@@ -1,0 +1,343 @@
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Check, X, Rocket, Zap, Trophy, Clock, Shield, Star } from "lucide-react";
+import { Layout } from "@/components/layout/Layout";
+import { useState } from "react";
+import { useSubscriptionPlan } from "@/hooks/useSubscriptionPlan";
+import { useSubscriptionPlans } from "@/hooks/useSubscriptionPlans";
+import { useUserRole } from "@/hooks/useUserRole";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+
+const Abonnement = () => {
+  const [isAnnual, setIsAnnual] = useState(false);
+  const { currentPlan } = useSubscriptionPlan();
+  const { plans, loading: plansLoading, formatPrice } = useSubscriptionPlans();
+  const { userProfile } = useUserRole();
+  const { toast } = useToast();
+  const [isCreatingCheckout, setIsCreatingCheckout] = useState<string | null>(null);
+
+  // Fonction pour déterminer si un plan est actif
+  const isActivePlan = (planId: string) => {
+    const planType = isAnnual ? 'annual' : 'monthly';
+    return currentPlan === `${planId}_${planType}`;
+  };
+
+  // Fonction pour créer une session de checkout
+  const handleChoosePlan = async (planId: string) => {
+    if (!userProfile?.schoolId) {
+      toast({
+        title: "Erreur",
+        description: "Impossible de déterminer votre école",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const planCode = `${planId}_${isAnnual ? 'annual' : 'monthly'}`;
+    setIsCreatingCheckout(planId);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('create-checkout', {
+        body: {
+          plan_code: planCode,
+          school_id: userProfile.schoolId
+        }
+      });
+
+      if (error) throw error;
+
+      if (data?.checkout_url) {
+        // Rediriger vers PayTech
+        window.location.href = data.checkout_url; } else {
+        throw new Error('URL de checkout non reçue');
+      }
+    } catch (error) {
+      console.error('Erreur lors de la création du checkout:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de créer la session de paiement. Veuillez réessayer.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsCreatingCheckout(null);
+    }
+  };
+
+  if (plansLoading) {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+            <p className="mt-4 text-muted-foreground">Chargement des plans...</p>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  // Générer les plans à partir de la base de données
+  const displayPlans = [
+    {
+      id: "starter",
+      title: "STARTER", 
+      icon: Rocket,
+      dbPlans: {
+        monthly: plans.find(p => p.code === 'starter_monthly'),
+        annual: plans.find(p => p.code === 'starter_annual')
+      },
+      features: [
+        { text: "Gestion de 200 élèves maximum", included: true },
+        { text: "Gestion de 6 classes maximum", included: true },
+        { text: "Gestion des notes & bulletins", included: true },
+        { text: "Présence & Retard", included: true },
+        { text: "Assistance 6j/7", included: true },
+        { text: "Emplois du temps", included: true },
+        { text: "Cahier de texte", included: true },
+        { text: "Formation gratuite", included: true },
+        { text: "Gestion des paiements", included: false },
+        { text: "Support premium", included: false },
+        { text: "Assistance dédiée", included: false }
+      ]
+    },
+    {
+      id: "pro",
+      title: "PRO",
+      icon: Zap,
+      isPopular: true,
+      dbPlans: {
+        monthly: plans.find(p => p.code === 'pro_monthly'),
+        annual: plans.find(p => p.code === 'pro_annual')
+      },
+      features: [
+        { text: "Gestion de 500 élèves maximum", included: true },
+        { text: "Gestion de 15 classes maximum", included: true },
+        { text: "Gestion des notes & bulletins", included: true },
+        { text: "Présence & Retard", included: true },
+        { text: "Assistance 7j/7", included: true },
+        { text: "Emplois du temps", included: true },
+        { text: "Cahier de texte", included: true },
+        { text: "Formation gratuite", included: true },
+        { text: "Gestion des paiements", included: true },
+        { text: "Support premium", included: false },
+        { text: "Assistance dédiée", included: false }
+      ]
+    },
+    {
+      id: "premium",
+      title: "PREMIUM",
+      icon: Trophy,
+      dbPlans: {
+        monthly: plans.find(p => p.code === 'premium_monthly'),
+        annual: plans.find(p => p.code === 'premium_annual')
+      },
+      features: [
+        { text: "Gestion des élèves illimités", included: true },
+        { text: "Gestion des classes illimitées", included: true },
+        { text: "Gestion des notes & bulletins", included: true },
+        { text: "Présence & Retard", included: true },
+        { text: "Assistance 7j/7", included: true },
+        { text: "Emplois du temps", included: true },
+        { text: "Cahier de texte", included: true },
+        { text: "Formation gratuite", included: true },
+        { text: "Gestion des paiements", included: true },
+        { text: "Support premium", included: true },
+        { text: "Assistance dédiée", included: true }
+      ]
+    }
+  ];
+
+  // Fonction pour calculer l'économie annuelle
+  const calculateSavings = (monthlyPrice: string, annualPrice: string) => {
+    const monthly = parseFloat(monthlyPrice.replace(/\D/g, ''));
+    const annual = parseFloat(annualPrice.replace(/\D/g, ''));
+    const yearlyFromMonthly = monthly * 12;
+    const savings = Math.round(((yearlyFromMonthly - annual) / yearlyFromMonthly) * 100);
+    return savings;
+  };
+
+  return (
+    <Layout>
+      <div className="container mx-auto p-8 max-w-7xl">
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold text-foreground mb-4">
+            Choisissez votre plan d'abonnement
+          </h1>
+          <p className="text-muted-foreground text-lg max-w-2xl mx-auto mb-8">
+            Sélectionnez le plan qui convient le mieux à votre école et profitez de toutes nos fonctionnalités
+          </p>
+          
+          {/* Toggle Switch */}
+          <div className="flex items-center justify-center mb-8">
+            <div className="relative bg-gray-200 rounded-full p-1 w-48 h-12">
+              <div 
+                className={`absolute top-1 bottom-1 w-24 bg-black rounded-full transition-transform duration-300 ease-in-out ${
+                  isAnnual ? 'transform translate-x-24' : 'transform translate-x-0'
+                }`}
+              />
+              <div className="relative flex h-full">
+                <button
+                  onClick={() => setIsAnnual(false)}
+                  className={`flex-1 rounded-full text-sm font-medium transition-colors duration-300 ${
+                    !isAnnual ? 'text-white' : 'text-black'
+                  }`}
+                >
+                  Mensuel
+                </button>
+                <button
+                  onClick={() => setIsAnnual(true)}
+                  className={`flex-1 rounded-full text-sm font-medium transition-colors duration-300 ${
+                    isAnnual ? 'text-white' : 'text-black'
+                  }`}
+                >
+                  Annuel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid md:grid-cols-3 gap-6 max-w-6xl mx-auto mb-16">
+          {displayPlans.map((plan) => {
+            const IconComponent = plan.icon;
+            const isActive = isActivePlan(plan.id);
+            const currentPlan = isAnnual ? plan.dbPlans.annual : plan.dbPlans.monthly;
+            
+            if (!currentPlan) return null; // Ne pas afficher si le plan n'existe pas en DB
+            
+            return (
+              <Card 
+                key={plan.id}
+                className={`relative border-2 rounded-2xl hover:shadow-lg transition-shadow ${
+                  isActive 
+                    ? 'border-green-500 bg-green-50/50' 
+                    : 'border-gray-200'
+                }`}
+              >
+                {isActive && (
+                  <Badge 
+                    className="absolute -top-3 right-4 bg-green-600 text-white px-3 py-1 rounded-full text-xs font-medium"
+                  >
+                    ✓ Abonnement actif
+                  </Badge>
+                )}
+                {plan.isPopular && !isActive && (
+                  <Badge 
+                    className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-blue-600 text-white px-4 py-1 rounded-full"
+                  >
+                    ⭐ Le Plus populaire
+                  </Badge>
+                )}
+                
+                <CardHeader className="text-center pb-6 pt-8">
+                  <div className="flex justify-center mb-4">
+                    <div className="p-4 rounded-full bg-blue-100">
+                      <IconComponent className="h-8 w-8 text-blue-600" />
+                    </div>
+                  </div>
+                  
+                  <CardTitle className="text-2xl font-bold text-foreground mb-4">
+                    {plan.title}
+                  </CardTitle>
+                  
+                  <div className="mb-2">
+                    <div className="flex items-baseline justify-center gap-1">
+                      <span className="text-3xl font-bold text-foreground">
+                        {formatPrice(currentPlan.price, currentPlan.currency)}
+                      </span>
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      par {isAnnual ? 'an' : 'mois'}
+                    </div>
+                  </div>
+                </CardHeader>
+
+                <CardContent className="px-6 pb-8">
+                  <div className="space-y-3 mb-8">
+                    {plan.features.map((feature, index) => (
+                      <div key={index} className="flex items-start gap-3">
+                        <div className={`rounded-full p-1 mt-0.5 ${
+                          feature.included ? 'bg-green-100' : 'bg-red-100'
+                        }`}>
+                          {feature.included ? (
+                            <Check className="h-3 w-3 text-green-600" />
+                          ) : (
+                            <X className="h-3 w-3 text-red-600" />
+                          )}
+                        </div>
+                        <span className="text-sm text-foreground leading-relaxed">
+                          {feature.text}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <Button 
+                    onClick={() => handleChoosePlan(plan.id)}
+                    disabled={isCreatingCheckout === plan.id}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg"
+                  >
+                    {isCreatingCheckout === plan.id 
+                      ? "Redirection en cours..." 
+                      : "CHOISIR LE PLAN"
+                    }
+                  </Button>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+
+        <div className="max-w-4xl mx-auto">
+          <div className="bg-orange-50 rounded-xl p-6 border border-orange-200">
+            <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+              📋 Informations importantes
+            </h3>
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="space-y-3">
+                <div className="flex items-start gap-3">
+                  <div className="bg-blue-100 rounded-full p-1 mt-1">
+                    <Clock className="h-4 w-4 text-blue-600" />
+                  </div>
+                  <span className="text-sm text-muted-foreground">
+                    Essai gratuit de 30 jours dès l'inscription
+                  </span>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="bg-yellow-100 rounded-full p-1 mt-1">
+                    <Shield className="h-4 w-4 text-yellow-600" />
+                  </div>
+                  <span className="text-sm text-muted-foreground">
+                    Notifications 5 jours avant expiration
+                  </span>
+                </div>
+              </div>
+              <div className="space-y-3">
+                <div className="flex items-start gap-3">
+                  <div className="bg-green-100 rounded-full p-1 mt-1">
+                    <Star className="h-4 w-4 text-green-600" />
+                  </div>
+                  <span className="text-sm text-muted-foreground">
+                    {isAnnual ? `Économisez jusqu'à ${calculateSavings("40 000 FCFA", "359 000 FCFA")}% par rapport au mensuel` : "Accès complet à toutes les fonctionnalités pendant la période active"}
+                  </span>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="bg-purple-100 rounded-full p-1 mt-1">
+                    <Check className="h-4 w-4 text-purple-600" />
+                  </div>
+                  <span className="text-sm text-muted-foreground">
+                    Accès complet à toutes les fonctionnalités pendant la période active
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Layout>
+  );
+};
+
+export default Abonnement;

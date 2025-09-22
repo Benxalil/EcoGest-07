@@ -1,0 +1,187 @@
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useUserRole } from './useUserRole';
+import { useToast } from '@/hooks/use-toast';
+
+export interface Course {
+  id?: string;
+  subject: string;
+  teacher?: string;
+  start_time: string;
+  end_time: string;
+  day: string;
+  class_id: string;
+  school_id: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface DaySchedule {
+  day: string;
+  courses: Course[];
+}
+
+export interface CreateCourseData {
+  subject: string;
+  teacher?: string;
+  start_time: string;
+  end_time: string;
+  day: string;
+  class_id: string;
+}
+
+export const useSchedules = (classId?: string) => {
+  const [schedules, setSchedules] = useState<DaySchedule[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { userProfile } = useUserRole();
+  const { toast } = useToast();
+
+  const fetchSchedules = async () => {
+    if (!userProfile?.schoolId || !classId) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('schedules')
+        .select('*')
+        .eq('school_id', userProfile.schoolId)
+        .eq('class_id', classId)
+        .order('day, start_time');
+
+      if (error) throw error;
+
+      // Organiser les cours par jour
+      const days = ['LUNDI', 'MARDI', 'MERCREDI', 'JEUDI', 'VENDREDI', 'SAMEDI'];
+      const organizedSchedules: DaySchedule[] = days.map(day => ({
+        day,
+        courses: (data || []).filter(course => course.day === day)
+      }));
+
+      setSchedules(organizedSchedules);
+    } catch (err) {
+      console.error('Erreur lors de la récupération des emplois du temps:', err);
+      setError(err instanceof Error ? err.message : 'Erreur inconnue');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const createCourse = async (courseData: CreateCourseData) => {
+    if (!userProfile?.schoolId) return false;
+
+    try {
+      const { error } = await supabase
+        .from('schedules')
+        .insert({
+          subject: courseData.subject,
+          subject_id: null, // Explicitement null pour éviter l'erreur
+          teacher: courseData.teacher,
+          teacher_id: null, // Explicitement null pour éviter l'erreur
+          start_time: courseData.start_time,
+          end_time: courseData.end_time,
+          day: courseData.day,
+          class_id: courseData.class_id,
+          school_id: userProfile.schoolId
+        });
+
+      if (error) throw error;
+
+      await fetchSchedules();
+
+      toast({
+        title: "Cours ajouté avec succès",
+        description: `Le cours ${courseData.subject} a été ajouté.`,
+      });
+
+      return true;
+    } catch (err) {
+      console.error('Erreur lors de la création du cours:', err);
+      toast({
+        title: "Erreur lors de la création",
+        description: err instanceof Error ? err.message : "Une erreur est survenue lors de la création du cours.",
+        variant: "destructive",
+      });
+      return false;
+    }
+  };
+
+  const updateCourse = async (id: string, courseData: Partial<CreateCourseData>) => {
+    if (!userProfile?.schoolId) return false;
+
+    try {
+      const { error } = await supabase
+        .from('schedules')
+        .update(courseData)
+        .eq('id', id)
+        .eq('school_id', userProfile.schoolId);
+
+      if (error) throw error;
+
+      await fetchSchedules();
+
+      toast({
+        title: "Cours mis à jour",
+        description: "Le cours a été mis à jour avec succès.",
+      });
+
+      return true;
+    } catch (err) {
+      console.error('Erreur lors de la mise à jour du cours:', err);
+      toast({
+        title: "Erreur lors de la mise à jour",
+        description: err instanceof Error ? err.message : "Une erreur est survenue lors de la mise à jour.",
+        variant: "destructive",
+      });
+      return false;
+    }
+  };
+
+  const deleteCourse = async (id: string) => {
+    if (!userProfile?.schoolId) return false;
+
+    try {
+      const { error } = await supabase
+        .from('schedules')
+        .delete()
+        .eq('id', id)
+        .eq('school_id', userProfile.schoolId);
+
+      if (error) throw error;
+
+      await fetchSchedules();
+
+      toast({
+        title: "Cours supprimé",
+        description: "Le cours a été supprimé avec succès.",
+      });
+
+      return true;
+    } catch (err) {
+      console.error('Erreur lors de la suppression du cours:', err);
+      toast({
+        title: "Erreur lors de la suppression",
+        description: err instanceof Error ? err.message : "Une erreur est survenue lors de la suppression.",
+        variant: "destructive",
+      });
+      return false;
+    }
+  };
+
+  useEffect(() => {
+    fetchSchedules();
+  }, [userProfile?.schoolId, classId]);
+
+  return {
+    schedules,
+    loading,
+    error,
+    createCourse,
+    updateCourse,
+    deleteCourse,
+    refreshSchedules: fetchSchedules
+  };
+};
