@@ -19,7 +19,6 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { useClasses } from "@/hooks/useClasses";
 
 interface Matiere {
   id: number;
@@ -30,8 +29,15 @@ interface Matiere {
   classeId: string;
 }
 
+interface Classe {
+  id: string;
+  session: string;
+  libelle: string;
+  effectif: number;
+}
+
 export default function ListeMatieres() {
-  const { classes, loading: classesLoading } = useClasses();
+  const [classes, setClasses] = useState<Classe[]>([]);
   const [matieres, setMatieres] = useState<Matiere[]>([]);
   const [newMatiere, setNewMatiere] = useState({ nom: "", abreviation: "", moyenne: "", coefficient: "", classeId: "" });
   const [editingMatiere, setEditingMatiere] = useState<Matiere | null>(null);
@@ -41,12 +47,21 @@ export default function ListeMatieres() {
   const navigate = useNavigate();
 
   useEffect(() => {
+    // Charger les classes depuis le localStorage
+    const savedClasses = localStorage.getItem('classes');
+    if (savedClasses) {
+      const classesData = JSON.parse(savedClasses);
+      setClasses(classesData);
+      console.log("Classes chargées:", classesData);
+    }
+
     // Charger les matières depuis le localStorage
     const savedMatieres = localStorage.getItem('matieres');
     if (savedMatieres) {
       const matieresData = JSON.parse(savedMatieres);
       setMatieres(matieresData);
-      }
+      console.log("Matières chargées:", matieresData);
+    }
   }, []);
 
   const saveMatieres = (newMatieres: Matiere[]) => {
@@ -68,9 +83,11 @@ export default function ListeMatieres() {
       const newMatieres = [...matieres, nouvelleMatiere];
       saveMatieres(newMatieres);
       
+      console.log("Nouvelle matière:", nouvelleMatiere);
       toast.success("Matière ajoutée avec succès");
       setNewMatiere({ nom: "", abreviation: "", moyenne: "", coefficient: "", classeId: "" });
-      setDialogOpen(false); } else {
+      setDialogOpen(false);
+    } else {
       toast.error("Veuillez remplir tous les champs obligatoires");
     }
   };
@@ -87,9 +104,11 @@ export default function ListeMatieres() {
       );
       saveMatieres(updatedMatieres);
       
+      console.log("Matière modifiée:", editingMatiere);
       toast.success("Matière modifiée avec succès");
       setEditingMatiere(null);
-      setEditDialogOpen(false); } else {
+      setEditDialogOpen(false);
+    } else {
       toast.error("Veuillez remplir tous les champs obligatoires");
     }
   };
@@ -99,6 +118,7 @@ export default function ListeMatieres() {
       const updatedMatieres = matieres.filter(m => m.id !== id);
       saveMatieres(updatedMatieres);
       
+      console.log("Matière supprimée:", id);
       toast.success("Matière supprimée avec succès");
     }
   };
@@ -106,7 +126,8 @@ export default function ListeMatieres() {
   const toggleClasseExpansion = (classeId: string) => {
     const newExpanded = new Set(expandedClasses);
     if (newExpanded.has(classeId)) {
-      newExpanded.delete(classeId); } else {
+      newExpanded.delete(classeId);
+    } else {
       newExpanded.add(classeId);
     }
     setExpandedClasses(newExpanded);
@@ -117,20 +138,8 @@ export default function ListeMatieres() {
   };
 
   const getClasseLabel = (classe: Classe) => {
-    return `${classe.name} ${classe.level}${classe.section ? ` - ${classe.section}` : ''}`;
+    return `${classe.session} ${classe.libelle}`;
   };
-
-  if (classesLoading) {
-    return (
-      <Layout>
-        <div className="container mx-auto py-8">
-          <div className="text-center">
-            <p className="text-gray-500 text-lg">Chargement des classes...</p>
-          </div>
-        </div>
-      </Layout>
-    );
-  }
 
   if (classes.length === 0) {
     return (

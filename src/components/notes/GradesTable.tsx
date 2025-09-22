@@ -196,3 +196,4 @@ export const GradesTable: React.FC<GradesTableProps> = ({ examId, classId, subje
     </div>
   );
 };
+

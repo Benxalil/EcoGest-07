@@ -175,3 +175,4 @@ export const GradesManagement: React.FC = () => {
     </div>
   );
 };
+

@@ -201,3 +201,4 @@ Accédez à `/test/permissions` pour :
 ---
 
 **Note** : Ce système est conçu pour être robuste, sécurisé et facile à utiliser. Il respecte les principes de sécurité en profondeur et offre une expérience utilisateur optimale selon le rôle de chaque utilisateur.
+

@@ -103,3 +103,4 @@ export const ExamsFilter: React.FC<ExamsFilterProps> = ({ onFilterChange }) => {
     </div>
   );
 };
+

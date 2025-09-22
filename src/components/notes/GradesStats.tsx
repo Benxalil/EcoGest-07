@@ -135,3 +135,4 @@ export const GradesStats: React.FC<GradesStatsProps> = ({ examId, classId, subje
     </div>
   );
 };
+

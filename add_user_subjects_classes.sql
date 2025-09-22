@@ -145,3 +145,4 @@ DROP TRIGGER IF EXISTS trigger_update_user_classes ON teacher_classes;
 CREATE TRIGGER trigger_update_user_classes
     AFTER INSERT OR UPDATE OR DELETE ON teacher_classes
     FOR EACH ROW EXECUTE FUNCTION update_user_subjects_classes();
+

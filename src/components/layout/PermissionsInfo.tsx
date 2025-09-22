@@ -91,3 +91,4 @@ export const PermissionsInfo: React.FC = () => {
     </Card>
   );
 };
+
