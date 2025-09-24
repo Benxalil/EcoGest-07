@@ -6,6 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Users, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useClasses } from "@/hooks/useClasses";
+import { useStudents } from "@/hooks/useStudents";
 
 interface Classe {
   id: string;
@@ -29,39 +31,39 @@ export default function ListeElevesClasse() {
   const navigate = useNavigate();
   const classeId = searchParams.get('classeId');
 
-  useEffect(() => {
-    if (classeId) {
-      // Récupérer les informations de la classe
-      // Remplacé par hook Supabase
-      let classeFound: Classe | null = null;
-      
-      if (savedClasses) {
-        try {
-          const classes = JSON.parse(savedClasses);
-          classeFound = classes.find((c: Classe) => c.id === classeId);
-          if (classeFound) {
-            setClasse(classeFound);
-          }
-        } catch (error) {
-          console.error('Erreur lors du chargement de la classe:', error);
-        }
-      }
+  // Hooks pour récupérer les données depuis la base
+  const { classes, loading: classesLoading } = useClasses();
+  const { students, loading: studentsLoading } = useStudents();
 
-      // Récupérer les élèves de cette classe
-      // Remplacé par hook Supabase
-      if (savedEleves && classeFound) {
-        try {
-          const allEleves = JSON.parse(savedEleves);
-          // Trouver le nom complet de la classe (session + libelle)
-          const classeCompleteNom = `${classeFound.session} ${classeFound.libelle}`;
-          const elevesForClasse = allEleves.filter((e: Eleve) => e.classe === classeCompleteNom);
-          setEleves(elevesForClasse);
-        } catch (error) {
-          console.error('Erreur lors du chargement des élèves:', error);
-        }
+  useEffect(() => {
+    if (classeId && classes.length > 0) {
+      // Récupérer les informations de la classe
+      const classeFound = classes.find(c => c.id === classeId);
+      if (classeFound) {
+        setClasse({
+          id: classeFound.id,
+          session: classeFound.academic_year_id || '',
+          libelle: `${classeFound.name} ${classeFound.level}${classeFound.section ? ` - ${classeFound.section}` : ''}`,
+          effectif: classeFound.enrollment_count || 0
+        });
       }
     }
-  }, [classeId]);
+  }, [classeId, classes]);
+
+  useEffect(() => {
+    if (classeId && students.length > 0) {
+      // Récupérer les élèves de cette classe
+      const elevesForClasse = students
+        .filter(student => student.class_id === classeId)
+        .map(student => ({
+          id: student.id,
+          nom: student.last_name,
+          prenom: student.first_name,
+          classe: classe?.libelle || ''
+        }));
+      setEleves(elevesForClasse);
+    }
+  }, [classeId, students, classe]);
 
   const handleConsulterEleve = (eleveId: string) => {
     navigate(`/notes/eleves-notes?classeId=${classeId}&eleveId=${eleveId}`);
@@ -70,6 +72,21 @@ export default function ListeElevesClasse() {
   const elevesFiltered = eleves.filter((eleve) =>
     `${eleve.prenom} ${eleve.nom}`.toLowerCase().includes(searchTerm.toLowerCase())
   ).sort((a, b) => a.prenom.toLowerCase().localeCompare(b.prenom.toLowerCase()));
+
+  if (classesLoading || studentsLoading) {
+    return (
+      <Layout>
+        <div className="container mx-auto p-6">
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+              <p className="text-muted-foreground">Chargement des données...</p>
+            </div>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>

@@ -11,8 +11,6 @@ interface UserProfile {
   id: string;
   email?: string;
   schoolId?: string;
-  subjects?: Array<{ id: string; name: string }>;
-  classes?: Array<{ id: string; name: string }>;
 }
 
 export const useUserRole = () => {
@@ -34,17 +32,7 @@ export const useUserRole = () => {
             try {
               const { data: profile } = await supabase
                 .from('profiles')
-                .select(`
-                  *,
-                  subjects:teacher_subjects(
-                    subject_id,
-                    subjects!inner(id, name)
-                  ),
-                  classes:teacher_classes(
-                    class_id,
-                    classes!inner(id, name)
-                  )
-                `)
+                .select('*')
                 .eq('id', session.user.id)
                 .single();
 
@@ -56,14 +44,6 @@ export const useUserRole = () => {
                   id: profile.id,
                   email: profile.email,
                   schoolId: profile.school_id,
-                  subjects: profile.subjects?.map((s: any) => ({
-                    id: s.subjects.id,
-                    name: s.subjects.name
-                  })) || [],
-                  classes: profile.classes?.map((c: any) => ({
-                    id: c.classes.id,
-                    name: c.classes.name
-                  })) || []
                 });
               }
             } catch (error) {

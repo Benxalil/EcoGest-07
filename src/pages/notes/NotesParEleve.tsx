@@ -10,7 +10,11 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@
 import { ArrowLeft, User, BookOpen, Search, Save, Edit3 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useSchoolData } from "@/hooks/useSchoolData";
-import { MatiereWithCoefficient, parseMaxScoreFromMoyenne, loadMatieresFromStorage, calculateSemesterAverage } from "@/utils/gradeUtils";
+import { MatiereWithCoefficient, parseMaxScoreFromMoyenne, calculateSemesterAverage } from "@/utils/gradeUtils";
+import { useSubjects } from "@/hooks/useSubjects";
+import { useClasses } from "@/hooks/useClasses";
+import { useStudents } from "@/hooks/useStudents";
+import { useGrades } from "@/hooks/useGrades";
 interface Student {
   id: string;
   nom: string;
@@ -41,7 +45,6 @@ interface EleveNote {
   note?: string;
 }
 export default function NotesParEleve() {
-  const [classes, setClasses] = useState<Classe[]>([]);
   const [eleves, setEleves] = useState<Student[]>([]);
   const [matieres, setMatieres] = useState<MatiereWithCoefficient[]>([]);
   const [selectedEleve, setSelectedEleve] = useState<Student | null>(null);
@@ -66,10 +69,24 @@ export default function NotesParEleve() {
   // Remplacé par hook Supabase
   const { schoolData: schoolSettings } = useSchoolData();
   const isTrimestreSystem = schoolSettings?.system === 'trimestre';
+  
+  // Hooks pour récupérer les données depuis la base
+  const classeId = searchParams.get('classeId');
+  const { classes, loading: classesLoading } = useClasses();
+  const { students, loading: studentsLoading } = useStudents();
+  const { subjects, loading: subjectsLoading } = useSubjects(classeId || '');
+  const { grades, upsertGrade, getGradeForStudent, refetch: refetchGrades } = useGrades();
   useEffect(() => {
     loadData();
     loadExamInfo();
-  }, []);
+  }, [classes, students, subjects]);
+
+  // Charger les matières quand la classe change
+  useEffect(() => {
+    if (classeId) {
+      loadMatieresForEleve(classeId);
+    }
+  }, [classeId, subjects]);
   const loadExamInfo = () => {
     try {
       const savedExamInfo = sessionStorage.getItem('current_examen_notes');
@@ -79,7 +96,7 @@ export default function NotesParEleve() {
           type: examData.examType || examData.type || 'Composition',
           titre: examData.examTitle || examData.titre || 'Examen'
         });
-        }
+      }
     } catch (error) {
       console.error('Error loading exam info:', error);
       // Default to Composition type
@@ -134,9 +151,10 @@ export default function NotesParEleve() {
   // Utilitaire: résout un identifiant de classe à partir d'une référence (id, libellé, ou "session libellé")
   const resolveClasseId = (classeRef: string): string | null => {
     if (!classeRef) return null;
-    const byId = classes.find(c => c.id === classeRef);
+    const classesData = getClassesData();
+    const byId = classesData.find(c => c.id === classeRef);
     if (byId) return byId.id;
-    const byFull = classes.find(c => `${c.session} ${c.libelle}` === classeRef || `${c.libelle} ${c.session}` === classeRef || c.libelle === classeRef);
+    const byFull = classesData.find(c => `${c.session} ${c.libelle}` === classeRef || `${c.libelle} ${c.session}` === classeRef || c.libelle === classeRef);
     return byFull?.id || null;
   };
   const getCurrentClasseIdForSelectedEleve = (): string => {
@@ -157,89 +175,97 @@ export default function NotesParEleve() {
       loadNotesForEleve(selectedEleve.id, cid);
     }
   }, [selectedEleve, matieres]);
-  const loadData = () => {
-    // Charger les classes
-    // Remplacé par hook Supabase
-    if (savedClasses) {
-      try {
-        const classesData = JSON.parse(savedClasses);
-        setClasses(classesData);
-      } catch (error) {
-        console.error('Erreur lors du chargement des classes:', error);
-      }
+  // Fonction utilitaire pour mapper les classes du hook vers le format attendu
+  const getClassesData = (): Classe[] => {
+    if (classes && classes.length > 0) {
+      return classes.map(classe => ({
+        id: classe.id,
+        session: classe.academic_year_id || '',
+        libelle: `${classe.name} ${classe.level}${classe.section ? ` - ${classe.section}` : ''}`,
+        effectif: classe.enrollment_count || 0
+      }));
     }
+    return [];
+  };
 
-    // Charger les élèves
-    // Remplacé par hook Supabase
-    if (savedEleves) {
-      try {
-        const elevesData = JSON.parse(savedEleves);
-        setEleves(elevesData);
-      } catch (error) {
-        console.error('Erreur lors du chargement des élèves:', error);
-      }
+  const loadData = () => {
+    // Mapping des élèves depuis useStudents
+    if (students && students.length > 0) {
+      const elevesData = students.map(student => ({
+        id: student.id,
+        nom: student.last_name,
+        prenom: student.first_name,
+        classe: student.classes?.name || ''
+      }));
+      setEleves(elevesData);
     }
   };
   const loadMatieresForEleve = (classeId: string) => {
-    const matieres = loadMatieresFromStorage(classeId);
-    setMatieres(matieres);
+    // Utiliser les matières depuis useSubjects
+    if (subjects && subjects.length > 0) {
+      const matieresWithCoeff = subjects.map(subject => ({
+        id: subject.id,
+        nom: subject.name,
+        coefficient: subject.coefficient || 1,
+        maxScore: subject.hours_per_week || 20, // Utiliser hours_per_week comme note maximale
+        abbreviation: subject.abbreviation || subject.name.substring(0, 3).toUpperCase(),
+        moyenne: (subject.hours_per_week || 20).toString() // Ajouter pour compatibilité
+      }));
+      setMatieres(matieresWithCoeff);
+    }
   };
-  const loadNotesForEleve = (eleveId: string, classeIdForKey: string) => {
+  const loadNotesForEleve = async (eleveId: string, classeIdForKey: string) => {
     const allNotes: {
       [key: string]: EleveNote[];
     } = {};
 
-    // Check exam context to determine the correct key pattern
-    const examInfo = sessionStorage.getItem('current_examen_notes');
-    let isExamContext = false;
-    let activiteId = '';
+    // Charger les notes depuis la base de données
+    const studentGrades = getGradesForStudent(eleveId);
     
-    if (examInfo) {
-      try {
-        const examData = JSON.parse(examInfo);
-        // Forcer le contexte d'examen si on a des informations d'examen
-        if (examData.activiteId || examData.examType || examData.examTitle) {
-          isExamContext = true;
-          activiteId = examData.activiteId || '';
-          }
-      } catch (error) {
-        console.error('Error parsing exam info:', error);
+    // Grouper les notes par matière
+    const notesBySubject: { [subjectId: string]: EleveNote } = {};
+    
+    studentGrades.forEach(grade => {
+      const subjectId = grade.subject_id;
+      if (!notesBySubject[subjectId]) {
+        notesBySubject[subjectId] = {
+          eleveId: grade.student_id,
+          matiereId: parseInt(subjectId),
+          semestre1: { devoir: "", composition: "" },
+          semestre2: { devoir: "", composition: "" },
+          note: ""
+        };
       }
-    }
-
-    if (isExamContext && activiteId) {
-      // Pour un examen spécifique, charger SEULEMENT les notes de cet examen
-      const notesKey = `notes_${classeIdForKey}_${activiteId}`;
-      const savedNotes = localStorage.getItem(notesKey);
-      if (savedNotes) {
-        try {
-          const notesData = JSON.parse(savedNotes);
-          allNotes[notesKey] = notesData;
-          } catch (error) {
-          console.error('Erreur lors du chargement des notes d\'examen:', error);
-        } } else {
-        // Pas de notes pour ce nouvel examen - initialiser vide
-        allNotes[notesKey] = [];
-      } } else {
-      // Pour le mode semestre classique, charger les notes par matière
-      matieres.forEach(matiere => {
-        const notesKey = `notes_${classeIdForKey}_${matiere.id}`;
-        const savedNotes = localStorage.getItem(notesKey);
-        if (savedNotes) {
-          try {
-            const notesData = JSON.parse(savedNotes);
-            allNotes[notesKey] = notesData;
-            } catch (error) {
-            console.error('Erreur lors du chargement des notes:', error);
+      
+      // Remplir les notes selon le type
+      if (grade.semester && grade.exam_type) {
+        if (grade.semester === 'semestre1') {
+          if (grade.exam_type === 'devoir') {
+            notesBySubject[subjectId].semestre1.devoir = grade.grade_value.toString();
+          } else if (grade.exam_type === 'composition') {
+            notesBySubject[subjectId].semestre1.composition = grade.grade_value.toString();
+          }
+        } else if (grade.semester === 'semestre2') {
+          if (grade.exam_type === 'devoir') {
+            notesBySubject[subjectId].semestre2.devoir = grade.grade_value.toString();
+          } else if (grade.exam_type === 'composition') {
+            notesBySubject[subjectId].semestre2.composition = grade.grade_value.toString();
           }
         }
-      });
-    }
+      } else {
+        // Note simple (sans semestre)
+        notesBySubject[subjectId].note = grade.grade_value.toString();
+      }
+    });
     
-    console.log('All loaded notes:', Object.keys(allNotes).length, 'keys');
+    // Convertir en format attendu
+    const notesKey = `notes_${classeIdForKey}_${eleveId}`;
+    allNotes[notesKey] = Object.values(notesBySubject);
+    
+    console.log('Loaded notes from database for student', eleveId, ':', allNotes[notesKey]);
     setNotes(allNotes);
   };
-  const handleNoteChange = (matiereId: number, semestre: "semestre1" | "semestre2", type: "devoir" | "composition", value: string) => {
+  const handleNoteChange = async (matiereId: number, semestre: "semestre1" | "semestre2", type: "devoir" | "composition", value: string) => {
     if (!selectedEleve) return;
 
     // Validate input if matiere is available
@@ -256,6 +282,33 @@ export default function NotesParEleve() {
         });
         return;
       }
+    }
+
+    // Sauvegarder dans la base de données
+    if (value !== "" && matiere) {
+      const examInfo = sessionStorage.getItem('current_examen_notes');
+      let examId = undefined;
+      let examType = type;
+      
+      if (examInfo) {
+        try {
+          const examData = JSON.parse(examInfo);
+          examId = examData.activiteId;
+        } catch (error) {
+          console.error('Error parsing exam info:', error);
+        }
+      }
+
+      await upsertGrade({
+        student_id: selectedEleve.id,
+        subject_id: matiereId.toString(),
+        exam_id: examId,
+        grade_value: parseFloat(value) || 0,
+        max_grade: parseMaxScoreFromMoyenne(matiere.moyenne),
+        coefficient: matiere.coefficient,
+        semester: semestre,
+        exam_type: examType
+      });
     }
     
     const classeIdForKey = getCurrentClasseIdForSelectedEleve();
@@ -287,7 +340,8 @@ export default function NotesParEleve() {
             ...updatedNotes[existingNoteIndex][semestre],
             [type]: value
           }
-        }; } else {
+        };
+      } else {
         const newNote: EleveNote = {
           eleveId: selectedEleve.id,
           matiereId,
@@ -315,7 +369,7 @@ export default function NotesParEleve() {
   };
 
   // Handle single note change for non-composition exams
-  const handleSingleNoteChange = (matiereId: number, value: string) => {
+  const handleSingleNoteChange = async (matiereId: number, value: string) => {
     if (!selectedEleve) return;
 
     // Validate input if matiere is available
@@ -332,6 +386,33 @@ export default function NotesParEleve() {
         });
         return;
       }
+    }
+
+    // Sauvegarder dans la base de données
+    if (value !== "" && matiere) {
+      const examInfo = sessionStorage.getItem('current_examen_notes');
+      let examId = undefined;
+      let examType = 'examen';
+      
+      if (examInfo) {
+        try {
+          const examData = JSON.parse(examInfo);
+          examId = examData.activiteId;
+          examType = examData.type || 'examen';
+        } catch (error) {
+          console.error('Error parsing exam info:', error);
+        }
+      }
+
+      await upsertGrade({
+        student_id: selectedEleve.id,
+        subject_id: matiereId.toString(),
+        exam_id: examId,
+        grade_value: parseFloat(value) || 0,
+        max_grade: parseMaxScoreFromMoyenne(matiere.moyenne),
+        coefficient: matiere.coefficient,
+        exam_type: examType
+      });
     }
     
     const classeIdForKey = getCurrentClasseIdForSelectedEleve();
@@ -360,7 +441,8 @@ export default function NotesParEleve() {
         updatedNotes[existingNoteIndex] = {
           ...updatedNotes[existingNoteIndex],
           note: value
-        }; } else {
+        };
+      } else {
         const newNote: EleveNote = {
           eleveId: selectedEleve.id,
           matiereId,
@@ -551,13 +633,31 @@ export default function NotesParEleve() {
     };
   };
   const getClasseById = (classeId: string) => {
-    return classes.find(c => c.id === classeId);
+    const classesData = getClassesData();
+    return classesData.find(c => c.id === classeId);
   };
   const filteredEleves = eleves.filter(eleve => {
     const matchesSearch = eleve.nom.toLowerCase().includes(searchTerm.toLowerCase()) || eleve.prenom.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesClasse = selectedClasseFilter === "all" || eleve.classe === selectedClasseFilter || resolveClasseId(eleve.classe) === selectedClasseFilter;
     return matchesSearch && matchesClasse;
   });
+
+  // État de chargement
+  if (classesLoading || studentsLoading || subjectsLoading) {
+    return (
+      <Layout>
+        <div className="container mx-auto p-6">
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+              <p className="text-muted-foreground">Chargement des données...</p>
+            </div>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
   return <Layout>
       <div className="container mx-auto p-6">
         <div className="flex items-center justify-between mb-6">
@@ -571,7 +671,7 @@ export default function NotesParEleve() {
                 {selectedEleve ? `Notes de ${selectedEleve.prenom} ${selectedEleve.nom}` : "Notes par Élève"}
               </h1>
               <p className="text-gray-600">
-                {selectedEleve ? `Classe: ${getClasseById(getCurrentClasseIdForSelectedEleve())?.session} - Session: ${getClasseById(getCurrentClasseIdForSelectedEleve())?.libelle}` : "Consultez et modifiez les notes de chaque élève individuellement"}
+                {selectedEleve ? `Classe: ${getClasseById(getCurrentClasseIdForSelectedEleve())?.libelle} - Session: ${getClasseById(getCurrentClasseIdForSelectedEleve())?.session}` : "Consultez et modifiez les notes de chaque élève individuellement"}
               </p>
             </div>
           </div>
@@ -616,7 +716,15 @@ export default function NotesParEleve() {
                       const eleveNote = getEleveNoteForMatiere(matiere.id);
                       return <TableRow key={matiere.id} className="hover:bg-gray-50">
                               <TableCell className="text-center font-medium">{index + 1}</TableCell>
-                              <TableCell className="font-medium">{matiere.nom}</TableCell>
+                              <TableCell className="font-medium">
+                                <div className="flex flex-col">
+                                  <span>{matiere.nom}</span>
+                                  <div className="flex gap-2 text-xs text-gray-500 mt-1">
+                                    <span>Coeff: {matiere.coefficient}</span>
+                                    <span>Barème: /{matiere.maxScore}</span>
+                                  </div>
+                                </div>
+                              </TableCell>
                               {examInfo?.type === 'Composition' ? <>
                                   <TableCell className="text-center">
                                     <GradeInput maxScore={parseMaxScoreFromMoyenne(matiere.moyenne)} value={eleveNote[selectedSemestre].devoir || "0"} onChange={value => handleNoteChange(matiere.id, selectedSemestre, "devoir", value)} disabled={!isEditMode} className="w-16 text-center mx-auto" />

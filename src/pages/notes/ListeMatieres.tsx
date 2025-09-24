@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, BookOpen, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { useClasses } from "@/hooks/useClasses";
+import { useSubjects } from "@/hooks/useSubjects";
 
 interface Classe {
   id: string;
@@ -19,6 +21,8 @@ interface Matiere {
   abreviation?: string;
   horaires: string;
   classeId: string;
+  coefficient: number;
+  maxScore: number;
 }
 
 export default function ListeMatieres() {
@@ -27,39 +31,37 @@ export default function ListeMatieres() {
   const [searchTerm, setSearchTerm] = useState("");
   const navigate = useNavigate();
   const { classeId } = useParams();
+  const { classes } = useClasses();
+  const { subjects } = useSubjects(classeId);
 
   useEffect(() => {
     // Récupérer les informations de la classe
-    if (classeId) {
-      // Remplacé par hook Supabase
-      if (savedClasses) {
-        try {
-          const classes = JSON.parse(savedClasses);
-          const classeFound = classes.find((c: Classe) => c.id === classeId);
-          if (classeFound) {
-            setClasse(classeFound);
-          }
-        } catch (error) {
-          console.error('Erreur lors du chargement de la classe:', error);
-        }
-      }
-
-      // Récupérer les matières spécifiques à cette classe
-      // Remplacé par hook Supabase
-      if (savedMatieres) {
-        try {
-          const allMatieres = JSON.parse(savedMatieres);
-          const matieresForClasse = allMatieres.filter((m: Matiere) => m.classeId === classeId);
-          setMatieres(matieresForClasse);
-        } catch (error) {
-          console.error('Erreur lors du chargement des matières:', error);
-        }
+    if (classeId && classes) {
+      const classeFound = classes.find((c: any) => c.id === classeId);
+      if (classeFound) {
+        setClasse({
+          id: classeFound.id,
+          session: classeFound.academic_year_id || '',
+          libelle: `${classeFound.name} ${classeFound.level}${classeFound.section ? ` - ${classeFound.section}` : ''}`,
+          effectif: classeFound.enrollment_count || 0
+        });
       }
     }
-  }, [classeId]);
 
-  // Fonction supprimée - page ConsulterNotes supprimée
-
+    // Récupérer les matières spécifiques à cette classe (déjà filtrées par useSubjects)
+    if (subjects) {
+      const matieresForClasse = subjects.map((s: any) => ({
+        id: s.id,
+        nom: s.name,
+        abreviation: s.abbreviation || '',
+        horaires: '1h/sem', // Valeur fixe pour l'affichage
+        classeId: s.class_id,
+        coefficient: s.coefficient || 1,
+        maxScore: s.hours_per_week || 20 // Utiliser hours_per_week comme note maximale
+      }));
+      setMatieres(matieresForClasse);
+    }
+  }, [classeId, classes, subjects]);
 
   const matieresFiltered = matieres.filter((matiere) =>
     matiere.nom.toLowerCase().includes(searchTerm.toLowerCase())
@@ -80,20 +82,29 @@ export default function ListeMatieres() {
             </Button>
             <div>
               <h1 className="text-2xl font-bold text-gray-900">
-                Notes - {classe?.session} {classe?.libelle || "Classe"}
+                Notes - {classe?.libelle || "Classe"}
               </h1>
               <p className="text-gray-600">
                 Effectif: {classe?.effectif} élèves
               </p>
             </div>
           </div>
-          <Button
-            onClick={() => navigate(`/notes/eleves?classeId=${classeId}`)}
-            variant="default"
-            size="sm"
-          >
-            Notes par Élève
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              onClick={() => navigate(`/notes/eleves?classeId=${classeId}`)}
+              variant="outline"
+              size="sm"
+            >
+              Notes par Élève
+            </Button>
+            <Button
+              onClick={() => navigate(`/notes/consulter?classeId=${classeId}`)}
+              variant="default"
+              size="sm"
+            >
+              Consulter les Notes
+            </Button>
+          </div>
         </div>
 
         <div className="mb-6">
@@ -119,16 +130,18 @@ export default function ListeMatieres() {
                 <BookOpen className="h-5 w-5 text-primary" />
                 <div className="flex items-center gap-6 flex-1">
                   <h3 className="font-semibold text-base min-w-[200px]">{matiere.nom}</h3>
-                  <span className="text-sm text-muted-foreground">
-                    Classe: {classe?.session} {classe?.libelle}
-                  </span>
+                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                    <span>Classe: {classe?.libelle}</span>
+                    <span>Coeff: {matiere.coefficient}</span>
+                    <span>Barème: /{matiere.maxScore}</span>
+                  </div>
                 </div>
               </div>
               <div className="flex items-center gap-3">
                 <Button
                   variant="default"
                   size="sm"
-                  onClick={() => console.log("Fonction supprimée")}
+                  onClick={() => navigate(`/notes/consulter?classeId=${classeId}&matiereId=${matiere.id}`)}
                 >
                   Consulter les Notes
                 </Button>

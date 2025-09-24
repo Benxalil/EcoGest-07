@@ -1,37 +1,48 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserRole } from './useUserRole';
-import { usePermissions } from './usePermissions';
 import { useToast } from '@/hooks/use-toast';
 
 export interface Grade {
   id: string;
   student_id: string;
-  exam_id: string;
-  school_id: string;
-  marks_obtained: number;
-  max_marks: number;
-  grade?: string;
-  remarks?: string;
+  subject_id: string;
+  exam_id?: string;
+  grade_value: number;
+  max_grade: number;
+  coefficient: number;
+  semester?: string;
+  exam_type?: string;
   created_at: string;
   updated_at: string;
+  created_by?: string;
+  school_id: string;
 }
 
 export interface CreateGradeData {
   student_id: string;
-  exam_id: string;
-  marks_obtained: number;
-  max_marks: number;
-  grade?: string;
-  remarks?: string;
+  subject_id: string;
+  exam_id?: string;
+  grade_value: number;
+  max_grade: number;
+  coefficient: number;
+  semester?: string;
+  exam_type?: string;
 }
 
-export const useGrades = (examId?: string, studentId?: string, subjectId?: string, classId?: string) => {
+export interface UpdateGradeData {
+  grade_value?: number;
+  max_grade?: number;
+  coefficient?: number;
+  semester?: string;
+  exam_type?: string;
+}
+
+export const useGrades = (studentId?: string, subjectId?: string, examId?: string) => {
   const [grades, setGrades] = useState<Grade[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { userProfile } = useUserRole();
-  const permissions = usePermissions();
   const { toast } = useToast();
 
   const fetchGrades = async () => {
@@ -40,62 +51,27 @@ export const useGrades = (examId?: string, studentId?: string, subjectId?: strin
       return;
     }
 
-    // Vérifier les permissions
-    if (subjectId && !permissions.canViewSubjectGrades(subjectId)) {
-      setGrades([]);
-      setLoading(false);
-      return;
-    }
-
-    if (classId && !permissions.canViewClassGrades(classId)) {
-      setGrades([]);
-      setLoading(false);
-      return;
-    }
-
     try {
       setLoading(true);
       let query = supabase
         .from('grades')
-        .select(`
-          *,
-          exams!inner(
-            id,
-            title,
-            subject_id,
-            class_id,
-            teacher_id,
-            subjects!inner(id, name),
-            classes!inner(id, name)
-          )
-        `)
-        .eq('school_id', userProfile.schoolId);
-
-      if (examId) {
-        query = query.eq('exam_id', examId);
-      }
+        .select('*')
+        .eq('school_id', userProfile.schoolId)
+        .order('created_at', { ascending: false });
 
       if (studentId) {
         query = query.eq('student_id', studentId);
       }
-
-      // Si c'est un enseignant, filtrer par ses matières
-      if (permissions.isTeacher && !permissions.canViewAllGrades) {
-        const teacherSubjects = userProfile?.subjects?.map(s => s.id) || [];
-        if (teacherSubjects.length > 0) {
-          query = query.in('exams.subject_id', teacherSubjects);
-        } else {
-          // Si l'enseignant n'a pas de matières assignées, ne pas afficher de notes
-          setGrades([]);
-          setLoading(false);
-          return;
-        }
+      if (subjectId) {
+        query = query.eq('subject_id', subjectId);
+      }
+      if (examId) {
+        query = query.eq('exam_id', examId);
       }
 
-      const { data, error } = await query.order('created_at', { ascending: false });
+      const { data, error } = await query;
 
       if (error) throw error;
-      
       setGrades(data || []);
     } catch (err) {
       console.error('Erreur lors de la récupération des notes:', err);
@@ -105,42 +81,20 @@ export const useGrades = (examId?: string, studentId?: string, subjectId?: strin
     }
   };
 
+  useEffect(() => {
+    fetchGrades();
+  }, [userProfile?.schoolId, studentId, subjectId, examId]);
+
   const createGrade = async (gradeData: CreateGradeData) => {
     if (!userProfile?.schoolId) return false;
-
-    // Vérifier les permissions avant de créer
-    if (!permissions.canEditAllGrades) {
-      // Pour un enseignant, vérifier qu'il peut modifier les notes de cet examen
-      const exam = await supabase
-        .from('exams')
-        .select('subject_id, class_id')
-        .eq('id', gradeData.exam_id)
-        .single();
-
-      if (exam.data) {
-        if (!permissions.canEditSubjectGrades(exam.data.subject_id) || 
-            !permissions.canEditClassGrades(exam.data.class_id)) {
-          toast({
-            title: "Accès refusé",
-            description: "Vous n'avez pas l'autorisation de modifier les notes de cette matière.",
-            variant: "destructive",
-          });
-          return false;
-        }
-      }
-    }
 
     try {
       const { error } = await supabase
         .from('grades')
         .insert({
-          student_id: gradeData.student_id,
-          exam_id: gradeData.exam_id,
-          marks_obtained: gradeData.marks_obtained,
-          max_marks: gradeData.max_marks,
-          grade: gradeData.grade,
-          remarks: gradeData.remarks,
-          school_id: userProfile.schoolId
+          ...gradeData,
+          school_id: userProfile.schoolId,
+          created_by: userProfile.id
         });
 
       if (error) throw error;
@@ -153,50 +107,40 @@ export const useGrades = (examId?: string, studentId?: string, subjectId?: strin
       });
 
       return true;
-    } catch (err) {
+    } catch (err: any) {
       console.error('Erreur lors de la création de la note:', err);
+      
+      let errorMessage = "Une erreur est survenue lors de l'enregistrement de la note.";
+      
+      if (err?.code === '23505') {
+        errorMessage = "Cette note existe déjà pour cet élève et cette matière.";
+      } else if (err?.code === '23503') {
+        errorMessage = "Élève, matière ou examen introuvable.";
+      } else if (err?.code === '23502') {
+        errorMessage = "Données manquantes pour créer la note.";
+      } else if (err?.message) {
+        errorMessage = err.message;
+      }
+      
       toast({
         title: "Erreur lors de l'enregistrement",
-        description: err instanceof Error ? err.message : "Une erreur est survenue lors de l'enregistrement de la note.",
+        description: errorMessage,
         variant: "destructive",
       });
       return false;
     }
   };
 
-  const updateGrade = async (id: string, gradeData: Partial<CreateGradeData>) => {
+  const updateGrade = async (id: string, gradeData: UpdateGradeData) => {
     if (!userProfile?.schoolId) return false;
-
-    // Vérifier les permissions avant de modifier
-    if (!permissions.canEditAllGrades) {
-      // Récupérer l'examen associé à cette note
-      const grade = await supabase
-        .from('grades')
-        .select(`
-          exam_id,
-          exams!inner(subject_id, class_id)
-        `)
-        .eq('id', id)
-        .single();
-
-      if (grade.data?.exams) {
-        const exam = grade.data.exams as any;
-        if (!permissions.canEditSubjectGrades(exam.subject_id) || 
-            !permissions.canEditClassGrades(exam.class_id)) {
-          toast({
-            title: "Accès refusé",
-            description: "Vous n'avez pas l'autorisation de modifier cette note.",
-            variant: "destructive",
-          });
-          return false;
-        }
-      }
-    }
 
     try {
       const { error } = await supabase
         .from('grades')
-        .update(gradeData)
+        .update({
+          ...gradeData,
+          updated_at: new Date().toISOString()
+        })
         .eq('id', id)
         .eq('school_id', userProfile.schoolId);
 
@@ -223,32 +167,6 @@ export const useGrades = (examId?: string, studentId?: string, subjectId?: strin
 
   const deleteGrade = async (id: string) => {
     if (!userProfile?.schoolId) return false;
-
-    // Vérifier les permissions avant de supprimer
-    if (!permissions.canEditAllGrades) {
-      // Récupérer l'examen associé à cette note
-      const grade = await supabase
-        .from('grades')
-        .select(`
-          exam_id,
-          exams!inner(subject_id, class_id)
-        `)
-        .eq('id', id)
-        .single();
-
-      if (grade.data?.exams) {
-        const exam = grade.data.exams as any;
-        if (!permissions.canEditSubjectGrades(exam.subject_id) || 
-            !permissions.canEditClassGrades(exam.class_id)) {
-          toast({
-            title: "Accès refusé",
-            description: "Vous n'avez pas l'autorisation de supprimer cette note.",
-            variant: "destructive",
-          });
-          return false;
-        }
-      }
-    }
 
     try {
       const { error } = await supabase
@@ -278,9 +196,52 @@ export const useGrades = (examId?: string, studentId?: string, subjectId?: strin
     }
   };
 
-  useEffect(() => {
-    fetchGrades();
-  }, [userProfile?.schoolId, examId, studentId]);
+  const upsertGrade = async (gradeData: CreateGradeData) => {
+    if (!userProfile?.schoolId) return false;
+
+    try {
+      // Chercher une note existante
+      const { data: existingGrade } = await supabase
+        .from('grades')
+        .select('id')
+        .eq('student_id', gradeData.student_id)
+        .eq('subject_id', gradeData.subject_id)
+        .eq('school_id', userProfile.schoolId)
+        .eq('exam_id', gradeData.exam_id || null)
+        .eq('semester', gradeData.semester || null)
+        .eq('exam_type', gradeData.exam_type || null)
+        .single();
+
+      if (existingGrade) {
+        // Mettre à jour la note existante
+        return await updateGrade(existingGrade.id, gradeData);
+      } else {
+        // Créer une nouvelle note
+        return await createGrade(gradeData);
+      }
+    } catch (err) {
+      console.error('Erreur lors de l\'upsert de la note:', err);
+      return false;
+    }
+  };
+
+  const getGradeForStudent = (studentId: string, subjectId: string, examId?: string, semester?: string, examType?: string) => {
+    return grades.find(grade => 
+      grade.student_id === studentId &&
+      grade.subject_id === subjectId &&
+      grade.exam_id === (examId || null) &&
+      grade.semester === (semester || null) &&
+      grade.exam_type === (examType || null)
+    );
+  };
+
+  const getGradesForStudent = (studentId: string) => {
+    return grades.filter(grade => grade.student_id === studentId);
+  };
+
+  const getGradesForSubject = (subjectId: string) => {
+    return grades.filter(grade => grade.subject_id === subjectId);
+  };
 
   return {
     grades,
@@ -289,6 +250,10 @@ export const useGrades = (examId?: string, studentId?: string, subjectId?: strin
     createGrade,
     updateGrade,
     deleteGrade,
-    refreshGrades: fetchGrades
+    upsertGrade,
+    getGradeForStudent,
+    getGradesForStudent,
+    getGradesForSubject,
+    refetch: fetchGrades
   };
 };

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserRole } from './useUserRole';
 import { useToast } from '@/hooks/use-toast';
@@ -13,7 +13,7 @@ export interface ClassData {
   academic_year_id: string;
   created_at: string;
   updated_at: string;
-  enrollment_count?: number; // Nombre réel d'élèves inscrits
+  enrollment_count?: number;
 }
 
 export interface CreateClassData {
@@ -30,7 +30,7 @@ export const useClasses = () => {
   const { userProfile } = useUserRole();
   const { toast } = useToast();
 
-  const fetchClasses = async () => {
+  const fetchClasses = useCallback(async () => {
     if (!userProfile?.schoolId) {
       setLoading(false);
       return;
@@ -46,21 +46,35 @@ export const useClasses = () => {
 
       if (error) throw error;
       
-      // Simplifier en ne calculant pas l'effectif à chaque chargement
-      setClasses(classesData || []);
+      // Calculer l'effectif pour chaque classe
+      const classesWithEnrollment = await Promise.all(
+        (classesData || []).map(async (classe) => {
+          const { count } = await supabase
+            .from('students')
+            .select('*', { count: 'exact', head: true })
+            .eq('class_id', classe.id)
+            .eq('is_active', true);
+          
+          return {
+            ...classe,
+            enrollment_count: count || 0
+          };
+        })
+      );
+      
+      setClasses(classesWithEnrollment);
     } catch (err) {
       console.error('Erreur lors de la récupération des classes:', err);
       setError(err instanceof Error ? err.message : 'Erreur inconnue');
     } finally {
       setLoading(false);
     }
-  };
+  }, [userProfile?.schoolId]);
 
   const createClass = async (classData: CreateClassData) => {
     if (!userProfile?.schoolId) return false;
 
     try {
-      // Get current academic year
       const { data: academicYears, error: academicError } = await supabase
         .from('academic_years')
         .select('id')
@@ -68,99 +82,86 @@ export const useClasses = () => {
         .eq('is_current', true)
         .single();
 
-      if (academicError || !academicYears) {
-        throw new Error('Aucune année académique active trouvée');
-      }
+      if (academicError) throw academicError;
 
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('classes')
         .insert({
-          name: classData.name,
-          level: classData.level,
-          section: classData.section,
-          capacity: classData.capacity || 30,
+          ...classData,
           school_id: userProfile.schoolId,
-          academic_year_id: academicYears.id
-        });
+          academic_year_id: academicYears.id,
+        })
+        .select()
+        .single();
 
       if (error) throw error;
-      
-      await fetchClasses();
-      
+
+      setClasses(prev => [...prev, data]);
       toast({
-        title: "Classe créée avec succès",
-        description: `La classe ${classData.name} ${classData.level} a été créée.`,
+        title: 'Succès',
+        description: 'Classe créée avec succès',
       });
-      
       return true;
     } catch (err) {
       console.error('Erreur lors de la création de la classe:', err);
       toast({
-        title: "Erreur lors de la création",
-        description: err instanceof Error ? err.message : "Une erreur est survenue lors de la création de la classe.",
-        variant: "destructive",
+        title: 'Erreur',
+        description: err instanceof Error ? err.message : 'Erreur inconnue',
+        variant: 'destructive',
       });
       return false;
     }
   };
 
   const updateClass = async (id: string, classData: Partial<CreateClassData>) => {
-    if (!userProfile?.schoolId) return false;
-
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('classes')
         .update(classData)
         .eq('id', id)
-        .eq('school_id', userProfile.schoolId);
+        .select()
+        .single();
 
       if (error) throw error;
-      
-      await fetchClasses();
-      
+
+      setClasses(prev => prev.map(cls => cls.id === id ? data : cls));
       toast({
-        title: "Classe mise à jour",
-        description: "La classe a été mise à jour avec succès.",
+        title: 'Succès',
+        description: 'Classe mise à jour avec succès',
       });
-      
       return true;
     } catch (err) {
       console.error('Erreur lors de la mise à jour de la classe:', err);
       toast({
-        title: "Erreur lors de la mise à jour",
-        description: err instanceof Error ? err.message : "Une erreur est survenue lors de la mise à jour.",
-        variant: "destructive",
+        title: 'Erreur',
+        description: err instanceof Error ? err.message : 'Erreur inconnue',
+        variant: 'destructive',
       });
       return false;
     }
   };
 
   const deleteClass = async (id: string) => {
-    if (!userProfile?.schoolId) return false;
-
     try {
       const { error } = await supabase
         .from('classes')
         .delete()
-        .eq('id', id)
-        .eq('school_id', userProfile.schoolId);
+        .eq('id', id);
 
       if (error) throw error;
-      
-      await fetchClasses();
-      
+
+      setClasses(prev => prev.filter(cls => cls.id !== id));
       toast({
-        title: "Classe supprimée",
-        description: "La classe a été supprimée avec succès.",
+        title: 'Succès',
+        description: 'Classe supprimée avec succès',
       });
-      
       return true;
     } catch (err) {
       console.error('Erreur lors de la suppression de la classe:', err);
       toast({
-        title: "Erreur lors de la suppression",
-        description: err instanceof Error ? err.message : "Une erreur est survenue lors de la suppression.",
-        variant: "destructive",
+        title: 'Erreur',
+        description: err instanceof Error ? err.message : 'Erreur inconnue',
+        variant: 'destructive',
       });
       return false;
     }
@@ -168,15 +169,15 @@ export const useClasses = () => {
 
   useEffect(() => {
     fetchClasses();
-  }, [userProfile?.schoolId]);
+  }, [fetchClasses]);
 
   return {
     classes,
     loading,
     error,
+    fetchClasses,
     createClass,
     updateClass,
     deleteClass,
-    refreshClasses: fetchClasses
   };
 };

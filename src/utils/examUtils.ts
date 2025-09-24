@@ -1,4 +1,5 @@
 // Utility functions for exam management and publication status
+// Ces fonctions sont maintenant obsolètes car les examens sont gérés via useExams hook
 
 interface Examen {
   id: string;
@@ -14,45 +15,39 @@ interface Examen {
 }
 
 /**
+ * @deprecated Utilisez useExams hook à la place
  * Get all exams from localStorage
  */
 export const getExamensFromStorage = (): Examen[] => {
-  try {
-    // Remplacé par hook Supabase
-      // const savedExamens = // localStorage.getItem("examens") // Remplacé par hook Supabase;
-    if (savedExamens) {
-      return JSON.parse(savedExamens);
-    }
-    return [];
-  } catch (error) {
-    console.error("Erreur lors de la récupération des examens:", error);
-    return [];
-  }
+  console.warn('getExamensFromStorage est obsolète. Utilisez useExams hook à la place.');
+  return [];
 };
 
 /**
+ * @deprecated Utilisez useExams hook à la place
  * Get only published exams from localStorage
  */
 export const getPublishedExamens = (): Examen[] => {
-  const allExamens = getExamensFromStorage();
-  return allExamens.filter(examen => examen.isPublished === true);
+  console.warn('getPublishedExamens est obsolète. Utilisez useExams hook à la place.');
+  return [];
 };
 
 /**
+ * @deprecated Utilisez useExams hook à la place
  * Check if an exam is published
  */
 export const isExamPublished = (examId: string): boolean => {
-  const examens = getExamensFromStorage();
-  const examen = examens.find(e => e.id === examId);
-  return examen?.isPublished === true;
+  console.warn('isExamPublished est obsolète. Utilisez useExams hook à la place.');
+  return false;
 };
 
 /**
+ * @deprecated Utilisez useExams hook à la place
  * Get published exam IDs
  */
 export const getPublishedExamIds = (): string[] => {
-  const publishedExamens = getPublishedExamens();
-  return publishedExamens.map(e => e.id);
+  console.warn('getPublishedExamIds est obsolète. Utilisez useExams hook à la place.');
+  return [];
 };
 
 /**

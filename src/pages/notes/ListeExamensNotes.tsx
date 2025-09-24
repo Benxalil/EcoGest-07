@@ -35,25 +35,37 @@ const fetchExamens = async (): Promise<Examen[]> => {
   try {
     const { data, error } = await supabase
       .from('exams')
-      .select(`
-        *,
-        classes!inner(*)
-      `)
+      .select('*')
       .order('exam_date', { ascending: false });
 
     if (error) throw error;
 
-    return data?.map(exam => ({
-      id: exam.id,
-      titre: exam.title,
-      type: exam.type,
-      semestre: exam.semester,
-      anneeAcademique: exam.academic_year,
-      dateExamen: exam.exam_date,
-      classes: exam.classes ? [exam.classes.name] : [],
-      dateCreation: exam.created_at,
-      statut: exam.status || 'planifié'
-    })) || [];
+    // Grouper les examens par titre et date pour afficher une seule bande par examen
+    const groupedExams = data?.reduce((acc, exam) => {
+      const key = `${exam.title}-${exam.exam_date}`;
+      if (!acc[key]) {
+        acc[key] = {
+          id: exam.id,
+          titre: exam.title,
+          type: exam.title,
+          semestre: exam.title === "Composition" ? "1er semestre" : "",
+          anneeAcademique: exam.academic_year || '',
+          dateExamen: exam.exam_date,
+          classes: [],
+          dateCreation: exam.created_at,
+          statut: 'planifié'
+        };
+      }
+      
+      // Ajouter la classe à la liste des classes pour cet examen
+      if (exam.class_id) {
+        acc[key].classes.push(exam.class_id);
+      }
+      
+      return acc;
+    }, {} as Record<string, Examen>);
+
+    return Object.values(groupedExams || []);
   } catch (error) {
     console.error("Erreur lors de la récupération des examens:", error);
     return [];
@@ -248,6 +260,22 @@ export default function ListeExamensNotes() {
               Retour
             </Button>
             <h1 className="text-2xl font-bold text-gray-900">Gestion des Notes</h1>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              onClick={() => navigate('/notes/eleves')}
+              variant="outline"
+              size="sm"
+            >
+              Notes par Élève
+            </Button>
+            <Button
+              onClick={() => navigate('/classes')}
+              variant="default"
+              size="sm"
+            >
+              Consulter les Notes
+            </Button>
           </div>
         </div>
 

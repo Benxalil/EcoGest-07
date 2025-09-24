@@ -75,7 +75,7 @@ export const useExams = (classId?: string) => {
         .insert({
           class_id: examData.class_id,
           subject_id: examData.subject_id,
-          teacher_id: userProfile.id, // Ajouter teacher_id requis
+          // teacher_id omis temporairement pour éviter l'erreur 400
           title: examData.title,
           exam_date: examData.exam_date,
           start_time: examData.start_time,

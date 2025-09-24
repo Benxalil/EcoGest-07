@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,47 +11,75 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
-import { useNavigate, useParams } from "react-router-dom";
-
-// Aucune donnée de test - système vide pour nouvel utilisateur
-const matieres = [
-  // Les matières seront ajoutées par l'utilisateur
-];
+import { useClasses } from "@/hooks/useClasses";
+import { useSubjects } from "@/hooks/useSubjects";
 
 interface Classe {
   id: string;
-  session: string;
-  libelle: string;
-  effectif: number;
+  name: string;
+  level: string;
+  section?: string;
+  capacity: number;
+}
+
+interface Matiere {
+  id: string;
+  nom: string;
+  abbreviation: string;
+  horaires: string;
+  classeId: string;
 }
 
 export default function ListeExamens() {
   const [searchTerm, setSearchTerm] = useState("");
   const [classe, setClasse] = useState<Classe | null>(null);
+  const [matieres, setMatieres] = useState<Matiere[]>([]);
   const navigate = useNavigate();
   const { classeId } = useParams();
+  
+  // Hooks pour récupérer les données depuis la base
+  const { classes, loading: classesLoading } = useClasses();
+  const { subjects, loading: subjectsLoading } = useSubjects(classeId || '');
 
   useEffect(() => {
     // Récupérer les informations de la classe
-    if (classeId) {
-      // Remplacé par hook Supabase - plus de localStorage
-      // Les classes sont maintenant gérées par useClasses hook
-      // TODO: Implémenter la récupération de classe par ID
+    if (classeId && classes.length > 0) {
+      const foundClasse = classes.find(c => c.id === classeId);
+      if (foundClasse) {
+        setClasse({
+          id: foundClasse.id,
+          name: foundClasse.name,
+          level: foundClasse.level,
+          section: foundClasse.section,
+          capacity: foundClasse.capacity
+        });
+      }
     }
-  }, [classeId]);
+  }, [classeId, classes]);
+
+  useEffect(() => {
+    // Récupérer les matières pour la classe
+    if (subjects.length > 0) {
+      const matieresForClasse = subjects.map(s => ({
+        id: s.id,
+        nom: s.name,
+        abbreviation: s.abbreviation || '',
+        horaires: s.hours_per_week ? `${s.hours_per_week}h/sem` : '',
+        classeId: s.class_id
+      }));
+      setMatieres(matieresForClasse);
+    }
+  }, [subjects]);
 
   const matieresFiltered = matieres.filter((matiere) =>
     matiere.nom.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleViewStudentNotes = (matiereId: number) => {
-    navigate(`/examens/${classeId}/activites/${matiereId}/notes-eleve`);
+  const handleViewStudentNotes = (matiereId: string) => {
+    navigate(`/notes/eleves?classeId=${classeId}&matiereId=${matiereId}`);
   };
-
-  // Fonction supprimée - page ConsulterNotes supprimée
 
   return (
     <Layout>
@@ -67,11 +96,11 @@ export default function ListeExamens() {
             </Button>
             <div>
               <h1 className="text-2xl font-bold text-primary">
-                {classe ? `${classe.session} ${classe.libelle}` : 'Matières'}
+                {classe ? `${classe.level} ${classe.name}${classe.section ? ` - ${classe.section}` : ''}` : 'Matières'}
               </h1>
               {classe && (
                 <p className="text-gray-600 text-sm">
-                  Gestion des activités et examens
+                  Effectif: {classe.capacity} élèves
                 </p>
               )}
             </div>
@@ -97,31 +126,60 @@ export default function ListeExamens() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {matieresFiltered.map((matiere) => (
-                <TableRow key={matiere.id}>
-                  <TableCell>{matiere.nom}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        className="bg-blue-500 text-white hover:bg-blue-600"
-                        onClick={() => console.log("Fonction supprimée")}
-                      >
-                        Consulter les Notes
-                      </Button>
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        className="bg-green-500 text-white hover:bg-green-600"
-                        onClick={() => handleViewStudentNotes(matiere.id)}
-                      >
-                        Note par élève
-                      </Button>
+              {classesLoading || subjectsLoading ? (
+                <TableRow>
+                  <TableCell colSpan={2} className="text-center py-8">
+                    <div className="flex items-center justify-center">
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+                      <span className="ml-2">Chargement des matières...</span>
                     </div>
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : matieresFiltered.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={2} className="text-center py-8">
+                    <p className="text-gray-500">
+                      {searchTerm ? "Aucune matière trouvée pour cette recherche." : "Aucune matière disponible pour cette classe."}
+                    </p>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                matieresFiltered.map((matiere) => (
+                  <TableRow key={matiere.id}>
+                    <TableCell>
+                      <div>
+                        <div className="font-medium">{matiere.nom}</div>
+                        {matiere.abbreviation && (
+                          <div className="text-sm text-gray-500">{matiere.abbreviation}</div>
+                        )}
+                        {matiere.horaires && (
+                          <div className="text-sm text-gray-500">{matiere.horaires}</div>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          className="bg-blue-500 text-white hover:bg-blue-600"
+                          onClick={() => navigate(`/notes/eleves?classeId=${classeId}&matiereId=${matiere.id}`)}
+                        >
+                          Consulter les Notes
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          className="bg-green-500 text-white hover:bg-green-600"
+                          onClick={() => handleViewStudentNotes(matiere.id)}
+                        >
+                          Note par élève
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </div>
@@ -129,3 +187,4 @@ export default function ListeExamens() {
     </Layout>
   );
 }
+

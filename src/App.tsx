@@ -26,6 +26,7 @@ import ListeElevesNotesPage from "./pages/notes/ListeElevesNotes";
 import EvaluerEleve from "./pages/notes/EvaluerEleve";
 import NotesParEleve from "./pages/notes/NotesParEleve";
 import ListeElevesClasse from "./pages/notes/ListeElevesClasse";
+import ConsulterNotes from "./pages/notes/ConsulterNotes";
 import ListeClassesResultats from "./pages/resultats/ListeClassesResultats";
 import ResultatsSemestre from "./pages/resultats/ResultatsSemestre";
 import BulletinAnnuel from "./pages/resultats/BulletinAnnuel";
@@ -79,6 +80,7 @@ function App() {
             <Route path="/notes" element={<ListeExamensNotes />} />
             <Route path="/notes/eleves" element={<ListeElevesClasse />} />
             <Route path="/notes/eleves-notes" element={<NotesParEleve />} />
+            <Route path="/notes/consulter" element={<ConsulterNotes />} />
             <Route path="/notes/classe/:classeId" element={<ListeMatieresNotes />} />
             <Route path="/notes/:classeId/matiere/:matiereId/eleves" element={<ListeElevesNotesPage />} />
             <Route path="/notes/:classeId/matiere/:matiereId/eleve/:eleveId" element={<EvaluerEleve />} />

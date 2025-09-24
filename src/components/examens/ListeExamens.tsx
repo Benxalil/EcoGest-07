@@ -1,6 +1,7 @@
 import { useAcademicYear } from "@/hooks/useAcademicYear";
 import { useClasses } from "@/hooks/useClasses";
 import { useSchoolData } from "@/hooks/useSchoolData";
+import { useExams } from "@/hooks/useExams";
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,7 +11,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Calendar, Search, Users, FileText, Clock, CheckCircle, AlertCircle, XCircle, Edit, Trash2 } from "lucide-react";
 import { format, isAfter, isBefore } from "date-fns";
 import { fr } from "date-fns/locale";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
@@ -27,16 +28,6 @@ interface Examen {
   statut: string;
 }
 
-const getExamensFromStorage = (): Examen[] => {
-  try {
-    // Remplacé par hook Supabase - plus de localStorage
-    // Les examens sont maintenant gérés par useExams hook
-    return [];
-  } catch (error) {
-    console.error("Erreur lors de la récupération des examens:", error);
-    return [];
-  }
-};
 
 const getStatutBadge = (statut: string) => {
   switch (statut) {
@@ -71,7 +62,7 @@ const getSemestreBadge = (semestre: string) => {
 export const ListeExamens: React.FC = () => {
   const { academicYear } = useAcademicYear();
   const { classes, loading: classesLoading } = useClasses();
-  const [examens, setExamens] = useState<Examen[]>([]);
+  const { exams, loading: examsLoading, updateExam, deleteExam } = useExams();
   const [searchTerm, setSearchTerm] = useState("");
   const [editOpen, setEditOpen] = useState(false);
   const [editingExamen, setEditingExamen] = useState<Examen | null>(null);
@@ -85,7 +76,7 @@ export const ListeExamens: React.FC = () => {
 
   // Remplacé par hook Supabase
   const { schoolData: schoolSettings } = useSchoolData();
-  const isTrimestreSystem = schoolSettings?.system === 'trimestre';
+  const isTrimestreSystem = schoolSettings?.semester_type === 'trimestre';
 
   // Helpers dates sûrs
   const isValidDateValue = (value?: string) => {
@@ -97,59 +88,71 @@ export const ListeExamens: React.FC = () => {
     if (!isValidDateValue(value)) return "Date non définie";
     return format(new Date(value as string), fmt, { locale: fr });
   };
+  
   const timeOr = (value?: string, fallback: number = 0) => {
     if (!isValidDateValue(value)) return fallback;
     return new Date(value as string).getTime();
   };
 
-  useEffect(() => {
-    const loadData = () => {
-      const savedExamens = getExamensFromStorage();
-      
-      // Mise à jour automatique des statuts basée sur la date
-      const examensAvecStatutMisAJour = savedExamens.map(examen => {
-        const dateExamen = new Date(examen.dateExamen);
-        const maintenant = new Date();
-        if (!isNaN(dateExamen.getTime())) {
-          if (isAfter(dateExamen, maintenant)) {
-            return { ...examen, statut: "À venir" };
-          } else if (isBefore(dateExamen, maintenant)) {
-            // Si pas encore de statut spécifique, marquer comme "Passé"
-            if (examen.statut === "À venir") {
-              return { ...examen, statut: "Passé" };
+  // Convertir les données du hook useExams vers le format attendu par le composant
+  const examens = React.useMemo(() => {
+    if (!exams) return [];
+    
+    // Grouper les examens par titre et date pour afficher une seule bande par examen
+    const groupedExams = exams.reduce((acc, exam) => {
+      const key = `${exam.title}-${exam.exam_date}`;
+      if (!acc[key]) {
+        acc[key] = {
+          id: exam.id, // Garder l'ID du premier examen pour les actions
+          titre: exam.title,
+          type: exam.title,
+          semestre: exam.title === "Composition" ? "1er semestre" : "",
+          anneeAcademique: academicYear,
+          dateExamen: exam.exam_date,
+          classes: [],
+          dateCreation: exam.created_at,
+          statut: (() => {
+            const dateExamen = new Date(exam.exam_date);
+            const maintenant = new Date();
+            if (!isNaN(dateExamen.getTime())) {
+              if (isAfter(dateExamen, maintenant)) {
+                return "À venir";
+              } else {
+                return "Passé";
+              }
             }
+            return "À venir";
+          })()
+        };
+      }
+      
+      // Ajouter la classe à la liste des classes pour cet examen
+      if (exam.class_id) {
+        const classe = classes.find(c => c.id === exam.class_id);
+        if (classe) {
+          const classeName = `${classe.name} ${classe.level}${classe.section ? ` - ${classe.section}` : ''}`;
+          if (!acc[key].classes.includes(classeName)) {
+            acc[key].classes.push(classeName);
           }
         }
-        return examen;
-      });
-
-      setExamens(examensAvecStatutMisAJour);
-    };
-
-    loadData();
+      }
+      
+      return acc;
+    }, {} as Record<string, Examen>);
     
-    const handleStorageChange = () => {
-      loadData();
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    window.addEventListener('examensUpdated', handleStorageChange);
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('examensUpdated', handleStorageChange);
-    };
-  }, []);
+    return Object.values(groupedExams);
+  }, [exams, classes, academicYear]);
 
   const getClasseNom = (classeId: string) => {
     const classe = classes.find(c => c.id === classeId);
     return classe ? `${classe.name} ${classe.level}${classe.section ? ` - ${classe.section}` : ''}` : classeId;
   };
 
-  const getClassesNoms = (classesIds: string[]) => {
-    if (classesIds.length === classes.length) {
+  const getClassesNoms = (classesNames: string[]) => {
+    if (classesNames.length === classes.length) {
       return "Toutes les classes";
     }
-    return classesIds.map(id => getClasseNom(id)).join(", ");
+    return classesNames.join(", ");
   };
 
   const filteredExamens = examens.filter(examen =>
@@ -167,7 +170,7 @@ export const ListeExamens: React.FC = () => {
   ).sort((a, b) => timeOr(b.dateExamen, -Infinity) - timeOr(a.dateExamen, -Infinity));
 
   const handleGererExamen = (examen: Examen) => {
-    };
+  };
 
   const openEditDialog = (examen: Examen) => {
     setEditingExamen(examen);
@@ -185,41 +188,49 @@ export const ListeExamens: React.FC = () => {
     openEditDialog(examen);
   };
 
-  const handleSupprimerExamen = (examenId: string) => {
+  const handleSupprimerExamen = async (examenId: string) => {
     try {
-      const savedExamens = getExamensFromStorage();
-      const examensUpdated = savedExamens.filter(examen => examen.id !== examenId);
-      // localStorage.setItem("examens", JSON.stringify(examensUpdated); // Remplacé par hook Supabase);
-      setExamens(examensUpdated);
-      window.dispatchEvent(new Event('examensUpdated'));
-      } catch (error) {
+      // Trouver tous les examens du groupe (même titre et date)
+      const examenGroup = examens.find(e => e.id === examenId);
+      if (!examenGroup) {
+        console.error('Examen non trouvé');
+        return;
+      }
+
+      // Trouver tous les examens de la base avec le même titre et la même date
+      const examsToDelete = exams?.filter(exam => 
+        exam.title === examenGroup.titre && 
+        exam.exam_date === examenGroup.dateExamen
+      ) || [];
+
+      // Supprimer tous les examens du groupe
+      for (const exam of examsToDelete) {
+        await deleteExam(exam.id);
+      }
+    } catch (error) {
       console.error("Erreur lors de la suppression de l'examen:", error);
     }
   };
 
-  const handleSaveEdit = (e: React.FormEvent) => {
+  const handleSaveEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingExamen) return;
 
-    const updated: Examen = {
-      ...editingExamen,
-      titre: editTypeExamen === 'Autre' && editTitre.trim() ? editTitre : (editTypeExamen === 'Autre' ? editingExamen.titre : editTypeExamen),
-      type: editTypeExamen,
-      semestre: editSemestre,
-      anneeAcademique: editAnnee,
-      dateExamen: editDate ? new Date(editDate).toISOString() : editingExamen.dateExamen,
-      classes: editToutesClasses ? classes.map(c => c.id) : editClassesSelectionnees
-    };
-
     try {
-      const savedExamens = getExamensFromStorage();
-      const idx = savedExamens.findIndex(e => e.id === updated.id);
-      if (idx !== -1) {
-        savedExamens[idx] = updated;
-        // localStorage.setItem("examens", JSON.stringify(savedExamens); // Remplacé par hook Supabase);
-        setExamens(savedExamens);
-        window.dispatchEvent(new Event('examensUpdated'));
+      // Trouver l'examen correspondant dans les données de la base
+      const examToUpdate = exams?.find(e => e.id === editingExamen.id);
+      if (!examToUpdate) {
+        console.error('Examen non trouvé');
+        return;
       }
+
+      // Mettre à jour l'examen via le hook useExams
+      await updateExam(examToUpdate.id, {
+        title: editTypeExamen === 'Autre' && editTitre.trim() ? editTitre : (editTypeExamen === 'Autre' ? editingExamen.titre : editTypeExamen),
+        exam_date: editDate ? new Date(editDate).toISOString().split('T')[0] : examToUpdate.exam_date,
+        // Autres champs peuvent être ajoutés selon les besoins
+      });
+
       setEditOpen(false);
       setEditingExamen(null);
     } catch (error) {
@@ -266,7 +277,7 @@ export const ListeExamens: React.FC = () => {
                     <div className="flex-1 space-y-2">
                       <div className="flex items-center gap-3">
                         <h3 className="font-semibold text-lg text-gray-900">{examen.titre}</h3>
-                        {getSemestreBadge(examen.semestre)}
+                        {examen.semestre && getSemestreBadge(examen.semestre)}
                         {getStatutBadge(examen.statut)}
                       </div>
                       
@@ -362,7 +373,7 @@ export const ListeExamens: React.FC = () => {
                     <div className="flex-1 space-y-2">
                       <div className="flex items-center gap-3">
                         <h3 className="font-semibold text-lg text-gray-900">{examen.titre}</h3>
-                        {getSemestreBadge(examen.semestre)}
+                        {examen.semestre && getSemestreBadge(examen.semestre)}
                         {getStatutBadge(examen.statut)}
                       </div>
                       
@@ -437,6 +448,9 @@ export const ListeExamens: React.FC = () => {
         <DialogContent className="sm:max-w-[520px]">
           <DialogHeader>
             <DialogTitle>Modifier l'examen</DialogTitle>
+            <DialogDescription>
+              Modifiez les informations de l'examen ci-dessous.
+            </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSaveEdit} className="space-y-4">
             {/* Type */}

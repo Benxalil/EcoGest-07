@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
 import { useAcademicYear } from "@/hooks/useAcademicYear";
 import { useClasses } from "@/hooks/useClasses";
 import { useSchoolData } from "@/hooks/useSchoolData";
@@ -31,12 +31,25 @@ export const CreerExamenModal: React.FC<CreerExamenModalProps> = ({ onExamenCrea
   const [typeExamen, setTypeExamen] = useState("");
   const [titrePersonnalise, setTitrePersonnalise] = useState("");
   const [semestre, setSemestre] = useState("");
-  const [anneeAcademique, setAnneeAcademique] = useState(academicYear);
+  const [anneeAcademique, setAnneeAcademique] = useState("");
   const [dateExamen, setDateExamen] = useState<Date>();
   const [toutesClasses, setToutesClasses] = useState(true);
   const [classesSelectionnees, setClassesSelectionnees] = useState<string[]>([]);
 
   const isTrimestreSystem = schoolSettings?.system === 'trimestre';
+
+  // Synchroniser l'année académique avec l'année active
+  useEffect(() => {
+    setAnneeAcademique(academicYear);
+  }, [academicYear]);
+
+  // Réinitialiser le formulaire quand le modal s'ouvre
+  useEffect(() => {
+    if (open) {
+      setToutesClasses(false); // Commencer avec "Toutes les classes" décoché
+      setClassesSelectionnees([]); // Aucune classe sélectionnée par défaut
+    }
+  }, [open, classes]);
 
   const typesExamen = [
     "Composition", 
@@ -56,6 +69,13 @@ export const CreerExamenModal: React.FC<CreerExamenModalProps> = ({ onExamenCrea
         : [...prev, classeId]
     );
   };
+
+  // S'assurer que toutes les classes sont sélectionnées quand "Toutes les classes" est coché
+  useEffect(() => {
+    if (toutesClasses && classes.length > 0) {
+      setClassesSelectionnees(classes.map(c => c.id));
+    }
+  }, [toutesClasses, classes]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -115,10 +135,13 @@ export const CreerExamenModal: React.FC<CreerExamenModalProps> = ({ onExamenCrea
     }
 
     try {
-      const classesToCreate = toutesClasses ? classes.map(c => c.id) : classesSelectionnees;
+      let successCount = 0;
+      
+      // Déterminer les classes à utiliser
+      const classesToUse = toutesClasses ? classes.map(c => c.id) : classesSelectionnees;
       
       // Créer un examen pour chaque classe sélectionnée
-      const createPromises = classesToCreate.map(classId => 
+      const createPromises = classesToUse.map(classId => 
         createExam({
           class_id: classId,
           title: typeExamen === "Autre" ? titrePersonnalise : typeExamen,
@@ -127,9 +150,8 @@ export const CreerExamenModal: React.FC<CreerExamenModalProps> = ({ onExamenCrea
           is_published: false
         })
       );
-
       const results = await Promise.all(createPromises);
-      const successCount = results.filter(Boolean).length;
+      successCount = results.filter(Boolean).length;
 
       if (successCount > 0) {
         toast({
@@ -174,6 +196,9 @@ export const CreerExamenModal: React.FC<CreerExamenModalProps> = ({ onExamenCrea
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>Créer un nouvel examen</DialogTitle>
+          <DialogDescription>
+            Remplissez les informations ci-dessous pour créer un nouvel examen.
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -228,7 +253,8 @@ export const CreerExamenModal: React.FC<CreerExamenModalProps> = ({ onExamenCrea
               <Input
                 id="anneeAcademique"
                 value={anneeAcademique}
-                onChange={(e) => setAnneeAcademique(e.target.value)}
+                readOnly
+                className="bg-gray-50"
                 placeholder="Ex: 2024/2025"
               />
             </div>
@@ -258,29 +284,33 @@ export const CreerExamenModal: React.FC<CreerExamenModalProps> = ({ onExamenCrea
           </div>
 
           <div className="space-y-4">
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="toutesClasses"
-                checked={toutesClasses}
-                onCheckedChange={(checked) => {
-                  setToutesClasses(checked as boolean);
-                  if (checked) {
-                    setClassesSelectionnees([]);
-                  }
-                }}
-              />
-              <Label htmlFor="toutesClasses">Toutes les classes</Label>
-            </div>
+            <div className="space-y-3">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="toutesClasses"
+                  checked={toutesClasses}
+                  onCheckedChange={(checked) => {
+                    setToutesClasses(checked as boolean);
+                    if (checked) {
+                      setClassesSelectionnees([]);
+                    } else {
+                      // Si on décoche "Toutes les classes", sélectionner toutes les classes par défaut
+                      setClassesSelectionnees(classes.map(c => c.id));
+                    }
+                  }}
+                />
+                <Label htmlFor="toutesClasses">Toutes les classes</Label>
+              </div>
 
-            {!toutesClasses && (
               <div className="space-y-2">
-                <Label>Classes sélectionnées</Label>
-                <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto">
+                <Label>Classes sélectionnées {toutesClasses ? "(Toutes)" : `(${classesSelectionnees.length} sélectionnée${classesSelectionnees.length > 1 ? 's' : ''})`}</Label>
+                <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto border rounded-md p-2">
                   {classes.map((classe) => (
                     <div key={classe.id} className="flex items-center space-x-2">
                       <Checkbox
                         id={classe.id}
-                        checked={classesSelectionnees.includes(classe.id)}
+                        checked={toutesClasses || classesSelectionnees.includes(classe.id)}
+                        disabled={toutesClasses}
                         onCheckedChange={() => handleClasseToggle(classe.id)}
                       />
                       <Label htmlFor={classe.id} className="text-sm">
@@ -290,7 +320,7 @@ export const CreerExamenModal: React.FC<CreerExamenModalProps> = ({ onExamenCrea
                   ))}
                 </div>
               </div>
-            )}
+            </div>
           </div>
 
           <div className="flex justify-end space-x-2">

@@ -1,6 +1,7 @@
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BookOpen, Calendar, CheckCircle } from "lucide-react";
+import { useExams } from "@/hooks/useExams";
 
 interface StatsCardProps {
   title: string;
@@ -29,28 +30,39 @@ interface ExamensStatsProps {
   classes: any[];
 }
 
-export const ExamensStats: React.FC<ExamensStatsProps> = ({ classes }) => {
-  // Remplacé par hook Supabase - plus de localStorage
-  // Les examens sont maintenant gérés par useExams hook
-  const examens: any[] = []; // Placeholder temporaire
-  const totalExamens = examens.length;
+export const ExamensStats: React.FC<ExamensStatsProps> = ({ classes }) => {     
+  // Utiliser le hook useExams pour récupérer les vraies données
+  const { exams } = useExams();
+  const examens = exams || [];
+  
+  // Grouper les examens par titre et date pour compter les examens uniques
+  const examensUniques = examens.reduce((acc, exam) => {
+    const key = `${exam.title}-${exam.exam_date}`;
+    if (!acc[key]) {
+      acc[key] = exam;
+    }
+    return acc;
+  }, {} as Record<string, any>);
+  
+  const examensUniquesList = Object.values(examensUniques);
+  const totalExamens = examensUniquesList.length;
   
   // Date actuelle pour les comparaisons
   const today = new Date();
   today.setHours(0, 0, 0, 0); // Reset time to start of day for accurate comparison
   
   // Examens prévus : dont la date est supérieure à aujourd'hui
-  const examensPrevu = examens.filter((e: any) => {
-    if (!e.dateExamen) return false;
-    const examDate = new Date(e.dateExamen);
+  const examensPrevu = examensUniquesList.filter((e: any) => {
+    if (!e.exam_date) return false;
+    const examDate = new Date(e.exam_date);
     examDate.setHours(0, 0, 0, 0);
     return examDate > today;
   }).length;
-  
+
   // Examens passés : dont la date est inférieure ou égale à aujourd'hui
-  const examensPassés = examens.filter((e: any) => {
-    if (!e.dateExamen) return false;
-    const examDate = new Date(e.dateExamen);
+  const examensPassés = examensUniquesList.filter((e: any) => {
+    if (!e.exam_date) return false;
+    const examDate = new Date(e.exam_date);
     examDate.setHours(0, 0, 0, 0);
     return examDate <= today;
   }).length;

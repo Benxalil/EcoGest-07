@@ -9,7 +9,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,6 +18,8 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { useClasses } from "@/hooks/useClasses";
+import { useSubjects } from "@/hooks/useSubjects";
 
 interface Matiere {
   id: number;
@@ -29,15 +30,8 @@ interface Matiere {
   classeId: string;
 }
 
-interface Classe {
-  id: string;
-  session: string;
-  libelle: string;
-  effectif: number;
-}
-
 export default function ListeMatieres() {
-  const [classes, setClasses] = useState<Classe[]>([]);
+  const { classes, loading: classesLoading } = useClasses();
   const [matieres, setMatieres] = useState<Matiere[]>([]);
   const [newMatiere, setNewMatiere] = useState({ nom: "", abreviation: "", moyenne: "", coefficient: "", classeId: "" });
   const [editingMatiere, setEditingMatiere] = useState<Matiere | null>(null);
@@ -46,47 +40,38 @@ export default function ListeMatieres() {
   const [expandedClasses, setExpandedClasses] = useState<Set<string>>(new Set());
   const navigate = useNavigate();
 
+  // Récupérer toutes les matières depuis la base de données
+  const { subjects, loading: subjectsLoading, createSubject, updateSubject, deleteSubject } = useSubjects();
+
   useEffect(() => {
-    // Charger les classes depuis le localStorage
-    const savedClasses = localStorage.getItem('classes');
-    if (savedClasses) {
-      const classesData = JSON.parse(savedClasses);
-      setClasses(classesData);
-      console.log("Classes chargées:", classesData);
+    // Convertir les subjects de la base vers le format local
+    if (subjects.length > 0) {
+      const matieresFromDB = subjects.map(subject => ({
+        id: parseInt(subject.id.replace(/\D/g, '')) || Date.now(), // Convertir UUID en nombre
+        nom: subject.name,
+        abreviation: subject.abbreviation || '',
+        moyenne: (subject.hours_per_week || 20).toString(), // Utiliser hours_per_week comme note maximale
+        coefficient: (subject.coefficient || 1).toString(),
+        classeId: subject.class_id
+      }));
+      setMatieres(matieresFromDB);
     }
+  }, [subjects]);
 
-    // Charger les matières depuis le localStorage
-    const savedMatieres = localStorage.getItem('matieres');
-    if (savedMatieres) {
-      const matieresData = JSON.parse(savedMatieres);
-      setMatieres(matieresData);
-      console.log("Matières chargées:", matieresData);
-    }
-  }, []);
-
-  const saveMatieres = (newMatieres: Matiere[]) => {
-    localStorage.setItem('matieres', JSON.stringify(newMatieres));
-    setMatieres(newMatieres);
-  };
-
-  const handleAddMatiere = () => {
-    if (newMatiere.nom && newMatiere.moyenne && newMatiere.coefficient && newMatiere.classeId) {
-      const nouvelleMatiere: Matiere = {
-        id: Date.now(),
-        nom: newMatiere.nom,
-        abreviation: newMatiere.abreviation || undefined,
-        moyenne: newMatiere.moyenne,
-        coefficient: newMatiere.coefficient,
-        classeId: newMatiere.classeId
-      };
+  const handleAddMatiere = async () => {
+    if (newMatiere.nom && newMatiere.classeId && newMatiere.moyenne && newMatiere.coefficient) {
+      const success = await createSubject({
+        name: newMatiere.nom,
+        abbreviation: newMatiere.abreviation || '',
+        class_id: newMatiere.classeId,
+        coefficient: parseFloat(newMatiere.coefficient) || 1,
+        hours_per_week: parseInt(newMatiere.moyenne) || 20 // Utiliser hours_per_week pour stocker la note maximale
+      });
       
-      const newMatieres = [...matieres, nouvelleMatiere];
-      saveMatieres(newMatieres);
-      
-      console.log("Nouvelle matière:", nouvelleMatiere);
-      toast.success("Matière ajoutée avec succès");
-      setNewMatiere({ nom: "", abreviation: "", moyenne: "", coefficient: "", classeId: "" });
-      setDialogOpen(false);
+      if (success) {
+        setNewMatiere({ nom: "", abreviation: "", moyenne: "", coefficient: "", classeId: "" });
+        setDialogOpen(false);
+      }
     } else {
       toast.error("Veuillez remplir tous les champs obligatoires");
     }
@@ -97,37 +82,49 @@ export default function ListeMatieres() {
     setEditDialogOpen(true);
   };
 
-  const handleUpdateMatiere = () => {
+  const handleUpdateMatiere = async () => {
     if (editingMatiere && editingMatiere.nom && editingMatiere.moyenne && editingMatiere.coefficient) {
-      const updatedMatieres = matieres.map(m => 
-        m.id === editingMatiere.id ? editingMatiere : m
-      );
-      saveMatieres(updatedMatieres);
-      
-      console.log("Matière modifiée:", editingMatiere);
-      toast.success("Matière modifiée avec succès");
-      setEditingMatiere(null);
-      setEditDialogOpen(false);
+      // Trouver le subject correspondant
+      const subject = subjects.find(s => s.class_id === editingMatiere.classeId && s.name === editingMatiere.nom);
+      if (subject) {
+        const success = await updateSubject(subject.id, {
+          name: editingMatiere.nom,
+          abbreviation: editingMatiere.abreviation || '',
+          class_id: editingMatiere.classeId,
+          coefficient: parseFloat(editingMatiere.coefficient) || 1,
+          hours_per_week: parseInt(editingMatiere.moyenne) || 20 // Utiliser hours_per_week pour stocker la note maximale
+        });
+        
+        if (success) {
+          setEditingMatiere(null);
+          setEditDialogOpen(false);
+        }
+      }
     } else {
       toast.error("Veuillez remplir tous les champs obligatoires");
     }
   };
 
-  const handleDeleteMatiere = (id: number) => {
+  const handleDeleteMatiere = async (id: number) => {
     if (window.confirm("Êtes-vous sûr de vouloir supprimer cette matière ?")) {
-      const updatedMatieres = matieres.filter(m => m.id !== id);
-      saveMatieres(updatedMatieres);
-      
-      console.log("Matière supprimée:", id);
-      toast.success("Matière supprimée avec succès");
+      // Trouver le subject correspondant
+      const matiere = matieres.find(m => m.id === id);
+      if (matiere) {
+        const subject = subjects.find(s => s.class_id === matiere.classeId && s.name === matiere.nom);
+        if (subject) {
+          const success = await deleteSubject(subject.id);
+          if (success) {
+            toast.success("Matière supprimée avec succès");
+          }
+        }
+      }
     }
   };
 
   const toggleClasseExpansion = (classeId: string) => {
     const newExpanded = new Set(expandedClasses);
     if (newExpanded.has(classeId)) {
-      newExpanded.delete(classeId);
-    } else {
+      newExpanded.delete(classeId); } else {
       newExpanded.add(classeId);
     }
     setExpandedClasses(newExpanded);
@@ -138,8 +135,47 @@ export default function ListeMatieres() {
   };
 
   const getClasseLabel = (classe: Classe) => {
-    return `${classe.session} ${classe.libelle}`;
+    return `${classe.name} ${classe.level}${classe.section ? ` - ${classe.section}` : ''}`;
   };
+
+  if (classesLoading) {
+    return (
+      <Layout>
+        <div className="container mx-auto py-8">
+          <div className="text-center">
+            <p className="text-gray-500 text-lg">Chargement des classes...</p>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (classesLoading || subjectsLoading) {
+    return (
+      <Layout>
+        <div className="container mx-auto p-6">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-4">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => navigate(-1)}
+                className="hover:bg-gray-100"
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+              <h1 className="text-2xl font-bold">Gestion des Matières par Classe</h1>
+            </div>
+          </div>
+
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-gray-500 text-lg">Chargement des matières...</p>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
 
   if (classes.length === 0) {
     return (
@@ -196,9 +232,9 @@ export default function ListeMatieres() {
             return (
               <Collapsible key={classe.id} open={isExpanded} onOpenChange={() => toggleClasseExpansion(classe.id)}>
                 <div className="border rounded-lg bg-white shadow">
-                  <CollapsibleTrigger className="w-full">
-                    <div className="flex items-center justify-between p-4 hover:bg-gray-50">
-                      <div className="flex items-center gap-3">
+                  <div className="flex items-center justify-between p-4">
+                    <CollapsibleTrigger className="flex-1">
+                      <div className="flex items-center gap-3 hover:bg-gray-50 p-2 rounded">
                         {isExpanded ? (
                           <ChevronDown className="h-5 w-5 text-gray-600" />
                         ) : (
@@ -213,72 +249,20 @@ export default function ListeMatieres() {
                           </p>
                         </div>
                       </div>
-                      
-                      <Dialog open={dialogOpen && newMatiere.classeId === classe.id} onOpenChange={setDialogOpen}>
-                        <DialogTrigger asChild>
-                          <Button
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setNewMatiere({ ...newMatiere, classeId: classe.id });
-                              setDialogOpen(true);
-                            }}
-                          >
-                            <Plus className="mr-2 h-4 w-4" />
-                            Ajouter une Matière
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent className="sm:max-w-[425px]">
-                          <DialogHeader>
-                            <DialogTitle>Ajouter une matière à {getClasseLabel(classe)}</DialogTitle>
-                          </DialogHeader>
-                          <div className="grid gap-4 py-4">
-                            <div className="grid gap-2">
-                              <Label htmlFor="nom">Nom de la matière</Label>
-                              <Input
-                                id="nom"
-                                value={newMatiere.nom}
-                                onChange={(e) => setNewMatiere({ ...newMatiere, nom: e.target.value })}
-                                placeholder="Ex: Mathématiques"
-                              />
-                            </div>
-                            <div className="grid gap-2">
-                              <Label htmlFor="abreviation">Abréviation (optionnel)</Label>
-                              <Input
-                                id="abreviation"
-                                value={newMatiere.abreviation}
-                                onChange={(e) => setNewMatiere({ ...newMatiere, abreviation: e.target.value })}
-                                placeholder="Ex: Math"
-                              />
-                            </div>
-                            <div className="grid gap-2">
-                              <Label htmlFor="moyenne">Moyenne de la matière</Label>
-                              <Input
-                                id="moyenne"
-                                value={newMatiere.moyenne}
-                                onChange={(e) => setNewMatiere({ ...newMatiere, moyenne: e.target.value })}
-                                placeholder="Ex: /20, /10, /5"
-                              />
-                            </div>
-                            <div className="grid gap-2">
-                              <Label htmlFor="coefficient">Coefficient de la matière</Label>
-                              <Input
-                                id="coefficient"
-                                type="number"
-                                min="1"
-                                value={newMatiere.coefficient}
-                                onChange={(e) => setNewMatiere({ ...newMatiere, coefficient: e.target.value })}
-                                placeholder="Ex: 2, 3, 4"
-                              />
-                            </div>
-                            <Button onClick={handleAddMatiere} className="mt-4">
-                              Enregistrer
-                            </Button>
-                          </div>
-                        </DialogContent>
-                      </Dialog>
-                    </div>
-                  </CollapsibleTrigger>
+                    </CollapsibleTrigger>
+                    
+                    <Button
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setNewMatiere({ ...newMatiere, classeId: classe.id });
+                        setDialogOpen(true);
+                      }}
+                    >
+                      <Plus className="mr-2 h-4 w-4" />
+                      Ajouter une Matière
+                    </Button>
+                  </div>
                   
                   <CollapsibleContent>
                     <div className="border-t bg-gray-50">
@@ -359,18 +343,19 @@ export default function ListeMatieres() {
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="edit-moyenne">Moyenne de la matière</Label>
+                <Label htmlFor="edit-moyenne">Moyenne de la matière *</Label>
                 <Input
                   id="edit-moyenne"
                   value={editingMatiere?.moyenne || ""}
                   onChange={(e) => setEditingMatiere(prev => 
                     prev ? { ...prev, moyenne: e.target.value } : null
                   )}
-                  placeholder="Ex: /20, /10, /5"
+                  placeholder="Ex: 20, 10, 5"
+                  required
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="edit-coefficient">Coefficient de la matière</Label>
+                <Label htmlFor="edit-coefficient">Coefficient de la matière *</Label>
                 <Input
                   id="edit-coefficient"
                   type="number"
@@ -380,10 +365,65 @@ export default function ListeMatieres() {
                     prev ? { ...prev, coefficient: e.target.value } : null
                   )}
                   placeholder="Ex: 2, 3, 4"
+                  required
                 />
               </div>
               <Button onClick={handleUpdateMatiere} className="mt-4">
                 Modifier
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Dialog pour ajouter une matière */}
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Ajouter une matière à {newMatiere.classeId ? getClasseLabel(classes.find(c => c.id === newMatiere.classeId)!) : 'la classe'}</DialogTitle>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="nom">Nom de la matière</Label>
+                <Input
+                  id="nom"
+                  value={newMatiere.nom}
+                  onChange={(e) => setNewMatiere({ ...newMatiere, nom: e.target.value })}
+                  placeholder="Ex: Mathématiques"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="abreviation">Abréviation (optionnel)</Label>
+                <Input
+                  id="abreviation"
+                  value={newMatiere.abreviation}
+                  onChange={(e) => setNewMatiere({ ...newMatiere, abreviation: e.target.value })}
+                  placeholder="Ex: Math"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="moyenne">Moyenne de la matière *</Label>
+                <Input
+                  id="moyenne"
+                  value={newMatiere.moyenne}
+                  onChange={(e) => setNewMatiere({ ...newMatiere, moyenne: e.target.value })}
+                  placeholder="Ex: 20, 10, 5"
+                  required
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="coefficient">Coefficient de la matière *</Label>
+                <Input
+                  id="coefficient"
+                  type="number"
+                  min="1"
+                  value={newMatiere.coefficient}
+                  onChange={(e) => setNewMatiere({ ...newMatiere, coefficient: e.target.value })}
+                  placeholder="Ex: 2, 3, 4"
+                  required
+                />
+              </div>
+              <Button onClick={handleAddMatiere} className="mt-4">
+                Enregistrer
               </Button>
             </div>
           </DialogContent>

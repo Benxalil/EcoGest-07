@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserRole } from './useUserRole';
 
@@ -34,7 +34,7 @@ export function useStudents(classId?: string) {
   const [error, setError] = useState<string | null>(null);
   const { userProfile } = useUserRole();
 
-  const fetchStudents = async () => {
+  const fetchStudents = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -71,11 +71,11 @@ export function useStudents(classId?: string) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [userProfile?.schoolId, classId]);
 
   useEffect(() => {
     fetchStudents();
-  }, [userProfile?.schoolId, classId]);
+  }, [fetchStudents]);
 
   const addStudent = async (studentData: Omit<Student, 'id' | 'created_at' | 'updated_at'>) => {
     try {

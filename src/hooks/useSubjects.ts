@@ -9,6 +9,9 @@ export interface Subject {
   abbreviation?: string;
   class_id: string;
   school_id: string;
+  coefficient?: number;
+  hours_per_week?: number;
+  color?: string;
   created_at?: string;
   updated_at?: string;
 }
@@ -17,6 +20,9 @@ export interface CreateSubjectData {
   name: string;
   abbreviation?: string;
   class_id: string;
+  coefficient?: number;
+  hours_per_week?: number;
+  color?: string;
 }
 
 export const useSubjects = (classId?: string) => {
@@ -34,6 +40,7 @@ export const useSubjects = (classId?: string) => {
 
     try {
       setLoading(true);
+      
       const query = supabase
         .from('subjects')
         .select('*')
@@ -45,12 +52,21 @@ export const useSubjects = (classId?: string) => {
 
       const { data, error } = await query.order('name');
 
-      if (error) throw error;
+      if (error) {
+        // Si la table n'existe pas, retourner un tableau vide
+        if (error.code === 'PGRST116' || error.message.includes('relation "subjects" does not exist')) {
+          setSubjects([]);
+          return;
+        }
+        throw error;
+      }
       
       setSubjects(data || []);
     } catch (err) {
       console.error('Erreur lors de la récupération des matières:', err);
-      setError(err instanceof Error ? err.message : 'Erreur inconnue');
+      setError(err instanceof Error ? err.message : 'Erreur lors de la récupération des matières');
+      // En cas d'erreur, retourner un tableau vide pour éviter de casser l'interface
+      setSubjects([]);
     } finally {
       setLoading(false);
     }
@@ -64,12 +80,19 @@ export const useSubjects = (classId?: string) => {
         .from('subjects')
         .insert({
           name: subjectData.name,
-          abbreviation: subjectData.abbreviation,
+          abbreviation: subjectData.abbreviation || '',
+          code: subjectData.abbreviation || subjectData.name.substring(0, 3).toUpperCase(),
           class_id: subjectData.class_id,
-          school_id: userProfile.schoolId
+          school_id: userProfile.schoolId,
+          coefficient: subjectData.coefficient || 1,
+          hours_per_week: subjectData.hours_per_week || 1,
+          color: subjectData.color || '#3B82F6'
         });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erreur lors de la création de la matière:', error);
+        throw error;
+      }
 
       await fetchSubjects();
 
@@ -79,11 +102,24 @@ export const useSubjects = (classId?: string) => {
       });
 
       return true;
-    } catch (err) {
+    } catch (err: any) {
       console.error('Erreur lors de la création de la matière:', err);
+      
+      let errorMessage = "Une erreur est survenue lors de la création de la matière.";
+      
+      if (err?.code === '23505') {
+        errorMessage = "Cette matière existe déjà dans cette classe.";
+      } else if (err?.code === '23503') {
+        errorMessage = "Classe ou école introuvable.";
+      } else if (err?.code === '23502') {
+        errorMessage = "Données manquantes pour créer la matière.";
+      } else if (err?.message) {
+        errorMessage = err.message;
+      }
+      
       toast({
         title: "Erreur lors de la création",
-        description: err instanceof Error ? err.message : "Une erreur est survenue lors de la création de la matière.",
+        description: errorMessage,
         variant: "destructive",
       });
       return false;
@@ -94,9 +130,15 @@ export const useSubjects = (classId?: string) => {
     if (!userProfile?.schoolId) return false;
 
     try {
+      // Préparer les données de mise à jour avec le code
+      const updateData = {
+        ...subjectData,
+        code: subjectData.abbreviation || (subjectData.name ? subjectData.name.substring(0, 3).toUpperCase() : undefined)
+      };
+
       const { error } = await supabase
         .from('subjects')
-        .update(subjectData)
+        .update(updateData)
         .eq('id', id)
         .eq('school_id', userProfile.schoolId);
 
