@@ -81,7 +81,7 @@ export const useResults = () => {
     };
   };
   
-  const getExamResults = (classId: string) => {
+  const getExamResults = (classId: string, examId?: string) => {
     return {
       class_id: classId,
       class_level: '',
@@ -90,7 +90,9 @@ export const useResults = () => {
       students: [],
       subjects: [],
       exam_title: '',
-      exam_date: ''
+      exam_date: '',
+      exams: [],
+      exam_id: examId
     };
   };
 

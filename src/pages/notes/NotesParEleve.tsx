@@ -202,7 +202,12 @@ export default function NotesParEleve() {
         abbreviation: subject.abbreviation || subject.name.substring(0, 3).toUpperCase(),
         moyenne: (subject.hours_per_week || 20).toString()
       }));
-      setMatieres(matieresWithCoeff);
+      setMatieres(matieresWithCoeff.map(matiere => ({
+        ...matiere,
+        id: parseInt(matiere.id.toString()),
+        coefficient: (matiere.coefficient || 1).toString(),
+        classeId: classeId || ""
+      })));
     }
   };
   const handleNoteChange = (matiereId: number, semestre: "semestre1" | "semestre2", type: "devoir" | "composition", value: string) => {
@@ -225,7 +230,7 @@ export default function NotesParEleve() {
 
     // Utiliser le système de synchronisation centralisé
     const updates: Partial<UnifiedNote> = {
-      coefficient: matiere?.coefficient || 1,
+      coefficient: Number(matiere?.coefficient) || 1,
       [type]: value
     };
     updateNote(selectedEleve.id, matiereId.toString(), updates);
@@ -251,7 +256,7 @@ export default function NotesParEleve() {
 
     // Utiliser le système de synchronisation centralisé
     const updates: Partial<UnifiedNote> = {
-      coefficient: matiere?.coefficient || 1,
+      coefficient: Number(matiere?.coefficient) || 1,
       note: value
     };
     updateNote(selectedEleve.id, matiereId.toString(), updates);
