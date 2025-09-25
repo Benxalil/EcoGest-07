@@ -238,6 +238,17 @@ const saveEleveToStorage = async (eleveData: EleveFormData, photo?: string | nul
         schoolId = profile?.school_id || schoolId;
       }
 
+      // Récupérer les classes disponibles pour cette école
+      const { data: classes, error: classError } = await supabase
+        .from('classes')
+        .select('*')
+        .eq('school_id', schoolId)
+        .limit(1);
+
+      if (classError) {
+        console.error("Erreur lors de la récupération des classes:", classError);
+      }
+
       // Utiliser la première classe disponible
       const firstClassId = classes?.[0]?.id;
       
@@ -295,7 +306,6 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
   const { classes: classesData, loading: classesLoading } = useClasses();
   const { addStudent, updateStudent } = useStudents();
   const { userProfile } = useUserRole();
-  const { classes } = useClasses();
   const { uploadDocument } = useStudentDocuments();
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
