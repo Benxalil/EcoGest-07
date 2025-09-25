@@ -57,7 +57,7 @@ export default function ResultatsSemestre() {
     nom: student.last_name,
     prenom: student.first_name,
     classe: `${student.class_level} ${student.class_section}`,
-    numero: typeof student.numero === 'number' ? student.numero : 0
+    numero: student.numero
   })) : [];
   
   const matieresClasse = examData ? examData.subjects.map(subject => ({
@@ -181,25 +181,7 @@ export default function ResultatsSemestre() {
     
     try {
       const elevesWithStats = getElevesWithRank();
-      // Créer un objet classe compatible pour generateBulletinPDF
-      const classeForPDF = {
-        id: classe.id,
-        session: classe.session,
-        libelle: classe.libelle,
-        effectif: classe.effectif
-      };
-      
-      // Générer un PDF pour chaque élève
-      for (const eleve of elevesWithStats) {
-        const eleveForPDF: Student = {
-          id: eleve.id,
-          nom: eleve.nom,
-          prenom: eleve.prenom,
-          classe: eleve.classe,
-          numero: eleve.numero
-        };
-        await generateBulletinPDF(eleveForPDF, classeForPDF, getSemestreLabel());
-      }
+      await generateBulletinPDF(classe, elevesWithStats, getSemestreLabel());
     } catch (error) {
       console.error("Erreur lors de la génération du PDF:", error);
     }
@@ -269,9 +251,9 @@ export default function ResultatsSemestre() {
               Retour
             </Button>
             <div>
-              <h1 className="text-2xl font-bold">{classe.session} {classe.libelle}</h1>
+              <h1 className="text-2xl font-bold">{getSemestreLabel()}</h1>
               <p className="text-gray-600">
-                Liste des élèves pour cette classe (Nombre d'élèves : {eleves.length})
+                {classe.session} {classe.libelle} - {classe.effectif} élèves
               </p>
               {isExamView && examData && (
                 <p className="text-sm text-gray-500">
@@ -284,83 +266,78 @@ export default function ResultatsSemestre() {
           <div className="flex space-x-2">
             <Button
               variant="outline"
-              onClick={handleBulletinClasse}
-              className="flex items-center bg-orange-500 hover:bg-orange-600 text-white"
+              onClick={handleCalculRang}
+              className="flex items-center"
             >
-              <FileText className="h-4 w-4 mr-2" />
-              Bulletin du Classe
+              <Calculator className="h-4 w-4 mr-2" />
+              {showCalculatedRank ? "Masquer" : "Calculer"} Rang
             </Button>
             
             <Button
               variant="outline"
-              onClick={handleCalculRang}
-              className="flex items-center bg-blue-500 hover:bg-blue-600 text-white"
+              onClick={handleBulletinClasse}
+              className="flex items-center"
             >
-              <Calculator className="h-4 w-4 mr-2" />
-              Calcul du Rang
+              <FileText className="h-4 w-4 mr-2" />
+              Bulletin Classe
+            </Button>
+            
+            <Button
+              onClick={handleGeneratePDF}
+              className="flex items-center"
+            >
+              <Printer className="h-4 w-4 mr-2" />
+              Imprimer
             </Button>
           </div>
         </div>
 
-        {/* Tableau des résultats avec format original */}
+        {/* Tableau des résultats */}
         <div className="bg-white rounded-lg shadow">
-          {/* Barre bleue avec titre EXAMEN */}
-          <div className="bg-blue-600 text-white text-center py-3 rounded-t-lg">
-            <h2 className="text-lg font-semibold">{getSemestreLabel()}</h2>
-          </div>
-          
-          {/* Barre noire avec "Tous les bulletins" */}
-          <div className="bg-black text-white text-center py-2">
-            <span className="text-sm font-medium">Tous les bulletins</span>
-          </div>
-          
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-12">N°</TableHead>
-                <TableHead>Nom et Prénom</TableHead>
+                <TableHead className="w-12">#</TableHead>
+                {showCalculatedRank && <TableHead className="w-16">Rang</TableHead>}
+                <TableHead>Nom & Prénom</TableHead>
                 {(isExamView && examData?.exam_title.toLowerCase().includes('composition')) ? (
                   <>
-                    <TableHead className="w-32 text-center">Note</TableHead>
-                    <TableHead className="w-32 text-center">Moyenne</TableHead>
+                    <TableHead className="w-32 text-center">Total Devoir</TableHead>
+                    <TableHead className="w-32 text-center">Moy. Devoir</TableHead>
+                    <TableHead className="w-32 text-center">Total Composition</TableHead>
+                    <TableHead className="w-32 text-center">Moy. Composition</TableHead>
                   </>
                 ) : (
                   <>
-                    <TableHead className="w-32 text-center">Note</TableHead>
+                    <TableHead className="w-32 text-center">Notes</TableHead>
                     <TableHead className="w-32 text-center">Moyenne</TableHead>
                   </>
                 )}
-                <TableHead className="w-20 text-center">Action</TableHead>
-                <TableHead className="w-40 text-center">Bulletins de notes</TableHead>
+                <TableHead className="w-20 text-center">Actions</TableHead>
+                <TableHead className="w-32 text-center">Moy. Générale</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {getElevesWithRank().map((eleve, index) => {
                 const stats = getEleveStatistics(eleve.id);
-                const hasNotes = stats.notesList.length > 0;
-                const notesText = hasNotes ? stats.notesList.map(n => n.note.toFixed(2)).join(', ') : "Aucune note";
-                const moyenneText = hasNotes ? stats.moyenneGenerale.toFixed(2) : "-";
-                
                 return (
                   <TableRow key={eleve.id}>
                     <TableCell className="font-medium">{eleve.numero || index + 1}</TableCell>
+                    {showCalculatedRank && <TableCell className="font-medium">{eleve.rang}</TableCell>}
                     <TableCell className="font-medium">{eleve.prenom} {eleve.nom}</TableCell>
-                    <TableCell className="text-center">
-                      {hasNotes ? (
-                        <span className="text-gray-700">{notesText}</span>
-                      ) : (
-                        <span className="text-gray-400 italic">{notesText}</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      {hasNotes ? (
-                        <span className={getGradeColor(stats.moyenneGenerale)}>
-                          {moyenneText}
-                        </span>
-                      ) : (
-                        <span className="text-gray-400">{moyenneText}</span>
-                      )}
-                    </TableCell>
+                    {(isExamView && examData?.exam_title.toLowerCase().includes('composition')) ? (
+                      <>
+                        <TableCell className="text-center">{stats.totalNotesDevoir.toFixed(2)}</TableCell>
+                        <TableCell className="text-center">{stats.moyenneDevoir.toFixed(2)}</TableCell>
+                        <TableCell className="text-center">{stats.totalNotesComposition.toFixed(2)}</TableCell>
+                        <TableCell className="text-center">{stats.moyenneComposition.toFixed(2)}</TableCell>
+                      </>
+                    ) : (
+                      <>
+                        <TableCell className="text-center">{stats.notesList.map(n => n.note.toFixed(2)).join(', ')}</TableCell>
+                        <TableCell className="text-center">{stats.moyenneGenerale.toFixed(2)}</TableCell>
+                      </>
+                    )}
                     <TableCell className="text-center">
                       <Button
                         variant="outline"
@@ -372,14 +349,9 @@ export default function ResultatsSemestre() {
                       </Button>
                     </TableCell>
                     <TableCell className="text-center">
-                      <Button
-                        variant="default"
-                        size="sm"
-                        className="bg-green-600 hover:bg-green-700 text-white"
-                        onClick={() => handleViewDetails(eleve)}
-                      >
-                        Bulletin de notes
-                      </Button>
+                      <span className={getGradeColor(stats.moyenneGenerale)}>
+                        {stats.moyenneGenerale.toFixed(2)}
+                      </span>
                     </TableCell>
                   </TableRow>
                 );
@@ -467,9 +439,7 @@ export default function ResultatsSemestre() {
             classe={classe}
             eleves={getElevesWithRank()}
             semestre={getSemestreLabel()}
-            matieresClasse={matieresClasse}
-            schoolSystem={schoolSystem}
-            classeId={classe.id}
+            onClose={() => setShowBulletinClasse(false)}
           />
         )}
       </div>

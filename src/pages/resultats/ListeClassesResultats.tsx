@@ -9,12 +9,13 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { ChevronRight, ArrowLeft, Calendar, Book, FileText, Award, Settings } from "lucide-react";
+import { ChevronRight, ArrowLeft, Calendar, Book, FileText, Award, Settings, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { useClasses } from "@/hooks/useClasses";
 import { useSchoolData } from "@/hooks/useSchoolData";
+import { useResults } from "@/hooks/useResults";
 
 interface Examen {
   id: string;
@@ -31,6 +32,7 @@ interface Examen {
 export default function ListeClassesResultats() {
   const { classes, loading } = useClasses();
   const { schoolData: schoolSettings } = useSchoolData();
+  const { results, loading: resultsLoading } = useResults();
   const [selectedClasse, setSelectedClasse] = useState<any>(null);
   const [classExamens, setClassExamens] = useState<Examen[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -70,16 +72,38 @@ export default function ListeClassesResultats() {
     }
   }, [schoolSettings]);
 
+  // Recharger les examens quand les résultats changent
+  useEffect(() => {
+    if (selectedClasse && results.length > 0) {
+      loadExamensForClasse(selectedClasse.id);
+    }
+  }, [results, selectedClasse]);
+
   const loadExamensForClasse = (classeId: string) => {
     try {
-      // Remplacé par hook Supabase
-      if (savedExamens) {
-        const examens = JSON.parse(savedExamens);
-        // Filtrer les examens qui concernent cette classe
-        const examensClasse = examens.filter((examen: Examen) => 
-          examen.classes.includes(classeId)
-        );
-        setClassExamens(examensClasse); } else {
+      console.log('loadExamensForClasse: Chargement des examens pour la classe:', classeId);
+      
+      // Utiliser les données du hook useResults
+      const classData = results.find(c => c.class_id === classeId);
+      
+      if (classData && classData.exams) {
+        // Convertir les examens du hook vers le format attendu
+        const examensClasse: Examen[] = classData.exams.map(exam => ({
+          id: exam.exam_id,
+          titre: exam.exam_title,
+          type: exam.exam_title.toLowerCase().includes('composition') ? 'Composition' : 'Examen',
+          semestre: 'semestre1', // Par défaut, on peut l'adapter selon les besoins
+          anneeAcademique: new Date().getFullYear().toString(),
+          dateExamen: exam.exam_date,
+          classes: [classeId],
+          dateCreation: new Date().toISOString(),
+          statut: 'actif'
+        }));
+        
+        console.log('loadExamensForClasse: Examens trouvés:', examensClasse.length);
+        setClassExamens(examensClasse);
+      } else {
+        console.log('loadExamensForClasse: Aucun examen trouvé pour cette classe');
         setClassExamens([]);
       }
     } catch (error) {
@@ -270,7 +294,15 @@ export default function ListeClassesResultats() {
                   </DialogTitle>
                 </DialogHeader>
                 <div className="py-4">
-                  {classExamens.length === 0 ? (
+                  {resultsLoading ? (
+                    <div className="text-center py-8">
+                      <Loader2 className="h-8 w-8 animate-spin text-blue-500 mx-auto mb-4" />
+                      <p className="text-gray-500 text-lg mb-2">Chargement des examens...</p>
+                      <p className="text-gray-400 text-sm">
+                        Récupération des examens disponibles pour cette classe
+                      </p>
+                    </div>
+                  ) : classExamens.length === 0 ? (
                     <div className="text-center py-8">
                       <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                       <p className="text-gray-500 text-lg mb-2">Aucun examen créé pour cette classe</p>
@@ -289,6 +321,18 @@ export default function ListeClassesResultats() {
                     </div>
                   ) : (
                     <div className="space-y-3 max-h-96 overflow-y-auto">
+                      <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                        <div className="flex items-center gap-2 text-blue-700">
+                          <Book className="h-4 w-4" />
+                          <span className="font-medium text-sm">
+                            {classExamens.length} examen{classExamens.length > 1 ? 's' : ''} disponible{classExamens.length > 1 ? 's' : ''}
+                          </span>
+                        </div>
+                        <p className="text-blue-600 text-xs mt-1">
+                          Cliquez sur un examen pour consulter les résultats des élèves
+                        </p>
+                      </div>
+                      
                       {classExamens.map((examen) => (
                         <div key={examen.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
                           <div className="flex items-start justify-between">
@@ -308,6 +352,9 @@ export default function ListeClassesResultats() {
                                   </div>
                                   <span className="text-gray-400">•</span>
                                   <span>{examen.anneeAcademique}</span>
+                                </div>
+                                <div className="mt-2 text-xs text-gray-500">
+                                  Cliquez sur "Consulter" pour voir les notes des élèves
                                 </div>
                               </div>
                             </div>

@@ -12,6 +12,7 @@ import { useStudents } from "@/hooks/useStudents";
 import { useSubjects } from "@/hooks/useSubjects";
 import { useGrades } from "@/hooks/useGrades";
 import { useExams } from "@/hooks/useExams";
+import { useNotesSync } from "@/hooks/useNotesSync";
 
 interface Student {
   id: string;
@@ -55,6 +56,7 @@ export default function ConsulterNotes() {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentExam, setCurrentExam] = useState<any>(null);
   const [isComposition, setIsComposition] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
@@ -67,8 +69,25 @@ export default function ConsulterNotes() {
   const { classes, loading: classesLoading } = useClasses();
   const { students, loading: studentsLoading } = useStudents();
   const { subjects, loading: subjectsLoading } = useSubjects(classeId || '');
-  const { grades, upsertGrade, getGradeForStudent, refetch: refetchGrades } = useGrades();
+  const { grades, upsertGrade, getGradeForStudent, refetch: refetchGrades } = useGrades(undefined, matiereId || undefined, examId || undefined);
+  
+  // Hook de synchronisation des notes
+  const {
+    localNotes,
+    hasUnsavedChanges: syncHasUnsavedChanges,
+    getNote,
+    getNotesForStudent,
+    updateNote,
+    saveAllNotes: syncSaveAllNotes,
+    refreshNotes
+  } = useNotesSync({
+    classeId: classeId || undefined,
+    matiereId: matiereId || undefined,
+    examId: examId || undefined,
+    isComposition: isComposition
+  });
   const { exams, loading: examsLoading } = useExams();
+  
 
   useEffect(() => {
     if (classeId && classes.length > 0) {
@@ -105,22 +124,28 @@ export default function ConsulterNotes() {
 
   // Détecter le type d'examen si un examId est fourni
   useEffect(() => {
+    console.log('ConsulterNotes: Détection du type d\'examen', { examId, examsCount: exams.length, classeId });
+    
     if (examId && exams.length > 0) {
       const examFound = exams.find(e => e.id === examId);
+      console.log('ConsulterNotes: Examen trouvé:', examFound);
+      
       if (examFound) {
         setCurrentExam(examFound);
-        setIsComposition(examFound.title === "Composition");
+        // Détecter si c'est une composition basée sur le nom de l'examen
+        const isCompositionExam = examFound.title.toLowerCase().includes('composition') || 
+                                 examFound.title.toLowerCase().includes('première composition') ||
+                                 examFound.title.toLowerCase().includes('deuxième composition');
+        setIsComposition(isCompositionExam);
+        console.log('ConsulterNotes: Détection d\'examen spécifique:', examFound.title, 'isComposition:', isCompositionExam);
+      } else {
+        console.log('ConsulterNotes: Examen non trouvé avec ID:', examId);
+        setIsComposition(false);
       }
     } else {
-      // Si pas d'examen spécifique, vérifier s'il y a un examen de type Composition pour cette classe/matière
-      const compositionExam = exams.find(e => 
-        e.title === "Composition" && 
-        e.class_id === classeId
-      );
-      if (compositionExam) {
-        setCurrentExam(compositionExam);
-        setIsComposition(true);
-      }
+      // Si pas d'examen spécifique, mode examen simple par défaut
+      setIsComposition(false);
+      console.log('ConsulterNotes: Aucun examen spécifique, mode examen simple par défaut');
     }
   }, [examId, exams, classeId]);
 
@@ -136,59 +161,76 @@ export default function ConsulterNotes() {
           classe: classe?.libelle || ''
         }));
       setEleves(elevesForClasse);
-      
-      // Charger les notes depuis la base de données
+    }
+  }, [classeId, students, classe]);
+
+  // Charger les notes quand les données nécessaires sont disponibles
+  useEffect(() => {
+    if (matiere && eleves.length > 0) {
       loadNotesFromDatabase();
     }
-  }, [classeId, students, classe, grades]);
+  }, [matiere, eleves, isComposition, localNotes]);
 
   const loadNotesFromDatabase = () => {
-    if (!matiere) return;
-    
+    if (!matiere || !eleves.length) {
+      console.log('loadNotesFromDatabase: Données manquantes', {
+        matiere: !!matiere,
+        eleves: eleves.length
+      });
+      return;
+    }
+
+    console.log('loadNotesFromDatabase: Chargement des notes depuis la synchronisation', {
+      matiere: matiere.nom,
+      matiereId: matiere.id,
+      elevesCount: eleves.length,
+      localNotesCount: localNotes.length,
+      isComposition,
+      examId
+    });
+
+    // Si c'est un nouvel examen (pas d'exam_id), créer des notes vides
+    if (!examId) {
+      console.log('loadNotesFromDatabase: Nouvel examen détecté, création de notes vides');
+      const emptyNotes: Note[] = eleves.map(eleve => ({
+        eleveId: eleve.id,
+        matiereId: matiere.id,
+        note: '',
+        coefficient: matiere.coefficient || 1,
+        devoir: isComposition ? '' : undefined,
+        composition: isComposition ? '' : undefined
+      }));
+      
+      console.log('loadNotesFromDatabase: Notes vides créées:', emptyNotes);
+      setNotes(emptyNotes);
+      return;
+    }
+
+    // Utiliser le système de synchronisation pour les examens existants
+    const notesFromSync = localNotes.filter(note => note.matiereId === matiere.id);
+    console.log('loadNotesFromDatabase: Notes depuis la synchronisation:', notesFromSync);
+
     const notesFromDB: Note[] = [];
     
     eleves.forEach(eleve => {
-      // Récupérer toutes les notes pour cet élève et cette matière
-      const studentGrades = grades.filter(g => 
-        g.student_id === eleve.id && 
-        g.subject_id === matiere.id
-      );
+      // Chercher la note dans les données synchronisées
+      const syncNote = notesFromSync.find(n => n.eleveId === eleve.id);
       
-      if (studentGrades.length > 0) {
-        const note: Note = {
-          eleveId: eleve.id,
-          matiereId: matiere.id,
-          note: '',
-          coefficient: matiere.coefficient || 1
-        };
-        
-        if (isComposition) {
-          // Pour les compositions, séparer devoir et composition
-          const devoirGrade = studentGrades.find(g => g.exam_type === 'devoir');
-          const compositionGrade = studentGrades.find(g => g.exam_type === 'composition');
-          
-          note.devoir = devoirGrade ? devoirGrade.grade_value.toString() : '';
-          note.composition = compositionGrade ? compositionGrade.grade_value.toString() : '';
-        } else {
-          // Pour les autres examens, note simple
-          const simpleGrade = studentGrades.find(g => !g.exam_type || g.exam_type === 'examen');
-          note.note = simpleGrade ? simpleGrade.grade_value.toString() : '';
-        }
-        
-        notesFromDB.push(note);
-      } else {
-        // Aucune note existante, créer une entrée vide
-        notesFromDB.push({
-          eleveId: eleve.id,
-          matiereId: matiere.id,
-          note: '',
-          coefficient: matiere.coefficient || 1,
-          devoir: isComposition ? '' : undefined,
-          composition: isComposition ? '' : undefined
-        });
-      }
+      // Créer une note pour cet élève (vide ou avec les données existantes)
+      const note: Note = {
+        eleveId: eleve.id,
+        matiereId: matiere.id,
+        note: syncNote?.note || '',
+        coefficient: matiere.coefficient || 1,
+        devoir: isComposition ? (syncNote?.devoir || '') : undefined,
+        composition: isComposition ? (syncNote?.composition || '') : undefined
+      };
+      
+      console.log(`loadNotesFromDatabase: Note pour ${eleve.prenom} ${eleve.nom}:`, note);
+      notesFromDB.push(note);
     });
     
+    console.log('loadNotesFromDatabase: Notes finales chargées:', notesFromDB);
     setNotes(notesFromDB);
   };
 
@@ -206,12 +248,15 @@ export default function ConsulterNotes() {
       }
     }
 
-    // Mettre à jour seulement l'état local (pas de sauvegarde automatique)
+    // Utiliser le système de synchronisation
+    const updates: any = { [type]: value };
+    updateNote(eleveId, matiere?.id || '', updates);
+
+    // Mettre à jour l'état local pour l'affichage immédiat
     setNotes(prevNotes => {
       const existingNoteIndex = prevNotes.findIndex(note => note.eleveId === eleveId);
       
       if (existingNoteIndex >= 0) {
-        // Mettre à jour la note existante
         const updatedNotes = [...prevNotes];
         if (type === 'note') {
           updatedNotes[existingNoteIndex] = {
@@ -226,15 +271,14 @@ export default function ConsulterNotes() {
             coefficient: matiere?.coefficient || 1
           };
         } else if (type === 'composition') {
-        updatedNotes[existingNoteIndex] = {
-          ...updatedNotes[existingNoteIndex],
+          updatedNotes[existingNoteIndex] = {
+            ...updatedNotes[existingNoteIndex],
             composition: value,
             coefficient: matiere?.coefficient || 1
-        };
+          };
         }
         return updatedNotes;
       } else {
-        // Créer une nouvelle note
         const newNote: Note = {
           eleveId,
           matiereId: matiereId || '',
@@ -250,62 +294,17 @@ export default function ConsulterNotes() {
 
   const handleSaveNotes = async () => {
     if (!matiere) {
-        toast({
+      toast({
         title: "Erreur",
         description: "Aucune matière sélectionnée.",
-          variant: "destructive",
-        });
-        return;
-      }
+        variant: "destructive",
+      });
+      return;
+    }
 
     try {
-      // Sauvegarder toutes les notes dans la base de données
-      const savePromises = notes.map(async (note) => {
-        if (isComposition) {
-          // Pour les compositions, sauvegarder devoir et composition séparément
-          const promises = [];
-          
-          if (note.devoir && note.devoir !== '') {
-            promises.push(upsertGrade({
-              student_id: note.eleveId,
-              subject_id: note.matiereId,
-              grade_value: parseFloat(note.devoir),
-              max_grade: matiere.maxScore,
-              coefficient: note.coefficient,
-              exam_type: 'devoir',
-              semester: 'semestre1'
-            }));
-          }
-          
-          if (note.composition && note.composition !== '') {
-            promises.push(upsertGrade({
-              student_id: note.eleveId,
-              subject_id: note.matiereId,
-              grade_value: parseFloat(note.composition),
-              max_grade: matiere.maxScore,
-              coefficient: note.coefficient,
-              exam_type: 'composition',
-              semester: 'semestre1'
-            }));
-          }
-          
-          return Promise.all(promises);
-      } else {
-          // Pour les autres examens, sauvegarder la note simple
-          if (note.note && note.note !== '') {
-            return upsertGrade({
-              student_id: note.eleveId,
-              subject_id: note.matiereId,
-              grade_value: parseFloat(note.note),
-              max_grade: matiere.maxScore,
-              coefficient: note.coefficient,
-              exam_type: 'examen'
-            });
-          }
-        }
-      });
-
-      await Promise.all(savePromises);
+      // Utiliser le système de synchronisation pour sauvegarder
+      await syncSaveAllNotes();
 
       toast({
         title: "Notes sauvegardées",
@@ -313,6 +312,7 @@ export default function ConsulterNotes() {
       });
 
       setIsEditMode(false);
+      setHasUnsavedChanges(false);
       
       // Recharger les notes depuis la base de données
       await refetchGrades();
@@ -468,6 +468,7 @@ export default function ConsulterNotes() {
                 variant="default"
                 size="sm"
                 className="bg-green-600 hover:bg-green-700"
+                disabled={!syncHasUnsavedChanges}
               >
               <Save className="h-4 w-4 mr-2" />
                 Sauvegarder
@@ -485,18 +486,12 @@ export default function ConsulterNotes() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
               <div>
                 <span className="font-medium">Classe:</span> {classe.libelle}
               </div>
               <div>
                 <span className="font-medium">Effectif:</span> {classe.effectif} élèves
-              </div>
-              <div>
-                <span className="font-medium">Coefficient:</span> {matiere.coefficient}
-              </div>
-              <div>
-                <span className="font-medium">Barème:</span> /{matiere.maxScore}
               </div>
             </div>
           </CardContent>
@@ -519,8 +514,12 @@ export default function ConsulterNotes() {
         <Card>
           <CardHeader>
             <CardTitle>
-              {isComposition ? 'Saisie des Notes - Composition' : 'Notes des élèves'}
+              {currentExam ? `Saisie des Notes - ${currentExam.title}` : (isComposition ? 'Saisie des Notes - Composition' : 'Notes des élèves')}
             </CardTitle>
+            {/* Debug info */}
+            <div className="text-xs text-gray-500 mt-2">
+              Debug: isComposition = {isComposition.toString()}, currentExam = {currentExam ? currentExam.title : 'null'}, examId = {examId || 'null'}
+            </div>
             {isComposition && (
               <p className="text-sm text-muted-foreground">
                 Saisissez les notes de chaque élève pour la matière {matiere?.nom} (sur {matiere?.maxScore || 20}). 
@@ -536,25 +535,17 @@ export default function ConsulterNotes() {
                   <TableHead>Nom & Prénom</TableHead>
                   {isComposition ? (
                     <>
-                      <TableHead className="w-32">1er Semestre</TableHead>
-                      <TableHead className="w-20">Coeff.</TableHead>
+                      <TableHead className="w-32 text-center">Devoir</TableHead>
+                      <TableHead className="w-32 text-center">Composition</TableHead>
+                      <TableHead className="w-20 text-center">Coeff.</TableHead>
                     </>
                   ) : (
                     <>
-                      <TableHead className="w-32">Note</TableHead>
-                      <TableHead className="w-20">Coeff.</TableHead>
+                      <TableHead className="w-32 text-center">{currentExam ? currentExam.title : 'Note'}</TableHead>
+                      <TableHead className="w-20 text-center">Coeff.</TableHead>
                     </>
                 )}
               </TableRow>
-                {isComposition && (
-                <TableRow>
-                  <TableHead></TableHead>
-                  <TableHead></TableHead>
-                    <TableHead className="text-center text-sm font-medium">Devoir</TableHead>
-                    <TableHead className="text-center text-sm font-medium">Composition</TableHead>
-                    <TableHead></TableHead>
-                </TableRow>
-              )}
             </TableHeader>
             <TableBody>
                 {elevesFiltered.map((eleve, index) => {
@@ -569,44 +560,44 @@ export default function ConsulterNotes() {
                       </TableCell>
                       {isComposition ? (
                       <>
-                        <TableCell>
-                            <div className="flex gap-2">
-                              {isEditMode ? (
-                                <Input
-                                  type="number"
-                                  min="0"
-                                  max={matiere?.maxScore || 20}
-                                  step="0.25"
-                                  value={note?.devoir || ''}
-                                  onChange={(e) => handleNoteChange(eleve.id, e.target.value, 'devoir')}
-                            className="w-full"
-                                  placeholder={`Note/${matiere?.maxScore || 20}`}
-                                />
-                              ) : (
-                                <span className={note?.devoir ? 'font-medium' : 'text-gray-400'}>
-                                  {note?.devoir ? `${note.devoir}/${matiere?.maxScore || 20}` : 'Non noté'}
-                                </span>
-                              )}
-                              {isEditMode ? (
-                                <Input
-                                  type="number"
-                                  min="0"
-                                  max={matiere?.maxScore || 20}
-                                  step="0.25"
-                                  value={note?.composition || ''}
-                                  onChange={(e) => handleNoteChange(eleve.id, e.target.value, 'composition')}
-                            className="w-full"
-                                  placeholder={`Note/${matiere?.maxScore || 20}`}
-                                />
-                              ) : (
-                                <span className={note?.composition ? 'font-medium' : 'text-gray-400'}>
-                                  {note?.composition ? `${note.composition}/${matiere?.maxScore || 20}` : 'Non noté'}
-                                </span>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-center">
-                            {matiere?.coefficient || 1}
+                        <TableCell className="text-center">
+                          {isEditMode ? (
+                            <Input
+                              type="number"
+                              min="0"
+                              max={matiere?.maxScore || 20}
+                              step="0.25"
+                              value={note?.devoir || ''}
+                              onChange={(e) => handleNoteChange(eleve.id, e.target.value, 'devoir')}
+                              className="w-full text-center"
+                              placeholder={`Note/${matiere?.maxScore || 20}`}
+                            />
+                          ) : (
+                            <span className={note?.devoir ? 'font-medium' : 'text-gray-400'}>
+                              {note?.devoir ? `${note.devoir}/${matiere?.maxScore || 20}` : 'Non noté'}
+                            </span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {isEditMode ? (
+                            <Input
+                              type="number"
+                              min="0"
+                              max={matiere?.maxScore || 20}
+                              step="0.25"
+                              value={note?.composition || ''}
+                              onChange={(e) => handleNoteChange(eleve.id, e.target.value, 'composition')}
+                              className="w-full text-center"
+                              placeholder={`Note/${matiere?.maxScore || 20}`}
+                            />
+                          ) : (
+                            <span className={note?.composition ? 'font-medium' : 'text-gray-400'}>
+                              {note?.composition ? `${note.composition}/${matiere?.maxScore || 20}` : 'Non noté'}
+                            </span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {matiere?.coefficient || 1}
                         </TableCell>
                       </>
                     ) : (

@@ -15,6 +15,7 @@ import { useSubjects } from "@/hooks/useSubjects";
 import { useClasses } from "@/hooks/useClasses";
 import { useStudents } from "@/hooks/useStudents";
 import { useGrades } from "@/hooks/useGrades";
+import { useNotesSync } from "@/hooks/useNotesSync";
 interface Student {
   id: string;
   nom: string;
@@ -55,6 +56,7 @@ export default function NotesParEleve() {
   }>({});
   const [selectedSemestre, setSelectedSemestre] = useState<"semestre1" | "semestre2">("semestre1");
   const [isEditMode, setIsEditMode] = useState<boolean>(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false);
   const [semesterAverage, setSemesterAverage] = useState<number>(0);
   const [examInfo, setExamInfo] = useState<{
     type: string;
@@ -75,7 +77,22 @@ export default function NotesParEleve() {
   const { classes, loading: classesLoading } = useClasses();
   const { students, loading: studentsLoading } = useStudents();
   const { subjects, loading: subjectsLoading } = useSubjects(classeId || '');
-  const { grades, upsertGrade, getGradeForStudent, refetch: refetchGrades } = useGrades();
+  const { grades, upsertGrade, getGradeForStudent, getGradesForStudent, refetch: refetchGrades } = useGrades(selectedEleve?.id, undefined, undefined);
+  
+  // Hook de synchronisation des notes
+  const {
+    localNotes,
+    hasUnsavedChanges: syncHasUnsavedChanges,
+    getNote,
+    getNotesForStudent,
+    updateNote,
+    saveAllNotes: syncSaveAllNotes,
+    refreshNotes
+  } = useNotesSync({
+    classeId: classeId || undefined,
+    studentId: selectedEleve?.id,
+    isComposition: examInfo?.type === 'Composition'
+  });
   useEffect(() => {
     loadData();
     loadExamInfo();
@@ -92,9 +109,17 @@ export default function NotesParEleve() {
       const savedExamInfo = sessionStorage.getItem('current_examen_notes');
       if (savedExamInfo) {
         const examData = JSON.parse(savedExamInfo);
+        const examTitle = examData.examTitle || examData.titre || 'Examen';
+        const examType = examData.examType || examData.type || 'Composition';
+        
+        // Détecter si c'est une composition basée sur le titre
+        const isCompositionExam = examTitle.toLowerCase().includes('composition') || 
+                                 examTitle.toLowerCase().includes('première composition') ||
+                                 examTitle.toLowerCase().includes('deuxième composition');
+        
         setExamInfo({
-          type: examData.examType || examData.type || 'Composition',
-          titre: examData.examTitle || examData.titre || 'Examen'
+          type: isCompositionExam ? 'Composition' : 'Examen',
+          titre: examTitle
         });
       }
     } catch (error) {
@@ -174,7 +199,7 @@ export default function NotesParEleve() {
       const cid = getCurrentClasseIdForSelectedEleve();
       loadNotesForEleve(selectedEleve.id, cid);
     }
-  }, [selectedEleve, matieres]);
+  }, [selectedEleve, matieres, grades]);
   // Fonction utilitaire pour mapper les classes du hook vers le format attendu
   const getClassesData = (): Classe[] => {
     if (classes && classes.length > 0) {
@@ -215,57 +240,21 @@ export default function NotesParEleve() {
     }
   };
   const loadNotesForEleve = async (eleveId: string, classeIdForKey: string) => {
+    console.log('loadNotesForEleve: Début du chargement pour élève', eleveId, 'classe', classeIdForKey);
+    console.log('loadNotesForEleve: Grades disponibles:', grades);
+    
     const allNotes: {
       [key: string]: EleveNote[];
     } = {};
 
-    // Charger les notes depuis la base de données
-    const studentGrades = getGradesForStudent(eleveId);
+    // La synchronisation gère déjà le chargement des notes
+    // On n'a plus besoin de logique complexe ici
+    console.log('loadNotesForEleve: Notes chargées via synchronisation, localNotes:', localNotes);
     
-    // Grouper les notes par matière
-    const notesBySubject: { [subjectId: string]: EleveNote } = {};
-    
-    studentGrades.forEach(grade => {
-      const subjectId = grade.subject_id;
-      if (!notesBySubject[subjectId]) {
-        notesBySubject[subjectId] = {
-          eleveId: grade.student_id,
-          matiereId: parseInt(subjectId),
-          semestre1: { devoir: "", composition: "" },
-          semestre2: { devoir: "", composition: "" },
-          note: ""
-        };
-      }
-      
-      // Remplir les notes selon le type
-      if (grade.semester && grade.exam_type) {
-        if (grade.semester === 'semestre1') {
-          if (grade.exam_type === 'devoir') {
-            notesBySubject[subjectId].semestre1.devoir = grade.grade_value.toString();
-          } else if (grade.exam_type === 'composition') {
-            notesBySubject[subjectId].semestre1.composition = grade.grade_value.toString();
-          }
-        } else if (grade.semester === 'semestre2') {
-          if (grade.exam_type === 'devoir') {
-            notesBySubject[subjectId].semestre2.devoir = grade.grade_value.toString();
-          } else if (grade.exam_type === 'composition') {
-            notesBySubject[subjectId].semestre2.composition = grade.grade_value.toString();
-          }
-        }
-      } else {
-        // Note simple (sans semestre)
-        notesBySubject[subjectId].note = grade.grade_value.toString();
-      }
-    });
-    
-    // Convertir en format attendu
-    const notesKey = `notes_${classeIdForKey}_${eleveId}`;
-    allNotes[notesKey] = Object.values(notesBySubject);
-    
-    console.log('Loaded notes from database for student', eleveId, ':', allNotes[notesKey]);
-    setNotes(allNotes);
+    // Réinitialiser l'état des changements non sauvegardés
+    setHasUnsavedChanges(false);
   };
-  const handleNoteChange = async (matiereId: number, semestre: "semestre1" | "semestre2", type: "devoir" | "composition", value: string) => {
+  const handleNoteChange = (matiereId: number, semestre: "semestre1" | "semestre2", type: "devoir" | "composition", value: string) => {
     if (!selectedEleve) return;
 
     // Validate input if matiere is available
@@ -284,32 +273,18 @@ export default function NotesParEleve() {
       }
     }
 
-    // Sauvegarder dans la base de données
-    if (value !== "" && matiere) {
-      const examInfo = sessionStorage.getItem('current_examen_notes');
-      let examId = undefined;
-      let examType = type;
-      
-      if (examInfo) {
-        try {
-          const examData = JSON.parse(examInfo);
-          examId = examData.activiteId;
-        } catch (error) {
-          console.error('Error parsing exam info:', error);
-        }
-      }
-
-      await upsertGrade({
-        student_id: selectedEleve.id,
-        subject_id: matiereId.toString(),
-        exam_id: examId,
-        grade_value: parseFloat(value) || 0,
-        max_grade: parseMaxScoreFromMoyenne(matiere.moyenne),
-        coefficient: matiere.coefficient,
-        semester: semestre,
-        exam_type: examType
-      });
+    // Mettre à jour via la synchronisation
+    const updates: any = { coefficient: matiere?.coefficient || 1 };
+    
+    if (type === 'devoir') {
+      updates.devoir = value;
+    } else if (type === 'composition') {
+      updates.composition = value;
     }
+
+    updateNote(selectedEleve.id, matiereId.toString(), updates);
+
+    // Mettre à jour aussi l'état local pour l'affichage immédiat
     
     const classeIdForKey = getCurrentClasseIdForSelectedEleve();
     
@@ -366,10 +341,13 @@ export default function NotesParEleve() {
 
     // Recalculate average
     calculateAndUpdateAverage();
+    
+    // Marquer qu'il y a des changements non sauvegardés
+    setHasUnsavedChanges(true);
   };
 
   // Handle single note change for non-composition exams
-  const handleSingleNoteChange = async (matiereId: number, value: string) => {
+  const handleSingleNoteChange = (matiereId: number, value: string) => {
     if (!selectedEleve) return;
 
     // Validate input if matiere is available
@@ -388,32 +366,15 @@ export default function NotesParEleve() {
       }
     }
 
-    // Sauvegarder dans la base de données
-    if (value !== "" && matiere) {
-      const examInfo = sessionStorage.getItem('current_examen_notes');
-      let examId = undefined;
-      let examType = 'examen';
-      
-      if (examInfo) {
-        try {
-          const examData = JSON.parse(examInfo);
-          examId = examData.activiteId;
-          examType = examData.type || 'examen';
-        } catch (error) {
-          console.error('Error parsing exam info:', error);
-        }
-      }
+    // Mettre à jour via la synchronisation
+    const updates: any = { 
+      coefficient: matiere?.coefficient || 1,
+      note: value
+    };
 
-      await upsertGrade({
-        student_id: selectedEleve.id,
-        subject_id: matiereId.toString(),
-        exam_id: examId,
-        grade_value: parseFloat(value) || 0,
-        max_grade: parseMaxScoreFromMoyenne(matiere.moyenne),
-        coefficient: matiere.coefficient,
-        exam_type: examType
-      });
-    }
+    updateNote(selectedEleve.id, matiereId.toString(), updates);
+
+    // Mettre à jour aussi l'état local pour l'affichage immédiat
     
     const classeIdForKey = getCurrentClasseIdForSelectedEleve();
     
@@ -463,6 +424,9 @@ export default function NotesParEleve() {
         [notesKey]: updatedNotes
       };
     });
+    
+    // Marquer qu'il y a des changements non sauvegardés
+    setHasUnsavedChanges(true);
   };
   const calculateAndUpdateAverage = () => {
     if (!selectedEleve || matieres.length === 0) {
@@ -533,48 +497,25 @@ export default function NotesParEleve() {
       });
     }
   };
-  const saveAllNotes = () => {
+  const saveAllNotes = async () => {
     if (!selectedEleve) return;
     
-    const classeIdForKey = getCurrentClasseIdForSelectedEleve();
-    
-    // Check if we're in exam context to use correct key pattern
-    const examInfo = sessionStorage.getItem('current_examen_notes');
-    let isExamContext = false;
-    let activiteId = '';
-    
-    if (examInfo) {
-      try {
-        const examData = JSON.parse(examInfo);
-        if (examData.activiteId) {
-          isExamContext = true;
-          activiteId = examData.activiteId;
-        }
-      } catch (error) {
-        console.error('Error parsing exam info for save all:', error);
-      }
-    }
-    
     try {
-      if (isExamContext) {
-        // Save notes for exam context (single key)
-        const notesKey = `notes_${classeIdForKey}_${activiteId}`;
-        const notesToSave = notes[notesKey] || [];
-        // Remplacé par hooks Supabase); } else {
-        // Save notes for each matiere
-        matieres.forEach(m => {
-          const notesKey = `notes_${classeIdForKey}_${m.id}`;
-          const notesToSave = notes[notesKey] || [];
-          // Remplacé par hooks Supabase);
-        });
-      }
+      // Utiliser la synchronisation pour sauvegarder
+      await syncSaveAllNotes();
       
-      toast({
-        title: "Succès",
-        description: "Toutes les notes ont été sauvegardées",
-        className: "animate-fade-in animate-scale-in"
-      });
+      // Recharger les notes depuis la base de données
+      console.log('saveAllNotes: Rechargement des notes après sauvegarde');
+      await refetchGrades();
+      
+      // Attendre un peu pour que les données soient mises à jour
+      setTimeout(() => {
+        const classeIdForKey = getCurrentClasseIdForSelectedEleve();
+        loadNotesForEleve(selectedEleve.id, classeIdForKey);
+      }, 500);
+      
     } catch (error) {
+      console.error('Erreur lors de la sauvegarde des notes:', error);
       toast({
         title: "Erreur",
         description: "Erreur lors de la sauvegarde",
@@ -600,25 +541,29 @@ export default function NotesParEleve() {
       };
     }
     
-    const classeIdForKey = getCurrentClasseIdForSelectedEleve();
+    // Utiliser la synchronisation pour récupérer la note
+    const syncNote = getNote(selectedEleve.id, matiereId.toString());
     
-    // Check if we're in exam context to use correct key pattern
-    const examInfo = sessionStorage.getItem('current_examen_notes');
-    let notesKey = `notes_${classeIdForKey}_${matiereId}`;
+    console.log('getEleveNoteForMatiere: Note synchronisée pour matière', matiereId, ':', syncNote);
+    console.log('getEleveNoteForMatiere: Type d\'examen:', examInfo?.type, 'isComposition:', examInfo?.type === 'Composition');
     
-    if (examInfo) {
-      try {
-        const examData = JSON.parse(examInfo);
-        if (examData.activiteId) {
-          notesKey = `notes_${classeIdForKey}_${examData.activiteId}`;
-        }
-      } catch (error) {
-        console.error('Error parsing exam info for get note:', error);
-      }
+    if (syncNote) {
+      return {
+        eleveId: selectedEleve.id,
+        matiereId,
+        semestre1: {
+          devoir: syncNote.devoir || "",
+          composition: syncNote.composition || ""
+        },
+        semestre2: {
+          devoir: "",
+          composition: ""
+        },
+        note: syncNote.note || ""
+      };
     }
     
-    const notesForMatiere = notes[notesKey] || [];
-    return notesForMatiere.find(note => note.eleveId === selectedEleve.id) || {
+    return {
       eleveId: selectedEleve.id,
       matiereId,
       semestre1: {
@@ -680,7 +625,13 @@ export default function NotesParEleve() {
                 <Edit3 className="h-4 w-4 mr-2" />
                 {isEditMode ? "Désactiver" : "Modifier"}
               </Button>
-              <Button onClick={saveAllNotes} size="sm" variant="default">
+              <Button 
+                onClick={saveAllNotes} 
+                size="sm" 
+                variant="default"
+                disabled={!syncHasUnsavedChanges}
+                className={syncHasUnsavedChanges ? "bg-green-600 hover:bg-green-700" : ""}
+              >
                 <Save className="h-4 w-4 mr-2" />
                 Sauvegarder toutes les notes
               </Button>

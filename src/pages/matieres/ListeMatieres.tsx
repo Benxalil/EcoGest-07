@@ -69,8 +69,8 @@ export default function ListeMatieres() {
       });
       
       if (success) {
-        setNewMatiere({ nom: "", abreviation: "", moyenne: "", coefficient: "", classeId: "" });
-        setDialogOpen(false);
+      setNewMatiere({ nom: "", abreviation: "", moyenne: "", coefficient: "", classeId: "" });
+      setDialogOpen(false);
       }
     } else {
       toast.error("Veuillez remplir tous les champs obligatoires");
@@ -96,8 +96,8 @@ export default function ListeMatieres() {
         });
         
         if (success) {
-          setEditingMatiere(null);
-          setEditDialogOpen(false);
+      setEditingMatiere(null);
+      setEditDialogOpen(false);
         }
       }
     } else {
@@ -114,7 +114,7 @@ export default function ListeMatieres() {
         if (subject) {
           const success = await deleteSubject(subject.id);
           if (success) {
-            toast.success("Matière supprimée avec succès");
+      toast.success("Matière supprimée avec succès");
           }
         }
       }
@@ -250,19 +250,19 @@ export default function ListeMatieres() {
                         </div>
                       </div>
                     </CollapsibleTrigger>
-                    
-                    <Button
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setNewMatiere({ ...newMatiere, classeId: classe.id });
-                        setDialogOpen(true);
-                      }}
-                    >
-                      <Plus className="mr-2 h-4 w-4" />
-                      Ajouter une Matière
-                    </Button>
-                  </div>
+                      
+                          <Button
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setNewMatiere({ ...newMatiere, classeId: classe.id });
+                              setDialogOpen(true);
+                            }}
+                          >
+                            <Plus className="mr-2 h-4 w-4" />
+                            Ajouter une Matière
+                          </Button>
+                    </div>
                   
                   <CollapsibleContent>
                     <div className="border-t bg-gray-50">

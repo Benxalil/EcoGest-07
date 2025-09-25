@@ -102,7 +102,7 @@ const getNextStudentNumber = async (schoolId: string): Promise<string> => {
     let nextNumber = 1;
     
     while (true) {
-      const formattedNumber = nextNumber.toString().padStart(3, '0');
+    const formattedNumber = nextNumber.toString().padStart(3, '0');
       const candidateNumber = `ELEVE${formattedNumber}`;
       
       if (!studentNumbers.includes(candidateNumber)) {
@@ -264,7 +264,7 @@ const saveEleveToStorage = async (eleveData: EleveFormData, photo?: string | nul
 
       if (error) {
         console.error("Erreur lors de la sauvegarde dans Supabase:", error); } else {
-        }
+      }
     } catch (supabaseError) {
       console.error("Erreur Supabase:", supabaseError);
       // On continue même si Supabase échoue, les données sont dans localStorage
@@ -412,23 +412,23 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
     if (isEditing || initialData || !userProfile?.schoolId) return;
     
     const generateStudentNumber = async () => {
-      const studentSettings = getStudentSettingsFromStorage();
-      
-      // Générer le matricule seulement si la génération automatique est activée
-      if (studentSettings.autoGenerateMatricule) {
+    const studentSettings = getStudentSettingsFromStorage();
+    
+    // Générer le matricule seulement si la génération automatique est activée
+    if (studentSettings.autoGenerateMatricule) {
         const nextNumber = await getNextStudentNumber(userProfile.schoolId);
-        form.setValue("numeroPerso", nextNumber);
+      form.setValue("numeroPerso", nextNumber);
+      
+      // Générer les noms d'utilisateur des parents selon les paramètres
+      const parentSettings = getParentSettingsFromStorage();
+      if (parentSettings.autoGenerateMatricule) {
+        const parentNumber = getNextParentNumber(nextNumber, 'PERE');
+        const mereNumber = getNextParentNumber(nextNumber, 'MERE');
         
-        // Générer les noms d'utilisateur des parents selon les paramètres
-        const parentSettings = getParentSettingsFromStorage();
-        if (parentSettings.autoGenerateMatricule) {
-          const parentNumber = getNextParentNumber(nextNumber, 'PERE');
-          const mereNumber = getNextParentNumber(nextNumber, 'MERE');
-          
-          form.setValue("pereNomUtilisateur", parentNumber);
-          form.setValue("mereNomUtilisateur", mereNumber);
-        }
+        form.setValue("pereNomUtilisateur", parentNumber);
+        form.setValue("mereNomUtilisateur", mereNumber);
       }
+    }
     };
 
     generateStudentNumber();
@@ -621,20 +621,20 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
     }
 
     try {
-      // Récupérer les informations de l'utilisateur et de l'école
-      const { data: user } = await supabase.auth.getUser();
-      let schoolId = '11111111-1111-1111-1111-111111111111'; // Default test school ID
-      
-      if (user.user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('school_id')
-          .eq('id', user.user.id)
-          .single();
+        // Récupérer les informations de l'utilisateur et de l'école
+        const { data: user } = await supabase.auth.getUser();
+        let schoolId = '11111111-1111-1111-1111-111111111111'; // Default test school ID
         
-        schoolId = profile?.school_id || schoolId;
-      }
-
+        if (user.user) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('school_id')
+            .eq('id', user.user.id)
+            .single();
+          
+          schoolId = profile?.school_id || schoolId;
+        }
+        
       const studentData = {
         student_number: data.numeroPerso,
         first_name: data.prenom,

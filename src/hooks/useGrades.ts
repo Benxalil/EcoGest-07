@@ -47,12 +47,22 @@ export const useGrades = (studentId?: string, subjectId?: string, examId?: strin
 
   const fetchGrades = async () => {
     if (!userProfile?.schoolId) {
+      console.log('useGrades: Pas de schoolId, arrêt du fetch');
       setLoading(false);
       return;
     }
 
     try {
       setLoading(true);
+      setError(null);
+      
+      console.log('useGrades: Début du fetch avec:', {
+        schoolId: userProfile.schoolId,
+        studentId,
+        subjectId,
+        examId
+      });
+
       let query = supabase
         .from('grades')
         .select('*')
@@ -65,17 +75,32 @@ export const useGrades = (studentId?: string, subjectId?: string, examId?: strin
       if (subjectId) {
         query = query.eq('subject_id', subjectId);
       }
-      if (examId) {
+      if (examId && examId !== 'null') {
         query = query.eq('exam_id', examId);
+      } else if (examId === 'null') {
+        query = query.is('exam_id', null);
       }
 
       const { data, error } = await query;
 
-      if (error) throw error;
+      if (error) {
+        console.error('useGrades: Erreur Supabase:', error);
+        throw error;
+      }
+      
+      console.log('useGrades: Données récupérées:', data);
       setGrades(data || []);
     } catch (err) {
-      console.error('Erreur lors de la récupération des notes:', err);
-      setError(err instanceof Error ? err.message : 'Erreur inconnue');
+      console.error('useGrades: Erreur lors de la récupération des notes:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Erreur inconnue';
+      setError(errorMessage);
+      
+      // Afficher un toast d'erreur pour l'utilisateur
+      toast({
+        title: "Erreur de chargement",
+        description: `Impossible de charger les notes: ${errorMessage}`,
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
@@ -86,19 +111,37 @@ export const useGrades = (studentId?: string, subjectId?: string, examId?: strin
   }, [userProfile?.schoolId, studentId, subjectId, examId]);
 
   const createGrade = async (gradeData: CreateGradeData) => {
-    if (!userProfile?.schoolId) return false;
+    if (!userProfile?.schoolId) {
+      console.error('useGrades: Pas de schoolId pour createGrade');
+      return false;
+    }
 
     try {
-      const { error } = await supabase
+      console.log('useGrades: Création de note avec:', gradeData);
+      
+      // Nettoyer les données avant insertion
+      const cleanGradeData = {
+        ...gradeData,
+        school_id: userProfile.schoolId,
+        created_by: userProfile.id,
+        exam_id: gradeData.exam_id && gradeData.exam_id !== 'null' ? gradeData.exam_id : null,
+        semester: gradeData.semester && gradeData.semester !== 'null' ? gradeData.semester : null,
+        exam_type: gradeData.exam_type && gradeData.exam_type !== 'null' ? gradeData.exam_type : null
+      };
+      
+      console.log('useGrades: Données nettoyées pour insertion:', cleanGradeData);
+      
+      const { data, error } = await supabase
         .from('grades')
-        .insert({
-          ...gradeData,
-          school_id: userProfile.schoolId,
-          created_by: userProfile.id
-        });
+        .insert(cleanGradeData)
+        .select();
 
-      if (error) throw error;
+      if (error) {
+        console.error('useGrades: Erreur Supabase lors de la création:', error);
+        throw error;
+      }
 
+      console.log('useGrades: Note créée avec succès:', data);
       await fetchGrades();
 
       toast({
@@ -108,7 +151,7 @@ export const useGrades = (studentId?: string, subjectId?: string, examId?: strin
 
       return true;
     } catch (err: any) {
-      console.error('Erreur lors de la création de la note:', err);
+      console.error('useGrades: Erreur lors de la création de la note:', err);
       
       let errorMessage = "Une erreur est survenue lors de l'enregistrement de la note.";
       
@@ -197,30 +240,68 @@ export const useGrades = (studentId?: string, subjectId?: string, examId?: strin
   };
 
   const upsertGrade = async (gradeData: CreateGradeData) => {
-    if (!userProfile?.schoolId) return false;
+    if (!userProfile?.schoolId) {
+      console.error('useGrades: Pas de schoolId pour upsertGrade');
+      return false;
+    }
 
     try {
+      console.log('useGrades: Upsert grade avec:', gradeData);
+
       // Chercher une note existante
-      const { data: existingGrade } = await supabase
+      let query = supabase
         .from('grades')
         .select('id')
         .eq('student_id', gradeData.student_id)
         .eq('subject_id', gradeData.subject_id)
-        .eq('school_id', userProfile.schoolId)
-        .eq('exam_id', gradeData.exam_id || null)
-        .eq('semester', gradeData.semester || null)
-        .eq('exam_type', gradeData.exam_type || null)
-        .single();
+        .eq('school_id', userProfile.schoolId);
+      
+      // Ajouter les conditions seulement si les valeurs ne sont pas null/undefined
+      if (gradeData.exam_id && gradeData.exam_id !== 'null') {
+        query = query.eq('exam_id', gradeData.exam_id);
+      } else {
+        query = query.is('exam_id', null);
+      }
+      
+      if (gradeData.semester && gradeData.semester !== 'null') {
+        query = query.eq('semester', gradeData.semester);
+      } else {
+        query = query.is('semester', null);
+      }
+      
+      if (gradeData.exam_type && gradeData.exam_type !== 'null') {
+        query = query.eq('exam_type', gradeData.exam_type);
+      } else {
+        query = query.is('exam_type', null);
+      }
+      
+      const { data: existingGrade, error: searchError } = await query.single();
+
+      if (searchError && searchError.code !== 'PGRST116') {
+        // PGRST116 = "No rows found", ce qui est normal
+        console.error('useGrades: Erreur lors de la recherche:', searchError);
+        throw searchError;
+      }
 
       if (existingGrade) {
+        console.log('useGrades: Note existante trouvée, mise à jour:', existingGrade.id);
         // Mettre à jour la note existante
         return await updateGrade(existingGrade.id, gradeData);
       } else {
+        console.log('useGrades: Aucune note existante, création d\'une nouvelle');
         // Créer une nouvelle note
         return await createGrade(gradeData);
       }
     } catch (err) {
-      console.error('Erreur lors de l\'upsert de la note:', err);
+      console.error('useGrades: Erreur lors de l\'upsert de la note:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Erreur inconnue';
+      
+      toast({
+        title: "Erreur de sauvegarde",
+        description: `Impossible de sauvegarder la note: ${errorMessage}`,
+        variant: "destructive",
+      });
+      
       return false;
     }
   };
@@ -243,6 +324,141 @@ export const useGrades = (studentId?: string, subjectId?: string, examId?: strin
     return grades.filter(grade => grade.subject_id === subjectId);
   };
 
+  const deleteGradesForExam = async (examId: string) => {
+    if (!userProfile?.schoolId) {
+      console.log('useGrades: Pas de schoolId, impossible de supprimer les notes');
+      return false;
+    }
+
+    try {
+      console.log('useGrades: Suppression des notes pour l\'examen:', examId);
+      
+      const { error } = await supabase
+        .from('grades')
+        .delete()
+        .eq('exam_id', examId)
+        .eq('school_id', userProfile.schoolId);
+
+      if (error) {
+        console.error('useGrades: Erreur lors de la suppression des notes:', error);
+        throw error;
+      }
+
+      console.log('useGrades: Notes supprimées avec succès pour l\'examen:', examId);
+      
+      // Recharger les notes après suppression
+      await fetchGrades();
+      
+      toast({
+        title: "Notes supprimées",
+        description: "Toutes les notes de cet examen ont été supprimées.",
+      });
+
+      return true;
+    } catch (err) {
+      console.error('useGrades: Erreur lors de la suppression des notes:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Erreur inconnue';
+      
+      toast({
+        title: "Erreur de suppression",
+        description: `Impossible de supprimer les notes: ${errorMessage}`,
+        variant: "destructive",
+      });
+      
+      return false;
+    }
+  };
+
+  const deleteGradesForStudent = async (studentId: string) => {
+    if (!userProfile?.schoolId) {
+      console.log('useGrades: Pas de schoolId, impossible de supprimer les notes');
+      return false;
+    }
+
+    try {
+      console.log('useGrades: Suppression des notes pour l\'élève:', studentId);
+      
+      const { error } = await supabase
+        .from('grades')
+        .delete()
+        .eq('student_id', studentId)
+        .eq('school_id', userProfile.schoolId);
+
+      if (error) {
+        console.error('useGrades: Erreur lors de la suppression des notes:', error);
+        throw error;
+      }
+
+      console.log('useGrades: Notes supprimées avec succès pour l\'élève:', studentId);
+      
+      // Recharger les notes après suppression
+      await fetchGrades();
+      
+      toast({
+        title: "Notes supprimées",
+        description: "Toutes les notes de cet élève ont été supprimées.",
+      });
+
+      return true;
+    } catch (err) {
+      console.error('useGrades: Erreur lors de la suppression des notes:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Erreur inconnue';
+      
+      toast({
+        title: "Erreur de suppression",
+        description: `Impossible de supprimer les notes: ${errorMessage}`,
+        variant: "destructive",
+      });
+      
+      return false;
+    }
+  };
+
+  const deleteGradesForSubject = async (subjectId: string) => {
+    if (!userProfile?.schoolId) {
+      console.log('useGrades: Pas de schoolId, impossible de supprimer les notes');
+      return false;
+    }
+
+    try {
+      console.log('useGrades: Suppression des notes pour la matière:', subjectId);
+      
+      const { error } = await supabase
+        .from('grades')
+        .delete()
+        .eq('subject_id', subjectId)
+        .eq('school_id', userProfile.schoolId);
+
+      if (error) {
+        console.error('useGrades: Erreur lors de la suppression des notes:', error);
+        throw error;
+      }
+
+      console.log('useGrades: Notes supprimées avec succès pour la matière:', subjectId);
+      
+      // Recharger les notes après suppression
+      await fetchGrades();
+      
+      toast({
+        title: "Notes supprimées",
+        description: "Toutes les notes de cette matière ont été supprimées.",
+      });
+
+      return true;
+    } catch (err) {
+      console.error('useGrades: Erreur lors de la suppression des notes:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Erreur inconnue';
+      
+      toast({
+        title: "Erreur de suppression",
+        description: `Impossible de supprimer les notes: ${errorMessage}`,
+        variant: "destructive",
+      });
+      
+      return false;
+    }
+  };
+
   return {
     grades,
     loading,
@@ -254,6 +470,9 @@ export const useGrades = (studentId?: string, subjectId?: string, examId?: strin
     getGradeForStudent,
     getGradesForStudent,
     getGradesForSubject,
+    deleteGradesForExam,
+    deleteGradesForStudent,
+    deleteGradesForSubject,
     refetch: fetchGrades
   };
 };

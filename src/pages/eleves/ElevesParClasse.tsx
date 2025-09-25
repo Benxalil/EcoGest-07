@@ -201,7 +201,7 @@ export default function ElevesParClasse() {
   // Trouver l'ID de la classe à partir du nom de classe
   const currentClass = useMemo(() => {
     if (!className || !classesData) return null;
-    const decodedClassName = decodeURIComponent(className);
+      const decodedClassName = decodeURIComponent(className);
     const foundClass = classesData.find(classe => 
       `${classe.name} ${classe.level}${classe.section ? ` - ${classe.section}` : ''}` === decodedClassName
     );
@@ -290,14 +290,14 @@ export default function ElevesParClasse() {
     try {
       await deleteStudent(studentId);
       toast({
-        title: "Succès",
-        description: "Élève supprimé avec succès",
-      });
-    } catch (error) {
-      console.error("Erreur lors de la suppression de l'élève:", error);
+            title: "Succès",
+            description: "Élève supprimé avec succès",
+          });
+        } catch (error) {
+          console.error("Erreur lors de la suppression de l'élève:", error);
       toast({
-        title: "Erreur",
-        description: "Erreur lors de la suppression de l'élève",
+            title: "Erreur",
+            description: "Erreur lors de la suppression de l'élève",
         variant: "destructive",
       });
     }
@@ -479,9 +479,9 @@ export default function ElevesParClasse() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
                       <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                        <span className="text-blue-600 font-semibold">
+                          <span className="text-blue-600 font-semibold">
                           {student.first_name.charAt(0)}{student.last_name.charAt(0)}
-                        </span>
+                          </span>
                       </div>
                       <div>
                         <h3 className="font-semibold text-lg">
@@ -563,19 +563,19 @@ export default function ElevesParClasse() {
                 {/* Photo et informations de base */}
                 <div className="flex items-start gap-6">
                   <div className="relative">
-                    <div className="w-32 h-32 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden">
+                  <div className="w-32 h-32 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden">
                       {studentPhoto ? (
-                        <img 
+                      <img 
                           src={studentPhoto} 
                           alt={`Photo de ${selectedStudent.first_name} ${selectedStudent.last_name}`}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="text-center text-gray-500">
-                          <Users className="h-8 w-8 mx-auto mb-2" />
-                          <p className="text-sm">Aucune photo</p>
-                        </div>
-                      )}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="text-center text-gray-500">
+                        <Users className="h-8 w-8 mx-auto mb-2" />
+                        <p className="text-sm">Aucune photo</p>
+                      </div>
+                    )}
                     </div>
                     {/* Bouton pour changer la photo */}
                     <label className="absolute bottom-1 right-1 bg-blue-600 text-white rounded-full p-1 cursor-pointer hover:bg-blue-700 transition-colors" title="Changer la photo">
