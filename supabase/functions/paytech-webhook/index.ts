@@ -177,7 +177,7 @@ const handler = async (req: Request): Promise<Response> => {
     return new Response(
       JSON.stringify({ 
         error: "Erreur lors du traitement du webhook",
-        details: error.message 
+        details: error instanceof Error ? error.message : 'Unknown error' 
       }),
       {
         status: 500,

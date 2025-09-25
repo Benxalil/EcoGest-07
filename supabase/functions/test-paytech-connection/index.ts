@@ -94,7 +94,7 @@ const handler = async (req: Request): Promise<Response> => {
         JSON.stringify({ 
           success: false, 
           error: "Impossible de se connecter à l'API PayTech",
-          details: apiError.message 
+          details: apiError instanceof Error ? apiError.message : 'Unknown API error' 
         }),
         {
           status: 500,
@@ -109,7 +109,7 @@ const handler = async (req: Request): Promise<Response> => {
       JSON.stringify({ 
         success: false, 
         error: "Erreur lors du test de connexion",
-        details: error.message 
+        details: error instanceof Error ? error.message : 'Unknown error' 
       }),
       {
         status: 500,

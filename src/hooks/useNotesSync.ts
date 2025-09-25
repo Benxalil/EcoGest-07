@@ -2,14 +2,18 @@ import { useState, useEffect, useCallback } from 'react';
 import { useGrades } from './useGrades';
 import { useToast } from './use-toast';
 
-export interface SyncNote {
+// Interface unifiée pour les notes - utilisée par les deux interfaces
+export interface UnifiedNote {
   eleveId: string;
   matiereId: string;
+  coefficient: number;
+  // Pour les examens simples
   note?: string;
+  // Pour les compositions (devoir + composition par semestre)
   devoir?: string;
   composition?: string;
-  coefficient: number;
-  examType?: 'devoir' | 'composition' | 'examen';
+  // Métadonnées
+  examType?: 'devoir' | 'composition' | 'examen' | 'controle' | 'tp';
   semester?: 'semestre1' | 'semestre2';
 }
 
@@ -22,7 +26,7 @@ interface UseNotesSyncProps {
 }
 
 export const useNotesSync = ({ classeId, matiereId, examId, studentId, isComposition }: UseNotesSyncProps) => {
-  const [localNotes, setLocalNotes] = useState<SyncNote[]>([]);
+  const [localNotes, setLocalNotes] = useState<UnifiedNote[]>([]);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const { grades, upsertGrade, refetch: refetchGrades } = useGrades(studentId, matiereId, examId);
   const { toast } = useToast();
@@ -54,10 +58,10 @@ export const useNotesSync = ({ classeId, matiereId, examId, studentId, isComposi
       return;
     }
 
-    const notesFromDB: SyncNote[] = [];
+    const notesFromDB: UnifiedNote[] = [];
     
     // Grouper les notes par élève et matière
-    const notesByStudentAndSubject: { [key: string]: SyncNote } = {};
+    const notesByStudentAndSubject: { [key: string]: UnifiedNote } = {};
     
     filteredGrades.forEach(grade => {
       const key = `${grade.student_id}_${grade.subject_id}`;
@@ -110,28 +114,28 @@ export const useNotesSync = ({ classeId, matiereId, examId, studentId, isComposi
   }, [loadNotesFromDatabase]);
 
   // Obtenir une note pour un élève et une matière spécifiques
-  const getNote = useCallback((eleveId: string, matiereId: string): SyncNote | null => {
+  const getNote = useCallback((eleveId: string, matiereId: string): UnifiedNote | null => {
     const note = localNotes.find(n => n.eleveId === eleveId && n.matiereId === matiereId);
     console.log('useNotesSync: getNote pour', eleveId, matiereId, ':', note);
     return note || null;
   }, [localNotes]);
 
   // Obtenir toutes les notes pour un élève
-  const getNotesForStudent = useCallback((eleveId: string): SyncNote[] => {
+  const getNotesForStudent = useCallback((eleveId: string): UnifiedNote[] => {
     const studentNotes = localNotes.filter(n => n.eleveId === eleveId);
     console.log('useNotesSync: getNotesForStudent pour', eleveId, ':', studentNotes);
     return studentNotes;
   }, [localNotes]);
 
   // Obtenir toutes les notes pour une matière
-  const getNotesForSubject = useCallback((matiereId: string): SyncNote[] => {
+  const getNotesForSubject = useCallback((matiereId: string): UnifiedNote[] => {
     const subjectNotes = localNotes.filter(n => n.matiereId === matiereId);
     console.log('useNotesSync: getNotesForSubject pour', matiereId, ':', subjectNotes);
     return subjectNotes;
   }, [localNotes]);
 
   // Mettre à jour une note localement
-  const updateNote = useCallback((eleveId: string, matiereId: string, updates: Partial<SyncNote>) => {
+  const updateNote = useCallback((eleveId: string, matiereId: string, updates: Partial<UnifiedNote>) => {
     console.log('useNotesSync: updateNote pour', eleveId, matiereId, 'avec', updates);
     
     setLocalNotes(prevNotes => {
@@ -144,7 +148,7 @@ export const useNotesSync = ({ classeId, matiereId, examId, studentId, isComposi
         return updatedNotes;
       } else {
         // Créer une nouvelle note
-        const newNote: SyncNote = {
+        const newNote: UnifiedNote = {
           eleveId,
           matiereId,
           coefficient: 1,

@@ -49,8 +49,8 @@ export const PublierResultatsModal = ({
       });
       
       onUpdate();
-        onClose();
-      }
+      onClose();
+      
     } catch (error) {
       console.error('Erreur lors de la publication:', error);
       toast({
