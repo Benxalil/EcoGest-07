@@ -36,7 +36,7 @@ export const CreerExamenModal: React.FC<CreerExamenModalProps> = ({ onExamenCrea
   const [toutesClasses, setToutesClasses] = useState(true);
   const [classesSelectionnees, setClassesSelectionnees] = useState<string[]>([]);
 
-  const isTrimestreSystem = schoolSettings?.system === 'trimestre';
+  const isTrimestreSystem = schoolSettings?.semester_type === 'trimester';
 
   // Synchroniser l'année académique avec l'année active
   useEffect(() => {

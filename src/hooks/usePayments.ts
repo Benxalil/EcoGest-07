@@ -52,6 +52,7 @@ export const usePayments = () => {
 
       if (error) throw error;
       
+      // Utiliser les données directement telles qu'elles arrivent de Supabase
       setPayments(paymentsData || []);
     } catch (err) {
       console.error('Erreur lors de la récupération des paiements:', err);
@@ -68,7 +69,14 @@ export const usePayments = () => {
       const { data, error } = await supabase
         .from('payments')
         .insert({
-          ...paymentData,
+          student_id: paymentData.student_id,
+          amount: paymentData.amount,
+          payment_method: paymentData.payment_method,
+          payment_type: paymentData.payment_type,
+          payment_month: paymentData.payment_month,
+          paid_by: paymentData.paid_by,
+          phone_number: paymentData.phone_number,
+          payment_date: paymentData.payment_date,
           school_id: userProfile.schoolId
         })
         .select()
@@ -76,19 +84,20 @@ export const usePayments = () => {
 
       if (error) throw error;
       
+      // Utiliser les données directement
       setPayments(prev => [data, ...prev]);
-      
+
       toast({
         title: "Paiement enregistré",
         description: "Le paiement a été enregistré avec succès.",
       });
-      
+
       return true;
     } catch (err) {
       console.error('Erreur lors de la création du paiement:', err);
       toast({
         title: "Erreur lors de l'enregistrement",
-        description: err instanceof Error ? err.message : "Une erreur est survenue lors de l'enregistrement du paiement.",
+        description: err instanceof Error ? err.message : "Une erreur est survenue lors de l'enregistrement.",
         variant: "destructive",
       });
       return false;
@@ -109,15 +118,16 @@ export const usePayments = () => {
 
       if (error) throw error;
       
+      // Utiliser les données directement
       setPayments(prev => prev.map(payment => 
         payment.id === id ? data : payment
       ));
-      
+
       toast({
         title: "Paiement mis à jour",
         description: "Le paiement a été mis à jour avec succès.",
       });
-      
+
       return true;
     } catch (err) {
       console.error('Erreur lors de la mise à jour du paiement:', err);
@@ -141,14 +151,14 @@ export const usePayments = () => {
         .eq('school_id', userProfile.schoolId);
 
       if (error) throw error;
-      
+
       setPayments(prev => prev.filter(payment => payment.id !== id));
-      
+
       toast({
         title: "Paiement supprimé",
         description: "Le paiement a été supprimé avec succès.",
       });
-      
+
       return true;
     } catch (err) {
       console.error('Erreur lors de la suppression du paiement:', err);
@@ -159,22 +169,6 @@ export const usePayments = () => {
       });
       return false;
     }
-  };
-
-  // Fonction pour vérifier si un élève a payé pour un mois donné
-  const hasStudentPaid = (studentId: string, month?: string) => {
-    return payments.some(payment => 
-      payment.student_id === studentId && 
-      (!month || payment.payment_month === month)
-    );
-  };
-
-  // Fonction pour obtenir les détails de paiement d'un élève
-  const getStudentPayment = (studentId: string, month?: string) => {
-    return payments.find(payment => 
-      payment.student_id === studentId && 
-      (!month || payment.payment_month === month)
-    );
   };
 
   useEffect(() => {
@@ -188,8 +182,6 @@ export const usePayments = () => {
     createPayment,
     updatePayment,
     deletePayment,
-    hasStudentPaid,
-    getStudentPayment,
     refreshPayments: fetchPayments
   };
 };

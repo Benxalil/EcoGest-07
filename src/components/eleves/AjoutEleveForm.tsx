@@ -238,8 +238,10 @@ const saveEleveToStorage = async (eleveData: EleveFormData, photo?: string | nul
         schoolId = profile?.school_id || schoolId;
       }
 
-      // Utiliser la classe sélectionnée automatiquement
-      if (!selectedClass) {
+      // Utiliser la première classe disponible
+      const firstClassId = classesData?.[0]?.id;
+      
+      if (!firstClassId) {
         throw new Error("Aucune classe disponible pour ajouter l'élève");
       }
 
@@ -251,14 +253,14 @@ const saveEleveToStorage = async (eleveData: EleveFormData, photo?: string | nul
           last_name: eleveData.nom,
           date_of_birth: eleveData.dateNaissance || null,
           place_of_birth: eleveData.lieuNaissance || null,
-          gender: (eleveData.sexe === 'Masculin' ? 'M' : 'F') as 'M' | 'F',
+          gender: (eleveData.sexe === 'Masculin' ? 'M' : eleveData.sexe === 'Féminin' ? 'F' : null) as 'M' | 'F' | null,
           address: eleveData.adresse || null,
           phone: eleveData.telephone || null,
           parent_phone: eleveData.pereTelephone || null,
           parent_email: eleveData.perePrenom && eleveData.pereNom ? `${eleveData.perePrenom.toLowerCase()}.${eleveData.pereNom.toLowerCase()}@parent.com` : null,
           emergency_contact: `${eleveData.contactUrgenceNom} - ${eleveData.contactUrgenceTelephone} (${eleveData.contactUrgenceRelation})`,
           school_id: schoolId,
-          class_id: selectedClass?.id || null,
+          class_id: firstClassId,
           is_active: true
         });
 
@@ -641,14 +643,14 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
         last_name: data.nom,
         date_of_birth: data.dateNaissance || null,
         place_of_birth: data.lieuNaissance || null,
-        gender: data.sexe === 'Masculin' ? 'M' : 'F',
+        gender: (data.sexe === 'Masculin' ? 'M' : data.sexe === 'Féminin' ? 'F' : null) as 'M' | 'F' | null,
         address: data.adresse || null,
         phone: data.telephone || null,
         parent_phone: data.pereTelephone || null,
         parent_email: data.perePrenom && data.pereNom ? `${data.perePrenom.toLowerCase()}.${data.pereNom.toLowerCase()}@parent.com` : null,
         emergency_contact: `${data.contactUrgenceNom} - ${data.contactUrgenceTelephone} (${data.contactUrgenceRelation})`,
         school_id: schoolId,
-        class_id: selectedClass?.id || null,
+        class_id: (classId && classesData?.find(c => c.id === classId)?.id) || classesData?.[0]?.id || null,
         is_active: true
       };
 

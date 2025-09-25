@@ -121,9 +121,9 @@ export const ExamManagementExample: React.FC<ExamManagementExampleProps> = ({ cl
                       {notesCount} note{notesCount > 1 ? 's' : ''}
                     </Badge>
                   </div>
-                  {exam.description && (
+                  {exam.title && (
                     <p className="text-sm text-gray-600 line-clamp-2">
-                      {exam.description}
+                      Date: {new Date(exam.exam_date).toLocaleDateString('fr-FR')}
                     </p>
                   )}
                 </CardHeader>

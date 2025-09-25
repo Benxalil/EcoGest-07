@@ -76,7 +76,7 @@ export const ListeExamens: React.FC = () => {
 
   // Remplacé par hook Supabase
   const { schoolData: schoolSettings } = useSchoolData();
-  const isTrimestreSystem = schoolSettings?.semester_type === 'trimestre';
+  const isTrimestreSystem = schoolSettings?.semester_type === 'trimester';
 
   // Helpers dates sûrs
   const isValidDateValue = (value?: string) => {

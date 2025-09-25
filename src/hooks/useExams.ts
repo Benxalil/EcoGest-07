@@ -74,12 +74,12 @@ export const useExams = (classId?: string) => {
         .from('exams')
         .insert({
           class_id: examData.class_id,
-          subject_id: examData.subject_id,
-          // teacher_id omis temporairement pour éviter l'erreur 400
+          subject_id: examData.subject_id || null,
+          teacher_id: null, // Explicitement null pour éviter l'erreur
           title: examData.title,
           exam_date: examData.exam_date,
           start_time: examData.start_time,
-          end_time: examData.end_time,
+          duration_minutes: examData.total_marks ? examData.total_marks * 6 : 120,
           total_points: examData.total_marks,
           is_published: examData.is_published ?? false,
           school_id: userProfile.schoolId
