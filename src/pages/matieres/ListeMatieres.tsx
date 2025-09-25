@@ -78,8 +78,12 @@ export default function ListeMatieres() {
             </p>
           </div>
           <AjoutMatiereModal 
-            open={false}
-            onOpenChange={() => {}}
+            trigger={
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                Ajouter une matière
+              </Button>
+            }
           />
         </div>
 

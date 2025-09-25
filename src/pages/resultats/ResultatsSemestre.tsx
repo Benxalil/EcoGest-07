@@ -42,14 +42,14 @@ export default function ResultatsSemestre() {
   
   // Récupérer les données de la classe et de l'examen
   const classData = getClassResults(classeId || '');
-  const examData = isExamView ? getExamResults(classeId || '', examId) : null;
+  const examData = isExamView ? getExamResults(classeId || '', examId || '') : null;
   
   // Adapter les données pour la compatibilité avec l'interface existante
-  const classe = examData ? {
-    id: examData.class_id,
-    session: examData.class_level,
-    libelle: examData.class_section,
-    effectif: examData.effectif
+  const classe = classData ? {
+    id: classData.class_id,
+    session: classData.class_level,
+    libelle: classData.class_section,
+    effectif: classData.effectif
   } : null;
   
   const eleves = examData ? examData.students.map(student => ({
@@ -125,7 +125,7 @@ export default function ResultatsSemestre() {
       };
     }
 
-    const stats = getStudentExamStats(eleveId, 1);
+    const stats = getStudentExamStats(classeId, examId, eleveId);
     return stats || {
       totalNotes: 0,
       totalCoefficient: 0,
