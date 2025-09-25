@@ -345,9 +345,7 @@ export default function NotesParEleve() {
                   <div className="text-lg">
                     <span className="font-medium">Examen:</span> {examInfo?.titre || 'Examen'}
                   </div>
-                  <div className="text-lg">
-                    <span className="font-medium">Type:</span> {examInfo?.type || 'Examen'}
-                  </div>
+                  
                 </div>
               </div>
             </div>
