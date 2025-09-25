@@ -199,10 +199,11 @@ export const useSubscriptionPlan = () => {
 
       if (error) throw error;
 
-      if (school?.subscription_plan && PLAN_FEATURES[school.subscription_plan as SubscriptionPlan]) {
-        setCurrentPlan(school.subscription_plan as SubscriptionPlan);
-      } else if (school?.subscription_status === 'trial') {
-        setCurrentPlan('trial'); } else {
+      if ((school as any)?.subscription_plan && PLAN_FEATURES[(school as any).subscription_plan as SubscriptionPlan]) {
+        setCurrentPlan((school as any).subscription_plan as SubscriptionPlan);
+      } else if ((school as any)?.subscription_status === 'trial') {
+        setCurrentPlan('trial');
+      } else {
         setCurrentPlan('trial'); // Par défaut
       }
     } catch (error) {

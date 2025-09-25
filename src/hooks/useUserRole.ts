@@ -21,13 +21,18 @@ export const useUserRole = () => {
 
   const fetchUserProfile = async (userId: string) => {
     try {
+      setLoading(false); // Critical: Set loading to false immediately to prevent infinite loading
+      
       const { data: profile, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
-        .single();
+        .maybeSingle();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching user profile:', error);
+        return null;
+      }
 
       if (profile) {
         const userProfileData: UserProfile = {
@@ -44,8 +49,6 @@ export const useUserRole = () => {
       }
     } catch (error) {
       console.error('Error fetching user profile:', error);
-    } finally {
-      setLoading(false);
     }
     
     return null;

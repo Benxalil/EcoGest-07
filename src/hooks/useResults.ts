@@ -81,16 +81,9 @@ export const useResults = () => {
       // 1. Récupérer toutes les classes de l'école
       const { data: classes, error: classesError } = await supabase
         .from('classes')
-        .select(`
-          id,
-          name,
-          level,
-          section,
-          academic_year_id
-        `)
+        .select('*')
         .eq('school_id', userProfile.schoolId)
-        .order('level', { ascending: true })
-        .order('section', { ascending: true });
+        .order('name') as any;
 
       if (classesError) {
         console.error('useResults: Erreur lors de la récupération des classes:', classesError);
@@ -161,7 +154,7 @@ export const useResults = () => {
           .select('*')
           .eq('school_id', userProfile.schoolId)
           .in('student_id', students?.map(s => s.id) || [])
-          .in('subject_id', subjects?.map(s => s.id) || []);
+          .in('subject_id', subjects?.map(s => s.id) || []) as any;
 
         if (gradesError) {
           console.error(`useResults: Erreur lors de la récupération des notes pour la classe ${classe.name}:`, gradesError);
@@ -191,8 +184,8 @@ export const useResults = () => {
             gradesByStudentAndSubject[student.id] = {};
             subjects?.forEach(subject => {
               gradesByStudentAndSubject[student.id][subject.id] = {
-                coefficient: subject.coefficient,
-                max_score: subject.max_score
+                coefficient: subject.coefficient || 1,
+                max_score: 20 // Default value since max_score doesn't exist in subjects table
               };
             });
           });
@@ -200,7 +193,7 @@ export const useResults = () => {
           // Remplir avec les notes existantes
           examGrades.forEach(grade => {
             const studentId = grade.student_id;
-            const subjectId = grade.subject_id;
+            const subjectId = (grade as any).subject_id;
             
             // Trouver les informations de la matière
             const subject = subjects?.find(s => s.id === subjectId);
@@ -211,7 +204,7 @@ export const useResults = () => {
             if (!gradesByStudentAndSubject[studentId][subjectId]) {
               gradesByStudentAndSubject[studentId][subjectId] = {
                 coefficient: subject?.coefficient || 1,
-                max_score: subject?.max_score || 20
+                max_score: 20 // Default value since max_score doesn't exist in subjects table
               };
             }
 
@@ -222,10 +215,10 @@ export const useResults = () => {
 
             if (isCompositionExam) {
               // Pour les compositions, séparer devoir et composition
-              if (grade.exam_type === 'devoir') {
-                gradesByStudentAndSubject[studentId][subjectId].devoir = grade.grade_value;
-              } else if (grade.exam_type === 'composition') {
-                gradesByStudentAndSubject[studentId][subjectId].composition = grade.grade_value;
+              if ((grade as any).exam_type === 'devoir') {
+                gradesByStudentAndSubject[studentId][subjectId].devoir = (grade as any).grade_value || (grade as any).score;
+              } else if ((grade as any).exam_type === 'composition') {
+                gradesByStudentAndSubject[studentId][subjectId].composition = (grade as any).grade_value || (grade as any).score;
               }
               
               // Calculer la moyenne pour les compositions
@@ -240,8 +233,8 @@ export const useResults = () => {
               }
             } else {
               // Pour les autres examens, note simple
-              gradesByStudentAndSubject[studentId][subjectId].note = grade.grade_value;
-              gradesByStudentAndSubject[studentId][subjectId].moyenne = grade.grade_value;
+              gradesByStudentAndSubject[studentId][subjectId].note = (grade as any).grade_value || (grade as any).score;
+              gradesByStudentAndSubject[studentId][subjectId].moyenne = (grade as any).grade_value || (grade as any).score;
             }
           });
 
@@ -257,20 +250,20 @@ export const useResults = () => {
             subjects: subjects?.map(subject => ({
               subject_id: subject.id,
               subject_name: subject.name,
-              subject_abbreviation: subject.abbreviation,
-              coefficient: subject.coefficient,
-              max_score: subject.max_score,
-              hours_per_week: subject.hours_per_week
+              subject_abbreviation: (subject as any).abbreviation || (subject as any).code || '',
+              coefficient: subject.coefficient || 1,
+              max_score: 20, // Default value since max_score doesn't exist in subjects table
+              hours_per_week: (subject as any).hours_per_week || 0
             })) || [],
             students: students?.map(student => ({
               student_id: student.id,
               first_name: student.first_name,
               last_name: student.last_name,
-              numero: student.numero,
+              numero: student.student_number,
               class_id: classe.id,
               class_name: classe.name,
               class_level: classe.level,
-              class_section: classe.section
+              class_section: classe.section || ''
             })) || [],
             grades: gradesByStudentAndSubject
           };
