@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { useCache } from './useCache';
 
 type UserRole = "school_admin" | "teacher" | "student" | "parent" | "super_admin";
 
@@ -13,13 +14,25 @@ interface UserProfile {
   schoolId?: string;
 }
 
-export const useUserRole = () => {
+export const useOptimizedUserRole = () => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const cache = useCache();
 
   const fetchUserProfile = async (userId: string) => {
+    // Vérifier le cache d'abord
+    const cacheKey = `user_profile_${userId}`;
+    const cachedProfile = cache.get<UserProfile>(cacheKey);
+    
+    if (cachedProfile) {
+      console.log('Profil utilisateur récupéré depuis le cache');
+      setUserProfile(cachedProfile);
+      setLoading(false);
+      return cachedProfile;
+    }
+
     try {
       const { data: profile, error } = await supabase
         .from('profiles')
@@ -39,7 +52,10 @@ export const useUserRole = () => {
           schoolId: profile.school_id,
         };
         
+        // Mettre en cache pour 10 minutes
+        cache.set(cacheKey, userProfileData, 10 * 60 * 1000);
         setUserProfile(userProfileData);
+        console.log('Profil utilisateur récupéré depuis la DB et mis en cache');
         return userProfileData;
       }
     } catch (error) {
@@ -104,6 +120,8 @@ export const useUserRole = () => {
   
   const resetRoleSimulation = async () => {
     if (user) {
+      // Effacer le cache et recharger
+      cache.delete(`user_profile_${user.id}`);
       await fetchUserProfile(user.id);
     }
   };

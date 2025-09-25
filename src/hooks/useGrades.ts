@@ -90,7 +90,24 @@ export const useGrades = (studentId?: string, subjectId?: string, examId?: strin
       
       console.log('useGrades: Données récupérées:', data);
       // Utiliser les données directement telles qu'elles arrivent de Supabase
-      setGrades(data || []);
+      // Mapper les données de la DB vers notre interface Grade
+      const grades = (data || []).map(grade => ({
+        id: grade.id,
+        student_id: grade.student_id,
+        subject_id: grade.subject_id,
+        exam_id: grade.exam_id,
+        grade_value: grade.grade_value,
+        max_grade: grade.max_grade,
+        coefficient: grade.coefficient,
+        created_at: grade.created_at,
+        updated_at: grade.updated_at,
+        created_by: grade.created_by,
+        exam_type: grade.exam_type,
+        semester: grade.semester,
+        school_id: grade.school_id
+      }));
+      
+      setGrades(grades);
     } catch (err) {
       console.error('useGrades: Erreur lors de la récupération des notes:', err);
       const errorMessage = err instanceof Error ? err.message : 'Erreur inconnue';
@@ -181,7 +198,13 @@ export const useGrades = (studentId?: string, subjectId?: string, examId?: strin
     try {
       const { error } = await supabase
         .from('grades')
-        .update(gradeData)
+        .update({
+          grade_value: gradeData.grade_value,
+          max_grade: gradeData.max_grade,
+          coefficient: gradeData.coefficient,
+          exam_type: gradeData.exam_type,
+          semester: gradeData.semester
+        })
         .eq('id', id)
         .eq('school_id', userProfile.schoolId);
 

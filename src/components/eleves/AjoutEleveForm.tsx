@@ -239,7 +239,7 @@ const saveEleveToStorage = async (eleveData: EleveFormData, photo?: string | nul
       }
 
       // Utiliser la première classe disponible
-      const firstClassId = classesData?.[0]?.id;
+      const firstClassId = classes?.[0]?.id;
       
       if (!firstClassId) {
         throw new Error("Aucune classe disponible pour ajouter l'élève");
@@ -295,6 +295,7 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
   const { classes: classesData, loading: classesLoading } = useClasses();
   const { addStudent, updateStudent } = useStudents();
   const { userProfile } = useUserRole();
+  const { classes } = useClasses();
   const { uploadDocument } = useStudentDocuments();
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
