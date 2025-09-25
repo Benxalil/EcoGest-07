@@ -1,84 +1,86 @@
-// Simplified useGrades hook to avoid deep type instantiation
+// Simplified classes hook
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserRole } from './useUserRole';
 
-export interface Grade {
+export interface ClassData {
   id: string;
-  student_id: string;
-  subject_id: string;
-  exam_id?: string;
-  grade_value: number;
-  max_grade: number;
-  coefficient: number;
-  exam_type: string;
-  semester?: string;
+  name: string;
+  level: string;
+  section?: string;
+  capacity?: number;
+  effectif?: number;
+  academic_year_id: string;
   school_id: string;
+  created_at: string;
+  updated_at: string;
+  series_id?: string;
+  label_id?: string;
 }
 
-export const useGrades = () => {
-  const [grades, setGrades] = useState<Grade[]>([]);
+export const useOptimizedClasses = () => {
+  const [classes, setClasses] = useState<ClassData[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState('');
   const { userProfile } = useUserRole();
 
-  const fetchGrades = async () => {
+  const fetchClasses = async () => {
     if (!userProfile?.schoolId) return;
     
     try {
       setLoading(true);
       const { data, error: fetchError } = await (supabase as any)
-        .from('grades')
+        .from('classes')
         .select('*')
         .eq('school_id', userProfile.schoolId);
       
       if (fetchError) throw fetchError;
-      setGrades(data || []);
+      setClasses(data || []);
     } catch (err) {
-      setError('Failed to fetch grades');
+      setError('Failed to fetch classes');
     } finally {
       setLoading(false);
     }
   };
 
-  const createGrade = async (gradeData: any) => {
+  const createClass = async (classData: any) => {
     try {
       const { error: createError } = await (supabase as any)
-        .from('grades')
-        .insert({ ...gradeData, school_id: userProfile?.schoolId });
+        .from('classes')
+        .insert({ ...classData, school_id: userProfile?.schoolId });
       
       if (createError) throw createError;
-      await fetchGrades();
+      await fetchClasses();
       return true;
     } catch (err) {
       return false;
     }
   };
 
-  const updateGrade = async (id: string, gradeData: any) => {
+  const updateClass = async (id: string, classData: any) => {
     try {
       const { error: updateError } = await (supabase as any)
-        .from('grades')
-        .update(gradeData)
+        .from('classes')
+        .update(classData)
         .eq('id', id);
       
       if (updateError) throw updateError;
-      await fetchGrades();
+      await fetchClasses();
       return true;
     } catch (err) {
       return false;
     }
   };
 
-  const deleteGrade = async (id: string) => {
+  const deleteClass = async (id: string) => {
     try {
       const { error: deleteError } = await (supabase as any)
-        .from('grades')
+        .from('classes')
         .delete()
         .eq('id', id);
       
       if (deleteError) throw deleteError;
-      await fetchGrades();
+      await fetchClasses();
       return true;
     } catch (err) {
       return false;
@@ -86,19 +88,17 @@ export const useGrades = () => {
   };
 
   useEffect(() => {
-    fetchGrades();
+    fetchClasses();
   }, [userProfile?.schoolId]);
 
   return {
-    grades,
+    classes,
     loading,
     error,
-    createGrade,
-    updateGrade,
-    deleteGrade,
-    refetch: fetchGrades,
-    getGradeForStudent: (studentId: string) => grades.find(g => g.student_id === studentId),
-    getGradesForStudent: (studentId: string) => grades.filter(g => g.student_id === studentId),
-    getGradesForSubject: (subjectId: string) => grades.filter(g => g.subject_id === subjectId)
+    fetchClasses,
+    createClass,
+    updateClass,
+    deleteClass,
+    refreshClasses: fetchClasses
   };
 };

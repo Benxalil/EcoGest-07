@@ -105,7 +105,7 @@ export const useResults = () => {
         console.log(`useResults: Traitement de la classe ${classe.name}`);
 
         // Récupérer les examens de cette classe
-        const { data: exams, error: examsError } = await supabase
+        const { data: exams, error: examsError } = await (supabase as any)
           .from('exams')
           .select('*')
           .eq('class_id', classe.id)
@@ -123,7 +123,7 @@ export const useResults = () => {
         }
 
         // Récupérer les matières de cette classe
-        const { data: subjects, error: subjectsError } = await supabase
+        const { data: subjects, error: subjectsError } = await (supabase as any)
           .from('subjects')
           .select('*')
           .eq('class_id', classe.id)
