@@ -45,11 +45,11 @@ export default function ResultatsSemestre() {
   const examData = isExamView ? getExamResults(classeId || '', examId || '') : null;
   
   // Adapter les données pour la compatibilité avec l'interface existante
-  const classe = classData ? {
-    id: classData.class_id,
-    session: classData.class_level,
-    libelle: classData.class_section,
-    effectif: classData.effectif
+  const classe = examData ? {
+    id: examData.class_id,
+    session: examData.class_level,
+    libelle: examData.class_section,
+    effectif: examData.effectif
   } : null;
   
   const eleves = examData ? examData.students.map(student => ({
@@ -125,7 +125,7 @@ export default function ResultatsSemestre() {
       };
     }
 
-    const stats = getStudentExamStats(classeId, examId, eleveId);
+    const stats = getStudentExamStats(eleveId, 1);
     return stats || {
       totalNotes: 0,
       totalCoefficient: 0,
@@ -181,7 +181,10 @@ export default function ResultatsSemestre() {
     
     try {
       const elevesWithStats = getElevesWithRank();
-      await generateBulletinPDF(classe, elevesWithStats, getSemestreLabel());
+      // Générer un PDF pour chaque élève
+      for (const eleve of elevesWithStats) {
+        await generateBulletinPDF(eleve, classe, getSemestreLabel());
+      }
     } catch (error) {
       console.error("Erreur lors de la génération du PDF:", error);
     }
@@ -439,7 +442,9 @@ export default function ResultatsSemestre() {
             classe={classe}
             eleves={getElevesWithRank()}
             semestre={getSemestreLabel()}
-            onClose={() => setShowBulletinClasse(false)}
+            matieresClasse={matieresClasse}
+            schoolSystem={schoolSystem}
+            classeId={classe.id}
           />
         )}
       </div>
