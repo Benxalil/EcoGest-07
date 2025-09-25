@@ -54,8 +54,8 @@ export const useSchedules = (classId?: string) => {
 
       if (error) throw error;
 
-      // Organiser les cours par jour
-      const days = ['LUNDI', 'MARDI', 'MERCREDI', 'JEUDI', 'VENDREDI', 'SAMEDI'];
+      // Organiser les cours par jour - utiliser le format correct attendu par la DB
+      const days = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
       const organizedSchedules: DaySchedule[] = days.map(day => ({
         day,
         courses: (data || []).filter(course => course.day === day)
@@ -74,15 +74,18 @@ export const useSchedules = (classId?: string) => {
     if (!userProfile?.schoolId) return false;
 
     try {
-      // Mapper le jour en français vers numéro
-      const dayMapping: { [key: string]: number } = {
-        'LUNDI': 1,
-        'MARDI': 2,
-        'MERCREDI': 3,
-        'JEUDI': 4,
-        'VENDREDI': 5,
-        'SAMEDI': 6
+      // Convertir le format d'affichage vers le format DB si nécessaire
+      const dayMapping: { [key: string]: string } = {
+        'LUNDI': 'Lundi',
+        'MARDI': 'Mardi',
+        'MERCREDI': 'Mercredi',
+        'JEUDI': 'Jeudi',
+        'VENDREDI': 'Vendredi',
+        'SAMEDI': 'Samedi'
       };
+
+      const dbDay = dayMapping[courseData.day] || courseData.day;
+      const dayOfWeek = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'].indexOf(dbDay) + 1;
 
       const { error } = await supabase
         .from('schedules')
@@ -91,8 +94,8 @@ export const useSchedules = (classId?: string) => {
           teacher: courseData.teacher || '',
           start_time: courseData.start_time,
           end_time: courseData.end_time,
-          day: courseData.day,
-          day_of_week: dayMapping[courseData.day] || 1,
+          day: dbDay,
+          day_of_week: dayOfWeek,
           class_id: courseData.class_id,
           school_id: userProfile.schoolId
         });
