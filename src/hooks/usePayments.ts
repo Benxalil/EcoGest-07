@@ -53,7 +53,7 @@ export const usePayments = () => {
       if (error) throw error;
       
       // Utiliser les données directement telles qu'elles arrivent de Supabase
-      setPayments(paymentsData || []);
+      setPayments((paymentsData as any) || []);
     } catch (err) {
       console.error('Erreur lors de la récupération des paiements:', err);
       setError(err instanceof Error ? err.message : 'Erreur inconnue');
@@ -66,7 +66,7 @@ export const usePayments = () => {
     if (!userProfile?.schoolId) return false;
 
     try {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('payments')
         .insert({
           student_id: paymentData.student_id,
@@ -85,7 +85,7 @@ export const usePayments = () => {
       if (error) throw error;
       
       // Utiliser les données directement
-      setPayments(prev => [data, ...prev]);
+      setPayments(prev => [(data as any), ...prev]);
 
       toast({
         title: "Paiement enregistré",
@@ -108,7 +108,7 @@ export const usePayments = () => {
     if (!userProfile?.schoolId) return false;
 
     try {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('payments')
         .update(paymentData)
         .eq('id', id)
@@ -120,7 +120,7 @@ export const usePayments = () => {
       
       // Utiliser les données directement
       setPayments(prev => prev.map(payment => 
-        payment.id === id ? data : payment
+        payment.id === id ? (data as any) : payment
       ));
 
       toast({

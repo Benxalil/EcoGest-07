@@ -4,7 +4,6 @@ import { useOptimizedUserRole } from './useOptimizedUserRole';
 import { useCache } from './useCache';
 import { useToast } from './use-toast';
 
-// Interface basée sur le vrai schéma de la table payments
 export interface Payment {
   id: string;
   student_id: string;
@@ -67,9 +66,8 @@ export const useOptimizedPayments = () => {
 
       if (error) throw error;
 
-      // Mettre en cache pour 3 minutes
       cache.set(cacheKey, data || [], 3 * 60 * 1000);
-      setPayments(data || []);
+      setPayments((data as any) || []);
       console.log('Paiements récupérés depuis la DB et mis en cache');
       
     } catch (error) {
@@ -89,7 +87,7 @@ export const useOptimizedPayments = () => {
     if (!userProfile?.schoolId) return false;
 
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('payments')
         .insert({
           ...paymentData,
@@ -98,7 +96,6 @@ export const useOptimizedPayments = () => {
 
       if (error) throw error;
 
-      // Invalider le cache et recharger
       cache.delete(`payments_${userProfile.schoolId}`);
       await fetchPayments();
       
@@ -123,7 +120,7 @@ export const useOptimizedPayments = () => {
     if (!userProfile?.schoolId) return false;
 
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('payments')
         .update(paymentData)
         .eq('id', id)
@@ -131,7 +128,6 @@ export const useOptimizedPayments = () => {
 
       if (error) throw error;
 
-      // Invalider le cache et recharger
       cache.delete(`payments_${userProfile.schoolId}`);
       await fetchPayments();
       
@@ -164,7 +160,6 @@ export const useOptimizedPayments = () => {
 
       if (error) throw error;
 
-      // Invalider le cache et recharger
       cache.delete(`payments_${userProfile.schoolId}`);
       await fetchPayments();
       
