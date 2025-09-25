@@ -35,10 +35,10 @@ export default function ElevesParClasse() {
   });
 
   const handleDeleteStudent = async (studentId: string, studentName: string) => {
-    try {
-      await deleteStudent(studentId);
+    const success = await deleteStudent(studentId);
+    if (success) {
       toast.success(`Élève ${studentName} supprimé avec succès`);
-    } catch (error) {
+    } else {
       toast.error("Erreur lors de la suppression de l'élève");
     }
   };
@@ -96,7 +96,7 @@ export default function ElevesParClasse() {
             </p>
           </div>
           <div className="ml-auto">
-            <AjoutEleveModal open={false} onOpenChange={() => {}} />
+            <AjoutEleveModal />
           </div>
         </div>
 
