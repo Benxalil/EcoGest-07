@@ -12,6 +12,14 @@ export interface StudentResult {
   semester1_average?: number;
   semester2_average?: number;
   annual_average?: number;
+  exams?: any[]; // Added for compatibility
+  class_level?: string;
+  class_section?: string;
+  effectif?: number;
+  students?: any[];
+  subjects?: any[];
+  exam_title?: string;
+  exam_date?: string;
 }
 
 export const useResults = () => {
@@ -59,6 +67,33 @@ export const useResults = () => {
     fetchResults();
   }, [userProfile?.schoolId]);
 
+  const getStudentExamStats = (studentId: string, semester?: number) => {
+    return { 
+      moyenneGenerale: 0, 
+      notesList: [],
+      totalNotesDevoir: 0,
+      moyenneDevoir: 0,
+      totalNotesComposition: 0,
+      moyenneComposition: 0,
+      totalNotes: 0,
+      totalCoefficient: 0,
+      isComposition: false
+    };
+  };
+  
+  const getExamResults = (classId: string) => {
+    return {
+      class_id: classId,
+      class_level: '',
+      class_section: '', 
+      effectif: 0,
+      students: [],
+      subjects: [],
+      exam_title: '',
+      exam_date: ''
+    };
+  };
+
   return {
     results,
     loading,
@@ -66,6 +101,8 @@ export const useResults = () => {
     fetchResults,
     calculateResults,
     getStudentResults: (studentId: string) => results.filter(r => r.student_id === studentId),
-    getClassResults: (classId: string) => results.filter(r => r.class_id === classId)
+    getClassResults: (classId: string) => results.filter(r => r.class_id === classId),
+    getStudentExamStats,
+    getExamResults
   };
 };

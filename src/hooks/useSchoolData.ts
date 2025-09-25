@@ -26,6 +26,7 @@ export interface SchoolData {
   school_suffix?: string | null;
   subscription_status?: Database['public']['Enums']['subscription_status'] | null;
   trial_end_date?: string | null;
+  system?: string; // Added for compatibility
 }
 
 export const useSchoolData = () => {

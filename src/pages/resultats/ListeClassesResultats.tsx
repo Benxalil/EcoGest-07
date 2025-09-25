@@ -67,8 +67,8 @@ export default function ListeClassesResultats() {
   };
 
   useEffect(() => {
-    if (schoolSettings?.system) {
-      setSchoolSystem(schoolSettings.system);
+    if (schoolSettings?.system || schoolSettings?.semester_type) {
+      setSchoolSystem(schoolSettings.system || schoolSettings.semester_type);
     }
   }, [schoolSettings]);
 
@@ -86,9 +86,9 @@ export default function ListeClassesResultats() {
       // Utiliser les données du hook useResults
       const classData = results.find(c => c.class_id === classeId);
       
-      if (classData && classData.exams) {
+      if (classData && (classData as any).exams) {
         // Convertir les examens du hook vers le format attendu
-        const examensClasse: Examen[] = classData.exams.map(exam => ({
+        const examensClasse: Examen[] = (classData as any).exams.map(exam => ({
           id: exam.exam_id,
           titre: exam.exam_title,
           type: exam.exam_title.toLowerCase().includes('composition') ? 'Composition' : 'Examen',
@@ -112,7 +112,7 @@ export default function ListeClassesResultats() {
     }
   };
 
-  const handleClasseClick = (classe: Classe) => {
+  const handleClasseClick = (classe: any) => {
     setSelectedClasse(classe);
     loadExamensForClasse(classe.id);
     setIsDialogOpen(true);

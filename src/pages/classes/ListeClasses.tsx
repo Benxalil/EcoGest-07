@@ -57,11 +57,11 @@ export default function ListeClasses() {
   const navigate = useNavigate();
   const { isFeatureLimited, getFeatureLimit, currentPlan } = useSubscriptionPlan();
   const { showError } = useNotifications();
-  const { classes, loading, error, deleteClass, refreshClasses } = useClasses();
+  const { classes, loading, error, deleteClass, fetchClasses } = useClasses();
 
   const handleAddSuccess = () => {
     setIsAddDialogOpen(false);
-    refreshClasses();
+    fetchClasses();
   };
 
   const handleOpenAddDialog = () => {
@@ -148,7 +148,7 @@ export default function ListeClasses() {
           <div className="text-center py-12">
             <p className="text-red-500 text-lg mb-4">Erreur lors du chargement</p>
             <p className="text-gray-400 mb-6">{error}</p>
-            <Button onClick={refreshClasses}>
+            <Button onClick={fetchClasses}>
               Réessayer
             </Button>
           </div>
