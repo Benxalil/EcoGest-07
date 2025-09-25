@@ -11,6 +11,11 @@ export interface Announcement {
   is_published: boolean;
   priority: 'normal' | 'urgent';
   target_audience: string[];
+  target_role?: string[];
+  target_classes?: string[];
+  is_urgent?: boolean;
+  published_at?: string;
+  expires_at?: string;
   school_id: string;
   created_at: string;
   updated_at: string;
@@ -47,7 +52,11 @@ export const useAnnouncements = () => {
 
       if (error) throw error;
       
-      setAnnouncements(data || []);
+      setAnnouncements(data?.map(item => ({
+        ...item,
+        priority: (item as any).priority || 'normal',
+        target_audience: (item as any).target_audience || ['tous']
+      })) || []);
     } catch (err) {
       console.error('Erreur lors de la récupération des annonces:', err);
       setError(err instanceof Error ? err.message : 'Erreur inconnue');

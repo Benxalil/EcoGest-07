@@ -128,12 +128,15 @@ export const BulletinClasse: React.FC<BulletinClasseProps> = ({
 
   // Fonction pour obtenir la date de naissance d'un élève
   const getDateNaissance = (eleveId: string) => {
-    // Remplacé par hook Supabase
-      // const savedStudents = // localStorage.getItem("eleves") // Remplacé par hook Supabase;
-    if (savedStudents) {
-      const students = JSON.parse(savedStudents);
-      const student = students.find((s: any) => s.id === eleveId);
-      return student?.dateNaissance || "Non renseignée";
+    try {
+      const savedStudents = localStorage.getItem("eleves");
+      if (savedStudents) {
+        const students = JSON.parse(savedStudents);
+        const student = students.find((s: any) => s.id === eleveId);
+        return student?.dateNaissance || "Non renseignée";
+      }
+    } catch (error) {
+      console.error("Erreur lors de la récupération des élèves:", error);
     }
     return "Non renseignée";
   };

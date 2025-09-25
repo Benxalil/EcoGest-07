@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useExamsWithCascade } from '@/hooks/useExamsWithCascade';
+import { useExams } from '@/hooks/useExams';
 import { useGrades } from '@/hooks/useGrades';
 import { ConfirmDeleteExam } from './ConfirmDeleteExam';
 import { Button } from '@/components/ui/button';
@@ -12,7 +12,7 @@ interface ExamManagementExampleProps {
 }
 
 export const ExamManagementExample: React.FC<ExamManagementExampleProps> = ({ classId }) => {
-  const { exams, loading, deleteExam } = useExamsWithCascade();
+  const { exams, loading, deleteExam } = useExams();
   const { grades } = useGrades();
   const [deleteDialog, setDeleteDialog] = useState<{
     isOpen: boolean;

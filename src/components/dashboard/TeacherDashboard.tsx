@@ -18,7 +18,7 @@ interface TeacherStats {
 export function TeacherDashboard() {
   const navigate = useNavigate();
   const { userProfile } = useUserRole();
-  const { getRecentAnnouncements } = useAnnouncements();
+  const { announcements } = useAnnouncements();
   const { classes, loading: classesLoading } = useClasses();
   const [stats, setStats] = useState<TeacherStats>({
     totalClasses: 0,
@@ -132,12 +132,11 @@ export function TeacherDashboard() {
 
   const getTeacherAnnouncements = () => {
     try {
-      const announcements = getRecentAnnouncements();
       // Filtrer les annonces qui ciblent les enseignants ou sont générales
       return announcements.filter((ann: any) => 
-        !ann.targetRole || 
-        ann.targetRole.includes('teacher') || 
-        ann.targetRole.includes('all')
+        !ann.target_audience || 
+        ann.target_audience.includes('teacher') || 
+        ann.target_audience.includes('tous')
       );
     } catch (error) {
       console.error("Erreur lors de la récupération des annonces:", error);

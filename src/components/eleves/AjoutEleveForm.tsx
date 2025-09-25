@@ -251,7 +251,7 @@ const saveEleveToStorage = async (eleveData: EleveFormData, photo?: string | nul
           last_name: eleveData.nom,
           date_of_birth: eleveData.dateNaissance || null,
           place_of_birth: eleveData.lieuNaissance || null,
-          gender: eleveData.sexe === 'Masculin' ? 'M' : 'F',
+          gender: (eleveData.sexe === 'Masculin' ? 'M' : 'F') as 'M' | 'F',
           address: eleveData.adresse || null,
           phone: eleveData.telephone || null,
           parent_phone: eleveData.pereTelephone || null,

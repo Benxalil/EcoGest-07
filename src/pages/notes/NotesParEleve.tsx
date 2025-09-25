@@ -7,7 +7,7 @@ import { GradeInput } from "@/components/ui/grade-input";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
-import { ArrowLeft, User, Search, Save, Edit3 } from "lucide-react";
+import { ArrowLeft, User, Search, Save } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useSchoolData } from "@/hooks/useSchoolData";
 import { MatiereWithCoefficient, parseMaxScoreFromMoyenne, calculateSemesterAverage } from "@/utils/gradeUtils";
@@ -37,7 +37,6 @@ export default function NotesParEleve() {
   const [selectedClasseFilter, setSelectedClasseFilter] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedSemestre, setSelectedSemestre] = useState<"semestre1" | "semestre2">("semestre1");
-  const [isEditMode, setIsEditMode] = useState<boolean>(false);
   const [semesterAverage, setSemesterAverage] = useState<number>(0);
   const [examInfo, setExamInfo] = useState<{
     type: string;
@@ -50,7 +49,7 @@ export default function NotesParEleve() {
 
   // Hooks pour récupérer les données depuis la base
   const { schoolData: schoolSettings } = useSchoolData();
-  const isTrimestreSystem = schoolSettings?.system === 'trimestre';
+  const isTrimestreSystem = schoolSettings?.semester_type === 'trimester';
   
   const classeId = searchParams.get('classeId');
   const { classes, loading: classesLoading } = useClasses();
@@ -356,36 +355,43 @@ export default function NotesParEleve() {
   return (
     <Layout>
       <div className="container mx-auto p-6">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate(-1)}
-            >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Retour
-            </Button>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">
-                Notes par Élève
-              </h1>
-              <p className="text-gray-600">
-                {examInfo ? `${examInfo.type} - ${examInfo.titre}` : 'Saisie des notes'}
-              </p>
+        {/* HEADER AVEC INFORMATIONS DE L'EXAMEN - STRUCTURE ORIGINALE */}
+        <div className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white p-6 rounded-lg mb-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => navigate(-1)}
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Retour
+              </Button>
+              <div>
+                <h1 className="text-2xl font-bold">
+                  Notes par Élève
+                </h1>
+                <div className="flex items-center gap-4 mt-2">
+                  <div className="text-lg">
+                    <span className="font-medium">Examen:</span> {examInfo?.titre || 'Examen'}
+                  </div>
+                  <div className="text-lg">
+                    <span className="font-medium">Type:</span> {examInfo?.type || 'Examen'}
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
-          <div className="flex gap-2">
-            <Button
-              onClick={handleSaveAllNotes}
-              variant="default"
-              size="sm"
-              className="bg-green-600 hover:bg-green-700"
-              disabled={!hasUnsavedChanges}
-            >
-              <Save className="h-4 w-4 mr-2" />
-              Sauvegarder toutes les notes
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                onClick={handleSaveAllNotes}
+                variant="secondary"
+                size="sm"
+                disabled={!hasUnsavedChanges}
+              >
+                <Save className="h-4 w-4 mr-2" />
+                Sauvegarder toutes les notes
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -493,13 +499,14 @@ export default function NotesParEleve() {
                       <TableRow>
                         <TableHead>Matière</TableHead>
                         <TableHead>Coeff.</TableHead>
+                        {/* LOGIQUE CONDITIONNELLE ORIGINALE SELON LE TYPE D'EXAMEN */}
                         {examInfo?.type === 'Composition' ? (
                           <>
                             <TableHead>Devoir</TableHead>
                             <TableHead>Composition</TableHead>
                           </>
                         ) : (
-                          <TableHead>Note</TableHead>
+                          <TableHead>{examInfo?.titre || 'Note'}</TableHead>
                         )}
                       </TableRow>
                     </TableHeader>
@@ -514,6 +521,7 @@ export default function NotesParEleve() {
                               {matiere.nom}
                             </TableCell>
                             <TableCell>{matiere.coefficient}</TableCell>
+                            {/* AFFICHAGE CONDITIONNEL SELON LE TYPE D'EXAMEN */}
                             {examInfo?.type === 'Composition' ? (
                               <>
                                 <TableCell>
