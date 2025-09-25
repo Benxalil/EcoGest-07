@@ -74,16 +74,25 @@ export const useSchedules = (classId?: string) => {
     if (!userProfile?.schoolId) return false;
 
     try {
+      // Mapper le jour en français vers numéro
+      const dayMapping: { [key: string]: number } = {
+        'LUNDI': 1,
+        'MARDI': 2,
+        'MERCREDI': 3,
+        'JEUDI': 4,
+        'VENDREDI': 5,
+        'SAMEDI': 6
+      };
+
       const { error } = await supabase
         .from('schedules')
         .insert({
           subject: courseData.subject,
-          subject_id: null, // Explicitement null pour éviter l'erreur
-          teacher: courseData.teacher,
-          teacher_id: null, // Explicitement null pour éviter l'erreur
+          teacher: courseData.teacher || '',
           start_time: courseData.start_time,
           end_time: courseData.end_time,
           day: courseData.day,
+          day_of_week: dayMapping[courseData.day] || 1,
           class_id: courseData.class_id,
           school_id: userProfile.schoolId
         });
