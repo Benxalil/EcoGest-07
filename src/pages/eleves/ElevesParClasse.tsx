@@ -1,652 +1,250 @@
-import { useState, useEffect, useMemo } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import React, { useState } from "react";
 import { Layout } from "@/components/layout/Layout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { ArrowLeft, Plus, Search, Edit, Trash2 } from "lucide-react";
+import { useNavigate, useParams } from "react-router-dom";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { AjoutEleveForm } from "@/components/eleves/AjoutEleveForm";
-import { Eye, Edit, Trash2, UserPlus, Search, ArrowLeft, Users, Download, FileText } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { useClasses } from "@/hooks/useClasses";
-import { useStudents, Student } from "@/hooks/useStudents";
-import { useStudentDocuments } from "@/hooks/useStudentDocuments";
-import { useUserRole } from "@/hooks/useUserRole";
-import { supabase } from "@/integrations/supabase/client";
+import { AjoutEleveModal } from "@/components/eleves/AjoutEleveModal";
+import { useOptimizedClasses } from "@/hooks/useOptimizedClasses";
+import { useStudents } from "@/hooks/useStudents";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Skeleton } from "@/components/ui/skeleton";
-
-
-
-// Composant pour afficher les documents de l'élève (excluant les photos)
-function DocumentsSection({ studentId }: { studentId: string }) {
-  const { toast } = useToast();
-  const { documents, loading, deleteDocument, getDocumentUrl, downloadDocument } = useStudentDocuments(studentId);
-  const { userProfile } = useUserRole();
-  const [uploading, setUploading] = useState(false);
-
-  // Filtrer les documents pour exclure les photos
-  const documentFiles = documents.filter(doc => doc.file_type === 'document');
-
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>, type: 'photo' | 'document') => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    setUploading(true);
-    try {
-      // Uploader le fichier vers Supabase Storage
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${studentId}_${Date.now()}.${fileExt}`;
-      const filePath = `schools/${userProfile?.schoolId || 'default'}/students/${studentId}/${type}s/${fileName}`;
-
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('student-files')
-        .upload(filePath, file);
-
-      if (uploadError) {
-        throw uploadError;
-      }
-
-      // Enregistrer les métadonnées en base
-      const { error: dbError } = await supabase
-        .from('student_documents')
-        .insert([{
-          student_id: studentId,
-          file_name: file.name,
-          file_path: filePath,
-          file_type: type,
-          file_size: file.size,
-          document_name: file.name,
-          school_id: userProfile?.schoolId || 'default',
-          uploaded_by: userProfile?.id || 'default',
-          mime_type: file.type
-        }]);
-
-      if (dbError) {
-        throw dbError;
-      }
-
-      toast({
-        title: "Document uploadé",
-        description: "Le document a été uploadé avec succès",
-      });
-    } catch (error) {
-      console.error("Erreur lors de l'upload:", error);
-      toast({
-        title: "Erreur",
-        description: "Erreur lors de l'upload",
-        variant: "destructive",
-      });
-    }
-    setUploading(false);
-  };
-
-  const handleDeleteDocument = async (documentId: string) => {
-    const result = await deleteDocument(documentId);
-    
-    if (result.success) {
-      toast({
-        title: "Document supprimé",
-        description: "Le document a été supprimé avec succès",
-      }); } else {
-      toast({
-        title: "Erreur",
-        description: result.error || "Erreur lors de la suppression",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleDownloadDocument = async (document: any) => {
-    await downloadDocument(document.file_path, document.file_name);
-  };
-
-  const handlePreviewDocument = (document: any) => {
-    const url = getDocumentUrl(document.file_path);
-    window.open(url, '_blank');
-  };
-
-  return (
-    <div>
-      <h3 className="text-lg font-semibold mb-3 text-orange-600">Documents de l'élève</h3>
-      
-      {/* Section d'upload - seulement pour les documents */}
-      <div className="mb-4 space-y-2">
-        <div className="flex gap-2">
-          <label className="flex items-center gap-2 px-3 py-2 border border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
-            <input
-              type="file"
-              accept=".pdf,.doc,.docx,.txt"
-              onChange={(e) => handleFileUpload(e, 'document')}
-              disabled={uploading}
-              className="hidden"
-            />
-            <span className="text-sm text-gray-600">
-              {uploading ? 'Upload en cours...' : 'Ajouter un document'}
-            </span>
-          </label>
-        </div>
-      </div>
-      
-      {loading ? (
-        <div className="space-y-2">
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-3/4" />
-        </div>
-      ) : documentFiles.length > 0 ? (
-        <div className="space-y-3">
-          {documentFiles.map((doc) => (
-            <div key={doc.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
-              <div className="flex items-center gap-3">
-                <FileText className="h-5 w-5 text-blue-600" />
-                <div>
-                  <p className="font-medium">{doc.file_name}</p>
-                  <p className="text-sm text-gray-500">
-                    {doc.file_type} • {Math.round(doc.file_size / 1024)} KB
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handlePreviewDocument(doc)}
-                  className="text-blue-600 hover:text-blue-800"
-                  title="Prévisualiser le document"
-                >
-                  <Eye className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleDownloadDocument(doc)}
-                  className="text-green-600 hover:text-green-800"
-                  title="Télécharger le document"
-                >
-                  <Download className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleDeleteDocument(doc.id)}
-                  className="text-red-600 hover:text-red-800"
-                  title="Supprimer le document"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <p className="text-gray-500 italic">Aucun document disponible</p>
-      )}
-    </div>
-  );
-}
+import { toast } from "sonner";
 
 export default function ElevesParClasse() {
-  const { className } = useParams<{ className: string }>();
   const navigate = useNavigate();
-  const { toast } = useToast();
-  const { classes: classesData } = useClasses();
-  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [studentToEdit, setStudentToEdit] = useState<Student | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [studentPhoto, setStudentPhoto] = useState<string | null>(null);
-
-  // Trouver l'ID de la classe à partir du nom de classe
-  const currentClass = useMemo(() => {
-    if (!className || !classesData) return null;
-      const decodedClassName = decodeURIComponent(className);
-    const foundClass = classesData.find(classe => 
-      `${classe.name} ${classe.level}${classe.section ? ` - ${classe.section}` : ''}` === decodedClassName
+  const { classeId } = useParams();
+  const [searchTerm, setSearchTerm] = useState("");
+  
+  const { classes, loading: classesLoading } = useOptimizedClasses();
+  const { students, loading: studentsLoading, deleteStudent } = useStudents();
+  
+  const classe = classes.find(c => c.id === classeId);
+  const elevesClasse = students.filter(student => student.class_id === classeId);
+  
+  // Filtrage des élèves selon le terme de recherche
+  const elevesFiltres = elevesClasse.filter(eleve => {
+    const searchLower = searchTerm.toLowerCase();
+    return (
+      eleve.first_name?.toLowerCase().includes(searchLower) ||
+      eleve.last_name?.toLowerCase().includes(searchLower) ||
+      eleve.student_number?.toLowerCase().includes(searchLower)
     );
-    
-    return foundClass;
-  }, [className, classesData]);
+  });
 
-  // Utiliser le hook useStudents avec l'ID de la classe
-  const { students, loading, deleteStudent, refreshStudents } = useStudents(currentClass?.id);
-
-  // Log pour débogage
-  // Filtrer les élèves en fonction de la recherche
-  const filteredStudents = useMemo(() => {
-    if (!searchQuery.trim()) return students;
-    
-    const query = searchQuery.toLowerCase().trim();
-    return students.filter(student => 
-      student.last_name.toLowerCase().includes(query) ||
-      student.first_name.toLowerCase().includes(query) ||
-      `${student.first_name} ${student.last_name}`.toLowerCase().includes(query) ||
-      student.student_number?.toLowerCase().includes(query)
-    );
-  }, [students, searchQuery]);
-
-  const handleAddSuccess = () => {
-    setIsAddDialogOpen(false);
-    refreshStudents();
-  };
-
-  const handleEditSuccess = () => {
-    setIsEditDialogOpen(false);
-    setStudentToEdit(null);
-    refreshStudents();
-  };
-
-  const handleViewStudent = (student: Student) => {
-    setSelectedStudent(student);
-    setIsDialogOpen(true);
-  };
-
-  // Charger la photo de l'élève quand selectedStudent change
-  useEffect(() => {
-    const loadStudentPhoto = async () => {
-      if (!selectedStudent) {
-        setStudentPhoto(null);
-        return;
-      }
-
-      try {
-        const { data: documents, error } = await supabase
-          .from('student_documents')
-          .select('*')
-          .eq('student_id', selectedStudent.id)
-          .eq('file_type', 'photo')
-          .order('created_at', { ascending: false })
-          .limit(1);
-
-        if (error) {
-          console.error('Erreur lors de la récupération de la photo:', error);
-          setStudentPhoto(null);
-          return;
-        }
-
-        if (documents && documents.length > 0) {
-          const { data } = supabase.storage
-            .from('student-files')
-            .getPublicUrl(documents[0].file_path);
-          setStudentPhoto(data.publicUrl); } else {
-          setStudentPhoto(null);
-        }
-      } catch (error) {
-        console.error('Erreur lors du chargement de la photo:', error);
-        setStudentPhoto(null);
-      }
-    };
-
-    loadStudentPhoto();
-  }, [selectedStudent]);
-
-  const handleModifierEleve = (student: Student) => {
-    setStudentToEdit(student);
-    setIsEditDialogOpen(true);
-  };
-
-  const handleSupprimerEleve = async (studentId: string) => {
-    try {
-      await deleteStudent(studentId);
-      toast({
-            title: "Succès",
-            description: "Élève supprimé avec succès",
-          });
-        } catch (error) {
-          console.error("Erreur lors de la suppression de l'élève:", error);
-      toast({
-            title: "Erreur",
-            description: "Erreur lors de la suppression de l'élève",
-        variant: "destructive",
-      });
+  const handleDeleteStudent = async (studentId: string, studentName: string) => {
+    const success = await deleteStudent(studentId);
+    if (success) {
+      toast.success(`Élève ${studentName} supprimé avec succès`);
+    } else {
+      toast.error("Erreur lors de la suppression de l'élève");
     }
   };
 
-
-  // Fonction pour uploader une photo
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>, type: 'photo' | 'document') => {
-    const file = event.target.files?.[0];
-    if (!file || !selectedStudent) return;
-
-    try {
-      // Uploader le fichier vers Supabase Storage
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${selectedStudent.id}_${Date.now()}.${fileExt}`;
-      const filePath = `schools/${selectedStudent.school_id}/students/${selectedStudent.id}/${type}s/${fileName}`;
-
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('student-files')
-        .upload(filePath, file);
-
-      if (uploadError) {
-        throw uploadError;
-      }
-
-      // Enregistrer les métadonnées en base
-      const { error: dbError } = await supabase
-        .from('student_documents')
-        .insert([{
-          student_id: selectedStudent.id,
-          file_name: file.name,
-          file_path: filePath,
-          file_type: type,
-          file_size: file.size,
-          document_name: file.name,
-          school_id: selectedStudent.school_id,
-          uploaded_by: selectedStudent.school_id, // Utiliser school_id temporairement
-          mime_type: file.type
-        }]);
-
-      if (dbError) {
-        throw dbError;
-      }
-
-      toast({
-        title: "Photo uploadée",
-        description: "La photo a été uploadée avec succès",
-      });
-
-      // Recharger la photo
-      const { data: documents, error } = await supabase
-        .from('student_documents')
-        .select('*')
-        .eq('student_id', selectedStudent.id)
-        .eq('file_type', 'photo')
-        .order('created_at', { ascending: false })
-        .limit(1);
-
-      if (!error && documents && documents.length > 0) {
-        const { data } = supabase.storage
-          .from('student-files')
-          .getPublicUrl(documents[0].file_path);
-        setStudentPhoto(data.publicUrl);
-      }
-
-    } catch (error) {
-      console.error("Erreur lors de l'upload:", error);
-      toast({
-        title: "Erreur",
-        description: "Erreur lors de l'upload de la photo",
-        variant: "destructive",
-      });
-    }
-  };
-
-  if (loading) {
+  if (classesLoading || studentsLoading) {
     return (
       <Layout>
         <div className="container mx-auto py-8">
-          <h1 className="text-3xl font-bold mb-8">Chargement...</h1>
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+              <p className="text-gray-600">Chargement des données...</p>
+            </div>
+          </div>
         </div>
       </Layout>
     );
   }
 
+  if (!classe) {
+    return (
+      <Layout>
+        <div className="container mx-auto py-8">
+          <div className="text-center">
+            <p className="text-gray-600 text-lg mb-4">Classe non trouvée</p>
+            <Button onClick={() => navigate("/classes")}>
+              Retour aux classes
+            </Button>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  const nomClasse = `${classe.name} ${classe.level}${classe.section ? ` - ${classe.section}` : ''}`;
+
   return (
     <Layout>
-      <div className="container mx-auto py-8">
-        <div className="flex items-center gap-4 mb-8">
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
           <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate('/eleves')}
-            className="h-8 w-8"
+            variant="outline"
+            size="sm"
+            onClick={() => navigate("/eleves")}
           >
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Retour
           </Button>
-          <h1 className="text-3xl font-bold">Élèves de la classe {decodeURIComponent(className || '')}</h1>
-          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="flex items-center gap-2 ml-auto">
-                <UserPlus className="h-4 w-4" />
-                Ajouter un élève
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Ajouter un élève</DialogTitle>
-              </DialogHeader>
-              <AjoutEleveForm 
-                onSuccess={handleAddSuccess} 
-                classId={currentClass?.id}
-                className={currentClass ? `${currentClass.name} ${currentClass.level}${currentClass.section ? ` - ${currentClass.section}` : ''}` : undefined}
-              />
-            </DialogContent>
-          </Dialog>
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">
+              Élèves - {nomClasse}
+            </h1>
+            <p className="text-gray-600 mt-1">
+              {elevesClasse.length} élève{elevesClasse.length > 1 ? 's' : ''} inscrit{elevesClasse.length > 1 ? 's' : ''}
+            </p>
+          </div>
+          <div className="ml-auto">
+            <AjoutEleveModal />
+          </div>
         </div>
 
-        {/* Statistiques */}
-        <div className="grid md:grid-cols-3 gap-6 mb-8">
+        {/* Champ de recherche */}
+        <Card>
+          <CardContent className="pt-6">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Input
+                placeholder="Rechercher un élève par prénom, nom ou matricule..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Statistiques de la classe */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total élèves</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">Total Élèves</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{students.length}</div>
+              <div className="text-2xl font-bold">{elevesClasse.length}</div>
             </CardContent>
           </Card>
+          
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Garçons</CardTitle>
-              <Users className="h-4 w-4 text-blue-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
-                {students.filter(s => s.gender === 'M').length}
+              <div className="text-2xl font-bold text-blue-600">
+                {elevesClasse.filter(e => e.gender === 'M').length}
               </div>
             </CardContent>
           </Card>
+          
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Filles</CardTitle>
-              <Users className="h-4 w-4 text-pink-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
-                {students.filter(s => s.gender === 'F').length}
+              <div className="text-2xl font-bold text-pink-600">
+                {elevesClasse.filter(e => e.gender === 'F').length}
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Barre de recherche */}
-        <div className="mb-6">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <Input
-              placeholder="Rechercher un élève (nom, prénom, matricule...)"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-        </div>
-
         {/* Liste des élèves */}
-        {filteredStudents.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-gray-500 text-lg mb-4">
-              {searchQuery ? "Aucun élève trouvé pour cette recherche" : "Aucun élève dans cette classe"}
-            </p>
-          </div>
-        ) : (
-          <div className="grid gap-4">
-            {filteredStudents.map((student) => (
-              <Card key={student.id} className="hover:shadow-md transition-shadow">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                          <span className="text-blue-600 font-semibold">
-                          {student.first_name.charAt(0)}{student.last_name.charAt(0)}
-                          </span>
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-lg">
-                          {student.first_name} {student.last_name}
-                        </h3>
-                        <p className="text-gray-600">
-                          {student.student_number && `Matricule: ${student.student_number}`}
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          {student.gender && student.date_of_birth ? 
-                            `${student.gender === 'M' ? 'Masculin' : 'Féminin'} • Né(e) le ${new Date(student.date_of_birth).toLocaleDateString('fr-FR')}` :
-                            student.gender === 'M' ? 'Masculin' : student.gender === 'F' ? 'Féminin' : ''
+        <Card>
+          <CardHeader>
+            <CardTitle>Liste des Élèves - {nomClasse}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Élève</TableHead>
+                    <TableHead>Genre</TableHead>
+                    <TableHead>Date de naissance</TableHead>
+                    <TableHead>Contact</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {elevesFiltres.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-8 text-gray-500">
+                        {searchTerm ? "Aucun élève trouvé pour cette recherche" : "Aucun élève dans cette classe"}
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    elevesFiltres.map((eleve) => (
+                      <TableRow key={eleve.id}>
+                        <TableCell className="font-medium">
+                          <div>
+                            <div className="font-semibold">{eleve.first_name} {eleve.last_name}</div>
+                            <div className="text-sm text-gray-500">Matricule: {eleve.student_number}</div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={eleve.gender === 'M' ? 'default' : 'secondary'}>
+                            {eleve.gender === 'M' ? 'Garçon' : 'Fille'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {eleve.date_of_birth ? 
+                            new Date(eleve.date_of_birth).toLocaleDateString('fr-FR') : 
+                            <span className="text-gray-400">Non définie</span>
                           }
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleViewStudent(student)}
-                        className="h-8 w-8"
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleModifierEleve(student)}
-                        className="h-8 w-8"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-red-600 hover:text-red-800"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Supprimer l'élève</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Êtes-vous sûr de vouloir supprimer l'élève {student.first_name} {student.last_name} ? 
-                              Cette action est irréversible.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Annuler</AlertDialogCancel>
-                            <AlertDialogAction 
-                              onClick={() => handleSupprimerEleve(student.id)}
-                              className="bg-red-600 hover:bg-red-700"
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-sm">
+                            <div>{eleve.phone || eleve.parent_phone || <span className="text-gray-400">N/A</span>}</div>
+                            {eleve.parent_email && (
+                              <div className="text-gray-500">{eleve.parent_email}</div>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center space-x-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => navigate(`/eleves/modifier/${eleve.id}`)}
                             >
-                              Supprimer
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
-
-        {/* Dialog pour voir les détails de l'élève */}
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Détails de l'élève</DialogTitle>
-            </DialogHeader>
-            {selectedStudent && (
-              <div className="space-y-6">
-                {/* Photo et informations de base */}
-                <div className="flex items-start gap-6">
-                  <div className="relative">
-                  <div className="w-32 h-32 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden">
-                      {studentPhoto ? (
-                      <img 
-                          src={studentPhoto} 
-                          alt={`Photo de ${selectedStudent.first_name} ${selectedStudent.last_name}`}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="text-center text-gray-500">
-                        <Users className="h-8 w-8 mx-auto mb-2" />
-                        <p className="text-sm">Aucune photo</p>
-                      </div>
-                    )}
-                    </div>
-                    {/* Bouton pour changer la photo */}
-                    <label className="absolute bottom-1 right-1 bg-blue-600 text-white rounded-full p-1 cursor-pointer hover:bg-blue-700 transition-colors" title="Changer la photo">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => handleFileUpload(e, 'photo')}
-                        className="hidden"
-                      />
-                      <Edit className="h-3 w-3" />
-                    </label>
-                  </div>
-                  <div className="flex-1">
-                    <h2 className="text-2xl font-bold text-blue-600">
-                      {selectedStudent.first_name} {selectedStudent.last_name}
-                    </h2>
-                    <p className="text-gray-600 mb-2">Matricule: {selectedStudent.student_number}</p>
-                    <p className="text-gray-600 mb-2">Classe: {selectedStudent.classes ? `${selectedStudent.classes.name} ${selectedStudent.classes.level}${selectedStudent.classes.section ? ` - ${selectedStudent.classes.section}` : ''}` : 'Non assignée'}</p>
-                    <p className="text-gray-600">
-                      {selectedStudent.gender === 'M' ? 'Masculin' : selectedStudent.gender === 'F' ? 'Féminin' : ''} • {selectedStudent.date_of_birth && 
-                        `Né(e) le ${new Date(selectedStudent.date_of_birth).toLocaleDateString('fr-FR')}`
-                      }
-                    </p>
-                  </div>
-                </div>
-
-                {/* Informations personnelles */}
-                <div className="grid md:grid-cols-2 gap-6">
-                  <div>
-                    <h3 className="text-lg font-semibold mb-3 text-orange-600">Informations personnelles</h3>
-                    <div className="space-y-2">
-                      <p><strong>Lieu de naissance:</strong> {selectedStudent.place_of_birth || 'Non renseigné'}</p>
-                      <p><strong>Adresse:</strong> {selectedStudent.address || 'Non renseignée'}</p>
-                      <p><strong>Téléphone:</strong> {selectedStudent.phone || 'Non renseigné'}</p>
-                      <p><strong>Email:</strong> {selectedStudent.parent_email || 'Non renseigné'}</p>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h3 className="text-lg font-semibold mb-3 text-orange-600">Contact d'urgence</h3>
-                    <div className="space-y-2">
-                      <p><strong>Contact:</strong> {selectedStudent.emergency_contact || 'Non renseigné'}</p>
-                    </div>
-                  </div>
-                </div>
-
-
-                {/* Documents de l'élève */}
-                <DocumentsSection studentId={selectedStudent.id} />
-              </div>
-            )}
-          </DialogContent>
-        </Dialog>
-
-        {/* Dialog pour modifier l'élève */}
-        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Modifier l'élève</DialogTitle>
-            </DialogHeader>
-            {studentToEdit && (
-              <AjoutEleveForm 
-                onSuccess={handleEditSuccess} 
-                initialData={studentToEdit}
-                isEditing={true}
-                classId={currentClass?.id}
-                className={currentClass ? `${currentClass.name} ${currentClass.level}${currentClass.section ? ` - ${currentClass.section}` : ''}` : undefined}
-              />
-            )}
-          </DialogContent>
-        </Dialog>
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="outline" size="sm">
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Confirmer la suppression</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Êtes-vous sûr de vouloir supprimer l'élève {eleve.first_name} {eleve.last_name} ? Cette action est irréversible.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Annuler</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => handleDeleteStudent(eleve.id, `${eleve.first_name} ${eleve.last_name}`)}
+                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                  >
+                                    Supprimer
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </Layout>
   );

@@ -28,7 +28,7 @@ interface UseNotesSyncProps {
 export const useNotesSync = ({ classeId, matiereId, examId, studentId, isComposition }: UseNotesSyncProps) => {
   const [localNotes, setLocalNotes] = useState<UnifiedNote[]>([]);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const { grades, createGrade, updateGrade, refetch: refetchGrades } = useGrades(studentId, matiereId, examId);
+  const { grades, createGrade, updateGrade, refetch: refetchGrades } = useGrades();
   const { toast } = useToast();
 
   // Charger les notes depuis la base de données

@@ -6,10 +6,11 @@ export interface AcademicCalendarSettings {
 
 export const getAcademicCalendarSettings = (currentAcademicYear?: string): AcademicCalendarSettings => {
   try {
-    // Remplacé par hook Supabase
-      // const settings = // localStorage.getItem("settings") // Remplacé par hook Supabase;
-    if (settings) {
-      const parsedSettings = JSON.parse(settings);
+    // Mock settings for now - would come from Supabase in real implementation
+    const mockSettings = null; // Replace localStorage call
+    
+    if (mockSettings) {
+      const parsedSettings = JSON.parse(mockSettings);
       if (parsedSettings.dateDebutAnnee && parsedSettings.dateFinAnnee) {
         return {
           dateDebutAnnee: parsedSettings.dateDebutAnnee,

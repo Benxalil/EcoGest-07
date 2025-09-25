@@ -10,10 +10,13 @@ export interface ClassData {
   level: string;
   section?: string;
   capacity?: number;
-  school_id: string;
+  effectif?: number;
   academic_year_id: string;
+  school_id: string;
   created_at: string;
   updated_at: string;
+  series_id?: string;
+  label_id?: string;
   enrollment_count?: number;
 }
 

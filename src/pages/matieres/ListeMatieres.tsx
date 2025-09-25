@@ -1,206 +1,66 @@
-
-import { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Plus, Pencil, Trash2, ChevronDown, ChevronRight } from "lucide-react";
-import { toast } from "sonner";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { useNavigate } from "react-router-dom";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import { useClasses } from "@/hooks/useClasses";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { AjoutMatiereModal } from "@/components/matieres/AjoutMatiereModal";
+import { Plus, Search, Edit, Trash2 } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
 import { useSubjects } from "@/hooks/useSubjects";
+import { useOptimizedClasses } from "@/hooks/useOptimizedClasses";
 
-interface Matiere {
-  id: number;
-  nom: string;
-  abreviation?: string;
-  moyenne: string;
-  coefficient: string;
-  classeId: string;
+interface ClassType {
+  id: string;
+  name: string;
+  level: string;
+  section?: string;
 }
 
 export default function ListeMatieres() {
-  const { classes, loading: classesLoading } = useClasses();
-  const [matieres, setMatieres] = useState<Matiere[]>([]);
-  const [newMatiere, setNewMatiere] = useState({ nom: "", abreviation: "", moyenne: "", coefficient: "", classeId: "" });
-  const [editingMatiere, setEditingMatiere] = useState<Matiere | null>(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [expandedClasses, setExpandedClasses] = useState<Set<string>>(new Set());
-  const navigate = useNavigate();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedClass, setSelectedClass] = useState<string>("all");
 
-  // Récupérer toutes les matières depuis la base de données
-  const { subjects, loading: subjectsLoading, createSubject, updateSubject, deleteSubject } = useSubjects();
+  const { subjects, loading: subjectsLoading, deleteSubject } = useSubjects();
+  const { classes, loading: classesLoading } = useOptimizedClasses();
 
-  useEffect(() => {
-    // Convertir les subjects de la base vers le format local
-    if (subjects.length > 0) {
-      const matieresFromDB = subjects.map(subject => ({
-        id: parseInt(subject.id.replace(/\D/g, '')) || Date.now(), // Convertir UUID en nombre
-        nom: subject.name,
-        abreviation: subject.abbreviation || '',
-        moyenne: (subject.hours_per_week || 20).toString(), // Utiliser hours_per_week comme note maximale
-        coefficient: (subject.coefficient || 1).toString(),
-        classeId: subject.class_id
-      }));
-      setMatieres(matieresFromDB);
-    }
-  }, [subjects]);
+  // Filtrage des matières
+  const matieresFiltrees = subjects.filter(matiere => {
+    const matchesSearch = matiere.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         matiere.code?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesClass = selectedClass === "all" || matiere.class_id === selectedClass;
+    
+    return matchesSearch && matchesClass;
+  });
 
-  const handleAddMatiere = async () => {
-    if (newMatiere.nom && newMatiere.classeId && newMatiere.moyenne && newMatiere.coefficient) {
-      const success = await createSubject({
-        name: newMatiere.nom,
-        abbreviation: newMatiere.abreviation || '',
-        class_id: newMatiere.classeId,
-        coefficient: parseFloat(newMatiere.coefficient) || 1,
-        hours_per_week: parseInt(newMatiere.moyenne) || 20 // Utiliser hours_per_week pour stocker la note maximale
-      });
-      
-      if (success) {
-      setNewMatiere({ nom: "", abreviation: "", moyenne: "", coefficient: "", classeId: "" });
-      setDialogOpen(false);
-      }
+  const handleDeleteSubject = async (subjectId: string, subjectName: string) => {
+    const success = await deleteSubject(subjectId);
+    if (success) {
+      toast.success(`Matière ${subjectName} supprimée avec succès`);
     } else {
-      toast.error("Veuillez remplir tous les champs obligatoires");
+      toast.error("Erreur lors de la suppression de la matière");
     }
   };
 
-  const handleEditMatiere = (matiere: Matiere) => {
-    setEditingMatiere(matiere);
-    setEditDialogOpen(true);
+  const getClassName = (classId: string) => {
+    const classObj = classes.find(c => c.id === classId);
+    if (!classObj) return "Classe inconnue";
+    return `${classObj.name} ${classObj.level}${classObj.section ? ` - ${classObj.section}` : ''}`;
   };
 
-  const handleUpdateMatiere = async () => {
-    if (editingMatiere && editingMatiere.nom && editingMatiere.moyenne && editingMatiere.coefficient) {
-      // Trouver le subject correspondant
-      const subject = subjects.find(s => s.class_id === editingMatiere.classeId && s.name === editingMatiere.nom);
-      if (subject) {
-        const success = await updateSubject(subject.id, {
-          name: editingMatiere.nom,
-          abbreviation: editingMatiere.abreviation || '',
-          class_id: editingMatiere.classeId,
-          coefficient: parseFloat(editingMatiere.coefficient) || 1,
-          hours_per_week: parseInt(editingMatiere.moyenne) || 20 // Utiliser hours_per_week pour stocker la note maximale
-        });
-        
-        if (success) {
-      setEditingMatiere(null);
-      setEditDialogOpen(false);
-        }
-      }
-    } else {
-      toast.error("Veuillez remplir tous les champs obligatoires");
-    }
-  };
-
-  const handleDeleteMatiere = async (id: number) => {
-    if (window.confirm("Êtes-vous sûr de vouloir supprimer cette matière ?")) {
-      // Trouver le subject correspondant
-      const matiere = matieres.find(m => m.id === id);
-      if (matiere) {
-        const subject = subjects.find(s => s.class_id === matiere.classeId && s.name === matiere.nom);
-        if (subject) {
-          const success = await deleteSubject(subject.id);
-          if (success) {
-      toast.success("Matière supprimée avec succès");
-          }
-        }
-      }
-    }
-  };
-
-  const toggleClasseExpansion = (classeId: string) => {
-    const newExpanded = new Set(expandedClasses);
-    if (newExpanded.has(classeId)) {
-      newExpanded.delete(classeId); } else {
-      newExpanded.add(classeId);
-    }
-    setExpandedClasses(newExpanded);
-  };
-
-  const getMatieresForClasse = (classeId: string) => {
-    return matieres.filter(matiere => matiere.classeId === classeId);
-  };
-
-  const getClasseLabel = (classe: Classe) => {
-    return `${classe.name} ${classe.level}${classe.section ? ` - ${classe.section}` : ''}`;
-  };
-
-  if (classesLoading) {
+  if (subjectsLoading || classesLoading) {
     return (
       <Layout>
         <div className="container mx-auto py-8">
-          <div className="text-center">
-            <p className="text-gray-500 text-lg">Chargement des classes...</p>
-          </div>
-        </div>
-      </Layout>
-    );
-  }
-
-  if (classesLoading || subjectsLoading) {
-    return (
-      <Layout>
-        <div className="container mx-auto p-6">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-4">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => navigate(-1)}
-                className="hover:bg-gray-100"
-              >
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-              <h1 className="text-2xl font-bold">Gestion des Matières par Classe</h1>
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+              <p className="text-gray-600">Chargement des matières...</p>
             </div>
-          </div>
-
-          <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-gray-500 text-lg">Chargement des matières...</p>
-          </div>
-        </div>
-      </Layout>
-    );
-  }
-
-  if (classes.length === 0) {
-    return (
-      <Layout>
-        <div className="container mx-auto p-6">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-4">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => navigate(-1)}
-                className="hover:bg-gray-100"
-              >
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-              <h1 className="text-2xl font-bold">Gestion des Matières par Classe</h1>
-            </div>
-          </div>
-
-          <div className="text-center py-12">
-            <p className="text-gray-500 text-lg mb-4">Aucune classe n'a été créée</p>
-            <p className="text-gray-400 mb-6">Commencez par créer des classes pour gérer les matières</p>
-            <Button onClick={() => navigate("/classes/ajouter")}>
-              Créer une classe
-            </Button>
           </div>
         </div>
       </Layout>
@@ -209,225 +69,205 @@ export default function ListeMatieres() {
 
   return (
     <Layout>
-      <div className="container mx-auto p-6">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate(-1)}
-              className="hover:bg-gray-100"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <h1 className="text-2xl font-bold">Gestion des Matières par Classe</h1>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Gestion des Matières</h1>
+            <p className="text-gray-600 mt-1">
+              {subjects.length} matière{subjects.length > 1 ? 's' : ''} configurée{subjects.length > 1 ? 's' : ''}
+            </p>
           </div>
+          <AjoutMatiereModal 
+            trigger={
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                Ajouter une matière
+              </Button>
+            }
+          />
         </div>
 
-        <div className="space-y-4">
-          {classes.map((classe) => {
-            const matieresClasse = getMatieresForClasse(classe.id);
-            const isExpanded = expandedClasses.has(classe.id);
-            
-            return (
-              <Collapsible key={classe.id} open={isExpanded} onOpenChange={() => toggleClasseExpansion(classe.id)}>
-                <div className="border rounded-lg bg-white shadow">
-                  <div className="flex items-center justify-between p-4">
-                    <CollapsibleTrigger className="flex-1">
-                      <div className="flex items-center gap-3 hover:bg-gray-50 p-2 rounded">
-                        {isExpanded ? (
-                          <ChevronDown className="h-5 w-5 text-gray-600" />
-                        ) : (
-                          <ChevronRight className="h-5 w-5 text-gray-600" />
-                        )}
-                        <div className="text-left">
-                          <h3 className="text-lg font-semibold text-blue-600">
-                            {getClasseLabel(classe)}
-                          </h3>
-                          <p className="text-sm text-gray-500">
-                            {matieresClasse.length} matière{matieresClasse.length !== 1 ? 's' : ''}
-                          </p>
-                        </div>
-                      </div>
-                    </CollapsibleTrigger>
-                      
-                          <Button
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setNewMatiere({ ...newMatiere, classeId: classe.id });
-                              setDialogOpen(true);
-                            }}
-                          >
-                            <Plus className="mr-2 h-4 w-4" />
-                            Ajouter une Matière
-                          </Button>
-                    </div>
-                  
-                  <CollapsibleContent>
-                    <div className="border-t bg-gray-50">
-                      {matieresClasse.length === 0 ? (
-                        <div className="p-6 text-center text-gray-500">
-                          Aucune matière enregistrée pour cette classe
-                        </div>
-                      ) : (
-                        <div className="p-4">
-                          <div className="grid gap-3">
-                            {matieresClasse.map((matiere) => (
-                              <div key={matiere.id} className="flex items-center justify-between p-3 bg-white border rounded-lg">
-                                <div>
-                                  <h4 className="font-medium">
-                                    {matiere.nom}
-                                    {matiere.abreviation && (
-                                      <span className="text-gray-500 ml-2">({matiere.abreviation})</span>
-                                    )}
-                                  </h4>
-                                  <p className="text-sm text-gray-500">Moyenne: {matiere.moyenne} | Coefficient: {matiere.coefficient}</p>
-                                </div>
-                                <div className="flex gap-2">
-                                  <Button
-                                    variant="outline"
-                                    size="icon"
-                                    onClick={() => handleEditMatiere(matiere)}
-                                  >
-                                    <Pencil className="h-4 w-4" />
-                                  </Button>
-                                  <Button
-                                    variant="outline"
-                                    size="icon"
-                                    onClick={() => handleDeleteMatiere(matiere.id)}
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                              </div>
-                            ))}
+        {/* Filtres */}
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Input
+                  placeholder="Rechercher par nom ou code de matière..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <Select value={selectedClass} onValueChange={setSelectedClass}>
+                <SelectTrigger className="w-full sm:w-[250px]">
+                  <SelectValue placeholder="Filtrer par classe" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Toutes les classes</SelectItem>
+                  {classes.map((classe: ClassType) => (
+                    <SelectItem key={classe.id} value={classe.id}>
+                      {classe.name} {classe.level}{classe.section ? ` - ${classe.section}` : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Statistiques */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Matières</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{subjects.length}</div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Classes Concernées</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-blue-600">
+                {new Set(subjects.map(s => s.class_id)).size}
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Coefficient Moyen</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-600">
+                {subjects.length > 0 ? 
+                  (subjects.reduce((sum, s) => sum + (s.coefficient || 1), 0) / subjects.length).toFixed(1) : 
+                  '0'
+                }
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Heures Totales</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-purple-600">
+                {subjects.reduce((sum, s) => sum + (s.hours_per_week || 0), 0)}h
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Liste des matières */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Liste des Matières</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Matière</TableHead>
+                    <TableHead>Classe</TableHead>
+                    <TableHead>Coefficient</TableHead>
+                    <TableHead>Heures/semaine</TableHead>
+                    <TableHead>Couleur</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {matieresFiltrees.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+                        {searchTerm || selectedClass !== "all" ? 
+                          "Aucune matière trouvée pour ces critères" : 
+                          "Aucune matière configurée"
+                        }
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    matieresFiltrees.map((matiere) => (
+                      <TableRow key={matiere.id}>
+                        <TableCell className="font-medium">
+                          <div>
+                            <div className="font-semibold">{matiere.name}</div>
+                            {matiere.code && (
+                              <div className="text-sm text-gray-500">Code: {matiere.code}</div>
+                            )}
                           </div>
-                        </div>
-                      )}
-                    </div>
-                  </CollapsibleContent>
-                </div>
-              </Collapsible>
-            );
-          })}
-        </div>
-
-        {/* Dialog pour modifier une matière */}
-        <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>Modifier la matière</DialogTitle>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="edit-nom">Nom de la matière</Label>
-                <Input
-                  id="edit-nom"
-                  value={editingMatiere?.nom || ""}
-                  onChange={(e) => setEditingMatiere(prev => 
-                    prev ? { ...prev, nom: e.target.value } : null
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">
+                            {getClassName(matiere.class_id)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">
+                            {matiere.coefficient || 1}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {matiere.hours_per_week || 0}h
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center space-x-2">
+                            <div 
+                              className="w-4 h-4 rounded-full border border-gray-300"
+                              style={{ backgroundColor: matiere.color || '#3B82F6' }}
+                            />
+                            <span className="text-sm text-gray-600">
+                              {matiere.color || '#3B82F6'}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center space-x-2">
+                            <Button variant="outline" size="sm">
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="outline" size="sm">
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Confirmer la suppression</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Êtes-vous sûr de vouloir supprimer la matière {matiere.name} ? Cette action supprimera également toutes les notes associées.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Annuler</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => handleDeleteSubject(matiere.id, matiere.name)}
+                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                  >
+                                    Supprimer
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
                   )}
-                  placeholder="Ex: Mathématiques"
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="edit-abreviation">Abréviation (optionnel)</Label>
-                <Input
-                  id="edit-abreviation"
-                  value={editingMatiere?.abreviation || ""}
-                  onChange={(e) => setEditingMatiere(prev => 
-                    prev ? { ...prev, abreviation: e.target.value } : null
-                  )}
-                  placeholder="Ex: Math"
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="edit-moyenne">Moyenne de la matière *</Label>
-                <Input
-                  id="edit-moyenne"
-                  value={editingMatiere?.moyenne || ""}
-                  onChange={(e) => setEditingMatiere(prev => 
-                    prev ? { ...prev, moyenne: e.target.value } : null
-                  )}
-                  placeholder="Ex: 20, 10, 5"
-                  required
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="edit-coefficient">Coefficient de la matière *</Label>
-                <Input
-                  id="edit-coefficient"
-                  type="number"
-                  min="1"
-                  value={editingMatiere?.coefficient || ""}
-                  onChange={(e) => setEditingMatiere(prev => 
-                    prev ? { ...prev, coefficient: e.target.value } : null
-                  )}
-                  placeholder="Ex: 2, 3, 4"
-                  required
-                />
-              </div>
-              <Button onClick={handleUpdateMatiere} className="mt-4">
-                Modifier
-              </Button>
+                </TableBody>
+              </Table>
             </div>
-          </DialogContent>
-        </Dialog>
-
-        {/* Dialog pour ajouter une matière */}
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>Ajouter une matière à {newMatiere.classeId ? getClasseLabel(classes.find(c => c.id === newMatiere.classeId)!) : 'la classe'}</DialogTitle>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="nom">Nom de la matière</Label>
-                <Input
-                  id="nom"
-                  value={newMatiere.nom}
-                  onChange={(e) => setNewMatiere({ ...newMatiere, nom: e.target.value })}
-                  placeholder="Ex: Mathématiques"
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="abreviation">Abréviation (optionnel)</Label>
-                <Input
-                  id="abreviation"
-                  value={newMatiere.abreviation}
-                  onChange={(e) => setNewMatiere({ ...newMatiere, abreviation: e.target.value })}
-                  placeholder="Ex: Math"
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="moyenne">Moyenne de la matière *</Label>
-                <Input
-                  id="moyenne"
-                  value={newMatiere.moyenne}
-                  onChange={(e) => setNewMatiere({ ...newMatiere, moyenne: e.target.value })}
-                  placeholder="Ex: 20, 10, 5"
-                  required
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="coefficient">Coefficient de la matière *</Label>
-                <Input
-                  id="coefficient"
-                  type="number"
-                  min="1"
-                  value={newMatiere.coefficient}
-                  onChange={(e) => setNewMatiere({ ...newMatiere, coefficient: e.target.value })}
-                  placeholder="Ex: 2, 3, 4"
-                  required
-                />
-              </div>
-              <Button onClick={handleAddMatiere} className="mt-4">
-                Enregistrer
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+          </CardContent>
+        </Card>
       </div>
     </Layout>
   );
