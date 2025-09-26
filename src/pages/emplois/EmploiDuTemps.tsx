@@ -453,55 +453,44 @@ export default function EmploiDuTemps() {
                 </DialogHeader>
                 <Form {...cahierForm}>
                   <form onSubmit={cahierForm.handleSubmit(onCahierSubmit)} className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <FormField
-                        control={cahierForm.control}
-                        name="subject_id"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Matière</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value}>
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Sélectionner une matière" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {subjects.map((subject) => (
-                                  <SelectItem key={subject.id} value={subject.id}>
-                                    {subject.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </FormItem>
-                        )}
-                      />
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                       <FormField
+                         control={cahierForm.control}
+                         name="subject_id"
+                         render={({ field }) => (
+                           <FormItem>
+                             <FormLabel>Matière</FormLabel>
+                             <FormControl>
+                               <Input 
+                                 value={subjects.find(s => s.id === field.value)?.name || ''} 
+                                 readOnly 
+                                 className="bg-gray-50"
+                               />
+                             </FormControl>
+                           </FormItem>
+                         )}
+                       />
 
-                      <FormField
-                        control={cahierForm.control}
-                        name="teacher_id"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Enseignant</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value}>
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Sélectionner un enseignant" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {teachers.map((teacher) => (
-                                  <SelectItem key={teacher.id} value={teacher.id}>
-                                    {teacher.first_name} {teacher.last_name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </FormItem>
-                        )}
-                      />
-                    </div>
+                       <FormField
+                         control={cahierForm.control}
+                         name="teacher_id"
+                         render={({ field }) => (
+                           <FormItem>
+                             <FormLabel>Enseignant</FormLabel>
+                             <FormControl>
+                               <Input 
+                                 value={(() => {
+                                   const teacher = teachers.find(t => t.id === field.value);
+                                   return teacher ? `${teacher.first_name} ${teacher.last_name}` : '';
+                                 })()} 
+                                 readOnly 
+                                 className="bg-gray-50"
+                               />
+                             </FormControl>
+                           </FormItem>
+                         )}
+                       />
+                     </div>
 
                     <FormField
                       control={cahierForm.control}
