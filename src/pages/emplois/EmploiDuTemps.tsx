@@ -323,14 +323,12 @@ export default function EmploiDuTemps() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="Mathématiques">Mathématiques</SelectItem>
-                              <SelectItem value="Français">Français</SelectItem>
-                              <SelectItem value="Anglais">Anglais</SelectItem>
-                              <SelectItem value="Histoire-Géographie">Histoire-Géographie</SelectItem>
-                              <SelectItem value="Sciences">Sciences</SelectItem>
-                              <SelectItem value="Éducation Physique">Éducation Physique</SelectItem>
-                              <SelectItem value="Arts Plastiques">Arts Plastiques</SelectItem>
-                              <SelectItem value="Musique">Musique</SelectItem>
+                              {/* Récupération des matières depuis la base de données et suppression des doublons */}
+                              {Array.from(new Set(subjects.map(subject => subject.name))).map((subjectName) => (
+                                <SelectItem key={subjectName} value={subjectName}>
+                                  {subjectName}
+                                </SelectItem>
+                              ))}
                             </SelectContent>
                           </Select>
                         </FormItem>
