@@ -6,7 +6,6 @@ import { useToast } from '@/hooks/use-toast';
 export interface Subject {
   id: string;
   name: string;
-  code?: string; // Added for compatibility
   abbreviation?: string;
   class_id: string;
   school_id: string;

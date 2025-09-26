@@ -63,7 +63,7 @@ export default function BulletinAnnuel() {
 
   // Remplacé par hook Supabase
   const { schoolData: schoolSettings } = useSchoolData();
-  const schoolSystem = schoolSettings?.system || schoolSettings?.semester_type || "semester";
+  const schoolSystem = schoolSettings?.system || "semestre";
 
   const getNumberOfPeriods = () => {
     return schoolSystem === "trimestre" ? 3 : 2;

@@ -19,7 +19,7 @@ import { CreerAnnonceModal } from "@/components/annonces/CreerAnnonceModal";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { Session } from "@supabase/supabase-js";
-import { useOptimizedDashboard } from "@/hooks/useOptimizedDashboard";
+import { useDashboardData } from "@/hooks/useDashboardData";
 import { LoadingSkeleton } from "@/components/ui/loading-skeleton";
 import { useUserRole } from "@/hooks/useUserRole";
 
@@ -70,9 +70,8 @@ const Index = () => {
     announcements, 
     academicYear, 
     loading: dataLoading, 
-    error: dataError,
-    refreshData
-  } = useOptimizedDashboard();
+    error: dataError 
+  } = useDashboardData();
   
   // État de chargement global
   const isLoading = dataLoading || userLoading;
