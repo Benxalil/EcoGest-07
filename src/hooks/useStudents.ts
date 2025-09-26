@@ -87,7 +87,8 @@ export function useStudents(classId?: string) {
 
       if (error) throw error;
 
-      setStudents(prev => [...prev, data]);
+      // Rafraîchir la liste complète pour s'assurer de la synchronisation
+      await fetchStudents();
       return data;
     } catch (err) {
       console.error('Erreur lors de l\'ajout de l\'élève:', err);
@@ -106,9 +107,8 @@ export function useStudents(classId?: string) {
 
       if (error) throw error;
 
-      setStudents(prev => prev.map(student => 
-        student.id === id ? data : student
-      ));
+      // Rafraîchir la liste complète pour s'assurer de la synchronisation
+      await fetchStudents();
       return data;
     } catch (err) {
       console.error('Erreur lors de la mise à jour de l\'élève:', err);
