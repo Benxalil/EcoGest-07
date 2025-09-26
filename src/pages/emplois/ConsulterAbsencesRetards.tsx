@@ -64,14 +64,19 @@ export default function ConsulterAbsencesRetards() {
             )
           `)
           .eq('class_id', classeId)
-          .order('date', { ascending: false })
-          .order('students.last_name', { ascending: true });
+          .order('date', { ascending: false });
 
         if (error) {
           console.error('Erreur lors du chargement des présences:', error);
         } else {
           console.log('Données récupérées:', data);
-          setAttendances(data || []);
+          // Trier les données par nom d'élève
+          const sortedData = (data || []).sort((a, b) => {
+            const nameA = `${a.students?.last_name} ${a.students?.first_name}`.toLowerCase();
+            const nameB = `${b.students?.last_name} ${b.students?.first_name}`.toLowerCase();
+            return nameA.localeCompare(nameB);
+          });
+          setAttendances(sortedData);
         }
       } catch (error) {
         console.error('Erreur:', error);
