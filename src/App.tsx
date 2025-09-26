@@ -76,7 +76,7 @@ function App() {
             <Route path="/matieres" element={<ListeMatieres />} />
             <Route path="/examens" element={<ListeClassesExamens />} />
             <Route path="/examens/classe/:classeId" element={<ListeExamens />} />
-            <Route path="/examens/:classeId/activites/:activiteId/notes-eleve" element={<ListeElevesNotes />} />
+            <Route path="/examens/:classeId/activites/:activiteId/eleve/:eleveId/notes" element={<ListeElevesNotes />} />
             <Route path="/notes" element={<ListeExamensNotes />} />
             <Route path="/notes/eleves" element={<ListeElevesClasse />} />
             <Route path="/notes/eleves-notes" element={<NotesParEleve />} />

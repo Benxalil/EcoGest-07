@@ -192,7 +192,7 @@ export const useResults = () => {
             subjects?.forEach(subject => {
               gradesByStudentAndSubject[student.id][subject.id] = {
                 coefficient: subject.coefficient,
-                max_score: subject.max_score
+                max_score: subject?.coefficient || 1,
               };
             });
           });
@@ -211,7 +211,7 @@ export const useResults = () => {
             if (!gradesByStudentAndSubject[studentId][subjectId]) {
               gradesByStudentAndSubject[studentId][subjectId] = {
                 coefficient: subject?.coefficient || 1,
-                max_score: subject?.max_score || 20
+                max_score: subject?.coefficient || 1
               };
             }
 
@@ -259,14 +259,14 @@ export const useResults = () => {
               subject_name: subject.name,
               subject_abbreviation: subject.abbreviation,
               coefficient: subject.coefficient,
-              max_score: subject.max_score,
+              max_score: subject?.coefficient || 1,
               hours_per_week: subject.hours_per_week
             })) || [],
             students: students?.map(student => ({
               student_id: student.id,
               first_name: student.first_name,
               last_name: student.last_name,
-              numero: student.numero,
+              numero: student.student_number,
               class_id: classe.id,
               class_name: classe.name,
               class_level: classe.level,

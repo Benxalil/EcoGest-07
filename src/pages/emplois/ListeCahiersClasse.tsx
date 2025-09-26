@@ -2,6 +2,8 @@ import { Layout } from "@/components/layout/Layout";
 import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { useLessonLogs, type LessonLog } from "@/hooks/useLessonLogs";
+import { useTeachers } from "@/hooks/useTeachers";
+import { useSubjects } from "@/hooks/useSubjects";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Plus, Calendar, Clock, User, BookOpen } from "lucide-react";
@@ -17,77 +19,34 @@ interface Subject {
   name: string;
 }
 
-
 export default function ListeCahiersClasse() {
   const { classeId } = useParams();
   const navigate = useNavigate();
   const { lessonLogs: allLessonLogs, loading } = useLessonLogs();
+  const { teachers } = useTeachers();
+  const { subjects } = useSubjects();
   const [filteredLogs, setFilteredLogs] = useState<LessonLog[]>([]);
-  const [teachers, setTeachers] = useState<{ [key: string]: Teacher }>({});
-  const [subjects, setSubjects] = useState<{ [key: string]: Subject }>({});
   const [className, setClassName] = useState<string>('');
 
   useEffect(() => {
     if (!classeId) return;
 
-    const loadData = async () => {
-      try {
-        // Charger les enseignants depuis localStorage
-        // Remplacé par hook Supabase
-        const teachersMap: { [key: string]: Teacher } = {};
-        
-        if (savedEnseignants) {
-          const enseignantsData = JSON.parse(savedEnseignants);
-          enseignantsData.forEach((ens: any, index: number) => {
-            const id = `local-${index}`;
-            teachersMap[id] = {
-              id,
-              first_name: ens.prenom,
-              last_name: ens.nom
-            };
-          });
-        }
+    // Filter lesson logs by class
+    const logs = allLessonLogs.filter(log => log.class_id === classeId);
+    setFilteredLogs(logs);
 
-        // Charger les matières depuis localStorage
-        // Remplacé par hook Supabase
-        const subjectsMap: { [key: string]: Subject } = {};
-        
-        if (savedMatieres) {
-          const matieresData = JSON.parse(savedMatieres);
-          matieresData.forEach((matiere: any) => {
-            const id = `local-${matiere.id}`;
-            subjectsMap[id] = {
-              id,
-              name: matiere.nom
-            };
-          });
-        }
-
-        setTeachers(teachersMap);
-        setSubjects(subjectsMap);
-
-        // Filter lesson logs by class
-        const logs = allLessonLogs.filter(log => log.class_id === classeId);
-        setFilteredLogs(logs);
-
-        // Récupérer le nom de la classe depuis localStorage
-        const savedClassName = localStorage.getItem(`classe-name-${classeId}`) || '';
-        setClassName(savedClassName);
-      } catch (error) {
-        console.error('Error loading data:', error);
-      }
-    };
-
-    loadData();
+    // Récupérer le nom de la classe depuis localStorage
+    const savedClassName = localStorage.getItem(`classe-name-${classeId}`) || '';
+    setClassName(savedClassName);
   }, [classeId, allLessonLogs]);
 
   const getTeacherName = (teacherId: string) => {
-    const teacher = teachers[teacherId];
+    const teacher = teachers.find(t => t.id === teacherId);
     return teacher ? `${teacher.first_name} ${teacher.last_name}` : 'Enseignant inconnu';
   };
 
   const getSubjectName = (subjectId: string) => {
-    const subject = subjects[subjectId];
+    const subject = subjects.find(s => s.id === subjectId);
     return subject ? subject.name : 'Matière inconnue';
   };
 

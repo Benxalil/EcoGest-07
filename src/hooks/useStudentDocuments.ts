@@ -7,7 +7,7 @@ export interface StudentDocument {
   student_id: string;
   file_name: string;
   file_path: string;
-  file_type?: 'photo' | 'document';
+  file_type?: string;
   file_size: number;
   document_name: string;
   school_id: string;

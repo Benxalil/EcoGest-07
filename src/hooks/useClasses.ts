@@ -14,6 +14,8 @@ export interface ClassData {
   created_at: string;
   updated_at: string;
   enrollment_count?: number;
+  series_id?: string;
+  label_id?: string;
 }
 
 export interface CreateClassData {

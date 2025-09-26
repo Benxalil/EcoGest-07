@@ -238,10 +238,11 @@ const saveEleveToStorage = async (eleveData: EleveFormData, photo?: string | nul
         schoolId = profile?.school_id || schoolId;
       }
 
-      // Utiliser la première classe disponible
-      const firstClassId = classesData?.[0]?.id;
+      // Utiliser les classes du hook useClasses
+      const { classes: classesFromHook } = useClasses();
+      const firstClassId = classesFromHook?.[0]?.id;
       
-      if (!firstClassId) {
+      if (!classesFromHook?.[0]?.id) {
         throw new Error("Aucune classe disponible pour ajouter l'élève");
       }
 
@@ -260,7 +261,7 @@ const saveEleveToStorage = async (eleveData: EleveFormData, photo?: string | nul
           parent_email: eleveData.perePrenom && eleveData.pereNom ? `${eleveData.perePrenom.toLowerCase()}.${eleveData.pereNom.toLowerCase()}@parent.com` : null,
           emergency_contact: `${eleveData.contactUrgenceNom} - ${eleveData.contactUrgenceTelephone} (${eleveData.contactUrgenceRelation})`,
           school_id: schoolId,
-          class_id: firstClassId,
+          class_id: classesFromHook?.[0]?.id,
           is_active: true
         });
 
@@ -292,7 +293,7 @@ interface AjoutEleveFormProps {
 export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, classId, className }: AjoutEleveFormProps) {
   const { showSuccess, showError } = useNotifications();
   const { currentPlan, isFeatureLimited, getFeatureLimit } = useSubscriptionPlan();
-  const { classes: classesData, loading: classesLoading } = useClasses();
+  const { classes, loading: classesLoading } = useClasses();
   const { addStudent, updateStudent } = useStudents();
   const { userProfile } = useUserRole();
   const { uploadDocument } = useStudentDocuments();
@@ -445,8 +446,8 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
   }, [form, isEditing, initialData, userProfile?.schoolId]);
   // Si on a un classId, on utilise la classe spécifiée, sinon on utilise la première classe disponible
   const selectedClass = classId ? 
-    classesData?.find(c => c.id === classId) : 
-    classesData?.[0];
+    classes?.find(c => c.id === classId) : 
+    classes?.[0];
 
   // Surveiller les changements de l'adresse de l'élève et du lieu de naissance
   const watchAdresse = form.watch("adresse");
@@ -650,7 +651,7 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
         parent_email: data.perePrenom && data.pereNom ? `${data.perePrenom.toLowerCase()}.${data.pereNom.toLowerCase()}@parent.com` : null,
         emergency_contact: `${data.contactUrgenceNom} - ${data.contactUrgenceTelephone} (${data.contactUrgenceRelation})`,
         school_id: schoolId,
-        class_id: (classId && classesData?.find(c => c.id === classId)?.id) || classesData?.[0]?.id || null,
+        class_id: classesFromHook?.[0]?.id,
         is_active: true
       };
 

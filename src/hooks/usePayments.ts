@@ -175,6 +175,22 @@ export const usePayments = () => {
     fetchPayments();
   }, [userProfile?.schoolId]);
 
+  const hasStudentPaid = (studentId: string, paymentType: string, month?: string): boolean => {
+    return payments.some(payment => 
+      payment.student_id === studentId && 
+      payment.payment_type === paymentType && 
+      (!month || payment.payment_month === month)
+    );
+  };
+
+  const getStudentPayment = (studentId: string, paymentType: string, month?: string) => {
+    return payments.find(payment => 
+      payment.student_id === studentId && 
+      payment.payment_type === paymentType && 
+      (!month || payment.payment_month === month)
+    );
+  };
+
   return {
     payments,
     loading,
@@ -182,6 +198,8 @@ export const usePayments = () => {
     createPayment,
     updatePayment,
     deletePayment,
-    refreshPayments: fetchPayments
+    refreshPayments: fetchPayments,
+    hasStudentPaid,
+    getStudentPayment
   };
 };

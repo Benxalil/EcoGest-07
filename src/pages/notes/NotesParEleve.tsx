@@ -398,13 +398,13 @@ export default function NotesParEleve() {
                             {/* AFFICHAGE CONDITIONNEL SELON LE TYPE D'EXAMEN */}
                             {examInfo?.type === 'Composition' ? <>
                                 <TableCell>
-                                  <GradeInput value={noteData?.devoir || ''} onChange={value => handleNoteChange(matiere.id, selectedSemestre, 'devoir', value)} maxGrade={maxScore} placeholder="0" className="w-20" />
+                                  <GradeInput value={noteData?.devoir || ''} onChange={value => handleNoteChange(matiere.id, selectedSemestre, 'devoir', value)} maxScore={maxScore} placeholder="0" className="w-20" />
                                 </TableCell>
                                 <TableCell>
-                                  <GradeInput value={noteData?.composition || ''} onChange={value => handleNoteChange(matiere.id, selectedSemestre, 'composition', value)} maxGrade={maxScore} placeholder="0" className="w-20" />
+                                  <GradeInput value={noteData?.composition || ''} onChange={value => handleNoteChange(matiere.id, selectedSemestre, 'composition', value)} maxScore={maxScore} placeholder="0" className="w-20" />
                                 </TableCell>
                               </> : <TableCell>
-                                <GradeInput value={noteData?.note || ''} onChange={value => handleSingleNoteChange(matiere.id, value)} maxGrade={maxScore} placeholder="0" className="w-20" />
+                                <GradeInput value={noteData?.note || ''} onChange={value => handleSingleNoteChange(matiere.id, value)} maxScore={maxScore} placeholder="0" className="w-20" />
                               </TableCell>}
                           </TableRow>;
                   })}

@@ -12,6 +12,7 @@ export interface Subject {
   coefficient?: number;
   hours_per_week?: number;
   color?: string;
+  max_score?: number;
   created_at?: string;
   updated_at?: string;
 }
@@ -23,6 +24,7 @@ export interface CreateSubjectData {
   coefficient?: number;
   hours_per_week?: number;
   color?: string;
+  max_score?: number;
 }
 
 export const useSubjects = (classId?: string) => {
@@ -86,7 +88,8 @@ export const useSubjects = (classId?: string) => {
           school_id: userProfile.schoolId,
           coefficient: subjectData.coefficient || 1,
           hours_per_week: subjectData.hours_per_week || 1,
-          color: subjectData.color || '#3B82F6'
+          color: subjectData.color || '#3B82F6',
+          max_score: subjectData.max_score || 20
         });
 
       if (error) {
