@@ -520,13 +520,10 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
     }
   }, [watchContactRelation, form]);
 
-  // Charger les données existantes lors de l'édition
+  // Charger les documents existants lors de l'édition
   useEffect(() => {
     if (isEditing && initialData) {
-      // Charger la photo existante
-      if (initialData.photo) {
-        setPhotoPreview(initialData.photo);
-      }
+      // Note: La photo est déjà chargée par le useEffect principal via Supabase
       
       // Charger les documents existants
       const existingDocs = localStorage.getItem('student_documents');

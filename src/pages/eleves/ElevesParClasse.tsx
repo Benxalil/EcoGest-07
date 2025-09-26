@@ -125,7 +125,7 @@ function DocumentsSection({
               <div className="flex items-center gap-3">
                 <FileText className="h-5 w-5 text-blue-600" />
                 <div>
-                  <p className="font-medium">{doc.file_name}</p>
+                  <p className="font-medium">{doc.document_name}</p>
                   <p className="text-sm text-gray-500">
                     {doc.file_type} • {Math.round(doc.file_size / 1024)} KB
                   </p>
