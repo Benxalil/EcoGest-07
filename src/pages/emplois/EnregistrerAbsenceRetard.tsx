@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { toast } from "@/hooks/use-toast";
 import { ArrowLeft, Clock, Users, BookOpen } from "lucide-react";
 import { useState, useEffect } from "react";
+import { useStudents } from "@/hooks/useStudents";
 
 interface Eleve {
   id: string;
@@ -35,40 +36,7 @@ interface AbsenceRetardData {
   }[];
 }
 
-// Fonctions utilitaires
-const getElevesByClasse = (classeId: string): Eleve[] => {
-  try {
-    // Remplacé par hook Supabase
-    if (!savedEleves) return [];
-
-    const allEleves = JSON.parse(savedEleves);
-
-    // Récupérer le libellé de la classe (ex: "CI A") à partir de son id
-    let classDisplay: string | null = null;
-    try {
-      // Remplacé par hook Supabase
-      if (savedClasses) {
-        const classes = JSON.parse(savedClasses);
-        const classe = classes.find((c: any) => String(c.id) === String(classeId));
-        if (classe) classDisplay = `${classe.session} ${classe.libelle}`;
-      }
-    } catch (e) {
-      }
-
-    // Supporter plusieurs schémas possibles (compatibilité)
-    const filtered = allEleves.filter((eleve: any) =>
-      (classDisplay && eleve.classe === classDisplay) || // schéma courant (nom de classe)
-      eleve.classe === classeId || // si jamais la classe a été stockée par id
-      String(eleve.classeId || eleve.classe_id) === String(classeId) // autres variantes
-    );
-
-    console.info('[getElevesByClasse] classeId:', classeId, 'classDisplay:', classDisplay, 'count:', filtered.length);
-    return filtered as Eleve[];
-  } catch (error) {
-    console.error("Erreur lors de la récupération des élèves:", error);
-    return [];
-  }
-};
+// Cette fonction n'est plus nécessaire, nous utilisons useStudents directement
 
 const saveAbsenceRetardData = (data: AbsenceRetardData) => {
   // Bloc remplacé par hook Supabase
@@ -86,27 +54,35 @@ export default function EnregistrerAbsenceRetard() {
   const endTime = searchParams.get('endTime') || '';
   const teacher = searchParams.get('teacher') || '';
 
+  // Hook pour récupérer les élèves
+  const { students, loading: studentsLoading } = useStudents(classeId);
+
   // États locaux
-  const [eleves, setEleves] = useState<Eleve[]>([]);
   const [presences, setPresences] = useState<{[key: string]: "present" | "absent" | "retard"}>({});
   const [retardDialog, setRetardDialog] = useState<{open: boolean, eleveId: string}>({open: false, eleveId: ''});
   const [retardData, setRetardData] = useState<{motif: string, duree: string}>({motif: '', duree: ''});
   const [enseignant, setEnseignant] = useState(teacher);
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
 
+  // Convertir les étudiants au format attendu
+  const eleves: Eleve[] = students.map(student => ({
+    id: student.id,
+    nom: student.last_name,
+    prenom: student.first_name,
+    dateNaissance: student.date_of_birth || undefined,
+    classe: student.classes?.name || undefined
+  }));
+
   useEffect(() => {
-    if (classeId) {
-      const elevesClasse = getElevesByClasse(classeId);
-      setEleves(elevesClasse);
-      
+    if (eleves.length > 0) {
       // Initialiser tous les élèves comme présents
       const initialPresences: {[key: string]: "present" | "absent" | "retard"} = {};
-      elevesClasse.forEach(eleve => {
+      eleves.forEach(eleve => {
         initialPresences[eleve.id] = "present";
       });
       setPresences(initialPresences);
     }
-  }, [classeId]);
+  }, [eleves.length]);
 
   const handlePresenceChange = (eleveId: string, statut: "present" | "absent" | "retard") => {
     if (statut === "retard") {
@@ -276,7 +252,9 @@ export default function EnregistrerAbsenceRetard() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {eleves.length === 0 ? (
+            {studentsLoading ? (
+              <p className="text-gray-500 text-center py-8">Chargement des élèves...</p>
+            ) : eleves.length === 0 ? (
               <p className="text-gray-500 text-center py-8">Aucun élève trouvé pour cette classe.</p>
             ) : (
               <div className="space-y-3">
