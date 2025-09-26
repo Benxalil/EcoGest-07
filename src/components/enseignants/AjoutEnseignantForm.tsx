@@ -23,6 +23,7 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { useTeachers } from "@/hooks/useTeachers";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useSubjects } from "@/hooks/useSubjects";
 import { supabase } from "@/integrations/supabase/client";
 import { Plus, Trash2 } from "lucide-react";
 
@@ -72,10 +73,10 @@ interface AjoutEnseignantFormProps {
 
 export function AjoutEnseignantForm({ onSuccess }: AjoutEnseignantFormProps) {
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
-  const [matieres, setMatieres] = useState<Matiere[]>([]);
   const { toast } = useToast();
   const { createTeacher } = useTeachers();
   const { userProfile } = useUserRole();
+  const { subjects: matieres } = useSubjects();
 
   // Fonction pour récupérer les paramètres des enseignants
   const getTeacherSettingsFromStorage = () => {
@@ -138,22 +139,6 @@ export function AjoutEnseignantForm({ onSuccess }: AjoutEnseignantFormProps) {
       return `Prof${Date.now().toString().slice(-3)}`;
     }
   };
-
-  // Charger les matières depuis localStorage
-  useEffect(() => {
-    const savedMatieres = localStorage.getItem('matieres');
-    if (savedMatieres) {
-      try {
-        const matieresData = JSON.parse(savedMatieres);
-        setMatieres(matieresData);
-        } catch (error) {
-        console.error("Erreur lors du chargement des matières:", error);
-        setMatieres([]);
-      } } else {
-      // Debug remplacé par hook Supabase
-      setMatieres([]);
-    }
-  }, []);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -414,8 +399,8 @@ export function AjoutEnseignantForm({ onSuccess }: AjoutEnseignantFormProps) {
                           </FormControl>
                           <SelectContent>
                             {matieres.map((matiere) => (
-                              <SelectItem key={matiere.id} value={matiere.nom}>
-                                {matiere.nom}
+                              <SelectItem key={matiere.id} value={matiere.name}>
+                                {matiere.name}
                               </SelectItem>
                             ))}
                           </SelectContent>
