@@ -255,6 +255,27 @@ export const useGrades = (studentId?: string, subjectId?: string, examId?: strin
     return grades.filter(grade => grade.subject_id === subjectId);
   };
 
+  const upsertGrade = async (gradeData: CreateGradeData) => {
+    // Check if grade exists
+    const existingGrade = grades.find(grade => 
+      grade.student_id === gradeData.student_id &&
+      grade.subject_id === gradeData.subject_id &&
+      grade.exam_id === (gradeData.exam_id || null) &&
+      grade.semester === (gradeData.semester || null) &&
+      grade.exam_type === (gradeData.exam_type || null)
+    );
+
+    if (existingGrade) {
+      return await updateGrade(existingGrade.id, {
+        grade_value: gradeData.grade_value,
+        max_grade: gradeData.max_grade,
+        coefficient: gradeData.coefficient
+      });
+    } else {
+      return await createGrade(gradeData);
+    }
+  };
+
   return {
     grades,
     loading,
@@ -265,6 +286,7 @@ export const useGrades = (studentId?: string, subjectId?: string, examId?: strin
     getGradeForStudent,
     getGradesForStudent,
     getGradesForSubject,
+    upsertGrade,
     refetch: fetchGrades
   };
 };

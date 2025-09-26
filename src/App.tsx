@@ -99,6 +99,7 @@ function App() {
             <Route path="/matieres-cahier/:classeId" element={<ListeMatieresCahier />} />
             <Route path="/liste-cahiers-classe/:classeId" element={<ListeCahiersClasse />} />
             <Route path="/cahier-consultation" element={<ConsultationCahier />} />
+            <Route path="/emplois/cahier/:classeId/:subjectId" element={<ConsultationCahier />} />
             <Route path="/cahier-de-texte" element={<CahierDeTexte />} />
             <Route path="/paiements" element={<GestionPaiements />} />
             <Route path="/paiements/mes-paiements" element={<MesPaiements />} />

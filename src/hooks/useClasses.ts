@@ -179,5 +179,6 @@ export const useClasses = () => {
     createClass,
     updateClass,
     deleteClass,
+    refreshClasses: fetchClasses,
   };
 };
