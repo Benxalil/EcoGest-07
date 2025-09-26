@@ -22,7 +22,7 @@ interface Student {
   nom: string;
   prenom: string;
   classe: string;
-  numero?: number;
+  numero?: string;
 }
 
 interface StudentWithStats extends Student {
@@ -83,7 +83,7 @@ export default function ResultatsSemestre() {
     nom: student.last_name,
     prenom: student.first_name,
     classe: `${student.class_level} ${student.class_section}`,
-    numero: student.numero
+    numero: student.numero || '0'
   })) : [];
   
   const matieresClasse = examData ? examData.subjects.map(subject => ({
@@ -512,7 +512,7 @@ export default function ResultatsSemestre() {
                         variant="outline"
                         size="sm"
                         className="bg-green-500 text-white hover:bg-green-600 border-green-500"
-                        onClick={() => generateBulletinPDF(eleve, classe!, semestre || "1")}
+                        onClick={() => generateBulletinPDF(eleve as any, classe!, semestre || "1")}
                       >
                         Bulletin de notes
                       </Button>

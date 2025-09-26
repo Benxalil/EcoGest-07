@@ -6,8 +6,9 @@ export interface AcademicCalendarSettings {
 
 export const getAcademicCalendarSettings = (currentAcademicYear?: string): AcademicCalendarSettings => {
   try {
-    // Remplacé par hook Supabase
-      // const settings = // localStorage.getItem("settings") // Remplacé par hook Supabase;
+    // TODO: Remplacer par un vrai hook Supabase pour récupérer les paramètres de l'école
+    // const settings = useSchoolData hook
+    const settings = null; // Temporaire jusqu'à implémentation du hook
     if (settings) {
       const parsedSettings = JSON.parse(settings);
       if (parsedSettings.dateDebutAnnee && parsedSettings.dateFinAnnee) {

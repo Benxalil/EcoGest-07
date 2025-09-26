@@ -82,8 +82,8 @@ export const generateBulletinPDF = async (
 
   // Helper functions
   const getEleveInfo = async () => {
-    // Remplacé par hook Supabase
-      // const savedEleves = // localStorage.getItem("eleves") // Remplacé par hook Supabase;
+    // TODO: Remplacer par hook Supabase
+    const savedEleves = null; // Temporaire - remplacer par useStudents
     let eleveComplet = eleve;
     
     // First check localStorage for existing data
@@ -119,8 +119,8 @@ export const generateBulletinPDF = async (
     }
     
     // Get classe details for series information
-    // Remplacé par hook Supabase
-      // const savedClasses = // localStorage.getItem("classes") // Remplacé par hook Supabase;
+    // TODO: Remplacer par hook Supabase
+    const savedClasses = null; // Temporaire - remplacer par useClasses
     if (savedClasses) {
       const classesData = JSON.parse(savedClasses);
       const classeDetails = classesData.find((c: any) => c.id === classe.id);
@@ -157,6 +157,8 @@ export const generateBulletinPDF = async (
   const eleveInfo = await getEleveInfo();
   // Remplacé par hook Supabase
       // const savedMatieres = // localStorage.getItem("matieres") // Remplacé par hook Supabase;
+  // TODO: Remplacer par hook Supabase
+  const savedMatieres = null; // Temporaire - remplacer par useSubjects
   let matieresClasse: any[] = [];
   if (savedMatieres) {
     const allMatieres = JSON.parse(savedMatieres);
@@ -198,8 +200,8 @@ export const generateBulletinPDF = async (
 
   const getRangSemestre = (semestreNum: string) => {
     // Get all students in the class
-    // Remplacé par hook Supabase
-      // const savedEleves = // localStorage.getItem("eleves") // Remplacé par hook Supabase;
+    // TODO: Remplacer par hook Supabase
+    const savedEleves = null; // Temporaire - remplacer par useStudents
     if (!savedEleves) return { rang: null, total: 0 };
     
     const elevesData = JSON.parse(savedEleves);

@@ -67,8 +67,8 @@ export default function ListeClassesResultats() {
   };
 
   useEffect(() => {
-    if (schoolSettings?.system) {
-      setSchoolSystem(schoolSettings.system);
+    if (schoolSettings?.semester_type) {
+      setSchoolSystem(schoolSettings.semester_type === 'trimester' ? 'trimestre' : 'semestre');
     }
   }, [schoolSettings]);
 

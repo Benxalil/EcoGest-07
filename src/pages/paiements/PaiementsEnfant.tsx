@@ -15,7 +15,7 @@ type PaymentCategory = Database['public']['Tables']['payment_categories']['Row']
 type Student = Database['public']['Tables']['students']['Row'];
 
 interface PaymentWithCategory extends Payment {
-  category: PaymentCategory;
+  category?: PaymentCategory | null;
 }
 
 export default function PaiementsEnfant() {
@@ -52,12 +52,19 @@ export default function PaiementsEnfant() {
             *,
             category:payment_categories(*)
           `)
-          .eq('student_id', childData.id)
-          .order('due_date', { ascending: true });
+        .eq('student_id', childData.id)
+        .order('payment_date', { ascending: true });
 
         if (error) {
-          console.error('Erreur lors de la récupération des paiements:', error); } else {
-          setPayments(paymentsData || []);
+          console.error('Erreur lors de la récupération des paiements:', error);
+          setPayments([]);
+        } else {
+          // Type conversion to handle Supabase query result
+          const paymentsWithCategory = (paymentsData || []).map(payment => ({
+            ...payment,
+            category: payment.category || null
+          })) as unknown as PaymentWithCategory[];
+          setPayments(paymentsWithCategory);
         }
       } catch (error) {
         console.error('Erreur:', error);

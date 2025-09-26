@@ -15,7 +15,7 @@ interface Student {
   nom: string;
   prenom: string;
   classe: string;
-  numero?: number;
+  numero?: string;
 }
 
 interface StudentWithStats extends Student {
@@ -165,6 +165,7 @@ export default function ResultatsSemestre() {
       
       return {
         ...eleve,
+        numero: eleve.numero || '0',
         moyenneGenerale: stats.moyenneGenerale,
         rang: rang
       };
@@ -181,7 +182,7 @@ export default function ResultatsSemestre() {
     
     try {
       const elevesWithStats = getElevesWithRank();
-      await generateBulletinPDF(classe, elevesWithStats, getSemestreLabel());
+      await generateBulletinPDF(classe as any, elevesWithStats as any, getSemestreLabel());
     } catch (error) {
       console.error("Erreur lors de la génération du PDF:", error);
     }

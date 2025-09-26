@@ -160,8 +160,7 @@ export const generateBulletinClassePDF = async (
 
     const getDateNaissance = async (eleveId: string): Promise<string> => {
       // First check localStorage
-      // Remplacé par hook Supabase
-      // const savedEleves = // localStorage.getItem("eleves") // Remplacé par hook Supabase;
+      const savedEleves = null; // Temporaire - remplacer par useStudents
       if (savedEleves) {
         const elevesData = JSON.parse(savedEleves);
         const eleve = elevesData.find((e: any) => e.id === eleveId);
@@ -193,8 +192,7 @@ export const generateBulletinClassePDF = async (
 
     const getLieuNaissance = async (eleveId: string): Promise<string> => {
       // First check localStorage  
-      // Remplacé par hook Supabase
-      // const savedEleves = // localStorage.getItem("eleves") // Remplacé par hook Supabase;
+      const savedEleves = null; // Temporaire - remplacer par useStudents
       if (savedEleves) {
         const elevesData = JSON.parse(savedEleves);
         const eleve = elevesData.find((e: any) => e.id === eleveId);

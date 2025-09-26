@@ -9,9 +9,9 @@ interface Student {
   nom: string;
   prenom: string;
   classe: string;
-  numero?: number;
-  moyenneGenerale: number;
-  rang: number;
+  numero?: string;
+  moyenneGenerale?: number;
+  rang?: number;
 }
 
 interface Classe {
@@ -38,13 +38,19 @@ interface EleveNote {
   };
 }
 
+interface StudentWithStats extends Student {
+  moyenneGenerale: number;
+  rang: number;
+}
+
 interface BulletinClasseProps {
   classe: Classe;
-  eleves: Student[];
-  matieresClasse: Matiere[];
+  eleves: StudentWithStats[];
+  matieresClasse?: Matiere[];
   semestre: string;
-  schoolSystem: 'semestre' | 'trimestre';
-  classeId: string;
+  schoolSystem?: 'semestre' | 'trimestre';
+  classeId?: string;
+  onClose?: () => void;
 }
 
 export const BulletinClasse: React.FC<BulletinClasseProps> = ({
@@ -170,7 +176,7 @@ export const BulletinClasse: React.FC<BulletinClasseProps> = ({
 
   const handleExportPDF = () => {
     const elevesClasses = getElevesWithRank();
-    generateBulletinClassePDF(classe, elevesClasses, matieresClasse, semestre, schoolSystem, classeId);
+    generateBulletinClassePDF(classe, elevesClasses as any, matieresClasse || [], semestre, schoolSystem || 'semestre', classeId || "");
   };
 
   const elevesClasses = getElevesWithRank();
