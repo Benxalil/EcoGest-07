@@ -28,7 +28,7 @@ interface UseNotesSyncProps {
 export const useNotesSync = ({ classeId, matiereId, examId, studentId, isComposition }: UseNotesSyncProps) => {
   const [localNotes, setLocalNotes] = useState<UnifiedNote[]>([]);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const { grades, createGrade, updateGrade, refetch: refetchGrades } = useGrades(studentId, matiereId, examId);
+  const { grades, upsertGrade, refetch: refetchGrades } = useGrades(studentId, matiereId, examId);
   const { toast } = useToast();
 
   // Charger les notes depuis la base de données
@@ -180,7 +180,7 @@ export const useNotesSync = ({ classeId, matiereId, examId, studentId, isComposi
         if (isComposition) {
           // Pour les compositions, sauvegarder devoir et composition séparément
           if (note.devoir && note.devoir !== '') {
-            promises.push(createGrade({
+            promises.push(upsertGrade({
               student_id: note.eleveId,
               subject_id: note.matiereId,
               exam_id: examId || undefined,
@@ -193,7 +193,7 @@ export const useNotesSync = ({ classeId, matiereId, examId, studentId, isComposi
           }
           
           if (note.composition && note.composition !== '') {
-            promises.push(createGrade({
+            promises.push(upsertGrade({
               student_id: note.eleveId,
               subject_id: note.matiereId,
               exam_id: examId || undefined,
@@ -207,7 +207,7 @@ export const useNotesSync = ({ classeId, matiereId, examId, studentId, isComposi
         } else {
           // Pour les autres examens, sauvegarder note simple
           if (note.note && note.note !== '') {
-            promises.push(createGrade({
+            promises.push(upsertGrade({
               student_id: note.eleveId,
               subject_id: note.matiereId,
               exam_id: examId || undefined,
@@ -243,7 +243,7 @@ export const useNotesSync = ({ classeId, matiereId, examId, studentId, isComposi
         variant: "destructive",
       });
     }
-  }, [localNotes, examId, createGrade, refetchGrades, toast]);
+  }, [localNotes, examId, upsertGrade, refetchGrades, toast]);
 
   // Forcer le rechargement des notes
   const refreshNotes = useCallback(async () => {
