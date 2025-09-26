@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -76,7 +76,18 @@ export function AjoutEnseignantForm({ onSuccess }: AjoutEnseignantFormProps) {
   const { toast } = useToast();
   const { createTeacher } = useTeachers();
   const { userProfile } = useUserRole();
-  const { subjects: matieres } = useSubjects();
+  const { subjects: allMatieres } = useSubjects();
+  
+  // Dédupliquer les matières par nom pour éviter les doublons entre classes
+  const matieres = useMemo(() => {
+    const uniqueMatieres = new Map();
+    allMatieres.forEach(matiere => {
+      if (!uniqueMatieres.has(matiere.name)) {
+        uniqueMatieres.set(matiere.name, matiere);
+      }
+    });
+    return Array.from(uniqueMatieres.values());
+  }, [allMatieres]);
 
   // Fonction pour récupérer les paramètres des enseignants
   const getTeacherSettingsFromStorage = () => {
