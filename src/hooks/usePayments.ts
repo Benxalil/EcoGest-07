@@ -182,8 +182,6 @@ export const usePayments = () => {
     createPayment,
     updatePayment,
     deletePayment,
-    refreshPayments: fetchPayments,
-    hasStudentPaid: (studentId: string) => payments.some(p => p.student_id === studentId),
-    getStudentPayment: (studentId: string) => payments.find(p => p.student_id === studentId)
+    refreshPayments: fetchPayments
   };
 };

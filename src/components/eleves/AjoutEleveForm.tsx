@@ -396,7 +396,7 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
       // Charger la photo existante de l'élève
       const loadExistingPhoto = async () => {
         try {
-          const { data: documents, error } = await (supabase as any)
+          const { data: documents, error } = await supabase
             .from('student_documents')
             .select('*')
             .eq('student_id', initialData.id)
