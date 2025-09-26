@@ -46,7 +46,15 @@ export function useStudents(classId?: string) {
 
       let query = supabase
         .from('students')
-        .select('*')
+        .select(`
+          *,
+          classes (
+            id,
+            name,
+            level,
+            section
+          )
+        `)
         .eq('school_id', userProfile.schoolId)
         .eq('is_active', true)
         .order('first_name');

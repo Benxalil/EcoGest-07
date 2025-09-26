@@ -560,25 +560,26 @@ export default function ElevesParClasse() {
             </DialogHeader>
             {selectedStudent && (
               <div className="space-y-6">
-                {/* Photo et informations de base */}
+                {/* En-tête avec nom et informations principales */}
                 <div className="flex items-start gap-6">
-                  <div className="relative">
-                  <div className="w-32 h-32 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden">
+                  {/* Photo */}
+                  <div className="relative flex-shrink-0">
+                    <div className="w-20 h-24 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden border">
                       {studentPhoto ? (
-                      <img 
+                        <img 
                           src={studentPhoto} 
                           alt={`Photo de ${selectedStudent.first_name} ${selectedStudent.last_name}`}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="text-center text-gray-500">
-                        <Users className="h-8 w-8 mx-auto mb-2" />
-                        <p className="text-sm">Aucune photo</p>
-                      </div>
-                    )}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="text-center text-gray-500">
+                          <Users className="h-6 w-6 mx-auto mb-1" />
+                          <p className="text-xs">Aucune photo</p>
+                        </div>
+                      )}
                     </div>
                     {/* Bouton pour changer la photo */}
-                    <label className="absolute bottom-1 right-1 bg-blue-600 text-white rounded-full p-1 cursor-pointer hover:bg-blue-700 transition-colors" title="Changer la photo">
+                    <label className="absolute -bottom-1 -right-1 bg-blue-600 text-white rounded-full p-1 cursor-pointer hover:bg-blue-700 transition-colors" title="Changer la photo">
                       <input
                         type="file"
                         accept="image/*"
@@ -588,40 +589,143 @@ export default function ElevesParClasse() {
                       <Edit className="h-3 w-3" />
                     </label>
                   </div>
+                  
+                  {/* Informations principales */}
                   <div className="flex-1">
-                    <h2 className="text-2xl font-bold text-blue-600">
+                    <h2 className="text-2xl font-bold text-blue-600 mb-2">
                       {selectedStudent.first_name} {selectedStudent.last_name}
                     </h2>
-                    <p className="text-gray-600 mb-2">Matricule: {selectedStudent.student_number}</p>
-                    <p className="text-gray-600 mb-2">Classe: {selectedStudent.classes ? `${selectedStudent.classes.name} ${selectedStudent.classes.level}${selectedStudent.classes.section ? ` - ${selectedStudent.classes.section}` : ''}` : 'Non assignée'}</p>
+                    <p className="text-gray-600 mb-1">
+                      <span className="font-medium">Matricule:</span> {selectedStudent.student_number}
+                    </p>
+                    <p className="text-gray-600 mb-1">
+                      <span className="font-medium">Classe:</span> {
+                        selectedStudent.classes 
+                          ? `${selectedStudent.classes.name} ${selectedStudent.classes.level}${selectedStudent.classes.section ? ` - ${selectedStudent.classes.section}` : ''}`
+                          : currentClass 
+                            ? `${currentClass.name} ${currentClass.level}${currentClass.section ? ` - ${currentClass.section}` : ''}`
+                            : 'Non assignée'
+                      }
+                    </p>
                     <p className="text-gray-600">
-                      {selectedStudent.gender === 'M' ? 'Masculin' : selectedStudent.gender === 'F' ? 'Féminin' : ''} • {selectedStudent.date_of_birth && 
-                        `Né(e) le ${new Date(selectedStudent.date_of_birth).toLocaleDateString('fr-FR')}`
+                      {selectedStudent.gender === 'M' ? 'Masculin' : selectedStudent.gender === 'F' ? 'Féminin' : 'Non renseigné'} • {
+                        selectedStudent.date_of_birth 
+                          ? `Né(e) le ${new Date(selectedStudent.date_of_birth).toLocaleDateString('fr-FR')}`
+                          : 'Date de naissance non renseignée'
                       }
                     </p>
                   </div>
                 </div>
 
-                {/* Informations personnelles */}
-                <div className="grid md:grid-cols-2 gap-6">
-                  <div>
-                    <h3 className="text-lg font-semibold mb-3 text-orange-600">Informations personnelles</h3>
-                    <div className="space-y-2">
-                      <p><strong>Lieu de naissance:</strong> {selectedStudent.place_of_birth || 'Non renseigné'}</p>
-                      <p><strong>Adresse:</strong> {selectedStudent.address || 'Non renseignée'}</p>
-                      <p><strong>Téléphone:</strong> {selectedStudent.phone || 'Non renseigné'}</p>
-                      <p><strong>Email:</strong> {selectedStudent.parent_email || 'Non renseigné'}</p>
+                {/* Grille d'informations en 2 colonnes */}
+                <div className="grid md:grid-cols-2 gap-8">
+                  {/* Colonne gauche */}
+                  <div className="space-y-8">
+                    {/* Informations personnelles */}
+                    <div>
+                      <h3 className="text-lg font-semibold mb-4 text-orange-600">Informations personnelles</h3>
+                      <div className="space-y-3">
+                        <div>
+                          <p className="text-sm font-medium text-gray-700">Lieu de naissance:</p>
+                          <p className="text-gray-900">{selectedStudent.place_of_birth || 'Non renseigné'}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-700">Adresse:</p>
+                          <p className="text-gray-900">{selectedStudent.address || 'Non renseignée'}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-700">Téléphone:</p>
+                          <p className="text-gray-900">{selectedStudent.phone || 'Non renseigné'}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-700">Email:</p>
+                          <p className="text-gray-900">{selectedStudent.parent_email || 'Non renseigné'}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Informations du père */}
+                    <div>
+                      <h3 className="text-lg font-semibold mb-4 text-orange-600">Informations du père</h3>
+                      <div className="space-y-3">
+                        {(() => {
+                          const emergencyParts = selectedStudent.emergency_contact?.split(' - ') || [];
+                          const fatherName = emergencyParts[0] || '';
+                          const fatherPhone = emergencyParts[1] || '';
+                          
+                          return (
+                            <>
+                              <div>
+                                <p className="text-sm font-medium text-gray-700">Nom:</p>
+                                <p className="text-gray-900">{fatherName || 'Non renseigné'}</p>
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium text-gray-700">Adresse:</p>
+                                <p className="text-gray-900">{selectedStudent.address || 'Non renseignée'}</p>
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium text-gray-700">Téléphone:</p>
+                                <p className="text-gray-900">{selectedStudent.parent_phone || fatherPhone || 'Non renseigné'}</p>
+                              </div>
+                            </>
+                          );
+                        })()}
+                      </div>
                     </div>
                   </div>
 
-                  <div>
-                    <h3 className="text-lg font-semibold mb-3 text-orange-600">Contact d'urgence</h3>
-                    <div className="space-y-2">
-                      <p><strong>Contact:</strong> {selectedStudent.emergency_contact || 'Non renseigné'}</p>
+                  {/* Colonne droite */}
+                  <div className="space-y-8">
+                    {/* Contact d'urgence */}
+                    <div>
+                      <h3 className="text-lg font-semibold mb-4 text-orange-600">Contact d'urgence</h3>
+                      <div className="space-y-3">
+                        {(() => {
+                          const emergencyParts = selectedStudent.emergency_contact?.split(' - ') || [];
+                          const contactName = emergencyParts[0] || '';
+                          const contactPhone = emergencyParts[1] || '';
+                          const contactRelation = emergencyParts[2]?.replace(/[()]/g, '') || '';
+                          
+                          return (
+                            <>
+                              <div>
+                                <p className="text-sm font-medium text-gray-700">Nom:</p>
+                                <p className="text-gray-900">{contactName || 'Non renseigné'}</p>
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium text-gray-700">Téléphone:</p>
+                                <p className="text-gray-900">{contactPhone || 'Non renseigné'}</p>
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium text-gray-700">Relation:</p>
+                                <p className="text-gray-900">{contactRelation || 'Non renseigné'}</p>
+                              </div>
+                            </>
+                          );
+                        })()}
+                      </div>
+                    </div>
+
+                    {/* Informations de la mère */}
+                    <div>
+                      <h3 className="text-lg font-semibold mb-4 text-orange-600">Informations de la mère</h3>
+                      <div className="space-y-3">
+                        <div>
+                          <p className="text-sm font-medium text-gray-700">Nom:</p>
+                          <p className="text-gray-900">Non renseigné</p>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-700">Adresse:</p>
+                          <p className="text-gray-900">Non renseigné</p>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-700">Téléphone:</p>
+                          <p className="text-gray-900">Non renseigné</p>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
-
 
                 {/* Documents de l'élève */}
                 <DocumentsSection studentId={selectedStudent.id} />
