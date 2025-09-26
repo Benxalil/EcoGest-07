@@ -59,8 +59,8 @@ export default function ModifierClasse() {
           name: classeData.name,
           level: classeData.level,
           section: classeData.section || "",
-          series_id: (classeData as any).series_id || "",
-          label_id: (classeData as any).label_id || ""
+          series_id: classeData.series_id || "",
+          label_id: classeData.label_id || ""
         }); } else {
         toast.error("Classe non trouvée");
         navigate("/classes");

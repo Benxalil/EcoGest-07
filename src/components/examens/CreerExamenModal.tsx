@@ -17,14 +17,12 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 
 interface CreerExamenModalProps {
-  classes?: any[];
   onExamenCreated?: () => void;
 }
 
-export const CreerExamenModal: React.FC<CreerExamenModalProps> = ({ classes: propsClasses, onExamenCreated }) => {
+export const CreerExamenModal: React.FC<CreerExamenModalProps> = ({ onExamenCreated }) => {
   const { academicYear } = useAcademicYear();
-  const { classes: hookClasses, loading: classesLoading } = useClasses();
-  const classes = propsClasses || hookClasses;
+  const { classes, loading: classesLoading } = useClasses();
   const { schoolData: schoolSettings } = useSchoolData();
   const { createExam } = useExams();
   const { toast } = useToast();

@@ -5,26 +5,24 @@ import { validateGradeInput } from "@/utils/gradeUtils";
 import { useState, useEffect } from "react";
 
 interface GradeInputProps extends Omit<React.ComponentProps<"input">, "onChange"> {
-  maxScore?: number;
-  maxGrade?: number;
+  maxScore: number;
   value: string | number;
   onChange: (value: string) => void;
   showValidation?: boolean;
 }
 
 export const GradeInput = React.forwardRef<HTMLInputElement, GradeInputProps>(
-  ({ className, maxScore, maxGrade, value, onChange, showValidation = true, ...props }, ref) => {
-    const maxValue = maxScore || maxGrade || 20;
+  ({ className, maxScore, value, onChange, showValidation = true, ...props }, ref) => {
     const [error, setError] = useState<string>("");
     const [hasInteracted, setHasInteracted] = useState(false);
 
-    // Validate input when value or maxValue changes
+    // Validate input when value or maxScore changes
     useEffect(() => {
       if (hasInteracted && showValidation && value !== "") {
-        const validation = validateGradeInput(value, maxValue);
+        const validation = validateGradeInput(value, maxScore);
         setError(validation.isValid ? "" : validation.errorMessage || "");
       }
-    }, [value, maxValue, hasInteracted, showValidation]);
+    }, [value, maxScore, hasInteracted, showValidation]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const inputValue = e.target.value;
@@ -36,7 +34,7 @@ export const GradeInput = React.forwardRef<HTMLInputElement, GradeInputProps>(
         return;
       }
 
-      const validation = validateGradeInput(inputValue, maxValue);
+      const validation = validateGradeInput(inputValue, maxScore);
       
       if (validation.isValid) {
         setError("");
@@ -51,11 +49,11 @@ export const GradeInput = React.forwardRef<HTMLInputElement, GradeInputProps>(
       setHasInteracted(true);
       
       if (e.target.value !== "") {
-        const validation = validateGradeInput(e.target.value, maxValue);
+        const validation = validateGradeInput(e.target.value, maxScore);
         if (!validation.isValid) {
           // Auto-correct to max value if exceeded
-          if (parseFloat(e.target.value) > maxValue) {
-            onChange(maxValue.toString());
+          if (parseFloat(e.target.value) > maxScore) {
+            onChange(maxScore.toString());
           }
         }
       }
@@ -69,9 +67,9 @@ export const GradeInput = React.forwardRef<HTMLInputElement, GradeInputProps>(
           ref={ref}
           type="number"
           min="0"
-          max={maxValue}
+          max={maxScore}
           step="0.5"
-          placeholder={`Note/${maxValue}`}
+          placeholder={`Note/${maxScore}`}
           value={value}
           onChange={handleChange}
           onBlur={handleBlur}
