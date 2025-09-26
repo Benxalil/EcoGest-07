@@ -17,9 +17,6 @@ export interface LessonLogData {
   updated_at: string;
 }
 
-// Legacy alias for backward compatibility
-export type LessonLog = LessonLogData;
-
 export const useLessonLogs = (classId?: string) => {
   const [lessonLogs, setLessonLogs] = useState<LessonLogData[]>([]);
   const [loading, setLoading] = useState(true);

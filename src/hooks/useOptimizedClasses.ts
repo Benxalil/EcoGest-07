@@ -218,6 +218,6 @@ export const useOptimizedClasses = () => {
     createClass,
     updateClass,
     deleteClass,
-    refreshClasses: fetchClasses,
+    refreshClasses: fetchClasses
   };
 };

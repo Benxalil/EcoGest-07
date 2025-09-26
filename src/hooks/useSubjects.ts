@@ -47,10 +47,10 @@ export const useSubjects = (classId?: string) => {
         .eq('school_id', userProfile.schoolId);
 
       if (classId) {
-        (query as any).eq('class_id', classId);
+        query.eq('class_id', classId);
       }
 
-      const { data, error } = await (query as any).order('name');
+      const { data, error } = await query.order('name');
 
       if (error) {
         // Si la table n'existe pas, retourner un tableau vide
@@ -61,18 +61,7 @@ export const useSubjects = (classId?: string) => {
         throw error;
       }
       
-      setSubjects((data || []).map((subject: any) => ({
-        id: subject.id,
-        name: subject.name,
-        abbreviation: subject.abbreviation || subject.code,
-        class_id: subject.class_id,
-        school_id: subject.school_id,
-        coefficient: subject.coefficient,
-        hours_per_week: subject.hours_per_week,
-        color: subject.color,
-        created_at: subject.created_at,
-        updated_at: subject.updated_at
-      })));
+      setSubjects(data || []);
     } catch (err) {
       console.error('Erreur lors de la récupération des matières:', err);
       setError(err instanceof Error ? err.message : 'Erreur lors de la récupération des matières');

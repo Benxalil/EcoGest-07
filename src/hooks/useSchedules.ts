@@ -58,18 +58,7 @@ export const useSchedules = (classId?: string) => {
       const days = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
       const organizedSchedules: DaySchedule[] = days.map(day => ({
         day,
-        courses: (data || []).filter(course => (course as any).day === day).map(course => ({
-          id: course.id,
-          subject: (course as any).subject || (course as any).activity_name || '',
-          teacher: (course as any).teacher || '',
-          start_time: course.start_time,
-          end_time: course.end_time,
-          day: (course as any).day || day,
-          class_id: course.class_id,
-          school_id: course.school_id,
-          created_at: course.created_at || '',
-          updated_at: course.created_at || ''
-        }))
+        courses: (data || []).filter(course => course.day === day)
       }));
 
       setSchedules(organizedSchedules);
@@ -101,7 +90,6 @@ export const useSchedules = (classId?: string) => {
       const { error } = await supabase
         .from('schedules')
         .insert({
-          activity_name: courseData.subject,
           subject: courseData.subject,
           teacher: courseData.teacher || '',
           start_time: courseData.start_time,
@@ -110,7 +98,7 @@ export const useSchedules = (classId?: string) => {
           day_of_week: dayOfWeek,
           class_id: courseData.class_id,
           school_id: userProfile.schoolId
-        } as any);
+        });
 
       if (error) throw error;
 
