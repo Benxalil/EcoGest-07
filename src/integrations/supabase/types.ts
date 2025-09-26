@@ -1319,6 +1319,7 @@ export type Database = {
           created_at: string | null
           hours_per_week: number | null
           id: string
+          max_score: number | null
           name: string
           school_id: string
         }
@@ -1331,6 +1332,7 @@ export type Database = {
           created_at?: string | null
           hours_per_week?: number | null
           id?: string
+          max_score?: number | null
           name: string
           school_id: string
         }
@@ -1343,6 +1345,7 @@ export type Database = {
           created_at?: string | null
           hours_per_week?: number | null
           id?: string
+          max_score?: number | null
           name?: string
           school_id?: string
         }
