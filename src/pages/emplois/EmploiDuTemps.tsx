@@ -136,16 +136,37 @@ export default function EmploiDuTemps() {
 
   const handleOpenCahierModal = (dayIndex: number, courseIndex: number, course: Course) => {
     // Trouver la matière correspondante
-    const subject = subjects.find(s => s.name === course.subject);
+    const subject = subjects.find(s => s.name === course.subject) || 
+                   subjects.find(s => s.id === course.subject_id);
     // Trouver l'enseignant correspondant
-    const teacher = teachers.find(t => `${t.first_name} ${t.last_name}` === course.teacher);
+    const teacher = teachers.find(t => `${t.first_name} ${t.last_name}` === course.teacher) ||
+                   teachers.find(t => t.id === course.teacher_id);
+    
+    // Vérifier que nous avons les IDs nécessaires
+    if (!subject?.id) {
+      toast({
+        title: "Erreur",
+        description: "Impossible de trouver la matière correspondante",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!teacher?.id) {
+      toast({
+        title: "Erreur", 
+        description: "Impossible de trouver l'enseignant correspondant",
+        variant: "destructive"
+      });
+      return;
+    }
     
     // Préremplir le formulaire avec les données du cours
     cahierForm.setValue("topic", course.subject);
     cahierForm.setValue("lesson_date", new Date().toISOString().split('T')[0]);
     cahierForm.setValue("start_time", course.start_time);
-    cahierForm.setValue("subject_id", subject?.id || "");
-    cahierForm.setValue("teacher_id", teacher?.id || "");
+    cahierForm.setValue("subject_id", subject.id);
+    cahierForm.setValue("teacher_id", teacher.id);
     cahierForm.setValue("content", ""); // À remplir manuellement
     
     // Ouvrir le modal
