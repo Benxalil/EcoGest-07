@@ -4,6 +4,7 @@ import { useOptimizedUserRole } from './useOptimizedUserRole';
 import { useCache } from './useCache';
 import { useToast } from './use-toast';
 
+// Interface basée sur le vrai schéma de la table grades
 export interface Grade {
   id: string;
   student_id: string;
@@ -53,6 +54,7 @@ export const useOptimizedGrades = (studentId?: string, subjectId?: string, examI
       return;
     }
 
+    // Construire la clé de cache basée sur les filtres
     const cacheKey = `grades_${userProfile.schoolId}_${studentId || 'all'}_${subjectId || 'all'}_${examId || 'all'}`;
     const cachedGrades = cache.get<Grade[]>(cacheKey);
     
@@ -72,6 +74,7 @@ export const useOptimizedGrades = (studentId?: string, subjectId?: string, examI
         .select('*')
         .eq('school_id', userProfile.schoolId);
 
+      // Appliquer les filtres optionnels
       if (studentId) query = query.eq('student_id', studentId);
       if (subjectId) query = query.eq('subject_id', subjectId);
       if (examId) query = query.eq('exam_id', examId);
@@ -80,8 +83,9 @@ export const useOptimizedGrades = (studentId?: string, subjectId?: string, examI
 
       if (error) throw error;
 
+      // Mettre en cache pour 2 minutes
       cache.set(cacheKey, data || [], 2 * 60 * 1000);
-      setGrades((data as any) || []);
+      setGrades(data || []);
       console.log('Notes récupérées depuis la DB et mises en cache');
       
     } catch (error) {
@@ -101,7 +105,7 @@ export const useOptimizedGrades = (studentId?: string, subjectId?: string, examI
     if (!userProfile?.schoolId) return false;
 
     try {
-      const { error } = await (supabase as any)
+      const { error } = await supabase
         .from('grades')
         .insert({
           ...gradeData,
@@ -111,6 +115,7 @@ export const useOptimizedGrades = (studentId?: string, subjectId?: string, examI
 
       if (error) throw error;
 
+      // Invalider le cache et recharger
       const cacheKey = `grades_${userProfile.schoolId}_${studentId || 'all'}_${subjectId || 'all'}_${examId || 'all'}`;
       cache.delete(cacheKey);
       await fetchGrades();
@@ -136,7 +141,7 @@ export const useOptimizedGrades = (studentId?: string, subjectId?: string, examI
     if (!userProfile?.schoolId) return false;
 
     try {
-      const { error } = await (supabase as any)
+      const { error } = await supabase
         .from('grades')
         .update(gradeData)
         .eq('id', id)
@@ -144,6 +149,7 @@ export const useOptimizedGrades = (studentId?: string, subjectId?: string, examI
 
       if (error) throw error;
 
+      // Invalider le cache et recharger
       const cacheKey = `grades_${userProfile.schoolId}_${studentId || 'all'}_${subjectId || 'all'}_${examId || 'all'}`;
       cache.delete(cacheKey);
       await fetchGrades();
@@ -177,6 +183,7 @@ export const useOptimizedGrades = (studentId?: string, subjectId?: string, examI
 
       if (error) throw error;
 
+      // Invalider le cache et recharger
       const cacheKey = `grades_${userProfile.schoolId}_${studentId || 'all'}_${subjectId || 'all'}_${examId || 'all'}`;
       cache.delete(cacheKey);
       await fetchGrades();
@@ -198,6 +205,7 @@ export const useOptimizedGrades = (studentId?: string, subjectId?: string, examI
     }
   };
 
+  // Fonctions utilitaires pour récupérer des notes spécifiques
   const getGradeForStudent = (studentId: string, subjectId: string, examId?: string, semester?: string, examType?: string): Grade | undefined => {
     return grades.find(grade => 
       grade.student_id === studentId &&
