@@ -1,20 +1,39 @@
 import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, BookText } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { ArrowLeft, BookText, Calendar, Clock } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useSubjects } from "@/hooks/useSubjects";
 import { useClasses } from "@/hooks/useClasses";
+import { useLessonLogs } from "@/hooks/useLessonLogs";
 
 export default function ListeMatieresCahier() {
   const navigate = useNavigate();
   const { classeId } = useParams();
   const { classes, loading: classesLoading } = useClasses();
   const { subjects, loading: subjectsLoading } = useSubjects(classeId);
+  const { lessonLogs, loading: lessonLogsLoading } = useLessonLogs(classeId);
 
   const classe = classes.find(c => c.id === classeId);
 
-  if (classesLoading || subjectsLoading) {
+  // Fonction pour obtenir les lesson logs d'une matière
+  const getSubjectLessonLogs = (subjectId: string) => {
+    return lessonLogs.filter(log => log.subject_id === subjectId);
+  };
+
+  // Fonction pour formater la date
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('fr-FR', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
+  if (classesLoading || subjectsLoading || lessonLogsLoading) {
     return (
       <Layout>
         <div className="flex items-center justify-center min-h-screen">
@@ -84,33 +103,75 @@ export default function ListeMatieresCahier() {
               </CardContent>
             </Card>
           ) : (
-            subjects.map((subject) => (
-              <Card key={subject.id} className="hover:shadow-md transition-shadow">
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <BookText className="h-5 w-5 mr-2 text-blue-600" />
-                    {subject.name}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    <p className="text-sm text-gray-600">
+            subjects.map((subject) => {
+              const subjectLogs = getSubjectLessonLogs(subject.id);
+              const latestLog = subjectLogs.length > 0 ? subjectLogs[0] : null;
+              
+              return (
+                <Card key={subject.id} className="hover:shadow-md transition-shadow">
+                  <CardHeader>
+                    <CardTitle className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        <BookText className="h-5 w-5 mr-2 text-primary" />
+                        {subject.name}
+                      </div>
+                      <Badge variant="secondary" className="text-xs">
+                        {subjectLogs.length} entrée{subjectLogs.length !== 1 ? 's' : ''}
+                      </Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
                       {subject.abbreviation && (
-                        <span className="font-medium">Abréviation: {subject.abbreviation}</span>
+                        <p className="text-sm text-muted-foreground">
+                          <span className="font-medium">Abréviation: {subject.abbreviation}</span>
+                        </p>
                       )}
-                    </p>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full"
-                      onClick={() => navigate(`/emplois/cahier/${classeId}/${subject.id}`)}
-                    >
-                      Voir le cahier de texte
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))
+                      
+                      {latestLog ? (
+                        <div className="bg-muted/50 p-3 rounded-lg space-y-2">
+                          <h4 className="font-medium text-sm line-clamp-1">
+                            Dernière entrée: {latestLog.topic}
+                          </h4>
+                          <div className="flex items-center text-xs text-muted-foreground space-x-3">
+                            <div className="flex items-center">
+                              <Calendar className="h-3 w-3 mr-1" />
+                              {formatDate(latestLog.lesson_date)}
+                            </div>
+                            {latestLog.start_time && (
+                              <div className="flex items-center">
+                                <Clock className="h-3 w-3 mr-1" />
+                                {latestLog.start_time.slice(0, 5)}
+                              </div>
+                            )}
+                          </div>
+                          {latestLog.content && (
+                            <p className="text-xs text-muted-foreground line-clamp-2">
+                              {latestLog.content}
+                            </p>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="bg-muted/30 p-3 rounded-lg text-center">
+                          <p className="text-sm text-muted-foreground">
+                            Aucune entrée de cahier de texte
+                          </p>
+                        </div>
+                      )}
+                      
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full"
+                        onClick={() => navigate(`/emplois/cahier/${classeId}/${subject.id}`)}
+                      >
+                        Voir le cahier de texte
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })
           )}
         </div>
       </div>
