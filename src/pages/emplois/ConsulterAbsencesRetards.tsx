@@ -15,7 +15,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Calendar, User } from "lucide-react";
 import { useClasses } from "@/hooks/useClasses";
-import { useStudents } from "@/hooks/useStudents";
 import { supabase } from "@/integrations/supabase/client";
 
 interface AttendanceRecord {
@@ -35,7 +34,6 @@ export default function ConsulterAbsencesRetards() {
   const { classeId } = useParams<{ classeId: string }>();
   const navigate = useNavigate();
   const { classes } = useClasses();
-  const { students } = useStudents();
   
   const [attendances, setAttendances] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -44,7 +42,6 @@ export default function ConsulterAbsencesRetards() {
   const [typeFilter, setTypeFilter] = useState("all");
 
   const classe = classes.find(c => c.id === classeId);
-  const classStudents = students.filter(s => s.class_id === classeId);
 
   useEffect(() => {
     const fetchAttendances = async () => {
@@ -61,17 +58,19 @@ export default function ConsulterAbsencesRetards() {
             type,
             reason,
             period,
-            students (
+            students!inner (
               first_name,
               last_name
             )
           `)
           .eq('class_id', classeId)
-          .order('date', { ascending: false });
+          .order('date', { ascending: false })
+          .order('students.last_name', { ascending: true });
 
         if (error) {
           console.error('Erreur lors du chargement des présences:', error);
         } else {
+          console.log('Données récupérées:', data);
           setAttendances(data || []);
         }
       } catch (error) {
@@ -120,6 +119,31 @@ export default function ConsulterAbsencesRetards() {
       case "retard": return "Retard";
       default: return type;
     }
+  };
+
+  // Grouper les enregistrements par date
+  const groupAttendancesByDate = () => {
+    const grouped = filteredAttendances.reduce((acc, record) => {
+      if (!acc[record.date]) {
+        acc[record.date] = [];
+      }
+      acc[record.date].push(record);
+      return acc;
+    }, {} as Record<string, AttendanceRecord[]>);
+
+    // Trier les dates par ordre décroissant (plus récent en premier)
+    return Object.keys(grouped)
+      .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())
+      .map(date => ({
+        date,
+        records: grouped[date],
+        stats: {
+          total: grouped[date].length,
+          present: grouped[date].filter(r => r.type === "present").length,
+          absence: grouped[date].filter(r => r.type === "absence").length,
+          retard: grouped[date].filter(r => r.type === "retard").length,
+        }
+      }));
   };
 
   if (loading) {
@@ -179,7 +203,8 @@ export default function ConsulterAbsencesRetards() {
                 <label className="block text-sm font-medium mb-2">Date</label>
                 <Input
                   type="date"
-                  value={dateFilter}onChange={(e) => setDateFilter(e.target.value)}
+                  value={dateFilter}
+                  onChange={(e) => setDateFilter(e.target.value)}
                   placeholder="jj/mm/aaaa"
                 />
               </div>
@@ -264,7 +289,7 @@ export default function ConsulterAbsencesRetards() {
           </Card>
         </div>
 
-        {/* Liste des absences et retards */}
+        {/* Liste des absences et retards groupées par date */}
         {filteredAttendances.length === 0 ? (
           <Card>
             <CardContent className="p-12 text-center">
@@ -279,43 +304,70 @@ export default function ConsulterAbsencesRetards() {
             </CardContent>
           </Card>
         ) : (
-          <Card>
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Élève</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Période</TableHead>
-                      <TableHead>Motif</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredAttendances.map((record) => (
-                      <TableRow key={record.id} className="hover:bg-gray-50">
-                        <TableCell>{formatDate(record.date)}</TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <User className="h-4 w-4 text-gray-400" />
-                            {record.students?.first_name} {record.students?.last_name}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <span className={getTypeStyle(record.type)}>
-                            {getTypeLabel(record.type)}
-                          </span>
-                        </TableCell>
-                        <TableCell>{record.period || "-"}</TableCell>
-                        <TableCell>{record.reason || "-"}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
+          <div className="space-y-4">
+            {groupAttendancesByDate().map(({ date, records: dateRecords, stats }) => (
+              <Card key={date} className="overflow-hidden">
+                <CardHeader className="pb-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <Calendar className="h-5 w-5 text-blue-500" />
+                      <CardTitle className="text-lg">
+                        {formatDate(date)}
+                      </CardTitle>
+                    </div>
+                    <div className="flex gap-2 text-sm">
+                      <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full font-medium">
+                        Total: {stats.total}
+                      </span>
+                      <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full font-medium">
+                        Présents: {stats.present}
+                      </span>
+                      <span className="bg-red-100 text-red-800 px-2 py-1 rounded-full font-medium">
+                        Absents: {stats.absence}
+                      </span>
+                      <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full font-medium">
+                        Retards: {stats.retard}
+                      </span>
+                    </div>
+                  </div>
+                </CardHeader>
+                
+                <CardContent className="p-0">
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Élève</TableHead>
+                          <TableHead>Type</TableHead>
+                          <TableHead>Période</TableHead>
+                          <TableHead>Motif</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {dateRecords.map((record) => (
+                          <TableRow key={record.id} className="hover:bg-gray-50">
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <User className="h-4 w-4 text-gray-400" />
+                                {record.students?.first_name} {record.students?.last_name}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <span className={getTypeStyle(record.type)}>
+                                {getTypeLabel(record.type)}
+                              </span>
+                            </TableCell>
+                            <TableCell>{record.period || "-"}</TableCell>
+                            <TableCell>{record.reason || "-"}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         )}
       </div>
     </Layout>
