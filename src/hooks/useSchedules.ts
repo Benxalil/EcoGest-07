@@ -125,9 +125,27 @@ export const useSchedules = (classId?: string) => {
     if (!userProfile?.schoolId) return false;
 
     try {
+      // Convertir le format d'affichage vers le format DB si nécessaire
+      const dayMapping: { [key: string]: string } = {
+        'LUNDI': 'Lundi',
+        'MARDI': 'Mardi', 
+        'MERCREDI': 'Mercredi',
+        'JEUDI': 'Jeudi',
+        'VENDREDI': 'Vendredi',
+        'SAMEDI': 'Samedi'
+      };
+
+      const updatedData: any = { ...courseData };
+      if (courseData.day) {
+        const dbDay = dayMapping[courseData.day] || courseData.day;
+        const dayOfWeek = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'].indexOf(dbDay) + 1;
+        updatedData.day = dbDay;
+        updatedData.day_of_week = dayOfWeek;
+      }
+
       const { error } = await supabase
         .from('schedules')
-        .update(courseData)
+        .update(updatedData)
         .eq('id', id)
         .eq('school_id', userProfile.schoolId);
 
