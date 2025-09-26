@@ -5,6 +5,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { useForm } from "react-hook-form";
 import { useState, useEffect } from "react";
 import { BookOpen, UserCheck, Pencil, ArrowLeft, Trash2, AlertTriangle } from "lucide-react";
@@ -12,6 +13,9 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useClasses } from "@/hooks/useClasses";
 import { useSchedules, Course, DaySchedule } from "@/hooks/useSchedules";
 import { useTeachers } from "@/hooks/useTeachers";
+import { useSubjects } from "@/hooks/useSubjects";
+import { useLessonLogs } from "@/hooks/useLessonLogs";
+import { useToast } from "@/hooks/use-toast";
 
 // Les interfaces Course et DaySchedule sont maintenant importées du hook useSchedules
 
@@ -23,6 +27,15 @@ interface CourseFormData {
   endTime: string;
 }
 
+interface CahierFormData {
+  topic: string;
+  lesson_date: string;
+  start_time: string;
+  content: string;
+  teacher_id: string;
+  subject_id: string;
+}
+
 // Les interfaces et données initiales sont maintenant gérées par le hook useSchedules
 
 export default function EmploiDuTemps() {
@@ -31,7 +44,11 @@ export default function EmploiDuTemps() {
   const { classeId } = useParams();
   const { schedules, loading: schedulesLoading, createCourse, updateCourse, deleteCourse } = useSchedules(classeId);
   const { teachers } = useTeachers();
+  const { subjects } = useSubjects(classeId);
+  const { createLessonLog, loading: lessonLoading } = useLessonLogs();
+  const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isCahierDialogOpen, setIsCahierDialogOpen] = useState(false);
   const [editingCourse, setEditingCourse] = useState<{
     dayIndex: number;
     courseIndex: number;
@@ -51,6 +68,17 @@ export default function EmploiDuTemps() {
       startTime: "",
       endTime: "",
     },
+  });
+
+  const cahierForm = useForm<CahierFormData>({
+    defaultValues: {
+      topic: "",
+      lesson_date: new Date().toISOString().split('T')[0],
+      start_time: "",
+      content: "",
+      teacher_id: "",
+      subject_id: ""
+    }
   });
 
   // Les données sont maintenant chargées automatiquement via le hook useSchedules
@@ -106,26 +134,22 @@ export default function EmploiDuTemps() {
     }
   };
 
-  const handleBanCourse = (dayIndex: number, courseIndex: number, course: Course) => {
-    // Construire les paramètres URL avec les données du cours
-    const dayName = schedules[dayIndex].day;
-    const startTime = course.start_time;
+  const handleOpenCahierModal = (dayIndex: number, courseIndex: number, course: Course) => {
+    // Trouver la matière correspondante
+    const subject = subjects.find(s => s.name === course.subject);
+    // Trouver l'enseignant correspondant
+    const teacher = teachers.find(t => `${t.first_name} ${t.last_name}` === course.teacher);
     
-    // Obtenir la date du jour sélectionné (pour l'exemple, on utilise la date d'aujourd'hui)
-    const today = new Date();
-    const currentDate = today.toISOString().split('T')[0];
+    // Préremplir le formulaire avec les données du cours
+    cahierForm.setValue("topic", course.subject);
+    cahierForm.setValue("lesson_date", new Date().toISOString().split('T')[0]);
+    cahierForm.setValue("start_time", course.start_time);
+    cahierForm.setValue("subject_id", subject?.id || "");
+    cahierForm.setValue("teacher_id", teacher?.id || "");
+    cahierForm.setValue("content", ""); // À remplir manuellement
     
-    const params = new URLSearchParams({
-      activite: course.subject,
-      matiereId: course.subject, // Utiliser le nom de la matière directement
-      dateSeance: currentDate,
-      heureSeance: startTime,
-      day: dayName,
-      classeId: classeId || '',
-      enseignant: course.teacher || ''
-    });
-
-    navigate(`/cahier-de-texte?${params.toString()}`);
+    // Ouvrir le modal
+    setIsCahierDialogOpen(true);
   };
 
   const handleAbsenceRetardForCourse = (dayIndex: number, course: Course) => {
@@ -176,6 +200,43 @@ export default function EmploiDuTemps() {
       form.reset();
     }
     setIsDialogOpen(open);
+  };
+
+  const handleCahierDialogClose = (open: boolean) => {
+    if (!open) {
+      cahierForm.reset();
+    }
+    setIsCahierDialogOpen(open);
+  };
+
+  const onCahierSubmit = async (data: CahierFormData) => {
+    if (!classeId) {
+      toast({
+        title: "Erreur",
+        description: "ID de classe manquant",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const success = await createLessonLog({
+      class_id: classeId,
+      subject_id: data.subject_id,
+      teacher_id: data.teacher_id,
+      topic: data.topic,
+      content: data.content,
+      lesson_date: data.lesson_date,
+      start_time: data.start_time
+    });
+
+    if (success) {
+      toast({
+        title: "Succès",
+        description: "Cahier de texte enregistré avec succès"
+      });
+      cahierForm.reset();
+      setIsCahierDialogOpen(false);
+    }
   };
 
   const handleRetardAbsence = () => {
@@ -383,6 +444,136 @@ export default function EmploiDuTemps() {
                 </Form>
               </DialogContent>
             </Dialog>
+
+            {/* Modal Cahier de Texte */}
+            <Dialog open={isCahierDialogOpen} onOpenChange={handleCahierDialogClose}>
+              <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Cahier de textes</DialogTitle>
+                </DialogHeader>
+                <Form {...cahierForm}>
+                  <form onSubmit={cahierForm.handleSubmit(onCahierSubmit)} className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField
+                        control={cahierForm.control}
+                        name="subject_id"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Matière</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Sélectionner une matière" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {subjects.map((subject) => (
+                                  <SelectItem key={subject.id} value={subject.id}>
+                                    {subject.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={cahierForm.control}
+                        name="teacher_id"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Enseignant</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Sélectionner un enseignant" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {teachers.map((teacher) => (
+                                  <SelectItem key={teacher.id} value={teacher.id}>
+                                    {teacher.first_name} {teacher.last_name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    <FormField
+                      control={cahierForm.control}
+                      name="topic"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Sujet de la séance</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="Ex: Introduction aux fractions" />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField
+                        control={cahierForm.control}
+                        name="lesson_date"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Date de la séance</FormLabel>
+                            <FormControl>
+                              <Input type="date" {...field} />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={cahierForm.control}
+                        name="start_time"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Heure de début</FormLabel>
+                            <FormControl>
+                              <Input type="time" {...field} />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    <FormField
+                      control={cahierForm.control}
+                      name="content"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Contenu de la séance</FormLabel>
+                          <FormControl>
+                            <Textarea
+                              {...field}
+                              placeholder="Décrivez le contenu de la séance..."
+                              rows={4}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+
+                    <div className="flex justify-end space-x-4">
+                      <Button type="button" variant="outline" onClick={() => handleCahierDialogClose(false)}>
+                        Annuler
+                      </Button>
+                      <Button type="submit" disabled={lessonLoading} className="bg-blue-500 hover:bg-blue-600 text-white">
+                        {lessonLoading ? "Enregistrement..." : "Enregistrer"}
+                      </Button>
+                    </div>
+                  </form>
+                </Form>
+              </DialogContent>
+            </Dialog>
+
             <Button 
               variant="default" 
               className="bg-yellow-500 hover:bg-yellow-600 text-white"
@@ -457,7 +648,7 @@ export default function EmploiDuTemps() {
                             <div className="flex justify-center gap-2">
                               <BookOpen 
                                 className="h-3 w-3 cursor-pointer text-blue-600 hover:text-blue-800" 
-                                onClick={() => handleBanCourse(dayIndex, originalCourseIndex, course)}
+                                onClick={() => handleOpenCahierModal(dayIndex, originalCourseIndex, course)}
                               />
                               <UserCheck 
                                 className="h-3 w-3 cursor-pointer text-green-600 hover:text-green-800" 
@@ -503,7 +694,7 @@ export default function EmploiDuTemps() {
                             <div className="flex justify-center gap-2">
                               <BookOpen 
                                 className="h-3 w-3 cursor-pointer text-blue-600 hover:text-blue-800" 
-                                onClick={() => handleBanCourse(dayIndex, originalCourseIndex, course)}
+                                onClick={() => handleOpenCahierModal(dayIndex, originalCourseIndex, course)}
                               />
                               <UserCheck 
                                 className="h-3 w-3 cursor-pointer text-green-600 hover:text-green-800" 
