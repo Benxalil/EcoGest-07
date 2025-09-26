@@ -12,6 +12,8 @@ import {
 } from "@/components/ui/table";
 import { ArrowLeft } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
+import { useClasses } from "@/hooks/useClasses";
+import { useStudents } from "@/hooks/useStudents";
 
 interface Classe {
   id: string;
@@ -33,29 +35,34 @@ export default function ListeElevesNotes() {
   const navigate = useNavigate();
   const { classeId, activiteId } = useParams();
 
+  const { classes } = useClasses();
+  const { students } = useStudents();
+
   useEffect(() => {
     // Récupérer les informations de la classe
-    if (classeId) {
-      // Remplacé par hook Supabase
-      if (savedClasses) {
-        const classes = JSON.parse(savedClasses);
-        const classeInfo = classes.find((c: Classe) => c.id === classeId);
-        setClasse(classeInfo || null);
+    if (classeId && classes.length > 0) {
+      const classeInfo = classes.find((c) => c.id === classeId);
+      if (classeInfo) {
+        setClasse({
+          id: classeInfo.id,
+          session: classeInfo.level,
+          libelle: classeInfo.name,
+          effectif: classeInfo.capacity || 0
+        });
+        
         // Récupérer les élèves de cette classe
-        if (classeInfo) {
-          // Remplacé par hook Supabase
-          if (savedStudents) {
-            const students = JSON.parse(savedStudents);
-            const classeNom = `${classeInfo.session} ${classeInfo.libelle}`;
-            const elevesClasse = students.filter((student: Student) => 
-              student.classe === classeNom
-            );
-            setEleves(elevesClasse);
-            }
-        }
+        const elevesClasse = students.filter((student) => 
+          student.class_id === classeId
+        ).map(student => ({
+          id: student.id,
+          nom: student.last_name,
+          prenom: student.first_name,
+          classe: `${classeInfo.level} ${classeInfo.name}`
+        }));
+        setEleves(elevesClasse);
       }
     }
-  }, [classeId]);
+  }, [classeId, classes, students]);
 
   const handleEvaluerEleve = (eleveId: string) => {
     navigate(`/examens/${classeId}/activites/${activiteId}/eleve/${eleveId}/notes`);

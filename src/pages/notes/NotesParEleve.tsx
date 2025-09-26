@@ -195,12 +195,13 @@ export default function NotesParEleve() {
   const loadMatieresForEleve = (classeId: string) => {
     if (subjects && subjects.length > 0) {
       const matieresWithCoeff = subjects.map(subject => ({
-        id: subject.id,
+        id: parseInt(subject.id.replace(/\D/g, '')) || Date.now(),
         nom: subject.name,
-        coefficient: subject.coefficient || 1,
+        coefficient: (subject.coefficient || 1).toString(),
         maxScore: subject.hours_per_week || 20,
         abbreviation: subject.abbreviation || subject.name.substring(0, 3).toUpperCase(),
-        moyenne: (subject.hours_per_week || 20).toString()
+        moyenne: (subject.hours_per_week || 20).toString(),
+        classeId: subject.class_id
       }));
       setMatieres(matieresWithCoeff);
     }
@@ -225,7 +226,7 @@ export default function NotesParEleve() {
 
     // Utiliser le système de synchronisation centralisé
     const updates: Partial<UnifiedNote> = {
-      coefficient: matiere?.coefficient || 1,
+      coefficient: parseFloat(matiere?.coefficient?.toString() || '1'),
       [type]: value
     };
     updateNote(selectedEleve.id, matiereId.toString(), updates);
@@ -251,7 +252,7 @@ export default function NotesParEleve() {
 
     // Utiliser le système de synchronisation centralisé
     const updates: Partial<UnifiedNote> = {
-      coefficient: matiere?.coefficient || 1,
+      coefficient: parseFloat(matiere?.coefficient?.toString() || '1'),
       note: value
     };
     updateNote(selectedEleve.id, matiereId.toString(), updates);

@@ -7,6 +7,8 @@ import { CreditCard, CheckCircle, Clock, XCircle, Calendar, Lock, Crown } from "
 import { useUserRole } from "@/hooks/useUserRole";
 import { useSubscriptionPlan } from "@/hooks/useSubscriptionPlan";
 import { useNavigate } from "react-router-dom";
+import { useStudents } from "@/hooks/useStudents";
+import { usePayments } from "@/hooks/usePayments";
 
 interface Payment {
   id: string;
@@ -28,32 +30,28 @@ export default function MesPaiements() {
     loadStudentPayments();
   }, [userProfile]);
 
+  const { students } = useStudents();
+  const { payments: allPayments } = usePayments();
+
   const loadStudentPayments = async () => {
     try {
       setLoading(true);
       
-      // Récupérer les paiements depuis localStorage
-      const savedPayments = localStorage.getItem('payments');
-      // Remplacé par hook Supabase
-      
-      if (savedPayments && savedStudents && userProfile) {
-        const allPayments = JSON.parse(savedPayments);
-        const students = JSON.parse(savedStudents);
-        
+      if (students.length > 0 && userProfile) {
         // Trouver l'élève correspondant à l'utilisateur connecté
-        const student = students.find((s: any) => 
-          s.email === userProfile.email || 
-          `${s.prenom} ${s.nom}`.toLowerCase() === `${userProfile.firstName} ${userProfile.lastName}`.toLowerCase()
+        const student = students.find((s) => 
+          s.parent_email === userProfile.email || 
+          `${s.first_name} ${s.last_name}`.toLowerCase() === `${userProfile.firstName} ${userProfile.lastName}`.toLowerCase()
         );
         
         if (student) {
           // Filtrer les paiements pour cet élève
-          const studentPayments = allPayments.filter((p: any) => p.studentId === student.id);
+          const studentPayments = allPayments.filter((p) => p.student_id === student.id);
           
           // Générer les mois de l'année académique avec les statuts
           const academicMonths = generateAcademicMonths();
           const paymentsWithStatus = academicMonths.map((month, index) => {
-            const existingPayment = studentPayments.find((p: any) => p.month === month);
+            const existingPayment = studentPayments.find((p) => p.payment_month === month);
             const dueDate = new Date();
             dueDate.setMonth(8 + index); // Septembre = index 8
             dueDate.setDate(5); // 5 de chaque mois
@@ -63,7 +61,6 @@ export default function MesPaiements() {
               month,
               amount: existingPayment?.amount || 50000, // Montant par défaut
               status: getPaymentStatus(existingPayment, dueDate),
-              paidDate: existingPayment?.paidDate,
               dueDate: dueDate.toISOString().split('T')[0]
             };
           });

@@ -651,7 +651,7 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
         parent_email: data.perePrenom && data.pereNom ? `${data.perePrenom.toLowerCase()}.${data.pereNom.toLowerCase()}@parent.com` : null,
         emergency_contact: `${data.contactUrgenceNom} - ${data.contactUrgenceTelephone} (${data.contactUrgenceRelation})`,
         school_id: schoolId,
-        class_id: classesFromHook?.[0]?.id,
+        class_id: classes?.[0]?.id,
         is_active: true
       };
 

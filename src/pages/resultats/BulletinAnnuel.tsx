@@ -9,6 +9,9 @@ import { useNavigate, useParams } from "react-router-dom";
 import { generateBulletinAnnuelPDF } from "@/utils/pdfGeneratorAnnuel";
 import { generateBulletinPDF } from "@/utils/pdfGenerator";
 import { useSchoolData } from "@/hooks/useSchoolData";
+import { useClasses } from "@/hooks/useClasses";
+import { useStudents } from "@/hooks/useStudents";
+import { useSubjects } from "@/hooks/useSubjects";
 
 interface Classe {
   id: string;
@@ -61,9 +64,11 @@ export default function BulletinAnnuel() {
   const navigate = useNavigate();
   const { classeId } = useParams();
 
-  // Remplacé par hook Supabase
   const { schoolData: schoolSettings } = useSchoolData();
-  const schoolSystem = schoolSettings?.system || "semestre";
+  const { classes } = useClasses();
+  const { students: allStudents } = useStudents();
+  const { subjects } = useSubjects();
+  const schoolSystem = schoolSettings?.semester_type === 'trimester' ? 'trimestre' : 'semestre';
 
   const getNumberOfPeriods = () => {
     return schoolSystem === "trimestre" ? 3 : 2;
@@ -77,69 +82,38 @@ export default function BulletinAnnuel() {
   };
 
   useEffect(() => {
-    const loadData = () => {
-      try {
-        // Charger les informations de la classe
-        // Remplacé par hook Supabase
-        let foundClasse = null;
-        if (savedClasses) {
-          const classes = JSON.parse(savedClasses);
-          foundClasse = classes.find((c: Classe) => c.id === classeId);
-          setClasse(foundClasse || null);
-        }
-
-        // Charger les élèves
-        // Remplacé par hook Supabase
-        if (savedStudents && foundClasse) {
-          const allStudents = JSON.parse(savedStudents);
-          // Construire le nom de la classe pour la comparaison (session + libelle)
-          const classeFullName = `${foundClasse.session} ${foundClasse.libelle}`;
-          const classeStudents = allStudents.filter((student: Student) => student.classe === classeFullName);
-          setStudents(classeStudents);
-        }
-
-        // Charger les matières
-        // Remplacé par hook Supabase
-        if (savedMatieres) {
-          setMatieres(JSON.parse(savedMatieres));
-        }
-
-        // Charger les notes depuis tous les fichiers notes_classeId_matiereId
-        const allNotesForClass: EleveNote[] = [];
-        if (savedMatieres) {
-          const matieresData = JSON.parse(savedMatieres);
-          matieresData.forEach((matiere: any) => {
-            if (matiere.classeId === classeId) {
-              const notesKey = `notes_${classeId}_${matiere.id}`;
-              const savedNotesForMatiere = localStorage.getItem(notesKey);
-              if (savedNotesForMatiere) {
-                try {
-                  const notesForMatiere = JSON.parse(savedNotesForMatiere);
-                  notesForMatiere.forEach((note: EleveNote) => {
-                    allNotesForClass.push({
-                      ...note,
-                      matiereId: matiere.id
-                    });
-                  });
-                } catch (error) {
-                  console.error(`Erreur lors du chargement des notes pour la matière ${matiere.id}:`, error);
-                }
-              }
-            }
-          });
-        }
-        setNotes(allNotesForClass);
-
-        // Charger le système scolaire
-        const system = getSchoolSettings();
-        setSchoolSystem(system);
-      } catch (error) {
-        console.error("Erreur lors du chargement des données:", error);
+    if (classeId && classes.length > 0) {
+      const foundClasse = classes.find((c) => c.id === classeId);
+      if (foundClasse) {
+        setClasse({
+          id: foundClasse.id,
+          session: foundClasse.level,
+          libelle: foundClasse.name,
+          effectif: foundClasse.capacity || 0
+        });
       }
-    };
-
-    loadData();
-  }, [classeId]);
+      
+      // Charger les élèves de cette classe
+      const classeStudents = allStudents.filter(student => student.class_id === classeId);
+      setStudents(classeStudents.map(student => ({
+        id: student.id,
+        nom: student.last_name,
+        prenom: student.first_name,
+        classe: `${foundClasse?.level} ${foundClasse?.name}`,
+        numero: parseInt(student.student_number) || 0
+      })));
+      
+      // Charger les matières de cette classe
+      const classeSubjects = subjects.filter(subject => subject.class_id === classeId);
+      setMatieres(classeSubjects.map(subject => ({
+        id: parseInt(subject.id.replace(/\D/g, '')) || Date.now(),
+        nom: subject.name,
+        abreviation: subject.abbreviation || '',
+        horaires: `${subject.hours_per_week || 0}h`,
+        classeId: subject.class_id
+      })));
+    }
+  }, [classeId, classes, allStudents, subjects]);
 
   const calculateAnnualAverage = (eleveId: string) => {
     const eleveNotes = notes.filter(note => note.eleveId === eleveId);

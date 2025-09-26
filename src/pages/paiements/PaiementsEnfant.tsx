@@ -116,24 +116,26 @@ export default function PaiementsEnfant() {
 
   const getPaymentStatusIcon = (payment: Payment) => {
     const now = new Date();
-    const dueDate = new Date(payment.due_date);
+    const paymentDate = new Date(payment.payment_date);
     
-    if (payment.status === 'paid') {
+    if (payment.payment_type === 'paid') {
       return <Check className="h-4 w-4 text-green-600" />;
-    } else if (dueDate < now) {
-      return <X className="h-4 w-4 text-red-600" />; } else {
+    } else if (paymentDate < now) {
+      return <X className="h-4 w-4 text-red-600" />;
+    } else {
       return <Clock className="h-4 w-4 text-yellow-600" />;
     }
   };
 
   const getPaymentStatusBadge = (payment: Payment) => {
     const now = new Date();
-    const dueDate = new Date(payment.due_date);
+    const paymentDate = new Date(payment.payment_date);
     
-    if (payment.status === 'paid') {
+    if (payment.payment_type === 'paid') {
       return <Badge variant="default" className="bg-green-100 text-green-800">Payé</Badge>;
-    } else if (dueDate < now) {
-      return <Badge variant="destructive">En retard</Badge>; } else {
+    } else if (paymentDate < now) {
+      return <Badge variant="destructive">En retard</Badge>;
+    } else {
       return <Badge variant="secondary">En attente</Badge>;
     }
   };
@@ -188,8 +190,8 @@ export default function PaiementsEnfant() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {payments.map((payment) => {
-            const dueMonth = new Date(payment.due_date).getMonth();
-            const monthName = monthNames[dueMonth];
+            const paymentMonth = new Date(payment.payment_date).getMonth();
+            const monthName = monthNames[paymentMonth];
             
             return (
               <Card key={payment.id} className="relative">
@@ -204,27 +206,25 @@ export default function PaiementsEnfant() {
                 </CardHeader>
                 <CardContent className="space-y-2">
                   <div>
-                    <p className="text-sm text-muted-foreground">Catégorie</p>
-                    <p className="font-medium">{payment.category?.name}</p>
+                    <p className="text-sm text-muted-foreground">Type de paiement</p>
+                    <p className="font-medium">{payment.payment_type}</p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Montant</p>
-                    <p className="font-bold text-lg">{payment.amount}€</p>
+                    <p className="font-bold text-lg">{payment.amount} FCFA</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Date d'échéance</p>
-                    <p className="text-sm">{new Date(payment.due_date).toLocaleDateString('fr-FR')}</p>
+                    <p className="text-sm text-muted-foreground">Date de paiement</p>
+                    <p className="text-sm">{new Date(payment.payment_date).toLocaleDateString('fr-FR')}</p>
                   </div>
-                  {payment.paid_date && (
+                  <div>
+                    <p className="text-sm text-muted-foreground">Méthode</p>
+                    <p className="text-sm">{payment.payment_method}</p>
+                  </div>
+                  {payment.payment_month && (
                     <div>
-                      <p className="text-sm text-muted-foreground">Date de paiement</p>
-                      <p className="text-sm text-green-600">{new Date(payment.paid_date).toLocaleDateString('fr-FR')}</p>
-                    </div>
-                  )}
-                  {payment.notes && (
-                    <div>
-                      <p className="text-sm text-muted-foreground">Notes</p>
-                      <p className="text-sm">{payment.notes}</p>
+                      <p className="text-sm text-muted-foreground">Mois concerné</p>
+                      <p className="text-sm">{payment.payment_month}</p>
                     </div>
                   )}
                 </CardContent>

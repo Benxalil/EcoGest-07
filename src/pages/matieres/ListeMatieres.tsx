@@ -134,7 +134,7 @@ export default function ListeMatieres() {
     return matieres.filter(matiere => matiere.classeId === classeId);
   };
 
-  const getClasseLabel = (classe: Classe) => {
+  const getClasseLabel = (classe: any) => {
     return `${classe.name} ${classe.level}${classe.section ? ` - ${classe.section}` : ''}`;
   };
 

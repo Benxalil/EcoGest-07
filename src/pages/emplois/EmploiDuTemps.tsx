@@ -136,11 +136,9 @@ export default function EmploiDuTemps() {
 
   const handleOpenCahierModal = (dayIndex: number, courseIndex: number, course: Course) => {
     // Trouver la matière correspondante
-    const subject = subjects.find(s => s.name === course.subject) || 
-                   subjects.find(s => s.id === course.subject_id);
+    const subject = subjects.find(s => s.name === course.subject);
     // Trouver l'enseignant correspondant
-    const teacher = teachers.find(t => `${t.first_name} ${t.last_name}` === course.teacher) ||
-                   teachers.find(t => t.id === course.teacher_id);
+    const teacher = teachers.find(t => `${t.first_name} ${t.last_name}` === course.teacher);
     
     // Vérifier que nous avons les IDs nécessaires
     if (!subject?.id) {

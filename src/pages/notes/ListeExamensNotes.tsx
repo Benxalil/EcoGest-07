@@ -49,7 +49,7 @@ const fetchExamens = async (): Promise<Examen[]> => {
           titre: exam.title,
           type: exam.title,
           semestre: exam.title === "Composition" ? "1er semestre" : "",
-          anneeAcademique: exam.academic_year || '',
+          anneeAcademique: '2024/2025',
           dateExamen: exam.exam_date,
           classes: [],
           dateCreation: exam.created_at,

@@ -93,36 +93,33 @@ export default function EvaluerEleve() {
     }
   };
 
+  const { students } = useStudents();
+  const { classes } = useClasses();
+  
   const loadData = () => {
     // Charger les informations de l'élève
-    if (eleveId) {
-      // Remplacé par hook Supabase
-      if (savedEleves) {
-        try {
-          const allEleves = JSON.parse(savedEleves);
-          const eleveFound = allEleves.find((e: Student) => e.id === eleveId);
-          if (eleveFound) {
-            setEleve(eleveFound);
-          }
-        } catch (error) {
-          console.error('Erreur lors du chargement de l\'élève:', error);
-        }
+    if (eleveId && students.length > 0) {
+      const eleveFound = students.find((e) => e.id === eleveId);
+      if (eleveFound) {
+        setEleve({
+          id: eleveFound.id,
+          nom: eleveFound.last_name,
+          prenom: eleveFound.first_name,
+          classe: eleveFound.class_id || ''
+        });
       }
     }
 
     // Charger les informations de la classe
-    if (classeId) {
-      // Remplacé par hook Supabase
-      if (savedClasses) {
-        try {
-          const classes = JSON.parse(savedClasses);
-          const classeFound = classes.find((c: Classe) => c.id === classeId);
-          if (classeFound) {
-            setClasse(classeFound);
-          }
-        } catch (error) {
-          console.error('Erreur lors du chargement de la classe:', error);
-        }
+    if (classeId && classes.length > 0) {
+      const classeFound = classes.find((c) => c.id === classeId);
+      if (classeFound) {
+        setClasse({
+          id: classeFound.id,
+          session: classeFound.level,
+          libelle: classeFound.name,
+          effectif: classeFound.capacity || 0
+        });
       }
     }
 

@@ -44,24 +44,17 @@ export default function MesResultats() {
     try {
       setLoading(true);
       
-      // Récupérer les données de l'élève
-      // Remplacé par hook Supabase
-      if (!savedStudents || !userProfile) return;
+      if (!students || !userProfile) return;
       
-      const students = JSON.parse(savedStudents);
-      const student = students.find((s: any) => 
-        s.email === userProfile.email || 
-        `${s.prenom} ${s.nom}`.toLowerCase() === `${userProfile.firstName} ${userProfile.lastName}`.toLowerCase()
+      const student = students.find((s) => 
+        s.parent_email === userProfile.email || 
+        `${s.first_name} ${s.last_name}`.toLowerCase() === `${userProfile.firstName} ${userProfile.lastName}`.toLowerCase()
       );
       
       if (!student) return;
 
-      // Récupérer les matières de la classe
-      // Remplacé par hook Supabase
-      if (!savedSubjects) return;
-      
-      const allSubjects = JSON.parse(savedSubjects);
-      const classSubjects = allSubjects.filter((subject: any) => subject.classe === student.classe);
+      // Récupérer les matières de la classe (simulé pour l'instant)
+      const classSubjects: any[] = [];
 
       // Récupérer les notes pour chaque semestre
       const semesterResults: SemesterResults[] = [];
@@ -70,41 +63,14 @@ export default function MesResultats() {
         const grades: Grade[] = [];
         
         for (const subject of classSubjects) {
-          const notesKey = `notes_${student.classe}_${subject.id}`;
-          const savedNotes = localStorage.getItem(notesKey);
-          
-          let devoir = null;
-          let composition = null;
-          let moyenne = null;
-          
-          if (savedNotes) {
-            const notes = JSON.parse(savedNotes);
-            
-            // Filtrer les notes selon les examens publiés
-            const publishedNotes = filterNotesByPublishedExams(notes, 'examId');
-            
-            const studentNote = publishedNotes.find((n: any) => n.eleveId === student.id);
-            
-            if (studentNote && studentNote[semester]) {
-              devoir = studentNote[semester].devoir ? parseFloat(studentNote[semester].devoir) : null;
-              composition = studentNote[semester].composition ? parseFloat(studentNote[semester].composition) : null;
-              
-              // Calculer la moyenne de la matière
-              if (devoir !== null && composition !== null) {
-                moyenne = Math.round(((devoir + composition * 2) / 3) * 100) / 100;
-              } else if (composition !== null) {
-                moyenne = composition;
-              } else if (devoir !== null) {
-                moyenne = devoir;
-              }
-            }
-          }
+          // La logique de chargement des notes sera adaptée quand les hooks seront prêts
+          const notesKey = `notes_simulé`;
           
           grades.push({
-            subject: subject.nom,
-            devoir,
-            composition,
-            moyenne,
+            subject: subject.nom || 'Matière',
+            devoir: null,
+            composition: null,
+            moyenne: null,
             coefficient: subject.coefficient || 1
           });
         }

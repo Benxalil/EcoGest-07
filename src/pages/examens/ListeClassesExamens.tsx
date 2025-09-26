@@ -20,6 +20,11 @@ export default function ListeClassesExamens() {
   const navigate = useNavigate();
   const { classes, loading } = useClasses();
 
+  const handleExamenCreated = () => {
+    // Rafraîchir la liste des examens si nécessaire
+    console.log('Examen créé avec succès');
+  };
+
   const handleClasseClick = (classe: any) => {
     navigate(`/examens/classe/${classe.id}`);
   };
@@ -88,7 +93,9 @@ export default function ListeClassesExamens() {
               <p className="text-gray-600 text-sm">Gérer les examens et les évaluations</p>
             </div>
           </div>
-          <CreerExamenModal classes={classes} />
+          <CreerExamenModal 
+            onExamenCreated={handleExamenCreated} 
+          />
         </div>
 
         {/* Blocs d'information statistiques */}

@@ -112,7 +112,7 @@ export default function ListeClassesResultats() {
     }
   };
 
-  const handleClasseClick = (classe: Classe) => {
+  const handleClasseClick = (classe: any) => {
     setSelectedClasse(classe);
     loadExamensForClasse(classe.id);
     setIsDialogOpen(true);
