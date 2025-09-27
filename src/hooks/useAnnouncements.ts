@@ -155,6 +155,12 @@ export const useAnnouncements = () => {
       if (error) throw error;
 
       await fetchAnnouncements();
+      
+      // Invalider le cache du dashboard pour synchronisation
+      const cacheKey = `dashboard-${userProfile.schoolId}`;
+      if (typeof localStorage !== 'undefined') {
+        localStorage.removeItem(cacheKey);
+      }
 
       toast({
         title: "Annonce supprimée",

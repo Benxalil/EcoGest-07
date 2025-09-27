@@ -207,7 +207,7 @@ const TeacherDashboard = memo(() => {
             </p>
           ) : (
             <div className="space-y-3">
-              {stats.announcements.map((announcement: any, index: number) => (
+              {stats.announcements.slice(0, 3).map((announcement: any, index: number) => (
                 <div key={index} className="border rounded-lg p-3 hover:bg-orange-50">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
@@ -216,11 +216,13 @@ const TeacherDashboard = memo(() => {
                         {announcement.content}
                       </p>
                     </div>
-                    {announcement.is_urgent && (
-                      <span className="bg-red-100 text-red-800 text-xs px-2 py-1 rounded">
-                        Urgent
-                      </span>
-                    )}
+                    <span className={`text-xs px-2 py-1 rounded ${
+                      announcement.priority === 'urgent' || announcement.is_urgent 
+                        ? 'bg-red-100 text-red-800' 
+                        : 'bg-blue-100 text-blue-800'
+                    }`}>
+                      {announcement.priority === 'urgent' || announcement.is_urgent ? 'Urgent' : 'Normal'}
+                    </span>
                   </div>
                 </div>
               ))}

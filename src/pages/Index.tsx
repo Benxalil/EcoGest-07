@@ -96,9 +96,14 @@ const Index = () => {
   };
 
   // Optimisation avec useMemo pour éviter les recalculs
-  const recentAnnouncements = useMemo(() => announcements.slice(0, 3), [announcements]);
+  const recentAnnouncements = useMemo(() => 
+    announcements
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .slice(0, 3), 
+    [announcements]
+  );
   const urgentAnnouncements = useMemo(() => 
-    announcements.filter(announcement => announcement.title?.toLowerCase().includes('urgent')), 
+    announcements.filter(announcement => announcement.priority === 'urgent' || announcement.is_urgent), 
     [announcements]
   );
 
@@ -421,11 +426,11 @@ const Index = () => {
                      <div key={index} className="border rounded-lg p-3 bg-white">
                        <div className="flex items-start justify-between mb-2 gap-2">
                          <h4 className="font-medium text-xs sm:text-sm flex-1 min-w-0 pr-2">{announcement.title}</h4>
-                         <span className={`text-xs px-2 py-1 rounded flex-shrink-0 ${
-                           announcement.title.includes('urgent') ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'
-                         }`}>
-                           {announcement.title.includes('urgent') ? 'Urgent' : 'Normal'}
-                         </span>
+                          <span className={`text-xs px-2 py-1 rounded flex-shrink-0 ${
+                            announcement.priority === 'urgent' || announcement.is_urgent ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'
+                          }`}>
+                            {announcement.priority === 'urgent' || announcement.is_urgent ? 'Urgent' : 'Normal'}
+                          </span>
                        </div>
                        <p className="text-xs text-muted-foreground mb-2 line-clamp-2">{announcement.content}</p>
                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-0 text-xs text-muted-foreground">

@@ -58,7 +58,7 @@ export const useDashboardData = () => {
         supabase.from('students').select('*').eq('school_id', userProfile.schoolId).eq('is_active', true),
         supabase.from('teachers').select('*').eq('school_id', userProfile.schoolId).eq('is_active', true),
         supabase.from('schools').select('*').eq('id', userProfile.schoolId).single(),
-        supabase.from('announcements').select('*').eq('school_id', userProfile.schoolId).eq('is_published', true).order('created_at', { ascending: false }).limit(10),
+        supabase.from('announcements').select('*').eq('school_id', userProfile.schoolId).eq('is_published', true).order('created_at', { ascending: false }),
         supabase.from('academic_years').select('*').eq('school_id', userProfile.schoolId).eq('is_current', true)
       ]);
 

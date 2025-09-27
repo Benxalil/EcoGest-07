@@ -92,8 +92,19 @@ export default function ListeAnnonces() {
     dateCreation: new Date(announcement.created_at)
   }));
 
-  const annoncesUrgentes = convertedAnnonces.filter(annonce => annonce.priorite === 'urgent');
-  const annoncesNormales = convertedAnnonces.filter(annonce => annonce.priorite === 'normal');
+  // Séparer en annonces à venir et passées (basé sur 7 jours)
+  const now = new Date();
+  const sevenDaysAgo = new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000));
+
+  const separateAnnouncements = (annonces: AnnonceData[]) => {
+    const aVenir = annonces.filter(annonce => annonce.dateCreation >= sevenDaysAgo);
+    const passees = annonces.filter(annonce => annonce.dateCreation < sevenDaysAgo);
+    return { aVenir, passees };
+  };
+
+  const { aVenir: toutesAVenir, passees: toutesPassees } = separateAnnouncements(convertedAnnonces);
+  const { aVenir: urgentesAVenir, passees: urgentesPassees } = separateAnnouncements(convertedAnnonces.filter(a => a.priorite === 'urgent'));
+  const { aVenir: normalesAVenir, passees: normalesPassees } = separateAnnouncements(convertedAnnonces.filter(a => a.priorite === 'normal'));
 
   if (loading) {
     return (
@@ -125,8 +136,8 @@ export default function ListeAnnonces() {
         <Tabs defaultValue="toutes" className="w-full">
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="toutes">Toutes ({convertedAnnonces.length})</TabsTrigger>
-            <TabsTrigger value="urgentes">Urgentes ({annoncesUrgentes.length})</TabsTrigger>
-            <TabsTrigger value="normales">Normales ({annoncesNormales.length})</TabsTrigger>
+            <TabsTrigger value="urgentes">Urgentes ({urgentesAVenir.length + urgentesPassees.length})</TabsTrigger>
+            <TabsTrigger value="normales">Normales ({normalesAVenir.length + normalesPassees.length})</TabsTrigger>
             </TabsList>
 
           <TabsContent value="toutes" className="space-y-4">
@@ -145,63 +156,131 @@ export default function ListeAnnonces() {
                   </CardContent>
                 </Card>
               ) : (
-              <div className="grid gap-4">
-                {convertedAnnonces.map((annonce) => (
-                  <Card key={annonce.id} className="hover:shadow-md transition-shadow">
-                    <CardHeader>
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <CardTitle className="text-lg">{annonce.titre}</CardTitle>
-                          <CardDescription className="mt-2">
-                            {annonce.contenu}
-                          </CardDescription>
-                        </div>
-                        <div className="flex items-center space-x-2 ml-4">
-                          <Badge variant={annonce.priorite === 'urgent' ? 'destructive' : 'secondary'}>
-                            {annonce.priorite}
-                          </Badge>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex items-center justify-between text-sm text-gray-500">
-                        <div className="flex items-center space-x-4">
-                          <div className="flex items-center">
-                            <Calendar className="h-4 w-4 mr-1" />
-                            {annonce.dateCreation.toLocaleDateString()}
-                          </div>
-                          <div className="flex items-center">
-                            <Users className="h-4 w-4 mr-1" />
-                            {annonce.destinataires.join(', ')}
-                          </div>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openEditModal(annonce)}
-                          >
-                            <Edit2 className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openDeleteDialog(annonce)}
-                            className="text-red-600 hover:text-red-700"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                  ))}
-                </div>
-              )}
-            </TabsContent>
+              <>
+                {/* Annonces à venir/en cours */}
+                {toutesAVenir.length > 0 && (
+                  <div className="space-y-4">
+                    <h4 className="text-lg font-semibold text-green-700 border-b pb-2">📍 À venir / En cours</h4>
+                    <div className="grid gap-4">
+                      {toutesAVenir.map((annonce) => (
+                        <Card key={annonce.id} className="hover:shadow-md transition-shadow">
+                          <CardHeader>
+                            <div className="flex justify-between items-start">
+                              <div className="flex-1">
+                                <CardTitle className="text-lg">{annonce.titre}</CardTitle>
+                                <CardDescription className="mt-2">
+                                  {annonce.contenu}
+                                </CardDescription>
+                              </div>
+                              <div className="flex items-center space-x-2 ml-4">
+                                <Badge variant={annonce.priorite === 'urgent' ? 'destructive' : 'secondary'}>
+                                  {annonce.priorite}
+                                </Badge>
+                              </div>
+                            </div>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="flex items-center justify-between text-sm text-gray-500">
+                              <div className="flex items-center space-x-4">
+                                <div className="flex items-center">
+                                  <Calendar className="h-4 w-4 mr-1" />
+                                  {annonce.dateCreation.toLocaleDateString()}
+                                </div>
+                                <div className="flex items-center">
+                                  <Users className="h-4 w-4 mr-1" />
+                                  {annonce.destinataires.join(', ')}
+                                </div>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => openEditModal(annonce)}
+                                >
+                                  <Edit2 className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => openDeleteDialog(annonce)}
+                                  className="text-red-600 hover:text-red-700"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Annonces passées */}
+                {toutesPassees.length > 0 && (
+                  <div className="space-y-4">
+                    <h4 className="text-lg font-semibold text-muted-foreground border-b pb-2">🗂️ Passées</h4>
+                    <div className="grid gap-4">
+                      {toutesPassees.map((annonce) => (
+                        <Card key={annonce.id} className="hover:shadow-md transition-shadow opacity-60 bg-muted/20">
+                          <CardHeader>
+                            <div className="flex justify-between items-start">
+                              <div className="flex-1">
+                                <CardTitle className="text-lg text-muted-foreground">{annonce.titre}</CardTitle>
+                                <CardDescription className="mt-2 text-muted-foreground">
+                                  {annonce.contenu}
+                                </CardDescription>
+                              </div>
+                              <div className="flex items-center space-x-2 ml-4">
+                                <Badge variant="outline" className="opacity-60">
+                                  {annonce.priorite}
+                                </Badge>
+                              </div>
+                            </div>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="flex items-center justify-between text-sm text-muted-foreground">
+                              <div className="flex items-center space-x-4">
+                                <div className="flex items-center">
+                                  <Calendar className="h-4 w-4 mr-1" />
+                                  {annonce.dateCreation.toLocaleDateString()}
+                                </div>
+                                <div className="flex items-center">
+                                  <Users className="h-4 w-4 mr-1" />
+                                  {annonce.destinataires.join(', ')}
+                                </div>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => openEditModal(annonce)}
+                                  className="opacity-60"
+                                >
+                                  <Edit2 className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => openDeleteDialog(annonce)}
+                                  className="text-red-600 hover:text-red-700 opacity-60"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </TabsContent>
 
           <TabsContent value="urgentes" className="space-y-4">
-            {annoncesUrgentes.length === 0 ? (
+            {urgentesAVenir.length === 0 && urgentesPassees.length === 0 ? (
               <Card>
                 <CardContent className="flex flex-col items-center justify-center py-12">
                   <Calendar className="h-12 w-12 text-gray-400 mb-4" />
@@ -212,59 +291,123 @@ export default function ListeAnnonces() {
                 </CardContent>
               </Card>
             ) : (
-              <div className="grid gap-4">
-                {annoncesUrgentes.map((annonce) => (
-                  <Card key={annonce.id} className="hover:shadow-md transition-shadow border-red-200">
-                    <CardHeader>
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <CardTitle className="text-lg text-red-900">{annonce.titre}</CardTitle>
-                          <CardDescription className="mt-2">
-                            {annonce.contenu}
-                          </CardDescription>
-                        </div>
-                        <Badge variant="destructive">Urgent</Badge>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex items-center justify-between text-sm text-gray-500">
-                        <div className="flex items-center space-x-4">
-                          <div className="flex items-center">
-                            <Calendar className="h-4 w-4 mr-1" />
-                            {annonce.dateCreation.toLocaleDateString()}
-                          </div>
-                          <div className="flex items-center">
-                            <Users className="h-4 w-4 mr-1" />
-                            {annonce.destinataires.join(', ')}
-                          </div>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openEditModal(annonce)}
-                          >
-                            <Edit2 className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openDeleteDialog(annonce)}
-                            className="text-red-600 hover:text-red-700"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+              <>
+                {/* Annonces urgentes à venir */}
+                {urgentesAVenir.length > 0 && (
+                  <div className="space-y-4">
+                    <h4 className="text-lg font-semibold text-red-700 border-b pb-2">🚨 Urgentes - À venir / En cours</h4>
+                    <div className="grid gap-4">
+                      {urgentesAVenir.map((annonce) => (
+                        <Card key={annonce.id} className="hover:shadow-md transition-shadow border-red-200">
+                          <CardHeader>
+                            <div className="flex justify-between items-start">
+                              <div className="flex-1">
+                                <CardTitle className="text-lg text-red-900">{annonce.titre}</CardTitle>
+                                <CardDescription className="mt-2">
+                                  {annonce.contenu}
+                                </CardDescription>
+                              </div>
+                              <Badge variant="destructive">Urgent</Badge>
+                            </div>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="flex items-center justify-between text-sm text-gray-500">
+                              <div className="flex items-center space-x-4">
+                                <div className="flex items-center">
+                                  <Calendar className="h-4 w-4 mr-1" />
+                                  {annonce.dateCreation.toLocaleDateString()}
+                                </div>
+                                <div className="flex items-center">
+                                  <Users className="h-4 w-4 mr-1" />
+                                  {annonce.destinataires.join(', ')}
+                                </div>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => openEditModal(annonce)}
+                                >
+                                  <Edit2 className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => openDeleteDialog(annonce)}
+                                  className="text-red-600 hover:text-red-700"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
                     </div>
+                  </div>
+                )}
+
+                {/* Annonces urgentes passées */}
+                {urgentesPassees.length > 0 && (
+                  <div className="space-y-4">
+                    <h4 className="text-lg font-semibold text-muted-foreground border-b pb-2">🗂️ Urgentes - Passées</h4>
+                    <div className="grid gap-4">
+                      {urgentesPassees.map((annonce) => (
+                        <Card key={annonce.id} className="hover:shadow-md transition-shadow opacity-60 bg-muted/20 border-red-200">
+                          <CardHeader>
+                            <div className="flex justify-between items-start">
+                              <div className="flex-1">
+                                <CardTitle className="text-lg text-muted-foreground">{annonce.titre}</CardTitle>
+                                <CardDescription className="mt-2 text-muted-foreground">
+                                  {annonce.contenu}
+                                </CardDescription>
+                              </div>
+                              <Badge variant="outline" className="opacity-60">Urgent</Badge>
+                            </div>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="flex items-center justify-between text-sm text-muted-foreground">
+                              <div className="flex items-center space-x-4">
+                                <div className="flex items-center">
+                                  <Calendar className="h-4 w-4 mr-1" />
+                                  {annonce.dateCreation.toLocaleDateString()}
+                                </div>
+                                <div className="flex items-center">
+                                  <Users className="h-4 w-4 mr-1" />
+                                  {annonce.destinataires.join(', ')}
+                                </div>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => openEditModal(annonce)}
+                                  className="opacity-60"
+                                >
+                                  <Edit2 className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => openDeleteDialog(annonce)}
+                                  className="text-red-600 hover:text-red-700 opacity-60"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                        </div>
+                  </div>
+                )}
+              </>
             )}
           </TabsContent>
 
           <TabsContent value="normales" className="space-y-4">
-            {annoncesNormales.length === 0 ? (
+            {normalesAVenir.length === 0 && normalesPassees.length === 0 ? (
               <Card>
                 <CardContent className="flex flex-col items-center justify-center py-12">
                   <Calendar className="h-12 w-12 text-gray-400 mb-4" />
@@ -275,56 +418,120 @@ export default function ListeAnnonces() {
                   </CardContent>
                 </Card>
               ) : (
-              <div className="grid gap-4">
-                {annoncesNormales.map((annonce) => (
-                  <Card key={annonce.id} className="hover:shadow-md transition-shadow">
-                    <CardHeader>
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <CardTitle className="text-lg">{annonce.titre}</CardTitle>
-                          <CardDescription className="mt-2">
-                            {annonce.contenu}
-                          </CardDescription>
+              <>
+                {/* Annonces normales à venir */}
+                {normalesAVenir.length > 0 && (
+                  <div className="space-y-4">
+                    <h4 className="text-lg font-semibold text-blue-700 border-b pb-2">📢 Normales - À venir / En cours</h4>
+                    <div className="grid gap-4">
+                      {normalesAVenir.map((annonce) => (
+                        <Card key={annonce.id} className="hover:shadow-md transition-shadow">
+                          <CardHeader>
+                            <div className="flex justify-between items-start">
+                              <div className="flex-1">
+                                <CardTitle className="text-lg">{annonce.titre}</CardTitle>
+                                <CardDescription className="mt-2">
+                                  {annonce.contenu}
+                                </CardDescription>
+                              </div>
+                              <Badge variant="secondary">Normal</Badge>
+                            </div>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="flex items-center justify-between text-sm text-gray-500">
+                              <div className="flex items-center space-x-4">
+                                <div className="flex items-center">
+                                  <Calendar className="h-4 w-4 mr-1" />
+                                  {annonce.dateCreation.toLocaleDateString()}
+                                </div>
+                                <div className="flex items-center">
+                                  <Users className="h-4 w-4 mr-1" />
+                                  {annonce.destinataires.join(', ')}
+                                </div>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => openEditModal(annonce)}
+                                >
+                                  <Edit2 className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => openDeleteDialog(annonce)}
+                                  className="text-red-600 hover:text-red-700"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Annonces normales passées */}
+                {normalesPassees.length > 0 && (
+                  <div className="space-y-4">
+                    <h4 className="text-lg font-semibold text-muted-foreground border-b pb-2">🗂️ Normales - Passées</h4>
+                    <div className="grid gap-4">
+                      {normalesPassees.map((annonce) => (
+                        <Card key={annonce.id} className="hover:shadow-md transition-shadow opacity-60 bg-muted/20">
+                          <CardHeader>
+                            <div className="flex justify-between items-start">
+                              <div className="flex-1">
+                                <CardTitle className="text-lg text-muted-foreground">{annonce.titre}</CardTitle>
+                                <CardDescription className="mt-2 text-muted-foreground">
+                                  {annonce.contenu}
+                                </CardDescription>
+                              </div>
+                              <Badge variant="outline" className="opacity-60">Normal</Badge>
+                            </div>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="flex items-center justify-between text-sm text-muted-foreground">
+                              <div className="flex items-center space-x-4">
+                                <div className="flex items-center">
+                                  <Calendar className="h-4 w-4 mr-1" />
+                                  {annonce.dateCreation.toLocaleDateString()}
+                                </div>
+                                <div className="flex items-center">
+                                  <Users className="h-4 w-4 mr-1" />
+                                  {annonce.destinataires.join(', ')}
+                                </div>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => openEditModal(annonce)}
+                                  className="opacity-60"
+                                >
+                                  <Edit2 className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => openDeleteDialog(annonce)}
+                                  className="text-red-600 hover:text-red-700 opacity-60"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
                         </div>
-                        <Badge variant="secondary">Normal</Badge>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex items-center justify-between text-sm text-gray-500">
-                        <div className="flex items-center space-x-4">
-                          <div className="flex items-center">
-                            <Calendar className="h-4 w-4 mr-1" />
-                            {annonce.dateCreation.toLocaleDateString()}
-                          </div>
-                          <div className="flex items-center">
-                            <Users className="h-4 w-4 mr-1" />
-                            {annonce.destinataires.join(', ')}
-                          </div>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openEditModal(annonce)}
-                          >
-                            <Edit2 className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openDeleteDialog(annonce)}
-                            className="text-red-600 hover:text-red-700"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                  ))}
-                </div>
-              )}
-            </TabsContent>
+                  </div>
+                )}
+              </>
+            )}
+          </TabsContent>
           </Tabs>
         
         {/* Modals */}
