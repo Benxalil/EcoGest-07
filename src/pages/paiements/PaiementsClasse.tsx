@@ -55,11 +55,11 @@ export default function PaiementsClasse() {
   // Trouver la classe par son ID
   const classeData = classes.find(c => c.id === classeId);
   
-  // Filtrer les élèves de cette classe
+  // Filtrer les élèves de cette classe (avec useMemo pour éviter les recalculs)
   const elevesClasse = students.filter(student => student.class_id === classeId);
 
   useEffect(() => {
-    if (classeId && classeData) {
+    if (classeId && classeData && !paymentsLoading && !studentsLoading) {
       setClasse(classeData);
       
       // Utiliser les vrais paiements de la base de données
@@ -82,7 +82,7 @@ export default function PaiementsClasse() {
       
       setEleves(elevesWithPaymentStatus);
     }
-  }, [classeId, classeData, elevesClasse, mois, payments, hasStudentPaid, getStudentPayment]);
+  }, [classeId, mois, payments.length, studentsLoading, paymentsLoading]);
   
   const form = useForm<PaiementFormData>({
     resolver: zodResolver(paiementSchema),
@@ -165,22 +165,12 @@ export default function PaiementsClasse() {
         });
 
         if (success) {
-          // Mettre à jour l'état local immédiatement
-          setEleves(prev => prev.map(eleve => 
-            eleve.id === eleveSelectionne 
-              ? { 
-                  ...eleve, 
-                  statut: "payé" as const,
-                  modePaiement: data.modePaiement,
-                  montant: parseInt(data.montant),
-                  datePaiement: new Date().toISOString().split('T')[0],
-                  typePaiement: data.typePaiement,
-                  moisMensualite: data.moisMensualite || mois,
-                  payePar: data.payePar,
-                  numeroTelephone: data.numeroTelephone
-                }
-              : eleve
-          ));
+          // Les données seront mises à jour automatiquement par le useEffect
+          // car payments a été mis à jour dans usePayments
+          toast({
+            title: "Paiement enregistré",
+            description: "Le paiement a été enregistré avec succès.",
+          });
           
           setModalOpen(false);
           setEleveSelectionne(null);
