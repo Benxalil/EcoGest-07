@@ -62,21 +62,33 @@ export default function PaiementsClasse() {
     if (classeId && classeData && !paymentsLoading && !studentsLoading) {
       setClasse(classeData);
       
-      // Utiliser les vrais paiements de la base de données
+      // Utiliser les vrais paiements de la base de données - vérifier TOUS les types de paiements pour le mois
       const elevesWithPaymentStatus = elevesClasse.map((eleve: any) => {
-        const hasPaid = hasStudentPaid(eleve.id, 'mensualite', mois);
-        const payment = getStudentPayment(eleve.id, 'mensualite', mois);
+        // Chercher tous les paiements de cet élève pour ce mois (tous types confondus)
+        const studentPayments = payments.filter(p => 
+          p.student_id === eleve.id && 
+          p.payment_month === mois
+        );
+        
+        // Si au moins un paiement existe pour ce mois, considérer comme payé
+        const hasPaid = studentPayments.length > 0;
+        
+        // Prendre le paiement le plus récent ou le premier disponible
+        const latestPayment = studentPayments.length > 0 
+          ? studentPayments.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0]
+          : null;
         
         return {
           ...eleve,
           statut: hasPaid ? "payé" : "non-payé",
-          modePaiement: payment?.payment_method || null,
-          montant: payment?.amount || 0,
-          datePaiement: payment?.payment_date || null,
-          typePaiement: payment?.payment_type || null,
-          moisMensualite: payment?.payment_month || null,
-          payePar: payment?.paid_by || null,
-          numeroTelephone: payment?.phone_number || null
+          modePaiement: latestPayment?.payment_method || null,
+          montant: latestPayment?.amount || 0,
+          datePaiement: latestPayment?.payment_date || null,
+          typePaiement: latestPayment?.payment_type || null,
+          moisMensualite: latestPayment?.payment_month || null,
+          payePar: latestPayment?.paid_by || null,
+          numeroTelephone: latestPayment?.phone_number || null,
+          allPayments: studentPayments // Garder tous les paiements pour référence
         };
       });
       
@@ -137,13 +149,16 @@ export default function PaiementsClasse() {
 
   const confirmerPaiement = async (data: PaiementFormData) => {
     if (eleveSelectionne) {
-      // Vérifier d'abord si l'élève a déjà payé pour ce mois
-      const existingPayment = getStudentPayment(eleveSelectionne, 'mensualite', data.moisMensualite || mois);
+      // Vérifier d'abord si l'élève a déjà payé pour ce type de paiement et ce mois
+      const monthToCheck = data.typePaiement === 'mensualite' ? (data.moisMensualite || mois) : mois;
+      const existingPayment = getStudentPayment(eleveSelectionne, data.typePaiement, monthToCheck);
       
       if (existingPayment) {
+        const paymentTypeLabel = data.typePaiement === 'mensualite' ? 'mensualité' : 
+                                data.typePaiement === 'inscription' ? 'inscription' : data.typePaiement;
         toast({
           title: "Paiement déjà enregistré",
-          description: `Cet élève a déjà effectué un paiement pour ${data.moisMensualite || mois}.`,
+          description: `Cet élève a déjà effectué un paiement de ${paymentTypeLabel} pour ${monthToCheck}.`,
           variant: "destructive",
         });
         setModalOpen(false);
@@ -181,9 +196,11 @@ export default function PaiementsClasse() {
         
         // Gestion spécifique de l'erreur de doublon
         if (error && typeof error === 'object' && 'code' in error && error.code === '23505') {
+          const paymentTypeLabel = data.typePaiement === 'mensualite' ? 'mensualité' : 
+                                  data.typePaiement === 'inscription' ? 'inscription' : data.typePaiement;
           toast({
             title: "Paiement déjà enregistré",
-            description: `Un paiement existe déjà pour cet élève pour le mois de ${data.moisMensualite || mois}.`,
+            description: `Un paiement de ${paymentTypeLabel} existe déjà pour cet élève pour le mois de ${data.moisMensualite || mois}.`,
             variant: "destructive",
           });
         } else {
@@ -424,13 +441,12 @@ export default function PaiementsClasse() {
                            ) : (
                              <Dialog open={modalOpen} onOpenChange={setModalOpen}>
                                <DialogTrigger asChild>
-                                 <Button 
-                                   size="sm" 
-                                   variant="default" 
-                                   className="h-8"
-                                   onClick={() => marquerPaye(eleve.id)}
-                                   disabled={hasStudentPaid(eleve.id, 'mensualite', mois)}
-                                 >
+                                  <Button 
+                                    size="sm" 
+                                    variant="default" 
+                                    className="h-8"
+                                    onClick={() => marquerPaye(eleve.id)}
+                                  >
                                    Marquer Payé
                                  </Button>
                                </DialogTrigger>
