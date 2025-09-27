@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { ArrowLeft, Calendar as CalendarIcon, Plus } from 'lucide-react';
@@ -26,15 +26,12 @@ interface Subject {
 
 const ConsultationCahier: React.FC = () => {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const matiereId = searchParams.get('matiereId');
-  const classeId = searchParams.get('classeId');
+  const { classeId, matiereId } = useParams();
   
-  const { lessonLogs: allLessonLogs, loading } = useLessonLogs();
+  const { lessonLogs, loading } = useLessonLogs(classeId);
   const { teachers } = useTeachers();
   const { subjects } = useSubjects();
   
-  const [lessonLogs, setLessonLogs] = useState<LessonLogData[]>([]);
   const [filteredLogs, setFilteredLogs] = useState<LessonLogData[]>([]);
   const [dateFilter, setDateFilter] = useState<Date | undefined>();
   const [subjectName, setSubjectName] = useState<string>('');
@@ -52,17 +49,14 @@ const ConsultationCahier: React.FC = () => {
           }
         }
 
-        // Filter lesson logs based on parameters
+        // Filter lesson logs by subject if matiereId is provided
         let logs: LessonLogData[];
-        if (matiereId && classeId) {
-          logs = allLessonLogs.filter(log => log.class_id === classeId && log.subject_id === matiereId);
-        } else if (classeId) {
-          logs = allLessonLogs.filter(log => log.class_id === classeId);
+        if (matiereId) {
+          logs = lessonLogs.filter(log => log.subject_id === matiereId);
         } else {
-          logs = [];
+          logs = lessonLogs;
         }
         
-        setLessonLogs(logs);
         setFilteredLogs(logs);
       } catch (error) {
         console.error('Error loading data:', error);
@@ -70,20 +64,29 @@ const ConsultationCahier: React.FC = () => {
     };
 
     loadData();
-  }, [matiereId, classeId, allLessonLogs, subjects]);
+  }, [matiereId, classeId, lessonLogs, subjects]);
 
   // Filter logs by date when dateFilter changes
   useEffect(() => {
     if (dateFilter) {
-      const filtered = lessonLogs.filter(log => {
+      let logs = lessonLogs;
+      if (matiereId) {
+        logs = lessonLogs.filter(log => log.subject_id === matiereId);
+      }
+      
+      const filtered = logs.filter(log => {
         const logDate = new Date(log.lesson_date);
         return logDate.toDateString() === dateFilter.toDateString();
       });
       setFilteredLogs(filtered);
     } else {
-      setFilteredLogs(lessonLogs);
+      let logs = lessonLogs;
+      if (matiereId) {
+        logs = lessonLogs.filter(log => log.subject_id === matiereId);
+      }
+      setFilteredLogs(logs);
     }
-  }, [dateFilter, lessonLogs]);
+  }, [dateFilter, lessonLogs, matiereId]);
 
   const clearDateFilter = () => {
     setDateFilter(undefined);
