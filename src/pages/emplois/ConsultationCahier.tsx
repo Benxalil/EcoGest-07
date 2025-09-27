@@ -36,7 +36,7 @@ const ConsultationCahier: React.FC = () => {
   const [dateFilter, setDateFilter] = useState<Date | undefined>();
   const [subjectName, setSubjectName] = useState<string>('');
 
-  // Apply subject filtering whenever lesson logs or matiereId changes
+  // Apply filtering whenever lesson logs, matiereId, or dateFilter changes
   useEffect(() => {
     if (!lessonLogs || lessonLogs.length === 0) {
       setFilteredLogs([]);
@@ -51,39 +51,28 @@ const ConsultationCahier: React.FC = () => {
       }
     }
 
-    // Apply subject filtering
-    let logs: LessonLogData[];
+    // Start with all lesson logs for this class
+    let logs: LessonLogData[] = lessonLogs;
+
+    // Apply subject filtering first
     if (matiereId) {
-      logs = lessonLogs.filter(log => log.subject_id === matiereId);
+      logs = logs.filter(log => log.subject_id === matiereId);
       console.log('Filtering logs for subject:', matiereId);
-      console.log('Filtered logs:', logs);
-    } else {
-      logs = lessonLogs;
+      console.log('Available logs:', lessonLogs);
+      console.log('Filtered logs by subject:', logs);
+    }
+
+    // Apply date filtering if date filter is active
+    if (dateFilter) {
+      logs = logs.filter(log => {
+        const logDate = new Date(log.lesson_date);
+        return logDate.toDateString() === dateFilter.toDateString();
+      });
+      console.log('Filtered logs by date:', logs);
     }
     
     setFilteredLogs(logs);
-  }, [lessonLogs, matiereId, subjects]);
-
-  // Apply date filtering on top of subject filtering
-  useEffect(() => {
-    if (!dateFilter) return;
-    
-    // Start with subject-filtered logs
-    let baseLogs: LessonLogData[];
-    if (matiereId) {
-      baseLogs = lessonLogs.filter(log => log.subject_id === matiereId);
-    } else {
-      baseLogs = lessonLogs;
-    }
-    
-    // Apply date filter
-    const filtered = baseLogs.filter(log => {
-      const logDate = new Date(log.lesson_date);
-      return logDate.toDateString() === dateFilter.toDateString();
-    });
-    
-    setFilteredLogs(filtered);
-  }, [dateFilter, lessonLogs, matiereId]);
+  }, [lessonLogs, matiereId, subjects, dateFilter]);
 
   const clearDateFilter = () => {
     setDateFilter(undefined);
