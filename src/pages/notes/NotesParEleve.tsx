@@ -336,7 +336,6 @@ export default function NotesParEleve() {
     }
     return examInfo?.titre || 'Examen';
   };
-
   return <Layout>
       <div className="container mx-auto p-6">
         {/* HEADER AVEC INFORMATIONS DE L'EXAMEN */}
@@ -374,12 +373,7 @@ export default function NotesParEleve() {
           <CardContent className="p-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-              <Input
-                placeholder="Rechercher un élève..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
+              <Input placeholder="Rechercher un élève..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10" />
             </div>
           </CardContent>
         </Card>
@@ -387,51 +381,30 @@ export default function NotesParEleve() {
         {/* Sélection de l'élève en horizontal */}
         <div className="mb-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-            {filteredEleves.map((eleve, index) => (
-              <Card
-                key={eleve.id}
-                className={`cursor-pointer transition-colors ${
-                  selectedEleve?.id === eleve.id
-                    ? 'bg-primary/10 border-primary'
-                    : 'hover:bg-muted/50'
-                }`}
-                onClick={() => setSelectedEleve(eleve)}
-              >
+            {filteredEleves.map((eleve, index) => <Card key={eleve.id} className={`cursor-pointer transition-colors ${selectedEleve?.id === eleve.id ? 'bg-primary/10 border-primary' : 'hover:bg-muted/50'}`} onClick={() => setSelectedEleve(eleve)}>
                 <CardContent className="p-3">
                   <div className="flex items-center justify-between">
                     <div>
-                      <div className={`font-medium text-sm ${
-                        selectedEleve?.id === eleve.id ? 'text-primary' : ''
-                      }`}>
+                      <div className={`font-medium text-sm ${selectedEleve?.id === eleve.id ? 'text-primary' : ''}`}>
                         {eleve.prenom} {eleve.nom}
                       </div>
                       <div className="text-xs text-muted-foreground">
                         ID: {(index + 1).toString().padStart(2, '0')}
                       </div>
                     </div>
-                    {selectedEleve?.id === eleve.id && (
-                      <div className="w-2 h-2 bg-primary rounded-full"></div>
-                    )}
+                    {selectedEleve?.id === eleve.id && <div className="w-2 h-2 bg-primary rounded-full"></div>}
                   </div>
                 </CardContent>
-              </Card>
-            ))}
+              </Card>)}
           </div>
 
-          {filteredEleves.length === 0 && (
-            <Card>
-              <CardContent className="py-8">
-                <div className="text-center">
-                  <p className="text-muted-foreground text-sm">Aucun élève trouvé.</p>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+          {filteredEleves.length === 0 && <Card>
+              
+            </Card>}
         </div>
 
         {/* Notes de l'élève sélectionné */}
-        {selectedEleve ? (
-          <Card>
+        {selectedEleve ? <Card>
             <CardHeader>
               <CardTitle>
                 Notes de {selectedEleve.prenom} {selectedEleve.nom}
@@ -444,82 +417,49 @@ export default function NotesParEleve() {
                     <TableHead className="w-12">N°</TableHead>
                     <TableHead>Matière</TableHead>
                     {/* LOGIQUE CONDITIONNELLE UNIFIÉE SELON LE TYPE D'EXAMEN */}
-                    {examInfo?.type === 'Composition' ? (
-                      <>
+                    {examInfo?.type === 'Composition' ? <>
                         <TableHead className="text-center">Devoir</TableHead>
                         <TableHead className="text-center">Composition</TableHead>
-                      </>
-                    ) : (
-                      <TableHead className="text-center">{examInfo?.titre || 'Note'}</TableHead>
-                    )}
+                      </> : <TableHead className="text-center">{examInfo?.titre || 'Note'}</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {matieres.map((matiere, index) => {
-                    const noteData = getNote(selectedEleve.id, matiere.id.toString());
-                    const maxScore = parseMaxScoreFromMoyenne(matiere.moyenne);
-                    return (
-                      <TableRow key={matiere.id}>
+                const noteData = getNote(selectedEleve.id, matiere.id.toString());
+                const maxScore = parseMaxScoreFromMoyenne(matiere.moyenne);
+                return <TableRow key={matiere.id}>
                         <TableCell className="font-mono text-sm">{(index + 1).toString().padStart(2, '0')}</TableCell>
                         <TableCell className="font-medium">
                           {matiere.nom}
                         </TableCell>
                         {/* AFFICHAGE CONDITIONNEL UNIFIÉ SELON LE TYPE D'EXAMEN */}
-                        {examInfo?.type === 'Composition' ? (
-                          <>
+                        {examInfo?.type === 'Composition' ? <>
                             <TableCell className="text-center">
-                              <GradeInput 
-                                value={noteData?.devoir || ''} 
-                                onChange={value => handleNoteChange(matiere.id, selectedSemestre, 'devoir', value)} 
-                                maxScore={maxScore} 
-                                placeholder="" 
-                                className="w-20 text-center" 
-                              />
+                              <GradeInput value={noteData?.devoir || ''} onChange={value => handleNoteChange(matiere.id, selectedSemestre, 'devoir', value)} maxScore={maxScore} placeholder="" className="w-20 text-center" />
                             </TableCell>
                             <TableCell className="text-center">
-                              <GradeInput 
-                                value={noteData?.composition || ''} 
-                                onChange={value => handleNoteChange(matiere.id, selectedSemestre, 'composition', value)} 
-                                maxScore={maxScore} 
-                                placeholder="" 
-                                className="w-20 text-center" 
-                              />
+                              <GradeInput value={noteData?.composition || ''} onChange={value => handleNoteChange(matiere.id, selectedSemestre, 'composition', value)} maxScore={maxScore} placeholder="" className="w-20 text-center" />
                             </TableCell>
-                          </>
-                        ) : (
-                          <TableCell className="text-center">
-                            <GradeInput 
-                              value={noteData?.note || ''} 
-                              onChange={value => handleSingleNoteChange(matiere.id, value)} 
-                              maxScore={maxScore} 
-                              placeholder="" 
-                              className="w-20 text-center" 
-                            />
-                          </TableCell>
-                        )}
-                      </TableRow>
-                    );
-                  })}
+                          </> : <TableCell className="text-center">
+                            <GradeInput value={noteData?.note || ''} onChange={value => handleSingleNoteChange(matiere.id, value)} maxScore={maxScore} placeholder="" className="w-20 text-center" />
+                          </TableCell>}
+                      </TableRow>;
+              })}
                 </TableBody>
               </Table>
 
-              {matieres.length === 0 && (
-                <div className="text-center py-8">
+              {matieres.length === 0 && <div className="text-center py-8">
                   <p className="text-muted-foreground">Aucune matière disponible.</p>
-                </div>
-              )}
+                </div>}
             </CardContent>
-          </Card>
-        ) : (
-          <Card>
+          </Card> : <Card>
             <CardContent className="py-12">
               <div className="text-center text-muted-foreground">
                 <User className="h-12 w-12 mx-auto mb-4 opacity-50" />
                 <p>Sélectionnez un élève pour voir ses notes</p>
               </div>
             </CardContent>
-          </Card>
-        )}
+          </Card>}
       </div>
     </Layout>;
 }
