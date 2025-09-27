@@ -1,8 +1,7 @@
 
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Layout } from "@/components/layout/OptimizedLayout";
-import { PerformanceMonitor } from "@/components/performance/PerformanceMonitor";
+import { Layout } from "@/components/layout/Layout";
 import { FloatingActionButton } from "@/components/ui/floating-action-button";
 import { Users, GraduationCap, School, Calendar, UserPlus, BookOpen, Megaphone, BarChart3, Clock, TrendingUp, Award } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -11,16 +10,16 @@ import { ExamensStats } from "@/components/examens/ExamensStats";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { SubscriptionAlert } from "@/components/subscription/SubscriptionAlert";
-import { TeacherDashboard } from "@/components/dashboard/OptimizedTeacherDashboard";
+import { TeacherDashboard } from "@/components/dashboard/TeacherDashboard";
 import { AjoutEleveModal } from "@/components/eleves/AjoutEleveModal";
 import { AjoutEnseignantModal } from "@/components/enseignants/AjoutEnseignantModal";
 import { AjoutClasseModal } from "@/components/classes/AjoutClasseModal";
 import { AjoutMatiereModal } from "@/components/matieres/AjoutMatiereModal";
 import { CreerAnnonceModal } from "@/components/annonces/CreerAnnonceModal";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { supabase } from "@/integrations/supabase/client";
 import { Session } from "@supabase/supabase-js";
-import { useDashboardDataOptimized } from "@/hooks/useDashboardDataOptimized";
-import { DashboardSkeleton } from "@/components/ui/dashboard-skeleton";
+import { useDashboardData } from "@/hooks/useDashboardData";
 import { LoadingSkeleton } from "@/components/ui/loading-skeleton";
 import { useUserRole } from "@/hooks/useUserRole";
 
@@ -54,8 +53,12 @@ const stats = [
 const Index = () => {
   const navigate = useNavigate();
   // Hooks Supabase
-  const { isTeacher, loading: userLoading, userProfile } = useUserRole();
+  const { isTeacher, loading: userLoading } = useUserRole();
   const [activeTab, setActiveTab] = useState<"apercu" | "analytique">("apercu");
+  const [session, setSession] = useState<Session | null>(null);
+
+  const [todaySchedules, setTodaySchedules] = useState<any[]>([]);
+  const [upcomingAnnouncements, setUpcomingAnnouncements] = useState<any[]>([]);
   const [showMoreSchedules, setShowMoreSchedules] = useState(false);
   
   // Hook optimisé pour charger toutes les données en parallèle
@@ -67,9 +70,8 @@ const Index = () => {
     announcements, 
     academicYear, 
     loading: dataLoading, 
-    error: dataError,
-    refetch
-  } = useDashboardDataOptimized();
+    error: dataError 
+  } = useDashboardData();
   
   // État de chargement global
   const isLoading = dataLoading || userLoading;
@@ -92,17 +94,28 @@ const Index = () => {
   };
 
   const handleModalSuccess = () => {
-    // Recharger les données après succès via le hook optimisé
-    refetch();
+    // Recharger les données après succès
+    loadData();
   };
 
-  // Optimisation avec useMemo pour éviter les recalculs
-  const recentAnnouncements = useMemo(() => announcements.slice(0, 3), [announcements]);
-  const urgentAnnouncements = useMemo(() => 
-    announcements.filter(announcement => announcement.title?.toLowerCase().includes('urgent')), 
-    [announcements]
-  );
+  // Utiliser les hooks Supabase au lieu de localStorage
+  const recentAnnouncements = announcements.slice(0, 3); // 3 dernières annonces
+  const urgentAnnouncements = announcements.filter(announcement => announcement.title.includes('urgent'));
 
+  const getTodaySchedules = () => {
+    const today = new Date();
+    const dayName = today.toLocaleDateString('fr-FR', { weekday: 'long' }).toUpperCase();
+    
+    // Si c'est dimanche, retourner un tableau vide
+    if (dayName === 'DIMANCHE') {
+      return [];
+    }
+
+    // Pour l'instant, retourner un tableau vide car les emplois du temps
+    // sont maintenant gérés par le hook useSchedules
+    // TODO: Intégrer avec useSchedules pour afficher les cours du jour
+    return [];
+  };
 
   // Optimisation avec useMemo pour éviter les recalculs
   const recentStudents = useMemo(() => {
@@ -143,32 +156,73 @@ const Index = () => {
       },
   ], [students.length, teachers.length, classes.length, academicYear]);
 
-  // Define helper function first
-  const generateMonthlyEnrollment = useMemo(() => (students: any[]) => {
+  const loadData = () => {
+    // Load today's schedules
+    const schedules = getTodaySchedules();
+    setTodaySchedules(schedules);
+
+    // Load upcoming announcements
+    setUpcomingAnnouncements(recentAnnouncements);
+
+    // Analytics data
+    const analyticData = {
+      classDistribution: classes.map((classe: any) => ({
+        name: `${classe.name} ${classe.level}${classe.section ? ` - ${classe.section}` : ''}`,
+        students: students.filter((s: any) => s.class_id === classe.id).length
+      })),
+      monthlyEnrollment: generateMonthlyEnrollment(students),
+      attendanceRate: 0, // Aucune donnée par défaut
+      averageGrade: 0 // Aucune donnée par défaut
+    };
+    // Les données analytiques sont maintenant calculées directement dans les composants
+  };
+
+  const generateMonthlyEnrollment = (students: any[]) => {
     const months = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
     return months.map((month, index) => ({
       month,
       inscriptions: Math.floor(Math.random() * 20) + 5
     }));
+  };
+
+  // Optimisation : charger les données seulement quand nécessaire
+  useEffect(() => {
+    if (!dataLoading) {
+    loadData();
+    }
+  }, [dataLoading]);
+
+  // Check authentication status
+  useEffect(() => {
+    // Check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setSession(session);
+      }
+    );
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  // Optimisation avec useMemo pour les données analytiques
-  const analyticsData = useMemo(() => ({
-    classDistribution: classes.map((classe: any) => ({
-      name: `${classe.name} ${classe.level}${classe.section ? ` - ${classe.section}` : ''}`,
-      students: students.filter((s: any) => s.class_id === classe.id).length
-    })),
-    monthlyEnrollment: generateMonthlyEnrollment(students),
-    attendanceRate: 85, // Placeholder
-    averageGrade: 14.5 // Placeholder
-  }), [classes, students, generateMonthlyEnrollment]);
+  // Redirect to auth if not authenticated
+  useEffect(() => {
+    if (!isLoading && !session) {
+      navigate("/auth");
+    }
+  }, [isLoading, session, navigate]);
 
-  
-  // Optimisation : utiliser directement les données du hook
-  const todaySchedules = useMemo(() => [], []);  // TODO: Intégrer avec useSchedules
-  const upcomingAnnouncements = useMemo(() => recentAnnouncements, [recentAnnouncements]);
+  // Les stats sont maintenant calculées avec useMemo dans statsData
 
-  // Supprimer les useEffect multiples - les données sont maintenant gérées par useDashboardData
+  // Écouter les changements de paramètres d'école
+  useEffect(() => {
+    // Les paramètres d'école sont maintenant gérés par le hook useSchoolData
+    // Plus besoin d'écouter les événements localStorage
+  }, []);
 
   const getGreeting = () => {
     const currentHour = new Date().getHours();
@@ -203,10 +257,7 @@ const Index = () => {
     }
   ];
 
-  const displayedSchedules = useMemo(() => 
-    showMoreSchedules ? todaySchedules : todaySchedules.slice(0, 5), 
-    [showMoreSchedules, todaySchedules]
-  );
+  const displayedSchedules = showMoreSchedules ? todaySchedules : todaySchedules.slice(0, 5);
 
   const chartConfig = {
     students: {
@@ -222,7 +273,7 @@ const Index = () => {
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
 
   // Affichage conditionnel selon le rôle
-  if (isLoading || !userProfile) {
+  if (isLoading || !session) {
     return (
       <Layout>
         <div className="space-y-6">

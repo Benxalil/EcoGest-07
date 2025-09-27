@@ -21,7 +21,7 @@ interface AttendanceRecord {
   id: string;
   date: string;
   student_id: string;
-  type: "absence" | "retard";
+  type: "absence" | "retard" | "present";
   reason?: string;
   period?: string;
   students: {
@@ -106,6 +106,8 @@ export default function ConsulterAbsencesRetards() {
 
   const getTypeStyle = (type: string) => {
     switch (type) {
+      case "present":
+        return "bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium";
       case "absence":
         return "bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs font-medium";
       case "retard":
@@ -117,6 +119,7 @@ export default function ConsulterAbsencesRetards() {
 
   const getTypeLabel = (type: string) => {
     switch (type) {
+      case "present": return "Présent";
       case "absence": return "Absence";
       case "retard": return "Retard";
       default: return type;
@@ -141,6 +144,7 @@ export default function ConsulterAbsencesRetards() {
         records: grouped[date],
         stats: {
           total: grouped[date].length,
+          present: grouped[date].filter(r => r.type === "present").length,
           absence: grouped[date].filter(r => r.type === "absence").length,
           retard: grouped[date].filter(r => r.type === "retard").length,
         }
@@ -233,6 +237,7 @@ export default function ConsulterAbsencesRetards() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Tous les types</SelectItem>
+                    <SelectItem value="present">Présent</SelectItem>
                     <SelectItem value="absence">Absence</SelectItem>
                     <SelectItem value="retard">Retard</SelectItem>
                   </SelectContent>
@@ -256,11 +261,19 @@ export default function ConsulterAbsencesRetards() {
         </Card>
 
         {/* Statistiques */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           <Card>
             <CardContent className="p-4">
               <div className="text-2xl font-bold text-blue-600">{filteredAttendances.length}</div>
               <div className="text-sm text-gray-600">Total des événements</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="text-2xl font-bold text-green-600">
+                {filteredAttendances.filter(r => r.type === "present").length}
+              </div>
+              <div className="text-sm text-gray-600">Présents</div>
             </CardContent>
           </Card>
           <Card>
@@ -311,8 +324,11 @@ export default function ConsulterAbsencesRetards() {
                       <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full font-medium">
                         Total: {stats.total}
                       </span>
+                      <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full font-medium">
+                        Présents: {stats.present}
+                      </span>
                       <span className="bg-red-100 text-red-800 px-2 py-1 rounded-full font-medium">
-                        Absences: {stats.absence}
+                        Absents: {stats.absence}
                       </span>
                       <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full font-medium">
                         Retards: {stats.retard}

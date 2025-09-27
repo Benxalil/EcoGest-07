@@ -32,23 +32,14 @@ export const useClasses = () => {
   const { userProfile } = useUserRole();
   const { toast } = useToast();
 
-  const fetchClasses = useCallback(async (retryCount = 0) => {
-    const maxRetries = 2;
-
-    // Don't fetch if no school ID, but only set loading to false if user profile is fully loaded
+  const fetchClasses = useCallback(async () => {
     if (!userProfile?.schoolId) {
-      // Only stop loading if we're sure there's no school ID (not just loading)
-      if (userProfile && !userProfile.schoolId) {
-        setLoading(false);
-        setError('School not configured for user');
-      }
+      setLoading(false);
       return;
     }
 
     try {
       setLoading(true);
-      setError(null);
-      
       const { data: classesData, error } = await supabase
         .from('classes')
         .select('*')
@@ -57,44 +48,25 @@ export const useClasses = () => {
 
       if (error) throw error;
       
-      // Calculer l'effectif pour chaque classe avec timeout
+      // Calculer l'effectif pour chaque classe
       const classesWithEnrollment = await Promise.all(
         (classesData || []).map(async (classe) => {
-          try {
-            const { count } = await supabase
-              .from('students')
-              .select('*', { count: 'exact', head: true })
-              .eq('class_id', classe.id)
-              .eq('is_active', true);
-            
-            return {
-              ...classe,
-              enrollment_count: count || 0
-            };
-          } catch (enrollmentError) {
-            console.warn('Error fetching enrollment for class:', classe.id, enrollmentError);
-            return {
-              ...classe,
-              enrollment_count: 0
-            };
-          }
+          const { count } = await supabase
+            .from('students')
+            .select('*', { count: 'exact', head: true })
+            .eq('class_id', classe.id)
+            .eq('is_active', true);
+          
+          return {
+            ...classe,
+            enrollment_count: count || 0
+          };
         })
       );
       
       setClasses(classesWithEnrollment);
-      setError(null);
     } catch (err) {
       console.error('Erreur lors de la récupération des classes:', err);
-      
-      // Retry logic
-      if (retryCount < maxRetries) {
-        const delay = Math.pow(2, retryCount) * 1000; // 1s, 2s
-        setTimeout(() => {
-          fetchClasses(retryCount + 1);
-        }, delay);
-        return;
-      }
-      
       setError(err instanceof Error ? err.message : 'Erreur inconnue');
     } finally {
       setLoading(false);

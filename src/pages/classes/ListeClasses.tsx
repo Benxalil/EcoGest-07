@@ -19,7 +19,6 @@ import jsPDF from 'jspdf';
 import { useSubscriptionPlan } from "@/hooks/useSubscriptionPlan";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useClasses, ClassData } from "@/hooks/useClasses";
-import { DashboardSkeleton } from "@/components/ui/dashboard-skeleton";
 
 // Fonction pour définir l'ordre académique des classes
 const getClassOrder = (level: string, section: string): number => {
@@ -130,7 +129,14 @@ export default function ListeClasses() {
   if (loading) {
     return (
       <Layout>
-        <DashboardSkeleton type="classes" />
+        <div className="container mx-auto p-6">
+          <div className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+              <p className="text-gray-500">Chargement des classes...</p>
+            </div>
+          </div>
+        </div>
       </Layout>
     );
   }
@@ -142,7 +148,7 @@ export default function ListeClasses() {
           <div className="text-center py-12">
             <p className="text-red-500 text-lg mb-4">Erreur lors du chargement</p>
             <p className="text-gray-400 mb-6">{error}</p>
-            <Button onClick={() => refreshClasses()}>
+            <Button onClick={refreshClasses}>
               Réessayer
             </Button>
           </div>

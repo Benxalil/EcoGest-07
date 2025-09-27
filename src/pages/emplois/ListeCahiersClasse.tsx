@@ -22,18 +22,23 @@ interface Subject {
 export default function ListeCahiersClasse() {
   const { classeId } = useParams();
   const navigate = useNavigate();
-  const { lessonLogs, loading } = useLessonLogs(classeId);
+  const { lessonLogs: allLessonLogs, loading } = useLessonLogs();
   const { teachers } = useTeachers();
-  const { subjects } = useSubjects(classeId);
+  const { subjects } = useSubjects();
+  const [filteredLogs, setFilteredLogs] = useState<LessonLog[]>([]);
   const [className, setClassName] = useState<string>('');
 
   useEffect(() => {
     if (!classeId) return;
 
+    // Filter lesson logs by class
+    const logs = allLessonLogs.filter(log => log.class_id === classeId);
+    setFilteredLogs(logs);
+
     // Récupérer le nom de la classe depuis localStorage
     const savedClassName = localStorage.getItem(`classe-name-${classeId}`) || '';
     setClassName(savedClassName);
-  }, [classeId]);
+  }, [classeId, allLessonLogs]);
 
   const getTeacherName = (teacherId: string) => {
     const teacher = teachers.find(t => t.id === teacherId);
@@ -94,7 +99,7 @@ export default function ListeCahiersClasse() {
           <div className="text-center py-8">
             <p className="text-gray-500">Chargement des cahiers de textes...</p>
           </div>
-        ) : lessonLogs.length === 0 ? (
+        ) : filteredLogs.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-gray-500 text-lg mb-4">Aucun cahier de texte enregistré pour cette classe</p>
             <Button onClick={handleAddEntry} className="bg-blue-500 hover:bg-blue-600 text-white">
@@ -104,7 +109,7 @@ export default function ListeCahiersClasse() {
           </div>
         ) : (
           <div className="grid gap-6">
-            {lessonLogs.map((log) => (
+            {filteredLogs.map((log) => (
               <Card key={log.id} className="hover:shadow-md transition-shadow">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-lg font-semibold text-gray-800">

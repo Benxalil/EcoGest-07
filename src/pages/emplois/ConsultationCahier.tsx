@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { ArrowLeft, Calendar as CalendarIcon, Plus } from 'lucide-react';
@@ -26,70 +26,64 @@ interface Subject {
 
 const ConsultationCahier: React.FC = () => {
   const navigate = useNavigate();
-  const { classeId, matiereId } = useParams();
+  const [searchParams] = useSearchParams();
+  const matiereId = searchParams.get('matiereId');
+  const classeId = searchParams.get('classeId');
   
-  const { lessonLogs, loading } = useLessonLogs(classeId);
+  const { lessonLogs: allLessonLogs, loading } = useLessonLogs();
   const { teachers } = useTeachers();
   const { subjects } = useSubjects();
   
+  const [lessonLogs, setLessonLogs] = useState<LessonLogData[]>([]);
   const [filteredLogs, setFilteredLogs] = useState<LessonLogData[]>([]);
   const [dateFilter, setDateFilter] = useState<Date | undefined>();
   const [subjectName, setSubjectName] = useState<string>('');
 
-  // Apply filtering whenever lesson logs, matiereId, or dateFilter changes
   useEffect(() => {
-    console.log('=== DEBUGGING CAHIER FILTRAGE ===');
-    console.log('matiereId from URL:', matiereId);
-    console.log('classeId from URL:', classeId);
-    console.log('lessonLogs received:', lessonLogs);
-    console.log('subjects available:', subjects);
+    const loadData = async () => {
+      if (!classeId) return;
 
-    if (!lessonLogs || lessonLogs.length === 0) {
-      console.log('No lesson logs available');
-      setFilteredLogs([]);
-      return;
-    }
+      try {
+        // Find subject name
+        if (matiereId) {
+          const subject = subjects.find(s => s.id === matiereId);
+          if (subject) {
+            setSubjectName(subject.name);
+          }
+        }
 
-    // Find subject name
-    if (matiereId && subjects.length > 0) {
-      const subject = subjects.find(s => s.id === matiereId);
-      console.log('Found subject:', subject);
-      if (subject) {
-        setSubjectName(subject.name);
-        console.log('Set subject name to:', subject.name);
+        // Filter lesson logs based on parameters
+        let logs: LessonLogData[];
+        if (matiereId && classeId) {
+          logs = allLessonLogs.filter(log => log.class_id === classeId && log.subject_id === matiereId);
+        } else if (classeId) {
+          logs = allLessonLogs.filter(log => log.class_id === classeId);
+        } else {
+          logs = [];
+        }
+        
+        setLessonLogs(logs);
+        setFilteredLogs(logs);
+      } catch (error) {
+        console.error('Error loading data:', error);
       }
-    }
+    };
 
-    // Start with all lesson logs for this class
-    let logs: LessonLogData[] = lessonLogs;
-    console.log('Starting with logs:', logs.length);
+    loadData();
+  }, [matiereId, classeId, allLessonLogs, subjects]);
 
-    // Apply subject filtering first - THIS IS CRITICAL
-    if (matiereId) {
-      console.log('Applying subject filter for matiereId:', matiereId);
-      logs = logs.filter(log => {
-        console.log(`Checking log: subject_id=${log.subject_id}, matches=${log.subject_id === matiereId}`);
-        return log.subject_id === matiereId;
-      });
-      console.log('After subject filtering:', logs.length, 'logs remain');
-    } else {
-      console.log('No matiereId provided, showing all logs');
-    }
-
-    // Apply date filtering if date filter is active
+  // Filter logs by date when dateFilter changes
+  useEffect(() => {
     if (dateFilter) {
-      console.log('Applying date filter for:', dateFilter);
-      logs = logs.filter(log => {
+      const filtered = lessonLogs.filter(log => {
         const logDate = new Date(log.lesson_date);
         return logDate.toDateString() === dateFilter.toDateString();
       });
-      console.log('After date filtering:', logs.length, 'logs remain');
+      setFilteredLogs(filtered);
+    } else {
+      setFilteredLogs(lessonLogs);
     }
-    
-    console.log('Final filtered logs:', logs);
-    setFilteredLogs(logs);
-    console.log('=== END DEBUGGING ===');
-  }, [lessonLogs, matiereId, subjects, dateFilter]);
+  }, [dateFilter, lessonLogs]);
 
   const clearDateFilter = () => {
     setDateFilter(undefined);
@@ -155,7 +149,7 @@ const ConsultationCahier: React.FC = () => {
               Retour
             </Button>
             <h1 className="text-2xl font-bold">
-              {subjectName ? `Cahier de texte - ${subjectName}` : 'Cahier de texte'}
+              Cahier de texte {subjectName && `- ${subjectName}`}
             </h1>
           </div>
           <Button onClick={handleAjouterEntree} className="flex items-center">
