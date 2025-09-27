@@ -142,6 +142,15 @@ const Index = () => {
       },
   ], [students.length, teachers.length, classes.length, academicYear]);
 
+  // Define helper function first
+  const generateMonthlyEnrollment = useMemo(() => (students: any[]) => {
+    const months = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
+    return months.map((month, index) => ({
+      month,
+      inscriptions: Math.floor(Math.random() * 20) + 5
+    }));
+  }, []);
+
   // Optimisation avec useMemo pour les données analytiques
   const analyticsData = useMemo(() => ({
     classDistribution: classes.map((classe: any) => ({
@@ -151,15 +160,7 @@ const Index = () => {
     monthlyEnrollment: generateMonthlyEnrollment(students),
     attendanceRate: 85, // Placeholder
     averageGrade: 14.5 // Placeholder
-  }), [classes, students]);
-
-  const generateMonthlyEnrollment = useMemo(() => (students: any[]) => {
-    const months = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
-    return months.map((month, index) => ({
-      month,
-      inscriptions: Math.floor(Math.random() * 20) + 5
-    }));
-  }, []);
+  }), [classes, students, generateMonthlyEnrollment]);
 
   
   // Optimisation : utiliser directement les données du hook
