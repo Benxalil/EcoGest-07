@@ -86,19 +86,31 @@ export default function ListeAnnonces() {
     id: announcement.id,
     titre: announcement.title,
     contenu: announcement.content,
-    dateExpiration: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 jours
+    // Utiliser la vraie date d'expiration de la DB si elle existe, sinon 30 jours par défaut
+    dateExpiration: announcement.expires_at 
+      ? new Date(announcement.expires_at)
+      : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
     destinataires: announcement.target_audience || ['tous'],
     priorite: announcement.priority || 'normal',
     dateCreation: new Date(announcement.created_at)
   }));
 
-  // Séparer en annonces à venir et passées (basé sur 7 jours)
+  // Séparer en annonces à venir et passées (basé sur la date d'expiration réelle)
   const now = new Date();
-  const sevenDaysAgo = new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000));
+  // Reset time to start of day for accurate comparison
+  now.setHours(0, 0, 0, 0);
 
   const separateAnnouncements = (annonces: AnnonceData[]) => {
-    const aVenir = annonces.filter(annonce => annonce.dateCreation >= sevenDaysAgo);
-    const passees = annonces.filter(annonce => annonce.dateCreation < sevenDaysAgo);
+    const aVenir = annonces.filter(annonce => {
+      const expirationDate = new Date(annonce.dateExpiration);
+      expirationDate.setHours(0, 0, 0, 0);
+      return expirationDate >= now;
+    });
+    const passees = annonces.filter(annonce => {
+      const expirationDate = new Date(annonce.dateExpiration);
+      expirationDate.setHours(0, 0, 0, 0);
+      return expirationDate < now;
+    });
     return { aVenir, passees };
   };
 
