@@ -19,7 +19,8 @@ import { AjoutMatiereModal } from "@/components/matieres/AjoutMatiereModal";
 import { CreerAnnonceModal } from "@/components/annonces/CreerAnnonceModal";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Session } from "@supabase/supabase-js";
-import { useDashboardData } from "@/hooks/useDashboardData";
+import { useDashboardDataOptimized } from "@/hooks/useDashboardDataOptimized";
+import { DashboardSkeleton } from "@/components/ui/dashboard-skeleton";
 import { LoadingSkeleton } from "@/components/ui/loading-skeleton";
 import { useUserRole } from "@/hooks/useUserRole";
 
@@ -68,7 +69,7 @@ const Index = () => {
     loading: dataLoading, 
     error: dataError,
     refetch
-  } = useDashboardData();
+  } = useDashboardDataOptimized();
   
   // État de chargement global
   const isLoading = dataLoading || userLoading;

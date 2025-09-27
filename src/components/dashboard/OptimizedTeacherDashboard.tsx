@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Users, Calendar, Clock, BookOpen, Megaphone, Award } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useUserRole } from "@/hooks/useUserRole";
-import { useDashboardData } from "@/hooks/useDashboardData";
+import { useDashboardDataOptimized } from "@/hooks/useDashboardDataOptimized";
+import { DashboardSkeleton } from "@/components/ui/dashboard-skeleton";
 
 interface TeacherStats {
   totalClasses: number;
@@ -22,7 +23,7 @@ const TeacherDashboard = memo(() => {
     announcements, 
     schoolData, 
     loading 
-  } = useDashboardData();
+  } = useDashboardDataOptimized();
 
   // Optimized stats calculation using useMemo
   const stats = useMemo((): TeacherStats => {
@@ -74,13 +75,7 @@ const TeacherDashboard = memo(() => {
   const navigateToAnnouncements = useCallback(() => navigate("/annonces"), [navigate]);
 
   if (loading) {
-    return (
-      <div className="space-y-6">
-        <div className="text-center py-12">
-          <p className="text-gray-500 text-lg">Chargement des données...</p>
-        </div>
-      </div>
-    );
+    return <DashboardSkeleton type="teacher" />;
   }
 
   return (
