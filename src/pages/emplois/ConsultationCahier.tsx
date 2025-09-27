@@ -38,7 +38,14 @@ const ConsultationCahier: React.FC = () => {
 
   // Apply filtering whenever lesson logs, matiereId, or dateFilter changes
   useEffect(() => {
+    console.log('=== DEBUGGING CAHIER FILTRAGE ===');
+    console.log('matiereId from URL:', matiereId);
+    console.log('classeId from URL:', classeId);
+    console.log('lessonLogs received:', lessonLogs);
+    console.log('subjects available:', subjects);
+
     if (!lessonLogs || lessonLogs.length === 0) {
+      console.log('No lesson logs available');
       setFilteredLogs([]);
       return;
     }
@@ -46,32 +53,42 @@ const ConsultationCahier: React.FC = () => {
     // Find subject name
     if (matiereId && subjects.length > 0) {
       const subject = subjects.find(s => s.id === matiereId);
+      console.log('Found subject:', subject);
       if (subject) {
         setSubjectName(subject.name);
+        console.log('Set subject name to:', subject.name);
       }
     }
 
     // Start with all lesson logs for this class
     let logs: LessonLogData[] = lessonLogs;
+    console.log('Starting with logs:', logs.length);
 
-    // Apply subject filtering first
+    // Apply subject filtering first - THIS IS CRITICAL
     if (matiereId) {
-      logs = logs.filter(log => log.subject_id === matiereId);
-      console.log('Filtering logs for subject:', matiereId);
-      console.log('Available logs:', lessonLogs);
-      console.log('Filtered logs by subject:', logs);
+      console.log('Applying subject filter for matiereId:', matiereId);
+      logs = logs.filter(log => {
+        console.log(`Checking log: subject_id=${log.subject_id}, matches=${log.subject_id === matiereId}`);
+        return log.subject_id === matiereId;
+      });
+      console.log('After subject filtering:', logs.length, 'logs remain');
+    } else {
+      console.log('No matiereId provided, showing all logs');
     }
 
     // Apply date filtering if date filter is active
     if (dateFilter) {
+      console.log('Applying date filter for:', dateFilter);
       logs = logs.filter(log => {
         const logDate = new Date(log.lesson_date);
         return logDate.toDateString() === dateFilter.toDateString();
       });
-      console.log('Filtered logs by date:', logs);
+      console.log('After date filtering:', logs.length, 'logs remain');
     }
     
+    console.log('Final filtered logs:', logs);
     setFilteredLogs(logs);
+    console.log('=== END DEBUGGING ===');
   }, [lessonLogs, matiereId, subjects, dateFilter]);
 
   const clearDateFilter = () => {
@@ -138,7 +155,7 @@ const ConsultationCahier: React.FC = () => {
               Retour
             </Button>
             <h1 className="text-2xl font-bold">
-              Cahier de texte {subjectName && `- ${subjectName}`}
+              {subjectName ? `Cahier de texte - ${subjectName}` : 'Cahier de texte'}
             </h1>
           </div>
           <Button onClick={handleAjouterEntree} className="flex items-center">
