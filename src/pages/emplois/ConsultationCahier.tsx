@@ -36,56 +36,53 @@ const ConsultationCahier: React.FC = () => {
   const [dateFilter, setDateFilter] = useState<Date | undefined>();
   const [subjectName, setSubjectName] = useState<string>('');
 
+  // Apply subject filtering whenever lesson logs or matiereId changes
   useEffect(() => {
-    const loadData = async () => {
-      if (!classeId) return;
-
-      try {
-        // Find subject name
-        if (matiereId) {
-          const subject = subjects.find(s => s.id === matiereId);
-          if (subject) {
-            setSubjectName(subject.name);
-          }
-        }
-
-        // Filter lesson logs by subject if matiereId is provided
-        let logs: LessonLogData[];
-        if (matiereId) {
-          logs = lessonLogs.filter(log => log.subject_id === matiereId);
-        } else {
-          logs = lessonLogs;
-        }
-        
-        setFilteredLogs(logs);
-      } catch (error) {
-        console.error('Error loading data:', error);
-      }
-    };
-
-    loadData();
-  }, [matiereId, classeId, lessonLogs, subjects]);
-
-  // Filter logs by date when dateFilter changes
-  useEffect(() => {
-    if (dateFilter) {
-      let logs = lessonLogs;
-      if (matiereId) {
-        logs = lessonLogs.filter(log => log.subject_id === matiereId);
-      }
-      
-      const filtered = logs.filter(log => {
-        const logDate = new Date(log.lesson_date);
-        return logDate.toDateString() === dateFilter.toDateString();
-      });
-      setFilteredLogs(filtered);
-    } else {
-      let logs = lessonLogs;
-      if (matiereId) {
-        logs = lessonLogs.filter(log => log.subject_id === matiereId);
-      }
-      setFilteredLogs(logs);
+    if (!lessonLogs || lessonLogs.length === 0) {
+      setFilteredLogs([]);
+      return;
     }
+
+    // Find subject name
+    if (matiereId && subjects.length > 0) {
+      const subject = subjects.find(s => s.id === matiereId);
+      if (subject) {
+        setSubjectName(subject.name);
+      }
+    }
+
+    // Apply subject filtering
+    let logs: LessonLogData[];
+    if (matiereId) {
+      logs = lessonLogs.filter(log => log.subject_id === matiereId);
+      console.log('Filtering logs for subject:', matiereId);
+      console.log('Filtered logs:', logs);
+    } else {
+      logs = lessonLogs;
+    }
+    
+    setFilteredLogs(logs);
+  }, [lessonLogs, matiereId, subjects]);
+
+  // Apply date filtering on top of subject filtering
+  useEffect(() => {
+    if (!dateFilter) return;
+    
+    // Start with subject-filtered logs
+    let baseLogs: LessonLogData[];
+    if (matiereId) {
+      baseLogs = lessonLogs.filter(log => log.subject_id === matiereId);
+    } else {
+      baseLogs = lessonLogs;
+    }
+    
+    // Apply date filter
+    const filtered = baseLogs.filter(log => {
+      const logDate = new Date(log.lesson_date);
+      return logDate.toDateString() === dateFilter.toDateString();
+    });
+    
+    setFilteredLogs(filtered);
   }, [dateFilter, lessonLogs, matiereId]);
 
   const clearDateFilter = () => {
