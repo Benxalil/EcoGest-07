@@ -64,8 +64,8 @@ export default function PaiementsClasse() {
       
       // Utiliser les vrais paiements de la base de données
       const elevesWithPaymentStatus = elevesClasse.map((eleve: any) => {
-        const hasPaid = hasStudentPaid(eleve.id, mois);
-        const payment = getStudentPayment(eleve.id, mois);
+        const hasPaid = hasStudentPaid(eleve.id, 'mensualite', mois);
+        const payment = getStudentPayment(eleve.id, 'mensualite', mois);
         
         return {
           ...eleve,
