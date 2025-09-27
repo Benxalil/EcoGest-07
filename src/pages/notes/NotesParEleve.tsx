@@ -328,188 +328,198 @@ export default function NotesParEleve() {
         </div>
       </Layout>;
   }
+  // Helper function to get exam display text
+  const getExamDisplayText = () => {
+    if (examInfo?.type === 'Composition') {
+      const semesterText = selectedSemestre === 'semestre1' ? '1er Semestre' : '2ème Semestre';
+      return `Examen : Composition – ${semesterText}`;
+    }
+    return examInfo?.titre || 'Examen';
+  };
+
   return <Layout>
       <div className="container mx-auto p-6">
-        {/* HEADER AVEC INFORMATIONS DE L'EXAMEN - STRUCTURE ORIGINALE */}
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white p-6 rounded-lg mb-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button variant="secondary" size="sm" onClick={() => navigate(-1)}>
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Retour
-              </Button>
-              <div>
-                <h1 className="text-2xl font-bold">
-                  Notes par Élève
-                </h1>
-                <div className="flex items-center gap-4 mt-2">
-                  <div className="text-lg">
-                    <span className="font-medium">Examen:</span> {examInfo?.titre || 'Examen'}
+        {/* HEADER AVEC INFORMATIONS DE L'EXAMEN */}
+        <Card className="mb-6">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <Button variant="outline" size="sm" onClick={() => navigate(-1)}>
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Retour
+                </Button>
+                <div>
+                  <h1 className="text-2xl font-bold">
+                    Notes par Élève
+                  </h1>
+                  <div className="flex items-center gap-4 mt-2">
+                    <div className="text-lg">
+                      <span className="font-medium">{getExamDisplayText()}</span>
+                    </div>
                   </div>
-                  
                 </div>
               </div>
+              <div className="flex gap-2">
+                <Button onClick={handleSaveAllNotes} size="sm" disabled={!hasUnsavedChanges}>
+                  <Save className="h-4 w-4 mr-2" />
+                  Sauvegarder toutes les notes
+                </Button>
+              </div>
             </div>
-            <div className="flex gap-2">
-              <Button onClick={handleSaveAllNotes} variant="secondary" size="sm" disabled={!hasUnsavedChanges}>
-                <Save className="h-4 w-4 mr-2" />
-                Sauvegarder toutes les notes
-              </Button>
+          </CardContent>
+        </Card>
+
+        {/* Barre de recherche pour filtrer les élèves */}
+        <Card className="mb-6">
+          <CardContent className="p-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              <Input
+                placeholder="Rechercher un élève..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Sélection de l'élève - INTERFACE IDENTIQUE IMAGE 2 */}
-          <div className="lg:col-span-1">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <User className="h-5 w-5 text-primary" />
-                  Sélectionner un élève
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {/* Recherche */}
-                <div className="mb-4">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                    <Input
-                      placeholder="Rechercher un élève..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10"
-                    />
-                  </div>
-                </div>
-
-                {/* Liste des élèves */}
-                <div className="space-y-2 max-h-96 overflow-y-auto">
-                  {filteredEleves.map((eleve, index) => (
-                    <div
-                      key={eleve.id}
-                      className={`p-3 rounded-lg border cursor-pointer transition-colors ${
-                        selectedEleve?.id === eleve.id
-                          ? 'bg-primary/10 border-primary text-primary font-medium'
-                          : 'bg-card hover:bg-muted/50 border-border'
-                      }`}
-                      onClick={() => setSelectedEleve(eleve)}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <div className="font-medium text-sm">
-                            {eleve.prenom} {eleve.nom}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            ID: {(index + 1).toString().padStart(2, '0')}
-                          </div>
-                        </div>
-                        {selectedEleve?.id === eleve.id && (
-                          <div className="w-2 h-2 bg-primary rounded-full"></div>
-                        )}
+        {/* Sélection de l'élève en horizontal */}
+        <div className="mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+            {filteredEleves.map((eleve, index) => (
+              <Card
+                key={eleve.id}
+                className={`cursor-pointer transition-colors ${
+                  selectedEleve?.id === eleve.id
+                    ? 'bg-primary/10 border-primary'
+                    : 'hover:bg-muted/50'
+                }`}
+                onClick={() => setSelectedEleve(eleve)}
+              >
+                <CardContent className="p-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className={`font-medium text-sm ${
+                        selectedEleve?.id === eleve.id ? 'text-primary' : ''
+                      }`}>
+                        {eleve.prenom} {eleve.nom}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        ID: {(index + 1).toString().padStart(2, '0')}
                       </div>
                     </div>
-                  ))}
-                </div>
-
-                {filteredEleves.length === 0 && (
-                  <div className="text-center py-8">
-                    <p className="text-gray-500 text-sm">Aucun élève trouvé.</p>
+                    {selectedEleve?.id === eleve.id && (
+                      <div className="w-2 h-2 bg-primary rounded-full"></div>
+                    )}
                   </div>
-                )}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {filteredEleves.length === 0 && (
+            <Card>
+              <CardContent className="py-8">
+                <div className="text-center">
+                  <p className="text-muted-foreground text-sm">Aucun élève trouvé.</p>
+                </div>
               </CardContent>
             </Card>
-          </div>
+          )}
+        </div>
 
-          {/* Notes de l'élève sélectionné */}
-          <div className="lg:col-span-2">
-            {selectedEleve ? <Card>
-                <CardHeader>
-                  <CardTitle>
-                    Notes de {selectedEleve.prenom} {selectedEleve.nom}
-                  </CardTitle>
-                  
-                </CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-12">N°</TableHead>
-                        <TableHead>Matière</TableHead>
-                        {/* LOGIQUE CONDITIONNELLE UNIFIÉE SELON LE TYPE D'EXAMEN */}
+        {/* Notes de l'élève sélectionné */}
+        {selectedEleve ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>
+                Notes de {selectedEleve.prenom} {selectedEleve.nom}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-12">N°</TableHead>
+                    <TableHead>Matière</TableHead>
+                    {/* LOGIQUE CONDITIONNELLE UNIFIÉE SELON LE TYPE D'EXAMEN */}
+                    {examInfo?.type === 'Composition' ? (
+                      <>
+                        <TableHead className="text-center">Devoir</TableHead>
+                        <TableHead className="text-center">Composition</TableHead>
+                      </>
+                    ) : (
+                      <TableHead className="text-center">{examInfo?.titre || 'Note'}</TableHead>
+                    )}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {matieres.map((matiere, index) => {
+                    const noteData = getNote(selectedEleve.id, matiere.id.toString());
+                    const maxScore = parseMaxScoreFromMoyenne(matiere.moyenne);
+                    return (
+                      <TableRow key={matiere.id}>
+                        <TableCell className="font-mono text-sm">{(index + 1).toString().padStart(2, '0')}</TableCell>
+                        <TableCell className="font-medium">
+                          {matiere.nom}
+                        </TableCell>
+                        {/* AFFICHAGE CONDITIONNEL UNIFIÉ SELON LE TYPE D'EXAMEN */}
                         {examInfo?.type === 'Composition' ? (
                           <>
-                            <TableHead className="text-center">Devoir</TableHead>
-                            <TableHead className="text-center">Composition</TableHead>
+                            <TableCell className="text-center">
+                              <GradeInput 
+                                value={noteData?.devoir || ''} 
+                                onChange={value => handleNoteChange(matiere.id, selectedSemestre, 'devoir', value)} 
+                                maxScore={maxScore} 
+                                placeholder="" 
+                                className="w-20 text-center" 
+                              />
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <GradeInput 
+                                value={noteData?.composition || ''} 
+                                onChange={value => handleNoteChange(matiere.id, selectedSemestre, 'composition', value)} 
+                                maxScore={maxScore} 
+                                placeholder="" 
+                                className="w-20 text-center" 
+                              />
+                            </TableCell>
                           </>
                         ) : (
-                          <TableHead className="text-center">{examInfo?.titre || 'Note'}</TableHead>
+                          <TableCell className="text-center">
+                            <GradeInput 
+                              value={noteData?.note || ''} 
+                              onChange={value => handleSingleNoteChange(matiere.id, value)} 
+                              maxScore={maxScore} 
+                              placeholder="" 
+                              className="w-20 text-center" 
+                            />
+                          </TableCell>
                         )}
                       </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {matieres.map((matiere, index) => {
-                        const noteData = getNote(selectedEleve.id, matiere.id.toString());
-                        const maxScore = parseMaxScoreFromMoyenne(matiere.moyenne);
-                        return (
-                          <TableRow key={matiere.id}>
-                            <TableCell className="font-mono text-sm">{(index + 1).toString().padStart(2, '0')}</TableCell>
-                            <TableCell className="font-medium">
-                              {matiere.nom}
-                            </TableCell>
-                            {/* AFFICHAGE CONDITIONNEL UNIFIÉ SELON LE TYPE D'EXAMEN */}
-                            {examInfo?.type === 'Composition' ? (
-                              <>
-                                <TableCell className="text-center">
-                                  <GradeInput 
-                                    value={noteData?.devoir || ''} 
-                                    onChange={value => handleNoteChange(matiere.id, selectedSemestre, 'devoir', value)} 
-                                    maxScore={maxScore} 
-                                    placeholder="" 
-                                    className="w-20 text-center" 
-                                  />
-                                </TableCell>
-                                <TableCell className="text-center">
-                                  <GradeInput 
-                                    value={noteData?.composition || ''} 
-                                    onChange={value => handleNoteChange(matiere.id, selectedSemestre, 'composition', value)} 
-                                    maxScore={maxScore} 
-                                    placeholder="" 
-                                    className="w-20 text-center" 
-                                  />
-                                </TableCell>
-                              </>
-                            ) : (
-                              <TableCell className="text-center">
-                                <GradeInput 
-                                  value={noteData?.note || ''} 
-                                  onChange={value => handleSingleNoteChange(matiere.id, value)} 
-                                  maxScore={maxScore} 
-                                  placeholder="" 
-                                  className="w-20 text-center" 
-                                />
-                              </TableCell>
-                            )}
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
+                    );
+                  })}
+                </TableBody>
+              </Table>
 
-                  {matieres.length === 0 && <div className="text-center py-8">
-                      <p className="text-gray-500">Aucune matière disponible.</p>
-                    </div>}
-                </CardContent>
-              </Card> : <Card>
-                <CardContent className="py-12">
-                  <div className="text-center text-gray-500">
-                    <User className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>Sélectionnez un élève pour voir ses notes</p>
-                  </div>
-                </CardContent>
-              </Card>}
-          </div>
-        </div>
+              {matieres.length === 0 && (
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground">Aucune matière disponible.</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        ) : (
+          <Card>
+            <CardContent className="py-12">
+              <div className="text-center text-muted-foreground">
+                <User className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>Sélectionnez un élève pour voir ses notes</p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </Layout>;
 }
