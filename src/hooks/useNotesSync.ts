@@ -31,36 +31,51 @@ export const useNotesSync = ({ classeId, matiereId, examId, studentId, isComposi
   const { grades, upsertGrade, refetch: refetchGrades } = useGrades(studentId, matiereId, examId);
   const { toast } = useToast();
 
-  // Charger les notes depuis la base de données
+  // Charger les notes depuis la base de données - LOGIQUE UNIFIÉE
   const loadNotesFromDatabase = useCallback(() => {
-    if (!grades.length) {
-      console.log('useNotesSync: Aucune note disponible');
-      return;
-    }
-
-    // Filtrer les notes par exam_id si spécifié
-    const filteredGrades = examId ? grades.filter(grade => grade.exam_id === examId) : grades;
-    
-    console.log('useNotesSync: Chargement des notes depuis la DB', {
+    console.log('useNotesSync: Début chargement notes', {
       gradesCount: grades.length,
-      filteredGradesCount: filteredGrades.length,
       classeId,
       matiereId,
       examId,
-      studentId
+      studentId,
+      isComposition
     });
 
-    // Si c'est un nouvel examen (pas d'exam_id), ne pas charger de notes existantes
+    // RÈGLE CRITIQUE: Nouvel examen = champs vides par défaut
     if (!examId) {
-      console.log('useNotesSync: Nouvel examen détecté, pas de notes à charger');
+      console.log('useNotesSync: Nouvel examen détecté → champs vides');
       setLocalNotes([]);
       setHasUnsavedChanges(false);
       return;
     }
 
-    const notesFromDB: UnifiedNote[] = [];
+    // Si pas de notes en base, retourner vide
+    if (!grades.length) {
+      console.log('useNotesSync: Aucune note en base de données');
+      setLocalNotes([]);
+      setHasUnsavedChanges(false);
+      return;
+    }
+
+    // Filtrer les notes UNIQUEMENT pour cet examen spécifique
+    const filteredGrades = grades.filter(grade => grade.exam_id === examId);
     
-    // Grouper les notes par élève et matière
+    console.log('useNotesSync: Notes filtrées pour cet examen:', {
+      totalGrades: grades.length,
+      filteredGrades: filteredGrades.length,
+      examId
+    });
+
+    // Si aucune note pour cet examen, retourner vide  
+    if (!filteredGrades.length) {
+      console.log('useNotesSync: Aucune note pour cet examen spécifique');
+      setLocalNotes([]);
+      setHasUnsavedChanges(false);
+      return;
+    }
+
+    // Grouper et traiter les notes par élève et matière
     const notesByStudentAndSubject: { [key: string]: UnifiedNote } = {};
     
     filteredGrades.forEach(grade => {
@@ -77,36 +92,25 @@ export const useNotesSync = ({ classeId, matiereId, examId, studentId, isComposi
         };
       }
       
-      // Remplir les notes selon le type d'examen
+      // LOGIQUE UNIFIÉE : Remplir selon le type d'examen et exam_type
       if (isComposition) {
-        // Pour les compositions, séparer devoir et composition
-        if (grade.semester && grade.exam_type) {
-          if (grade.semester === 'semestre1') {
-            if (grade.exam_type === 'devoir') {
-              notesByStudentAndSubject[key].devoir = grade.grade_value.toString();
-            } else if (grade.exam_type === 'composition') {
-              notesByStudentAndSubject[key].composition = grade.grade_value.toString();
-            }
-          } else if (grade.semester === 'semestre2') {
-            // Pour le semestre 2, on pourrait étendre la structure si nécessaire
-            if (grade.exam_type === 'devoir') {
-              notesByStudentAndSubject[key].devoir = grade.grade_value.toString();
-            } else if (grade.exam_type === 'composition') {
-              notesByStudentAndSubject[key].composition = grade.grade_value.toString();
-            }
-          }
+        // Pour les compositions : séparer devoir et composition
+        if (grade.exam_type === 'devoir') {
+          notesByStudentAndSubject[key].devoir = grade.grade_value.toString();
+        } else if (grade.exam_type === 'composition') {
+          notesByStudentAndSubject[key].composition = grade.grade_value.toString();
         }
       } else {
-        // Pour les autres examens, note simple
+        // Pour les autres examens : note simple
         notesByStudentAndSubject[key].note = grade.grade_value.toString();
       }
     });
     
     const notes = Object.values(notesByStudentAndSubject);
-    console.log('useNotesSync: Notes chargées:', notes);
+    console.log('useNotesSync: Notes finales chargées:', notes);
     setLocalNotes(notes);
     setHasUnsavedChanges(false);
-  }, [grades, classeId, matiereId, examId, studentId]);
+  }, [grades, classeId, matiereId, examId, studentId, isComposition]);
 
   // Charger les notes au démarrage et quand les grades changent
   useEffect(() => {
@@ -164,7 +168,7 @@ export const useNotesSync = ({ classeId, matiereId, examId, studentId, isComposi
     setHasUnsavedChanges(true);
   }, []);
 
-  // Sauvegarder toutes les notes en base de données
+  // Sauvegarder toutes les notes en base de données - LOGIQUE UNIFIÉE
   const saveAllNotes = useCallback(async () => {
     if (!localNotes.length) {
       console.log('useNotesSync: Aucune note à sauvegarder');
@@ -172,66 +176,66 @@ export const useNotesSync = ({ classeId, matiereId, examId, studentId, isComposi
     }
 
     try {
-      console.log('useNotesSync: Sauvegarde de', localNotes.length, 'notes');
+      console.log('useNotesSync: Début sauvegarde', localNotes.length, 'notes');
       
-      const savePromises = localNotes.map(async (note) => {
+      const savePromises = localNotes.flatMap((note) => {
         const promises = [];
         
         if (isComposition) {
-          // Pour les compositions, sauvegarder devoir et composition séparément
-          if (note.devoir && note.devoir !== '') {
+          // COMPOSITION : Sauvegarder devoir et composition séparément
+          if (note.devoir && note.devoir.trim() !== '') {
             promises.push(upsertGrade({
               student_id: note.eleveId,
               subject_id: note.matiereId,
               exam_id: examId || undefined,
               grade_value: parseFloat(note.devoir),
-              max_grade: 20, // Valeur par défaut
+              max_grade: 20,
               coefficient: note.coefficient,
               semester: 'semestre1',
               exam_type: 'devoir'
             }));
           }
           
-          if (note.composition && note.composition !== '') {
+          if (note.composition && note.composition.trim() !== '') {
             promises.push(upsertGrade({
               student_id: note.eleveId,
               subject_id: note.matiereId,
               exam_id: examId || undefined,
               grade_value: parseFloat(note.composition),
-              max_grade: 20, // Valeur par défaut
+              max_grade: 20,
               coefficient: note.coefficient,
               semester: 'semestre1',
               exam_type: 'composition'
             }));
           }
         } else {
-          // Pour les autres examens, sauvegarder note simple
-          if (note.note && note.note !== '') {
+          // EXAMEN SIMPLE : Sauvegarder note unique
+          if (note.note && note.note.trim() !== '') {
             promises.push(upsertGrade({
               student_id: note.eleveId,
               subject_id: note.matiereId,
               exam_id: examId || undefined,
               grade_value: parseFloat(note.note),
-              max_grade: 20, // Valeur par défaut
+              max_grade: 20,
               coefficient: note.coefficient,
               exam_type: 'examen'
             }));
           }
         }
         
-        return Promise.all(promises);
+        return promises;
       });
 
       await Promise.all(savePromises);
       
-      console.log('useNotesSync: Toutes les notes sauvegardées avec succès');
+      console.log('useNotesSync: Sauvegarde terminée avec succès');
       
       toast({
         title: "Notes sauvegardées",
         description: "Toutes les notes ont été sauvegardées avec succès.",
       });
 
-      // Recharger les notes depuis la base de données
+      // SYNCHRONISATION : Recharger depuis la base pour garantir la cohérence
       await refetchGrades();
       setHasUnsavedChanges(false);
       
@@ -243,7 +247,7 @@ export const useNotesSync = ({ classeId, matiereId, examId, studentId, isComposi
         variant: "destructive",
       });
     }
-  }, [localNotes, examId, upsertGrade, refetchGrades, toast]);
+  }, [localNotes, examId, isComposition, upsertGrade, refetchGrades, toast]);
 
   // Forcer le rechargement des notes
   const refreshNotes = useCallback(async () => {

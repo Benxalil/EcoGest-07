@@ -360,9 +360,65 @@ export default function NotesParEleve() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Sélection de l'élève */}
+          {/* Sélection de l'élève - INTERFACE IDENTIQUE IMAGE 2 */}
           <div className="lg:col-span-1">
-            
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <User className="h-5 w-5 text-primary" />
+                  Sélectionner un élève
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {/* Recherche */}
+                <div className="mb-4">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                    <Input
+                      placeholder="Rechercher un élève..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+
+                {/* Liste des élèves */}
+                <div className="space-y-2 max-h-96 overflow-y-auto">
+                  {filteredEleves.map((eleve, index) => (
+                    <div
+                      key={eleve.id}
+                      className={`p-3 rounded-lg border cursor-pointer transition-colors ${
+                        selectedEleve?.id === eleve.id
+                          ? 'bg-primary/10 border-primary text-primary font-medium'
+                          : 'bg-card hover:bg-muted/50 border-border'
+                      }`}
+                      onClick={() => setSelectedEleve(eleve)}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="font-medium text-sm">
+                            {eleve.prenom} {eleve.nom}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            ID: {(index + 1).toString().padStart(2, '0')}
+                          </div>
+                        </div>
+                        {selectedEleve?.id === eleve.id && (
+                          <div className="w-2 h-2 bg-primary rounded-full"></div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {filteredEleves.length === 0 && (
+                  <div className="text-center py-8">
+                    <p className="text-gray-500 text-sm">Aucun élève trouvé.</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
 
           {/* Notes de l'élève sélectionné */}
@@ -378,37 +434,65 @@ export default function NotesParEleve() {
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead className="w-12">N°</TableHead>
                         <TableHead>Matière</TableHead>
-                        <TableHead>Coeff.</TableHead>
-                        {/* LOGIQUE CONDITIONNELLE ORIGINALE SELON LE TYPE D'EXAMEN */}
-                        {examInfo?.type === 'Composition' ? <>
-                            <TableHead>Devoir</TableHead>
-                            <TableHead>Composition</TableHead>
-                          </> : <TableHead>{examInfo?.titre || 'Note'}</TableHead>}
+                        {/* LOGIQUE CONDITIONNELLE UNIFIÉE SELON LE TYPE D'EXAMEN */}
+                        {examInfo?.type === 'Composition' ? (
+                          <>
+                            <TableHead className="text-center">Devoir</TableHead>
+                            <TableHead className="text-center">Composition</TableHead>
+                          </>
+                        ) : (
+                          <TableHead className="text-center">{examInfo?.titre || 'Note'}</TableHead>
+                        )}
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {matieres.map(matiere => {
-                    const noteData = getNote(selectedEleve.id, matiere.id.toString());
-                    const maxScore = parseMaxScoreFromMoyenne(matiere.moyenne);
-                    return <TableRow key={matiere.id}>
+                      {matieres.map((matiere, index) => {
+                        const noteData = getNote(selectedEleve.id, matiere.id.toString());
+                        const maxScore = parseMaxScoreFromMoyenne(matiere.moyenne);
+                        return (
+                          <TableRow key={matiere.id}>
+                            <TableCell className="font-mono text-sm">{(index + 1).toString().padStart(2, '0')}</TableCell>
                             <TableCell className="font-medium">
                               {matiere.nom}
                             </TableCell>
-                            <TableCell>{matiere.coefficient}</TableCell>
-                            {/* AFFICHAGE CONDITIONNEL SELON LE TYPE D'EXAMEN */}
-                            {examInfo?.type === 'Composition' ? <>
-                                <TableCell>
-                                  <GradeInput value={noteData?.devoir || ''} onChange={value => handleNoteChange(matiere.id, selectedSemestre, 'devoir', value)} maxScore={maxScore} placeholder="0" className="w-20" />
+                            {/* AFFICHAGE CONDITIONNEL UNIFIÉ SELON LE TYPE D'EXAMEN */}
+                            {examInfo?.type === 'Composition' ? (
+                              <>
+                                <TableCell className="text-center">
+                                  <GradeInput 
+                                    value={noteData?.devoir || ''} 
+                                    onChange={value => handleNoteChange(matiere.id, selectedSemestre, 'devoir', value)} 
+                                    maxScore={maxScore} 
+                                    placeholder="" 
+                                    className="w-20 text-center" 
+                                  />
                                 </TableCell>
-                                <TableCell>
-                                  <GradeInput value={noteData?.composition || ''} onChange={value => handleNoteChange(matiere.id, selectedSemestre, 'composition', value)} maxScore={maxScore} placeholder="0" className="w-20" />
+                                <TableCell className="text-center">
+                                  <GradeInput 
+                                    value={noteData?.composition || ''} 
+                                    onChange={value => handleNoteChange(matiere.id, selectedSemestre, 'composition', value)} 
+                                    maxScore={maxScore} 
+                                    placeholder="" 
+                                    className="w-20 text-center" 
+                                  />
                                 </TableCell>
-                              </> : <TableCell>
-                                <GradeInput value={noteData?.note || ''} onChange={value => handleSingleNoteChange(matiere.id, value)} maxScore={maxScore} placeholder="0" className="w-20" />
-                              </TableCell>}
-                          </TableRow>;
-                  })}
+                              </>
+                            ) : (
+                              <TableCell className="text-center">
+                                <GradeInput 
+                                  value={noteData?.note || ''} 
+                                  onChange={value => handleSingleNoteChange(matiere.id, value)} 
+                                  maxScore={maxScore} 
+                                  placeholder="" 
+                                  className="w-20 text-center" 
+                                />
+                              </TableCell>
+                            )}
+                          </TableRow>
+                        );
+                      })}
                     </TableBody>
                   </Table>
 

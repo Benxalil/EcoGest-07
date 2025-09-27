@@ -106,29 +106,27 @@ export default function ConsulterNotes() {
     }
   }, [matiereId, subjects]);
 
-  // Détecter le type d'examen
+  // Détecter le type d'examen depuis sessionStorage - LOGIQUE UNIFIÉE
   useEffect(() => {
-    console.log('ConsulterNotes: Détection du type d\'examen', { examId, examsCount: exams.length });
-    
-    if (examId && exams.length > 0) {
-      const examFound = exams.find(e => e.id === examId);
-      
-      if (examFound) {
-        setCurrentExam(examFound);
-        const isCompositionExam = examFound.title.toLowerCase().includes('composition') || 
-                                 examFound.title.toLowerCase().includes('première composition') ||
-                                 examFound.title.toLowerCase().includes('deuxième composition');
+    try {
+      const savedExamInfo = sessionStorage.getItem('current_examen_notes');
+      if (savedExamInfo) {
+        const examData = JSON.parse(savedExamInfo);
+        const examTitle = examData.examTitle || examData.titre || 'Examen';
+        // Règle unifiée : détection par le nom de l'examen
+        const isCompositionExam = examTitle.toLowerCase().includes('composition');
         setIsComposition(isCompositionExam);
-        console.log('ConsulterNotes: Examen trouvé:', examFound.title, 'isComposition:', isCompositionExam);
+        setCurrentExam({ ...examData, title: examTitle });
+        console.log('ConsulterNotes: Type d\'examen détecté:', examTitle, 'isComposition:', isCompositionExam);
       } else {
         setIsComposition(false);
+        console.log('ConsulterNotes: Nouvel examen, mode examen simple');
       }
-    } else {
-      // Mode examen simple par défaut pour les nouveaux examens
+    } catch (error) {
+      console.error('ConsulterNotes: Erreur détection type examen:', error);
       setIsComposition(false);
-      console.log('ConsulterNotes: Nouvel examen, mode examen simple');
     }
-  }, [examId, exams]);
+  }, []);
 
   useEffect(() => {
     if (classeId && students.length > 0) {
@@ -394,29 +392,29 @@ export default function ConsulterNotes() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Nom</TableHead>
-                  <TableHead>Prénom</TableHead>
+                  <TableHead className="w-12">ID#</TableHead>
+                  <TableHead>Prénom & Nom</TableHead>
                   {isComposition ? (
                     <>
-                      <TableHead>Devoir /{matiere.maxScore}</TableHead>
-                      <TableHead>Composition /{matiere.maxScore}</TableHead>
+                      <TableHead className="text-center">Devoir /{matiere.maxScore}</TableHead>
+                      <TableHead className="text-center">Composition /{matiere.maxScore}</TableHead>
                     </>
                   ) : (
-                    <TableHead>Note /{matiere.maxScore}</TableHead>
+                    <TableHead className="text-center">{currentExam?.title || 'Note'} /{matiere.maxScore}</TableHead>
                   )}
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {elevesFiltered.map((eleve) => {
+                {elevesFiltered.map((eleve, index) => {
                   const noteData = getNote(eleve.id, matiere.id);
                   
                   return (
                     <TableRow key={eleve.id}>
-                      <TableCell className="font-medium">{eleve.nom}</TableCell>
-                      <TableCell>{eleve.prenom}</TableCell>
+                      <TableCell className="font-mono text-sm">{(index + 1).toString().padStart(2, '0')}</TableCell>
+                      <TableCell className="font-medium">{eleve.prenom} {eleve.nom}</TableCell>
                       {isComposition ? (
                         <>
-                          <TableCell>
+                          <TableCell className="text-center">
                             <Input
                               type="number"
                               min="0"
@@ -425,11 +423,11 @@ export default function ConsulterNotes() {
                               value={noteData?.devoir || ''}
                               onChange={(e) => handleNoteChange(eleve.id, e.target.value, 'devoir')}
                               disabled={!isEditMode}
-                              className="w-24"
-                              placeholder="0"
+                              className="w-20 text-center"
+                              placeholder=""
                             />
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="text-center">
                             <Input
                               type="number"
                               min="0"
@@ -438,13 +436,13 @@ export default function ConsulterNotes() {
                               value={noteData?.composition || ''}
                               onChange={(e) => handleNoteChange(eleve.id, e.target.value, 'composition')}
                               disabled={!isEditMode}
-                              className="w-24"
-                              placeholder="0"
+                              className="w-20 text-center"
+                              placeholder=""
                             />
                           </TableCell>
                         </>
                       ) : (
-                        <TableCell>
+                        <TableCell className="text-center">
                           <Input
                             type="number"
                             min="0"
@@ -453,8 +451,8 @@ export default function ConsulterNotes() {
                             value={noteData?.note || ''}
                             onChange={(e) => handleNoteChange(eleve.id, e.target.value, 'note')}
                             disabled={!isEditMode}
-                            className="w-24"
-                            placeholder="0"
+                            className="w-20 text-center"
+                            placeholder=""
                           />
                         </TableCell>
                       )}
