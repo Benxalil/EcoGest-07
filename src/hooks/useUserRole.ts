@@ -19,76 +19,55 @@ export const useUserRole = () => {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const fetchUserProfile = async (userId: string) => {
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (profile) {
+        setUserProfile({
+          role: profile.role,
+          firstName: profile.first_name,
+          lastName: profile.last_name,
+          id: profile.id,
+          email: profile.email,
+          schoolId: profile.school_id,
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    // Set up auth state listener FIRST
+    // Optimized auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
 
         if (session?.user) {
-          // Fetch user profile after authentication state changes
-          setTimeout(async () => {
-            try {
-              const { data: profile } = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('id', session.user.id)
-                .single();
-
-              if (profile) {
-                setUserProfile({
-                  role: profile.role,
-                  firstName: profile.first_name,
-                  lastName: profile.last_name,
-                  id: profile.id,
-                  email: profile.email,
-                  schoolId: profile.school_id,
-                });
-              }
-            } catch (error) {
-              console.error('Error fetching user profile:', error);
-            } finally {
-              setLoading(false);
-            }
-          }, 0); } else {
+          fetchUserProfile(session.user.id);
+        } else {
           setUserProfile(null);
           setLoading(false);
         }
       }
     );
 
-    // THEN check for existing session
+    // Check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       
       if (session?.user) {
-        // Fetch profile for existing session
-        setTimeout(async () => {
-          try {
-            const { data: profile } = await supabase
-              .from('profiles')
-              .select('*')
-              .eq('id', session.user.id)
-              .single();
-
-            if (profile) {
-              setUserProfile({
-                role: profile.role,
-                firstName: profile.first_name,
-                lastName: profile.last_name,
-                id: profile.id,
-                email: profile.email,
-                schoolId: profile.school_id,
-              });
-            }
-          } catch (error) {
-            console.error('Error fetching user profile:', error);
-          } finally {
-            setLoading(false);
-          }
-        }, 0); } else {
+        fetchUserProfile(session.user.id);
+      } else {
         setLoading(false);
       }
     });
