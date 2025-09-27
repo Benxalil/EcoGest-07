@@ -137,6 +137,20 @@ export default function PaiementsClasse() {
 
   const confirmerPaiement = async (data: PaiementFormData) => {
     if (eleveSelectionne) {
+      // Vérifier d'abord si l'élève a déjà payé pour ce mois
+      const existingPayment = getStudentPayment(eleveSelectionne, 'mensualite', data.moisMensualite || mois);
+      
+      if (existingPayment) {
+        toast({
+          title: "Paiement déjà enregistré",
+          description: `Cet élève a déjà effectué un paiement pour ${data.moisMensualite || mois}.`,
+          variant: "destructive",
+        });
+        setModalOpen(false);
+        setEleveSelectionne(null);
+        return;
+      }
+
       try {
         // Créer le paiement dans la base de données
         const success = await createPayment({
@@ -144,7 +158,7 @@ export default function PaiementsClasse() {
           amount: parseInt(data.montant),
           payment_method: data.modePaiement,
           payment_type: data.typePaiement,
-          payment_month: data.moisMensualite,
+          payment_month: data.moisMensualite || mois,
           paid_by: data.payePar,
           phone_number: data.numeroTelephone,
           payment_date: new Date().toISOString().split('T')[0]
@@ -161,7 +175,7 @@ export default function PaiementsClasse() {
                   montant: parseInt(data.montant),
                   datePaiement: new Date().toISOString().split('T')[0],
                   typePaiement: data.typePaiement,
-                  moisMensualite: data.moisMensualite,
+                  moisMensualite: data.moisMensualite || mois,
                   payePar: data.payePar,
                   numeroTelephone: data.numeroTelephone
                 }
@@ -174,11 +188,24 @@ export default function PaiementsClasse() {
         }
       } catch (error) {
         console.error('Erreur lors de l\'enregistrement du paiement:', error);
-        toast({
-          title: "Erreur",
-          description: "Une erreur est survenue lors de l'enregistrement du paiement.",
-          variant: "destructive",
-        });
+        
+        // Gestion spécifique de l'erreur de doublon
+        if (error && typeof error === 'object' && 'code' in error && error.code === '23505') {
+          toast({
+            title: "Paiement déjà enregistré",
+            description: `Un paiement existe déjà pour cet élève pour le mois de ${data.moisMensualite || mois}.`,
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Erreur",
+            description: "Une erreur est survenue lors de l'enregistrement du paiement.",
+            variant: "destructive",
+          });
+        }
+        
+        setModalOpen(false);
+        setEleveSelectionne(null);
       }
     }
   };
@@ -404,18 +431,19 @@ export default function PaiementsClasse() {
                               <FileText className="h-4 w-4 mr-1" />
                               Reçu
                             </Button>
-                          ) : (
-                            <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-                              <DialogTrigger asChild>
-                                <Button 
-                                  size="sm" 
-                                  variant="default" 
-                                  className="h-8"
-                                  onClick={() => marquerPaye(eleve.id)}
-                                >
-                                  Marquer Payé
-                                </Button>
-                              </DialogTrigger>
+                           ) : (
+                             <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+                               <DialogTrigger asChild>
+                                 <Button 
+                                   size="sm" 
+                                   variant="default" 
+                                   className="h-8"
+                                   onClick={() => marquerPaye(eleve.id)}
+                                   disabled={hasStudentPaid(eleve.id, 'mensualite', mois)}
+                                 >
+                                   Marquer Payé
+                                 </Button>
+                               </DialogTrigger>
                               <DialogContent className="sm:max-w-[425px]">
                                 <DialogHeader>
                                   <DialogTitle>Enregistrer le Paiement</DialogTitle>
