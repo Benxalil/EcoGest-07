@@ -26,7 +26,7 @@ interface Subject {
 
 const ConsultationCahier: React.FC = () => {
   const navigate = useNavigate();
-  const { classeId, matiereId } = useParams();
+  const { classeId, subjectId } = useParams();
   
   const { lessonLogs, loading } = useLessonLogs(classeId);
   const { teachers } = useTeachers();
@@ -36,60 +36,39 @@ const ConsultationCahier: React.FC = () => {
   const [dateFilter, setDateFilter] = useState<Date | undefined>();
   const [subjectName, setSubjectName] = useState<string>('');
 
-  // Apply filtering whenever lesson logs, matiereId, or dateFilter changes
+  // Apply filtering whenever lesson logs, subjectId, or dateFilter changes
   useEffect(() => {
-    console.log('=== DEBUGGING CAHIER FILTRAGE ===');
-    console.log('matiereId from URL:', matiereId);
-    console.log('classeId from URL:', classeId);
-    console.log('lessonLogs received:', lessonLogs);
-    console.log('subjects available:', subjects);
-
     if (!lessonLogs || lessonLogs.length === 0) {
-      console.log('No lesson logs available');
       setFilteredLogs([]);
       return;
     }
 
     // Find subject name
-    if (matiereId && subjects.length > 0) {
-      const subject = subjects.find(s => s.id === matiereId);
-      console.log('Found subject:', subject);
+    if (subjectId && subjects.length > 0) {
+      const subject = subjects.find(s => s.id === subjectId);
       if (subject) {
         setSubjectName(subject.name);
-        console.log('Set subject name to:', subject.name);
       }
     }
 
     // Start with all lesson logs for this class
     let logs: LessonLogData[] = lessonLogs;
-    console.log('Starting with logs:', logs.length);
 
     // Apply subject filtering first - THIS IS CRITICAL
-    if (matiereId) {
-      console.log('Applying subject filter for matiereId:', matiereId);
-      logs = logs.filter(log => {
-        console.log(`Checking log: subject_id=${log.subject_id}, matches=${log.subject_id === matiereId}`);
-        return log.subject_id === matiereId;
-      });
-      console.log('After subject filtering:', logs.length, 'logs remain');
-    } else {
-      console.log('No matiereId provided, showing all logs');
+    if (subjectId) {
+      logs = logs.filter(log => log.subject_id === subjectId);
     }
 
     // Apply date filtering if date filter is active
     if (dateFilter) {
-      console.log('Applying date filter for:', dateFilter);
       logs = logs.filter(log => {
         const logDate = new Date(log.lesson_date);
         return logDate.toDateString() === dateFilter.toDateString();
       });
-      console.log('After date filtering:', logs.length, 'logs remain');
     }
     
-    console.log('Final filtered logs:', logs);
     setFilteredLogs(logs);
-    console.log('=== END DEBUGGING ===');
-  }, [lessonLogs, matiereId, subjects, dateFilter]);
+  }, [lessonLogs, subjectId, subjects, dateFilter]);
 
   const clearDateFilter = () => {
     setDateFilter(undefined);
@@ -106,7 +85,7 @@ const ConsultationCahier: React.FC = () => {
   const handleAjouterEntree = () => {
     const params = new URLSearchParams();
     if (classeId) params.set('classeId', classeId);
-    if (matiereId) params.set('matiereId', matiereId);
+    if (subjectId) params.set('matiereId', subjectId);
     navigate(`/cahier-de-texte?${params.toString()}`);
   };
 
