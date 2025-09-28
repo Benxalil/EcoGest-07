@@ -85,15 +85,15 @@ export default function ParametresModernes() {
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   
-  // États pour les informations d'école éditables - initialisées avec les données réelles
+  // États pour les informations d'école éditables - initialisées vides pour éviter les valeurs par défaut
   const [schoolInfo, setSchoolInfo] = useState({
-    name: schoolData?.name || '',
-    phone: schoolData?.phone || '',
-    address: schoolData?.address || '',
-    email: schoolData?.email || '',
-    language: (schoolData?.language || 'french') as DatabaseType['public']['Enums']['language_type'],
-    schoolPrefix: schoolData?.school_suffix || '',
-    slogan: schoolData?.slogan || ''
+    name: '',
+    phone: '',
+    address: '',
+    email: '',
+    language: 'french' as DatabaseType['public']['Enums']['language_type'],
+    schoolPrefix: '',
+    slogan: ''
   });
 
   // États pour tous les paramètres
@@ -155,16 +155,28 @@ export default function ParametresModernes() {
     loadAllSettings();
   }, []);
 
-  // Synchroniser avec les données de l'école - se déclenche dès que schoolData est disponible
+  // Synchroniser avec les données de l'école - uniquement quand les vraies données sont chargées
   useEffect(() => {
+    console.log('useEffect schoolData sync - schoolData:', schoolData, 'loading:', schoolLoading);
+    
     if (schoolData && !schoolLoading) {
+      console.log('Synchronisation des vraies données école:', {
+        name: schoolData.name,
+        phone: schoolData.phone,
+        address: schoolData.address,
+        email: schoolData.email,
+        slogan: schoolData.slogan,
+        school_suffix: schoolData.school_suffix,
+        language: schoolData.language
+      });
+      
       setGeneralSettings(prev => ({
         ...prev,
         systemType: schoolData.semester_type || 'semester',
         anneeScolaire: schoolData.academic_year || academicYear
       }));
       
-      // Synchroniser les informations de l'école avec les vraies données
+      // Synchroniser les informations de l'école avec les vraies données de la base
       const generateSchoolPrefix = (name: string) => {
         return name
           .toLowerCase()
@@ -173,15 +185,6 @@ export default function ParametresModernes() {
           .replace(/_+/g, '_') // Éviter underscores multiples
           .replace(/^_|_$/g, ''); // Supprimer underscores début/fin
       };
-      
-      console.log('Synchronisation des données école:', {
-        name: schoolData.name,
-        phone: schoolData.phone,
-        address: schoolData.address,
-        email: schoolData.email,
-        slogan: schoolData.slogan,
-        school_suffix: schoolData.school_suffix
-      });
       
       setSchoolInfo({
         name: schoolData.name || '',
@@ -196,6 +199,14 @@ export default function ParametresModernes() {
       if (schoolData.logo_url) {
         setLogoPreview(schoolData.logo_url);
       }
+      
+      console.log('schoolInfo mis à jour avec:', {
+        name: schoolData.name,
+        phone: schoolData.phone,
+        address: schoolData.address,
+        email: schoolData.email,
+        slogan: schoolData.slogan
+      });
     }
   }, [schoolData, academicYear, schoolLoading]);
 
@@ -285,6 +296,16 @@ export default function ParametresModernes() {
       }
 
       // Sauvegarder les informations de l'école via useSchoolData
+      console.log('Sauvegarde des données école:', {
+        name: schoolInfo.name,
+        phone: schoolInfo.phone,
+        address: schoolInfo.address,
+        email: schoolInfo.email,
+        language: schoolInfo.language,
+        school_suffix: schoolInfo.schoolPrefix,
+        slogan: schoolInfo.slogan
+      });
+      
       const schoolUpdateSuccess = await updateSchoolData({
         name: schoolInfo.name,
         address: schoolInfo.address,
@@ -297,6 +318,8 @@ export default function ParametresModernes() {
         logo_url: logoPreview || schoolData.logo_url,
         slogan: schoolInfo.slogan
       });
+
+      console.log('Résultat sauvegarde école:', schoolUpdateSuccess);
 
       if (!schoolUpdateSuccess) {
         throw new Error("Échec de la mise à jour des données de l'école");

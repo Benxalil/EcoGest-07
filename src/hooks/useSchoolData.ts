@@ -103,7 +103,7 @@ export const useSchoolData = () => {
   });
 
   return {
-    schoolData: schoolData || getDefaultSchoolData(),
+    schoolData: schoolData, // Retourner null si pas encore chargé, éviter les valeurs par défaut prématurées
     loading,
     error,
     updateSchoolData,
