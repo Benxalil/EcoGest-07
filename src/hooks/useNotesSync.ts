@@ -247,12 +247,14 @@ export const useNotesSync = ({ classeId, matiereId, examId, studentId, isComposi
 
       // SYNCHRONISATION : Recharger depuis la base pour garantir la cohérence
       await refetchGrades();
-      setHasUnsavedChanges(false);
       
-      // Forcer le rechargement immédiat des notes locales
-      setTimeout(() => {
-        loadNotesFromDatabase();
-      }, 100);
+      // Forcer la mise à jour immédiate des notes locales après refetch
+      // On appelle loadNotesFromDatabase() immédiatement après refetchGrades()
+      // car le useEffect qui écoute les grades va déclencher loadNotesFromDatabase()
+      // mais on force un appel immédiat pour garantir la synchronisation
+      loadNotesFromDatabase();
+      
+      setHasUnsavedChanges(false);
       
     } catch (error) {
       console.error('useNotesSync: Erreur lors de la sauvegarde:', error);

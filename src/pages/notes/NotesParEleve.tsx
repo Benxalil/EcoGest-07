@@ -297,6 +297,11 @@ export default function NotesParEleve() {
     }
     try {
       await saveAllNotes();
+      
+      // Forcer un re-render pour afficher immédiatement les notes sauvegardées
+      // On recalcule la moyenne pour s'assurer que tout est à jour
+      calculateAndUpdateAverage();
+      
       toast({
         title: "Succès",
         description: "Toutes les notes ont été sauvegardées avec succès."
