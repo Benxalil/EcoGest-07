@@ -360,7 +360,8 @@ export default function ResultatsSemestre() {
               {getElevesWithRank().map((eleve, index) => {
                 const stats = getEleveStatistics(eleve.id);
                 const hasNotes = stats.notesList.length > 0;
-                const notesText = hasNotes ? stats.notesList.map(n => n.note.toFixed(2)).join(', ') : "Aucune note";
+                // Afficher seulement la moyenne générale dans la colonne Note
+                const notesText = hasNotes ? stats.moyenneGenerale.toFixed(2) : "-";
                 const moyenneText = hasNotes ? stats.moyenneGenerale.toFixed(2) : "-";
                 
                 return (
@@ -501,6 +502,7 @@ export default function ResultatsSemestre() {
                 schoolSystem={schoolSystem}
                 classeId={classe.id}
                 examId={activeExamData?.exam_id}
+                examData={activeExamData}
               />
             )}
           </DialogContent>

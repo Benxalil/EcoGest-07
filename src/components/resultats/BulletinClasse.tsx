@@ -53,6 +53,7 @@ interface BulletinClasseProps {
   schoolSystem?: 'semestre' | 'trimestre';
   classeId?: string;
   examId?: string;
+  examData?: any; // Données de l'examen pour déterminer le type
   onClose?: () => void;
 }
 
@@ -63,7 +64,8 @@ export const BulletinClasse: React.FC<BulletinClasseProps> = ({
   semestre,
   schoolSystem,
   classeId,
-  examId
+  examId,
+  examData
 }) => {
   const [studentsData, setStudentsData] = useState<any[]>([]);
   const { getStudentExamStats } = useResults();
@@ -194,8 +196,17 @@ export const BulletinClasse: React.FC<BulletinClasseProps> = ({
               <TableHead className="text-white font-bold text-center w-16">Rang</TableHead>
               <TableHead className="text-white font-bold">Prénom & Nom</TableHead>
               <TableHead className="text-white font-bold text-center">Date de Naissance</TableHead>
-              <TableHead className="text-white font-bold text-center">Moyenne Devoir</TableHead>
-              <TableHead className="text-white font-bold text-center">Moyenne Composition</TableHead>
+              {/* Affichage conditionnel selon le type d'examen */}
+              {examData?.exam_title.toLowerCase().includes('composition') ? (
+                <>
+                  <TableHead className="text-white font-bold text-center">Moyenne Devoir</TableHead>
+                  <TableHead className="text-white font-bold text-center">Moyenne Composition</TableHead>
+                </>
+              ) : (
+                <TableHead className="text-white font-bold text-center">
+                  {examData?.exam_title || 'Moyenne'}
+                </TableHead>
+              )}
               <TableHead className="text-white font-bold text-center">Appréciation</TableHead>
             </TableRow>
           </TableHeader>
@@ -216,12 +227,21 @@ export const BulletinClasse: React.FC<BulletinClasseProps> = ({
                   <TableCell className="text-center">
                     {dateNaissance}
                   </TableCell>
-                  <TableCell className="text-center font-medium">
-                    {stats.moyenneDevoir > 0 ? stats.moyenneDevoir.toFixed(2) : "-"}
-                  </TableCell>
-                  <TableCell className="text-center font-medium">
-                    {stats.moyenneComposition > 0 ? stats.moyenneComposition.toFixed(2) : "-"}
-                  </TableCell>
+                  {/* Affichage conditionnel selon le type d'examen */}
+                  {examData?.exam_title.toLowerCase().includes('composition') ? (
+                    <>
+                      <TableCell className="text-center font-medium">
+                        {stats.moyenneDevoir > 0 ? stats.moyenneDevoir.toFixed(2) : "-"}
+                      </TableCell>
+                      <TableCell className="text-center font-medium">
+                        {stats.moyenneComposition > 0 ? stats.moyenneComposition.toFixed(2) : "-"}
+                      </TableCell>
+                    </>
+                  ) : (
+                    <TableCell className="text-center font-medium">
+                      {stats.moyenneGenerale > 0 ? stats.moyenneGenerale.toFixed(2) : "-"}
+                    </TableCell>
+                  )}
                   <TableCell className="text-center font-bold text-green-600">
                     {appreciation}
                   </TableCell>

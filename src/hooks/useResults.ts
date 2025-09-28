@@ -70,6 +70,10 @@ export const useResults = () => {
       setLoading(true);
       setError(null);
       
+      // Forcer une nouvelle récupération des données en invalidant le cache
+      console.log('useResults: Récupération des données fraîches...');
+      setError(null);
+      
       console.log('useResults: Récupération des VRAIES données depuis la base pour schoolId:', userProfile.schoolId);
 
       // 1. Récupérer les classes
@@ -209,6 +213,28 @@ export const useResults = () => {
 
   useEffect(() => {
     fetchResults();
+    
+    // Écouter les changements dans la section Matières pour synchroniser
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'matieresUpdated' || e.key === 'coefficientsUpdated') {
+        console.log('useResults: Détection de changements dans les matières, rechargement...');
+        fetchResults();
+      }
+    };
+    
+    // Écouter les événements personnalisés pour la synchronisation
+    const handleMatieresUpdate = () => {
+      console.log('useResults: Matières mises à jour, rechargement des résultats...');
+      fetchResults();
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('matieresUpdated', handleMatieresUpdate);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('matieresUpdated', handleMatieresUpdate);
+    };
   }, [fetchResults]);
 
   // Fonction pour calculer les statistiques d'un élève pour un examen spécifique DEPUIS LES VRAIES NOTES
