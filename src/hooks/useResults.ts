@@ -268,6 +268,9 @@ export const useResults = () => {
       return null;
     }
 
+    // Détecter si c'est un examen de type "Composition"
+    const isCompositionExam = examData.exam_title.toLowerCase().includes('composition');
+
     // Calculer les statistiques à partir des vraies notes récupérées de la base
     let totalNotes = 0;
     let totalCoefficient = 0;
@@ -284,6 +287,7 @@ export const useResults = () => {
     }> = [];
 
     console.log('useResults: Notes de cet élève depuis la base:', studentData.grades);
+    console.log('useResults: Est un examen Composition?', isCompositionExam);
 
     // Grouper les notes par matière
     const notesBySubject = new Map();
@@ -299,21 +303,31 @@ export const useResults = () => {
           subject,
           coefficient: coeff,
           devoirNote: null,
-          compositionNote: null
+          compositionNote: null,
+          allNotes: [] // Pour stocker toutes les notes pour les examens composition
         });
       }
       
       const subjectData = notesBySubject.get(subject);
       
       if (note && note > 0) {
-        if (examType === 'devoir') {
-          subjectData.devoirNote = note;
-          totalNotesDevoir += note * coeff;
-          coeffDevoir += coeff;
-        } else if (examType === 'composition') {
-          subjectData.compositionNote = note;
-          totalNotesComposition += note * coeff;
-          coeffComposition += coeff;
+        // Si c'est un examen "Composition", inclure TOUTES les notes
+        if (isCompositionExam) {
+          subjectData.allNotes.push({ note, examType });
+          // Pour les compositions, on utilise toutes les notes disponibles
+          totalNotes += note * coeff;
+          totalCoefficient += coeff;
+        } else {
+          // Logique normale pour les autres types d'examens
+          if (examType === 'devoir') {
+            subjectData.devoirNote = note;
+            totalNotesDevoir += note * coeff;
+            coeffDevoir += coeff;
+          } else if (examType === 'composition') {
+            subjectData.compositionNote = note;
+            totalNotesComposition += note * coeff;
+            coeffComposition += coeff;
+          }
         }
       }
     });
@@ -322,26 +336,42 @@ export const useResults = () => {
     notesBySubject.forEach((subjectData) => {
       let finalNote = 0;
       
-      // Pour la moyenne générale, utiliser la meilleure note disponible
-      if (subjectData.devoirNote && subjectData.compositionNote) {
-        finalNote = Math.max(subjectData.devoirNote, subjectData.compositionNote);
-      } else if (subjectData.devoirNote) {
-        finalNote = subjectData.devoirNote;
-      } else if (subjectData.compositionNote) {
-        finalNote = subjectData.compositionNote;
-      }
-      
-      if (finalNote > 0) {
-        totalNotes += finalNote * subjectData.coefficient;
-        totalCoefficient += subjectData.coefficient;
+      if (isCompositionExam) {
+        // Pour les examens "Composition", utiliser la moyenne de toutes les notes de la matière
+        if (subjectData.allNotes.length > 0) {
+          const sum = subjectData.allNotes.reduce((acc, n) => acc + n.note, 0);
+          finalNote = sum / subjectData.allNotes.length;
+          
+          notesList.push({
+            note: finalNote,
+            coefficient: subjectData.coefficient,
+            subject: subjectData.subject,
+            devoirNote: subjectData.devoirNote,
+            compositionNote: subjectData.compositionNote
+          });
+        }
+      } else {
+        // Logique normale pour les autres examens
+        if (subjectData.devoirNote && subjectData.compositionNote) {
+          finalNote = Math.max(subjectData.devoirNote, subjectData.compositionNote);
+        } else if (subjectData.devoirNote) {
+          finalNote = subjectData.devoirNote;
+        } else if (subjectData.compositionNote) {
+          finalNote = subjectData.compositionNote;
+        }
         
-        notesList.push({
-          note: finalNote,
-          coefficient: subjectData.coefficient,
-          subject: subjectData.subject,
-          devoirNote: subjectData.devoirNote,
-          compositionNote: subjectData.compositionNote
-        });
+        if (finalNote > 0) {
+          totalNotes += finalNote * subjectData.coefficient;
+          totalCoefficient += subjectData.coefficient;
+          
+          notesList.push({
+            note: finalNote,
+            coefficient: subjectData.coefficient,
+            subject: subjectData.subject,
+            devoirNote: subjectData.devoirNote,
+            compositionNote: subjectData.compositionNote
+          });
+        }
       }
     });
 
