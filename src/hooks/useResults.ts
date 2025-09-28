@@ -214,6 +214,11 @@ export const useResults = () => {
   useEffect(() => {
     fetchResults();
     
+    // Forcer un rechargement immédiat des données après ajout des notes
+    const interval = setInterval(() => {
+      fetchResults();
+    }, 2000);
+    
     // Écouter les changements dans la section Matières pour synchroniser
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'matieresUpdated' || e.key === 'coefficientsUpdated') {
@@ -232,6 +237,7 @@ export const useResults = () => {
     window.addEventListener('matieresUpdated', handleMatieresUpdate);
     
     return () => {
+      clearInterval(interval);
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('matieresUpdated', handleMatieresUpdate);
     };
