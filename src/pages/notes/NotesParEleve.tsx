@@ -196,18 +196,18 @@ export default function NotesParEleve() {
   const loadMatieresForEleve = (classeId: string) => {
     if (subjects && subjects.length > 0) {
       const matieresWithCoeff = subjects.map(subject => ({
-        id: parseInt(subject.id.replace(/\D/g, '')) || Date.now(),
+        id: subject.id, // Use UUID directly instead of converting to number
         nom: subject.name,
         coefficient: (subject.coefficient || 1).toString(),
-        maxScore: subject.hours_per_week || 20,
+        maxScore: subject.max_score || 20, // Use max_score instead of hours_per_week
         abbreviation: subject.abbreviation || subject.name.substring(0, 3).toUpperCase(),
-        moyenne: (subject.hours_per_week || 20).toString(),
+        moyenne: `/${subject.max_score || 20}`, // Format as "/20" format
         classeId: subject.class_id
       }));
       setMatieres(matieresWithCoeff);
     }
   };
-  const handleNoteChange = (matiereId: number, semestre: "semestre1" | "semestre2", type: "devoir" | "composition", value: string) => {
+  const handleNoteChange = (matiereId: string, semestre: "semestre1" | "semestre2", type: "devoir" | "composition", value: string) => {
     if (!selectedEleve) return;
 
     // Validation
@@ -225,17 +225,17 @@ export default function NotesParEleve() {
       }
     }
 
-    // Utiliser le système de synchronisation centralisé
+    // Utiliser le système de synchronisation centralisé avec UUID
     const updates: Partial<UnifiedNote> = {
       coefficient: parseFloat(matiere?.coefficient?.toString() || '1'),
       [type]: value
     };
-    updateNote(selectedEleve.id, matiereId.toString(), updates);
+    updateNote(selectedEleve.id, matiereId, updates); // Already a string UUID
     calculateAndUpdateAverage();
   };
 
   // Handle single note change for non-composition exams
-  const handleSingleNoteChange = (matiereId: number, value: string) => {
+  const handleSingleNoteChange = (matiereId: string, value: string) => {
     if (!selectedEleve) return;
     const matiere = matieres.find(m => m.id === matiereId);
     if (matiere && value !== "") {

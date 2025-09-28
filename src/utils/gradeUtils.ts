@@ -1,10 +1,10 @@
 // Utility functions for grade management with coefficients and dynamic max scores
 
 export interface MatiereWithCoefficient {
-  id: number;
+  id: string; // UUID instead of number
   nom: string;
   abreviation?: string;
-  moyenne: string; // Format: "/20", "/10", etc.
+  moyenne: string; // Format: "/20", "/10", etc.  
   coefficient: string; // Numeric coefficient as string
   classeId: string;
   horaires?: string;
@@ -120,7 +120,7 @@ export const calculateWeightedAverage = (grades: GradeInput[]): WeightedAverage 
  * Calculate semester average for a student across all subjects
  */
 export const calculateSemesterAverage = (
-  notes: { [matiereId: number]: { devoir: number; composition: number } },
+  notes: { [matiereId: string]: { devoir: number; composition: number } },
   matieres: MatiereWithCoefficient[]
 ): WeightedAverage => {
   const grades: GradeInput[] = [];
@@ -157,7 +157,7 @@ export const calculateSemesterAverage = (
  * Get matiere by ID with proper typing
  */
 export const getMatiereById = (
-  matiereId: number, 
+  matiereId: string, 
   matieres: MatiereWithCoefficient[]
 ): MatiereWithCoefficient | null => {
   return matieres.find(m => m.id === matiereId) || null;

@@ -126,10 +126,9 @@ export default function EvaluerEleve() {
     // Charger les informations de la matière
     if (matiereId && classeId) {
       const matieres = loadMatieresFromStorage(classeId);
-      // Try both string and number ID matching for compatibility
+      // Match by string ID (UUID)
       const matiereFound = matieres.find(m => 
-        m.id === parseInt(matiereId) || 
-        m.id.toString() === matiereId
+        m.id === matiereId
       );
       
       if (matiereFound) {
