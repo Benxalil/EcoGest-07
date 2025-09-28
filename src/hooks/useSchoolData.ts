@@ -26,6 +26,7 @@ export interface SchoolData {
   school_suffix?: string | null;
   subscription_status?: Database['public']['Enums']['subscription_status'] | null;
   trial_end_date?: string | null;
+  slogan?: string | null;
 }
 
 export const useSchoolData = () => {
@@ -97,7 +98,8 @@ export const useSchoolData = () => {
     timezone: 'Africa/Dakar',
     language: 'french',
     semester_type: 'semester',
-    subscription_status: 'trial'
+    subscription_status: 'trial',
+    slogan: 'Excellence et Innovation'
   });
 
   return {

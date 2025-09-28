@@ -1,6 +1,5 @@
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
-import { getSchoolSettings } from './schoolSettings';
 import { supabase } from '@/integrations/supabase/client';
 
 // Fonction pour obtenir l'année académique de l'école
@@ -28,6 +27,37 @@ const getSchoolAcademicYear = async (): Promise<string> => {
   } catch (error) {
     console.error('Error fetching academic year:', error);
     return '2024/2025';
+  }
+};
+
+// Fonction pour obtenir les données de l'école
+const getSchoolData = async () => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { nom: 'École Connectée', academic_year: '2024/2025' };
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('school_id')
+      .eq('id', user.id)
+      .single();
+
+    if (profile?.school_id) {
+      const { data: school } = await supabase
+        .from('schools')
+        .select('name, academic_year')
+        .eq('id', profile.school_id)
+        .single();
+
+      return {
+        nom: school?.name || 'École Connectée',
+        academic_year: school?.academic_year || '2024/2025'
+      };
+    }
+    return { nom: 'École Connectée', academic_year: '2024/2025' };
+  } catch (error) {
+    console.error('Erreur récupération école:', error);
+    return { nom: 'École Connectée', academic_year: '2024/2025' };
   }
 };
 
@@ -95,7 +125,9 @@ export const generateBulletinClassePDF = async (
     
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-    const schoolSettings = getSchoolSettings();
+    
+    // Get school data from database
+    const schoolData = await getSchoolData();
 
     // Ajouter une page en format A4 portrait
     const page = pdfDoc.addPage([595, 842]); // Format A4 portrait
@@ -278,7 +310,7 @@ export const generateBulletinClassePDF = async (
     page.drawText('RÉPUBLIQUE DU SÉNÉGAL', {
       x: 40, y: yPos, size: 10, font: boldFont
     });
-    page.drawText(schoolSettings.nom || 'École Connectée', {
+    page.drawText(schoolData.nom || 'École Connectée', {
       x: width - 180, y: yPos, size: 10, font: boldFont
     });
 

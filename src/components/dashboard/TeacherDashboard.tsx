@@ -6,7 +6,7 @@ import { useState, useEffect } from "react";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useAnnouncements } from "@/hooks/useAnnouncements";
 import { useClasses } from "@/hooks/useClasses";
-import { getSchoolSettings } from "@/utils/schoolSettings";
+import { useSchoolData } from "@/hooks/useSchoolData";
 
 interface TeacherStats {
   totalClasses: number;
@@ -20,13 +20,13 @@ export function TeacherDashboard() {
   const { userProfile } = useUserRole();
   const { announcements } = useAnnouncements();
   const { classes, loading: classesLoading } = useClasses();
+  const { schoolData } = useSchoolData();
   const [stats, setStats] = useState<TeacherStats>({
     totalClasses: 0,
     totalStudents: 0,
     todaySchedules: [],
     announcements: []
   });
-  const [schoolSettings] = useState(() => getSchoolSettings());
 
   useEffect(() => {
     loadTeacherData();
@@ -167,7 +167,7 @@ export function TeacherDashboard() {
           {getGreeting()}, {userProfile?.firstName} {userProfile?.lastName} !
         </h1>
         <p className="text-blue-100">
-          Voici votre tableau de bord enseignant pour {schoolSettings.nom || "votre école"}.
+          Voici votre tableau de bord enseignant pour {schoolData.name || "votre école"}.
         </p>
       </div>
 

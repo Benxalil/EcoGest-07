@@ -30,7 +30,6 @@ const getSchoolAcademicYear = async (): Promise<string> => {
     return '2024/2025';
   }
 };
-import { getSchoolSettings } from './schoolSettings';
 
 interface Student {
   id: string;

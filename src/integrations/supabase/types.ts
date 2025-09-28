@@ -999,6 +999,7 @@ export type Database = {
           semester_type:
             | Database["public"]["Enums"]["semester_system_type"]
             | null
+          slogan: string | null
           sponsor_email: string | null
           sponsor_name: string | null
           sponsor_phone: string | null
@@ -1028,6 +1029,7 @@ export type Database = {
           semester_type?:
             | Database["public"]["Enums"]["semester_system_type"]
             | null
+          slogan?: string | null
           sponsor_email?: string | null
           sponsor_name?: string | null
           sponsor_phone?: string | null
@@ -1057,6 +1059,7 @@ export type Database = {
           semester_type?:
             | Database["public"]["Enums"]["semester_system_type"]
             | null
+          slogan?: string | null
           sponsor_email?: string | null
           sponsor_name?: string | null
           sponsor_phone?: string | null

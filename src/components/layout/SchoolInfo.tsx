@@ -5,14 +5,12 @@ import { useEffect } from "react";
 
 interface SchoolInfoProps {
   schoolName?: string;
-  schoolSlogan?: string;
   schoolLogo?: string;
   className?: string;
 }
 
 export function SchoolInfo({ 
   schoolName, 
-  schoolSlogan,
   schoolLogo, 
   className = "" 
 }: SchoolInfoProps) {
@@ -32,7 +30,7 @@ export function SchoolInfo({
   }, [refreshSchoolData]);
 
   const displayName = schoolName || schoolData.name || "École Connectée";
-  const displaySlogan = schoolSlogan || "Excellence et Innovation";
+  const displaySlogan = schoolData.slogan || "Excellence et Innovation";
   const displayLogo = schoolLogo || schoolData.logo_url;
   return (
     <div className={`flex items-center space-x-3 ${className}`}>

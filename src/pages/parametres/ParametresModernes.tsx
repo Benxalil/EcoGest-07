@@ -92,7 +92,8 @@ export default function ParametresModernes() {
     address: '',
     email: '',
     language: 'french' as DatabaseType['public']['Enums']['language_type'],
-    schoolPrefix: ''
+    schoolPrefix: '',
+    slogan: ''
   });
 
   // États pour tous les paramètres
@@ -179,7 +180,8 @@ export default function ParametresModernes() {
         address: schoolData.address || '',
         email: schoolData.email || '',
         language: schoolData.language || 'french',
-        schoolPrefix: schoolData.school_suffix || generateSchoolPrefix(schoolData.name || 'ecole')
+        schoolPrefix: schoolData.school_suffix || generateSchoolPrefix(schoolData.name || 'ecole'),
+        slogan: schoolData.slogan || 'Excellence et Innovation'
       });
       
       if (schoolData.logo_url) {
@@ -283,7 +285,8 @@ export default function ParametresModernes() {
         school_suffix: schoolInfo.schoolPrefix,
         academic_year: generalSettings.anneeScolaire,
         semester_type: generalSettings.systemType,
-        logo_url: logoPreview || schoolData.logo_url
+        logo_url: logoPreview || schoolData.logo_url,
+        slogan: schoolInfo.slogan
       });
 
       if (!schoolUpdateSuccess) {
@@ -461,6 +464,19 @@ export default function ParametresModernes() {
                       setHasUnsavedChanges(true);
                     }} 
                     placeholder="contact@ecole.com" 
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="slogan">Slogan de l'École</Label>
+                  <Input 
+                    id="slogan" 
+                    value={schoolInfo.slogan} 
+                    onChange={e => {
+                      setSchoolInfo(prev => ({...prev, slogan: e.target.value}));
+                      setHasUnsavedChanges(true);
+                    }} 
+                    placeholder="Excellence et Innovation" 
                   />
                 </div>
 
