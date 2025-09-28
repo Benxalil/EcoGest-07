@@ -95,7 +95,7 @@ export const useResults = () => {
       // 3. Récupérer les matières
       const { data: subjectsData, error: subjectsError } = await supabase
         .from('subjects')
-        .select('id, name, abbreviation, coefficient, class_id')
+        .select('id, name, abbreviation, coefficient, class_id, max_score')
         .eq('school_id', userProfile.schoolId);
 
       if (subjectsError) throw subjectsError;
@@ -170,12 +170,20 @@ export const useResults = () => {
                 class_section: classe.section || '',
                 grades: studentGrades.map(grade => {
                   const subject = classSubjects.find(s => s.id === grade.subject_id);
+                  const subjectMaxScore = subject?.max_score || 20; // Valeur par défaut de 20
+                  const validatedGrade = Math.min(grade.grade_value, subjectMaxScore); // S'assurer que la note ne dépasse pas le barème
+                  
+                  // Log pour debug si la note dépasse le barème
+                  if (grade.grade_value > subjectMaxScore) {
+                    console.warn(`Note ${grade.grade_value} dépasse le barème ${subjectMaxScore} pour ${subject?.name}`);
+                  }
+                  
                   return {
                     subject_id: grade.subject_id,
                     subject_name: subject?.name || 'Matière inconnue',
-                    grade_value: grade.grade_value,
-                    max_grade: grade.max_grade,
-                    coefficient: subject?.coefficient || grade.coefficient, // Utiliser le coefficient actuel de la matière
+                    grade_value: validatedGrade, // Utiliser la note validée
+                    max_grade: subjectMaxScore, // Utiliser le barème de la matière, pas celui stocké en grade
+                    coefficient: subject?.coefficient || 1, // Utiliser le coefficient actuel de la matière
                     exam_type: grade.exam_type,
                     semester: grade.semester
                   };
@@ -187,7 +195,8 @@ export const useResults = () => {
             subjects: classSubjects.map(subject => ({
               subject_id: subject.id,
               subject_name: subject.name,
-              coefficient: subject.coefficient || 1
+              coefficient: subject.coefficient || 1,
+              max_score: subject.max_score || 20
             }))
           }))
         };
