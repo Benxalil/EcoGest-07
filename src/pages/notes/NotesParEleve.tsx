@@ -65,6 +65,22 @@ export default function NotesParEleve() {
   } = useSubjects(classeId || '');
 
   // Hook de synchronisation des notes - CENTRALISÉ
+  // RÉCUPÉRER L'EXAMID DEPUIS SESSIONSTORAGE
+  const getExamIdFromStorage = () => {
+    try {
+      const savedExamInfo = sessionStorage.getItem('current_examen_notes');
+      if (savedExamInfo) {
+        const examData = JSON.parse(savedExamInfo);
+        return examData.examId;
+      }
+    } catch (error) {
+      console.error('Erreur lors de la récupération de l\'examId:', error);
+    }
+    return null;
+  };
+
+  const examIdFromStorage = getExamIdFromStorage();
+
   const {
     localNotes,
     hasUnsavedChanges,
@@ -76,7 +92,7 @@ export default function NotesParEleve() {
   } = useNotesSync({
     classeId: classeId || undefined,
     studentId: selectedEleve?.id,
-    examId: undefined, // Pas d'examId spécifique, on récupère les notes génériques
+    examId: examIdFromStorage, // Utiliser l'examId depuis sessionStorage
     isComposition: examInfo?.type === 'Composition'
   });
   useEffect(() => {

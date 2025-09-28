@@ -69,6 +69,22 @@ export default function ConsulterNotes() {
   } = useExams();
 
   // Hook de synchronisation des notes - CENTRALISÉ
+  // RÉCUPÉRER L'EXAMID DEPUIS SESSIONSTORAGE SI MANQUANT
+  const getExamIdFromStorage = () => {
+    try {
+      const savedExamInfo = sessionStorage.getItem('current_examen_notes');
+      if (savedExamInfo) {
+        const examData = JSON.parse(savedExamInfo);
+        return examData.examId;
+      }
+    } catch (error) {
+      console.error('Erreur lors de la récupération de l\'examId:', error);
+    }
+    return null;
+  };
+
+  const finalExamId = examId || getExamIdFromStorage();
+
   const {
     localNotes,
     hasUnsavedChanges,
@@ -79,7 +95,7 @@ export default function ConsulterNotes() {
   } = useNotesSync({
     classeId: classeId || undefined,
     matiereId: matiereId || undefined,
-    examId: examId || undefined,
+    examId: finalExamId, // Utiliser l'examId depuis URL ou sessionStorage
     isComposition: isComposition
   });
   useEffect(() => {

@@ -64,12 +64,12 @@ export const useNotesSync = ({ classeId, matiereId, examId, studentId, isComposi
       grade_value: g.grade_value
     })));
 
-    // CORRECTION: Filtrer plus intelligemment
-    // - Si examId défini: prendre uniquement les notes de cet examen
-    // - Sinon: prendre les notes avec exam_id null/undefined (notes génériques)
-    const filteredGrades = examId 
-      ? grades.filter(grade => grade.exam_id === examId)
-      : grades.filter(grade => !grade.exam_id);
+  // CORRECTION: Filtrage strict par examId pour éviter les fuites entre examens
+  // - Si examId défini: prendre UNIQUEMENT les notes de cet examen spécifique
+  // - Sinon: retourner array vide pour forcer la définition d'un examId
+  const filteredGrades = examId 
+    ? grades.filter(grade => grade.exam_id === examId)
+    : []; // Forcer un examId valide
     
     console.log('useNotesSync: Notes filtrées pour cet examen:', {
       totalGrades: grades.length,
@@ -185,8 +185,14 @@ export const useNotesSync = ({ classeId, matiereId, examId, studentId, isComposi
       return;
     }
 
+    // VALIDATION CRITIQUE : examId doit être défini pour éviter les fuites entre examens
+    if (!examId) {
+      console.error('useNotesSync: examId manquant, impossible de sauvegarder');
+      throw new Error('examId est requis pour sauvegarder les notes');
+    }
+
     try {
-      console.log('useNotesSync: Début sauvegarde', localNotes.length, 'notes');
+      console.log('useNotesSync: Début sauvegarde', localNotes.length, 'notes pour examId:', examId);
       
       const savePromises = localNotes.flatMap((note) => {
         const promises = [];
@@ -197,7 +203,7 @@ export const useNotesSync = ({ classeId, matiereId, examId, studentId, isComposi
             promises.push(upsertGrade({
               student_id: note.eleveId,
               subject_id: note.matiereId,
-              exam_id: examId || undefined,
+              exam_id: examId, // TOUJOURS défini maintenant
               grade_value: parseFloat(note.devoir),
               max_grade: 20,
               coefficient: note.coefficient,
@@ -210,7 +216,7 @@ export const useNotesSync = ({ classeId, matiereId, examId, studentId, isComposi
             promises.push(upsertGrade({
               student_id: note.eleveId,
               subject_id: note.matiereId,
-              exam_id: examId || undefined,
+              exam_id: examId, // TOUJOURS défini maintenant
               grade_value: parseFloat(note.composition),
               max_grade: 20,
               coefficient: note.coefficient,
@@ -224,7 +230,7 @@ export const useNotesSync = ({ classeId, matiereId, examId, studentId, isComposi
             promises.push(upsertGrade({
               student_id: note.eleveId,
               subject_id: note.matiereId,
-              exam_id: examId || undefined,
+              exam_id: examId, // TOUJOURS défini maintenant
               grade_value: parseFloat(note.note),
               max_grade: 20,
               coefficient: note.coefficient,
