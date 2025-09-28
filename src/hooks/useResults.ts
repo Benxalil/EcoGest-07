@@ -175,7 +175,7 @@ export const useResults = () => {
                     subject_name: subject?.name || 'Matière inconnue',
                     grade_value: grade.grade_value,
                     max_grade: grade.max_grade,
-                    coefficient: grade.coefficient,
+                    coefficient: subject?.coefficient || grade.coefficient, // Utiliser le coefficient actuel de la matière
                     exam_type: grade.exam_type,
                     semester: grade.semester
                   };

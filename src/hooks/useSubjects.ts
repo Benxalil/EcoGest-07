@@ -149,6 +149,10 @@ export const useSubjects = (classId?: string) => {
 
       await fetchSubjects();
 
+      // Émettre un événement pour notifier que les matières ont été mises à jour
+      window.dispatchEvent(new CustomEvent('matieresUpdated'));
+      localStorage.setItem('matieresUpdated', Date.now().toString());
+
       toast({
         title: "Matière mise à jour",
         description: "La matière a été mise à jour avec succès.",
