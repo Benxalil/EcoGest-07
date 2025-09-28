@@ -44,6 +44,9 @@ export default function ResultatsSemestre() {
   const classData = getClassResults(classeId || '');
   const examData = isExamView ? getExamResults(classeId || '', examId || '') : null;
   
+  // Pour la vue semestre, prendre le premier examen disponible ou créer des données par défaut
+  const activeExamData = examData || (classData?.exams && classData.exams.length > 0 ? classData.exams[0] : null);
+  
   // Adapter les données pour la compatibilité avec l'interface existante
   const classe = classData ? {
     id: classData.class_id,
@@ -52,7 +55,7 @@ export default function ResultatsSemestre() {
     effectif: classData.effectif
   } : null;
   
-  const eleves = examData ? examData.students.map(student => ({
+  const eleves = activeExamData ? activeExamData.students.map(student => ({
     id: student.student_id,
     nom: student.last_name,
     prenom: student.first_name,
@@ -60,7 +63,7 @@ export default function ResultatsSemestre() {
     numero: typeof student.numero === 'number' ? student.numero : 0
   })) : [];
   
-  const matieresClasse = examData ? examData.subjects.map(subject => ({
+  const matieresClasse = activeExamData ? activeExamData.subjects.map(subject => ({
     id: parseInt(subject.subject_id),
     nom: subject.subject_name
   })) : [];
@@ -90,7 +93,7 @@ export default function ResultatsSemestre() {
 
   const getSemestreLabel = () => {
     if (isExamView) {
-      return examData?.exam_title || examInfo?.title || examInfo?.examTitle || "EXAMEN";
+      return activeExamData?.exam_title || examInfo?.title || examInfo?.examTitle || "EXAMEN";
     }
     
     if (schoolSystem === 'trimestre') {
@@ -111,7 +114,7 @@ export default function ResultatsSemestre() {
 
   // Fonction pour calculer les statistiques d'un élève (utilise le nouveau hook)
   const getEleveStatistics = (eleveId: string) => {
-    if (!classeId || !examId) {
+    if (!classeId || !activeExamData?.exam_id) {
       return {
         totalNotes: 0,
         totalCoefficient: 0,
@@ -125,7 +128,7 @@ export default function ResultatsSemestre() {
       };
     }
 
-    const stats = getStudentExamStats(classeId, examId, eleveId);
+    const stats = getStudentExamStats(classeId, activeExamData.exam_id, eleveId);
     return stats || {
       totalNotes: 0,
       totalCoefficient: 0,
@@ -259,7 +262,7 @@ export default function ResultatsSemestre() {
   }
 
   // Vérification des données
-  if (!classe || !examData) {
+  if (!classe || !activeExamData) {
     return (
       <Layout>
         <div className="text-center text-gray-500 p-6">
@@ -292,9 +295,9 @@ export default function ResultatsSemestre() {
               <p className="text-gray-600">
                 Liste des élèves pour cette classe (Nombre d'élèves : {eleves.length})
               </p>
-              {isExamView && examData && (
+              {isExamView && activeExamData && (
                 <p className="text-sm text-gray-500">
-                  Date: {new Date(examData.exam_date).toLocaleDateString()}
+                  Date: {new Date(activeExamData.exam_date).toLocaleDateString()}
                 </p>
               )}
             </div>
@@ -338,7 +341,7 @@ export default function ResultatsSemestre() {
               <TableRow>
                 <TableHead className="w-12">N°</TableHead>
                 <TableHead>Nom et Prénom</TableHead>
-                {(isExamView && examData?.exam_title.toLowerCase().includes('composition')) ? (
+                {(isExamView && activeExamData?.exam_title.toLowerCase().includes('composition')) ? (
                   <>
                     <TableHead className="w-32 text-center">Note</TableHead>
                     <TableHead className="w-32 text-center">Moyenne</TableHead>
@@ -497,7 +500,7 @@ export default function ResultatsSemestre() {
                 matieresClasse={matieresClasse}
                 schoolSystem={schoolSystem}
                 classeId={classe.id}
-                examId={examId}
+                examId={activeExamData?.exam_id}
               />
             )}
           </DialogContent>
