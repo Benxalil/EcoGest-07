@@ -50,7 +50,7 @@ export const useNotesSync = ({ classeId, matiereId, examId, studentId, isComposi
       return;
     }
 
-    // Si pas de notes en base, retourner vide
+    // Si pas de notes en base, initialiser avec une structure vide pour les élèves/matières attendus
     if (!grades.length) {
       console.log('useNotesSync: Aucune note en base de données');
       setLocalNotes([]);
@@ -58,22 +58,34 @@ export const useNotesSync = ({ classeId, matiereId, examId, studentId, isComposi
       return;
     }
 
-    // Filtrer les notes UNIQUEMENT pour cet examen spécifique
-    const filteredGrades = grades.filter(grade => grade.exam_id === examId);
+    // Afficher toutes les notes pour debug
+    console.log('useNotesSync: Toutes les notes de la base:', grades.map(g => ({
+      id: g.id,
+      student_id: g.student_id,
+      subject_id: g.subject_id,
+      exam_id: g.exam_id,
+      exam_type: g.exam_type,
+      grade_value: g.grade_value
+    })));
+
+    // Filtrer les notes pour cet examen spécifique OU sans exam_id pour compatibilité
+    const filteredGrades = grades.filter(grade => 
+      !examId || grade.exam_id === examId || !grade.exam_id
+    );
     
     console.log('useNotesSync: Notes filtrées pour cet examen:', {
       totalGrades: grades.length,
       filteredGrades: filteredGrades.length,
-      examId
+      examId,
+      filteredData: filteredGrades.map(g => ({
+        id: g.id,
+        student_id: g.student_id,
+        subject_id: g.subject_id,
+        exam_id: g.exam_id,
+        exam_type: g.exam_type,
+        grade_value: g.grade_value
+      }))
     });
-
-    // Si aucune note pour cet examen, retourner vide  
-    if (!filteredGrades.length) {
-      console.log('useNotesSync: Aucune note pour cet examen spécifique');
-      setLocalNotes([]);
-      setHasUnsavedChanges(false);
-      return;
-    }
 
     // Grouper et traiter les notes par élève et matière
     const notesByStudentAndSubject: { [key: string]: UnifiedNote } = {};
@@ -96,13 +108,13 @@ export const useNotesSync = ({ classeId, matiereId, examId, studentId, isComposi
       if (isComposition) {
         // Pour les compositions : séparer devoir et composition
         if (grade.exam_type === 'devoir') {
-          notesByStudentAndSubject[key].devoir = grade.grade_value.toString();
+          notesByStudentAndSubject[key].devoir = grade.grade_value?.toString() || '';
         } else if (grade.exam_type === 'composition') {
-          notesByStudentAndSubject[key].composition = grade.grade_value.toString();
+          notesByStudentAndSubject[key].composition = grade.grade_value?.toString() || '';
         }
       } else {
         // Pour les autres examens : note simple
-        notesByStudentAndSubject[key].note = grade.grade_value.toString();
+        notesByStudentAndSubject[key].note = grade.grade_value?.toString() || '';
       }
     });
     
@@ -120,7 +132,7 @@ export const useNotesSync = ({ classeId, matiereId, examId, studentId, isComposi
   // Obtenir une note pour un élève et une matière spécifiques
   const getNote = useCallback((eleveId: string, matiereId: string): UnifiedNote | null => {
     const note = localNotes.find(n => n.eleveId === eleveId && n.matiereId === matiereId);
-    console.log('useNotesSync: getNote pour', eleveId, matiereId, ':', note);
+    console.log('useNotesSync: getNote pour', eleveId, matiereId, ':', note || 'null');
     return note || null;
   }, [localNotes]);
 
@@ -238,6 +250,11 @@ export const useNotesSync = ({ classeId, matiereId, examId, studentId, isComposi
       // SYNCHRONISATION : Recharger depuis la base pour garantir la cohérence
       await refetchGrades();
       setHasUnsavedChanges(false);
+      
+      // Forcer le rechargement immédiat des notes locales
+      setTimeout(() => {
+        loadNotesFromDatabase();
+      }, 100);
       
     } catch (error) {
       console.error('useNotesSync: Erreur lors de la sauvegarde:', error);
