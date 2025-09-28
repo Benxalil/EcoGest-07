@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
+import { generateUUID } from "@/utils/uuid";
 interface DocumentData {
   name: string;
   file: File | null;
@@ -112,12 +113,14 @@ const getNextStudentNumber = async (schoolId: string): Promise<string> => {
       
       // Protection contre les boucles infinies
       if (nextNumber > 9999) {
-        return `ELEVE${Date.now().toString().slice(-6)}`;
+        const randomSuffix = Math.floor(Math.random() * 999999).toString().padStart(6, '0');
+        return `ELEVE${randomSuffix}`;
       }
     }
   } catch (error) {
     console.error("Erreur lors de la génération du numéro:", error);
-    return `ELEVE${Date.now().toString().slice(-6)}`;
+    const randomSuffix = Math.floor(Math.random() * 999999).toString().padStart(6, '0');
+    return `ELEVE${randomSuffix}`;
   }
 };
 
@@ -211,7 +214,7 @@ const saveEleveToStorage = async (eleveData: EleveFormData, photo?: string | nul
   try {
     const existingEleves = localStorage.getItem('eleves');
     const eleves = existingEleves ? JSON.parse(existingEleves) : [];
-    const eleveId = Date.now().toString();
+    const eleveId = generateUUID();
     const eleveWithId = {
       id: eleveId,
       ...eleveData,

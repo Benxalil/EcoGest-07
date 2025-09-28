@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserRole } from './useUserRole';
 import { useToast } from '@/hooks/use-toast';
+import { isValidUUID, isTimestamp } from '@/utils/uuid';
 
 export interface Grade {
   id: string;
@@ -120,6 +121,31 @@ export const useGrades = (studentId?: string, subjectId?: string, examId?: strin
     try {
       console.log('useGrades: Création de note avec:', gradeData);
       
+      // Validation des UUIDs avant insertion
+      if (!isValidUUID(gradeData.student_id)) {
+        console.error('useGrades: student_id invalide:', gradeData.student_id);
+        if (isTimestamp(gradeData.student_id)) {
+          throw new Error('ID élève invalide: utilise un format timestamp au lieu d\'un UUID');
+        }
+        throw new Error(`ID élève invalide: ${gradeData.student_id}`);
+      }
+      
+      if (!isValidUUID(gradeData.subject_id)) {
+        console.error('useGrades: subject_id invalide:', gradeData.subject_id);
+        if (isTimestamp(gradeData.subject_id)) {
+          throw new Error('ID matière invalide: utilise un format timestamp au lieu d\'un UUID');
+        }
+        throw new Error(`ID matière invalide: ${gradeData.subject_id}`);
+      }
+      
+      if (gradeData.exam_id && gradeData.exam_id !== 'null' && !isValidUUID(gradeData.exam_id)) {
+        console.error('useGrades: exam_id invalide:', gradeData.exam_id);
+        if (isTimestamp(gradeData.exam_id)) {
+          throw new Error('ID examen invalide: utilise un format timestamp au lieu d\'un UUID');
+        }
+        throw new Error(`ID examen invalide: ${gradeData.exam_id}`);
+      }
+      
       // Nettoyer les données avant insertion
       const cleanGradeData = {
         ...gradeData,
@@ -156,7 +182,9 @@ export const useGrades = (studentId?: string, subjectId?: string, examId?: strin
       
       let errorMessage = "Une erreur est survenue lors de l'enregistrement de la note.";
       
-      if (err?.code === '23505') {
+      if (err?.code === '22P02') {
+        errorMessage = "Format d'identifiant invalide. Veuillez rafraîchir la page et réessayer.";
+      } else if (err?.code === '23505') {
         errorMessage = "Cette note existe déjà pour cet élève et cette matière.";
       } else if (err?.code === '23503') {
         errorMessage = "Élève, matière ou examen introuvable.";

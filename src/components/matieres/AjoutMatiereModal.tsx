@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useNotifications } from "@/hooks/useNotifications";
+import { generateUUID } from "@/utils/uuid";
 
 interface Classe {
   id: string;
@@ -14,7 +15,7 @@ interface Classe {
 }
 
 interface Matiere {
-  id: number;
+  id: string;
   nom: string;
   abreviation?: string;
   moyenne: string;
@@ -51,7 +52,7 @@ export function AjoutMatiereModal({ open, onOpenChange, onSuccess }: AjoutMatier
   const handleAddMatiere = () => {
     if (newMatiere.nom && newMatiere.moyenne && newMatiere.coefficient && newMatiere.classeId) {
       const nouvelleMatiere: Matiere = {
-        id: Date.now(),
+        id: generateUUID(),
         nom: newMatiere.nom,
         abreviation: newMatiere.abreviation || undefined,
         moyenne: newMatiere.moyenne,
