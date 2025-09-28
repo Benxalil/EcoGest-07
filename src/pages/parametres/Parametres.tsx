@@ -655,7 +655,29 @@ export default function Parametres() {
                     <div className="flex space-x-2">
                       <Input
                         id="school-suffix"
-                        value={schoolData?.school_suffix || ''}
+                        value={(() => {
+                          // Générer automatiquement le préfixe si absent
+                          if (!schoolData?.school_suffix && schoolData?.name) {
+                            const generateSchoolPrefix = (name: string) => {
+                              return name
+                                .toLowerCase()
+                                .replace(/[^a-z0-9\s]/g, '') // Supprimer caractères spéciaux
+                                .replace(/\s+/g, '_') // Remplacer espaces par underscores
+                                .replace(/_+/g, '_') // Éviter underscores multiples
+                                .replace(/^_|_$/g, ''); // Supprimer underscores début/fin
+                            };
+                            
+                            const autoPrefix = generateSchoolPrefix(schoolData.name);
+                            
+                            // Mettre à jour automatiquement en base de données
+                            if (updateSchoolData && autoPrefix) {
+                              updateSchoolData({ school_suffix: autoPrefix }).catch(console.error);
+                            }
+                            
+                            return autoPrefix;
+                          }
+                          return schoolData?.school_suffix || '';
+                        })()}
                         onChange={async (e) => {
                           const newSuffix = e.target.value.replace(/\s+/g, '_').toLowerCase();
                           if (schoolData && updateSchoolData) {
