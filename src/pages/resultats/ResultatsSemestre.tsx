@@ -419,15 +419,13 @@ export default function ResultatsSemestre() {
                         <TableCell className="text-center bg-blue-50 border-r">
                           <div className="grid grid-cols-2 gap-2">
                             <div className="text-sm font-medium text-gray-700">
-                              {/* Calculer et afficher les notes devoir pour toutes les matières */}
+                              {/* Calculer et afficher le total des notes devoir */}
                               {(() => {
                                 const devoirNotes = stats.notesList
                                   .filter(note => note.devoirNote && note.devoirNote > 0)
                                   .map(note => note.devoirNote);
-                                return devoirNotes.length > 0 ? 
-                                  devoirNotes.map((note, i) => (
-                                    <div key={i} className="text-xs">{note?.toFixed(1)}</div>
-                                  )) : "-";
+                                const totalDevoir = devoirNotes.reduce((sum, note) => sum + note, 0);
+                                return devoirNotes.length > 0 ? totalDevoir.toFixed(1) : "-";
                               })()}
                             </div>
                             <div className={`text-sm font-bold ${stats.moyenneDevoir > 0 ? getGradeColor(stats.moyenneDevoir) : "text-gray-400"}`}>
@@ -440,15 +438,13 @@ export default function ResultatsSemestre() {
                         <TableCell className="text-center bg-green-50">
                           <div className="grid grid-cols-2 gap-2">
                             <div className="text-sm font-medium text-gray-700">
-                              {/* Calculer et afficher les notes composition pour toutes les matières */}
+                              {/* Calculer et afficher le total des notes composition */}
                               {(() => {
                                 const compositionNotes = stats.notesList
                                   .filter(note => note.compositionNote && note.compositionNote > 0)
                                   .map(note => note.compositionNote);
-                                return compositionNotes.length > 0 ? 
-                                  compositionNotes.map((note, i) => (
-                                    <div key={i} className="text-xs">{note?.toFixed(1)}</div>
-                                  )) : "-";
+                                const totalComposition = compositionNotes.reduce((sum, note) => sum + note, 0);
+                                return compositionNotes.length > 0 ? totalComposition.toFixed(1) : "-";
                               })()}
                             </div>
                             <div className={`text-sm font-bold ${stats.moyenneComposition > 0 ? getGradeColor(stats.moyenneComposition) : "text-gray-400"}`}>
