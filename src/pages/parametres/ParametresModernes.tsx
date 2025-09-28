@@ -85,15 +85,15 @@ export default function ParametresModernes() {
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   
-  // États pour les informations d'école éditables
+  // États pour les informations d'école éditables - initialisées avec les données réelles
   const [schoolInfo, setSchoolInfo] = useState({
-    name: '',
-    phone: '',
-    address: '',
-    email: '',
-    language: 'french' as DatabaseType['public']['Enums']['language_type'],
-    schoolPrefix: '',
-    slogan: ''
+    name: schoolData?.name || '',
+    phone: schoolData?.phone || '',
+    address: schoolData?.address || '',
+    email: schoolData?.email || '',
+    language: (schoolData?.language || 'french') as DatabaseType['public']['Enums']['language_type'],
+    schoolPrefix: schoolData?.school_suffix || '',
+    slogan: schoolData?.slogan || ''
   });
 
   // États pour tous les paramètres
@@ -155,16 +155,16 @@ export default function ParametresModernes() {
     loadAllSettings();
   }, []);
 
-  // Synchroniser avec les données de l'école
+  // Synchroniser avec les données de l'école - se déclenche dès que schoolData est disponible
   useEffect(() => {
-    if (schoolData) {
+    if (schoolData && !schoolLoading) {
       setGeneralSettings(prev => ({
         ...prev,
         systemType: schoolData.semester_type || 'semester',
         anneeScolaire: schoolData.academic_year || academicYear
       }));
       
-      // Synchroniser les informations de l'école
+      // Synchroniser les informations de l'école avec les vraies données
       const generateSchoolPrefix = (name: string) => {
         return name
           .toLowerCase()
@@ -174,6 +174,15 @@ export default function ParametresModernes() {
           .replace(/^_|_$/g, ''); // Supprimer underscores début/fin
       };
       
+      console.log('Synchronisation des données école:', {
+        name: schoolData.name,
+        phone: schoolData.phone,
+        address: schoolData.address,
+        email: schoolData.email,
+        slogan: schoolData.slogan,
+        school_suffix: schoolData.school_suffix
+      });
+      
       setSchoolInfo({
         name: schoolData.name || '',
         phone: schoolData.phone || '',
@@ -181,14 +190,14 @@ export default function ParametresModernes() {
         email: schoolData.email || '',
         language: schoolData.language || 'french',
         schoolPrefix: schoolData.school_suffix || generateSchoolPrefix(schoolData.name || 'ecole'),
-        slogan: schoolData.slogan || 'Excellence et Innovation'
+        slogan: schoolData.slogan || ''
       });
       
       if (schoolData.logo_url) {
         setLogoPreview(schoolData.logo_url);
       }
     }
-  }, [schoolData, academicYear]);
+  }, [schoolData, academicYear, schoolLoading]);
 
   const loadAllSettings = () => {
     try {
@@ -305,8 +314,8 @@ export default function ParametresModernes() {
       // Déclencher un événement pour notifier les autres composants
       window.dispatchEvent(new Event('schoolSettingsUpdated'));
       
-      // Déclencher une actualisation des données d'école pour tous les composants qui utilisent useSchoolData
-      await new Promise(resolve => setTimeout(resolve, 100)); // Petit délai pour s'assurer que la DB est mise à jour
+      // Forcer le rechargement des données école pour une mise à jour instantanée
+      await new Promise(resolve => setTimeout(resolve, 200)); // Délai pour s'assurer que la DB est mise à jour
       
       setHasUnsavedChanges(false);
       
