@@ -29,9 +29,9 @@ export function SchoolInfo({
     };
   }, [refreshSchoolData]);
 
-  const displayName = schoolName || schoolData.name || "École Connectée";
-  const displaySlogan = schoolData.slogan || "Excellence et Innovation";
-  const displayLogo = schoolLogo || schoolData.logo_url;
+  const displayName = schoolName || schoolData?.name || "École Connectée";
+  const displaySlogan = schoolData?.slogan || "Excellence et Innovation";
+  const displayLogo = schoolLogo || schoolData?.logo_url;
   return (
     <div className={`flex items-center space-x-3 ${className}`}>
       <div className="text-right">
