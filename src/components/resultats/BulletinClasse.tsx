@@ -152,9 +152,18 @@ export const BulletinClasse: React.FC<BulletinClasseProps> = ({
     // Si l'examen est de type Composition, afficher le semestre
     if (examData?.title?.toLowerCase().includes('composition') || examData?.exam_title?.toLowerCase().includes('composition')) {
       if (schoolSystem === 'trimestre') {
-        return semestre === "1" ? "1er TRIMESTRE" : "2e TRIMESTRE";
+        switch(semestre) {
+          case "1": return "1er TRIMESTRE";
+          case "2": return "2e TRIMESTRE";
+          case "3": return "3e TRIMESTRE";
+          default: return "1er TRIMESTRE";
+        }
       } else {
-        return semestre === "1" ? "1er SEMESTRE" : "2e SEMESTRE";
+        switch(semestre) {
+          case "1": return "1er SEMESTRE";
+          case "2": return "2e SEMESTRE";
+          default: return "1er SEMESTRE";
+        }
       }
     }
     // Sinon, afficher le nom exact de l'examen
@@ -175,7 +184,7 @@ export const BulletinClasse: React.FC<BulletinClasseProps> = ({
         <div className="text-center space-y-2">
           <h2 className="text-2xl font-bold text-blue-800">BULLETIN COLLECTIF DE LA CLASSE</h2>
           <div className="text-lg font-semibold text-blue-700">
-            {classe.libelle}
+            {classe.session} {classe.libelle}
           </div>
           <div className="text-base text-blue-600">
             {getExamLabel()} - Effectif: {eleves.length} élèves
@@ -203,14 +212,14 @@ export const BulletinClasse: React.FC<BulletinClasseProps> = ({
               <TableHead className="text-white font-bold">Prénom & Nom</TableHead>
               <TableHead className="text-white font-bold text-center">Date de Naissance</TableHead>
               {/* Affichage conditionnel selon le type d'examen */}
-              {examData?.exam_title.toLowerCase().includes('composition') ? (
+              {(examData?.exam_title?.toLowerCase().includes('composition') || examData?.title?.toLowerCase().includes('composition')) ? (
                 <>
                   <TableHead className="text-white font-bold text-center">Moyenne Devoir</TableHead>
                   <TableHead className="text-white font-bold text-center">Moyenne Composition</TableHead>
                 </>
               ) : (
                 <TableHead className="text-white font-bold text-center">
-                  {examData?.exam_title || 'Moyenne'}
+                  {examData?.exam_title || examData?.title || 'Moyenne'}
                 </TableHead>
               )}
               <TableHead className="text-white font-bold text-center">Appréciation</TableHead>
@@ -234,7 +243,7 @@ export const BulletinClasse: React.FC<BulletinClasseProps> = ({
                     {dateNaissance}
                   </TableCell>
                   {/* Affichage conditionnel selon le type d'examen */}
-                  {examData?.exam_title.toLowerCase().includes('composition') ? (
+                  {(examData?.exam_title?.toLowerCase().includes('composition') || examData?.title?.toLowerCase().includes('composition')) ? (
                     <>
                       <TableCell className="text-center font-medium">
                         {stats.moyenneDevoir > 0 ? stats.moyenneDevoir.toFixed(2) : "-"}

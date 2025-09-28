@@ -227,9 +227,18 @@ export const generateBulletinClassePDF = async (
       // Si l'examen est de type Composition, afficher le semestre
       if (examData?.title?.toLowerCase().includes('composition') || examData?.exam_title?.toLowerCase().includes('composition')) {
         if (schoolSystem === 'trimestre') {
-          return semestre === "1" ? "1er TRIMESTRE" : "2e TRIMESTRE";
+          switch(semestre) {
+            case "1": return "1er TRIMESTRE";
+            case "2": return "2e TRIMESTRE"; 
+            case "3": return "3e TRIMESTRE";
+            default: return "1er TRIMESTRE";
+          }
         } else {
-          return semestre === "1" ? "1er SEMESTRE" : "2e SEMESTRE";
+          switch(semestre) {
+            case "1": return "1er SEMESTRE";
+            case "2": return "2e SEMESTRE";
+            default: return "1er SEMESTRE";
+          }
         }
       }
       // Sinon, afficher le nom exact de l'examen
@@ -334,7 +343,7 @@ export const generateBulletinClassePDF = async (
     const rightColX = infoTableX + infoTableWidth / 2 + 8;
     let infoY = infoTableY - 18;
 
-    page.drawText(`Classe : ${classe.libelle}`, { x: leftColX, y: infoY, size: 10, font: boldFont });
+    page.drawText(`Classe : ${classe.session} ${classe.libelle}`, { x: leftColX, y: infoY, size: 10, font: boldFont });
     page.drawText(`Effectif : ${elevesWithStats.length} élèves`, { x: rightColX, y: infoY, size: 10, font: boldFont });
 
     infoY -= 16;
@@ -348,8 +357,12 @@ export const generateBulletinClassePDF = async (
     const tableY = yPos;
     const tableWidth = 555;
     
-    // Column configuration - New layout with Date and Lieu de naissance
-    const columnWidths = [35, 120, 80, 80, 70, 75, 95]; // Rang, Nom, Date Naiss, Lieu Naiss, Moy Dev, Moy Comp, Appréciation
+    // Column configuration - Conditional based on exam type
+    const isCompositionExam = examData?.title?.toLowerCase().includes('composition') || examData?.exam_title?.toLowerCase().includes('composition');
+    const columnWidths = isCompositionExam ? 
+      [35, 120, 80, 80, 70, 75, 95] : // Rang, Nom, Date Naiss, Lieu Naiss, Moy Dev, Moy Comp, Appréciation
+      [35, 140, 100, 100, 90, 90];    // Rang, Nom, Date Naiss, Lieu Naiss, Moyenne, Appréciation
+    
     const numRows = elevesWithStats.length + 1; // +1 for header
     const rowHeight = 20;
 
@@ -379,8 +392,12 @@ export const generateBulletinClassePDF = async (
       color: rgb(0.9, 0.9, 0.9)
     });
 
-    // Header texts
-    const headers = ['Rang', 'Prénom & Nom', 'Date Naiss.', 'Lieu Naiss.', 'Moy. Dev', 'Moy. Comp', 'Appréciation'];
+    // Header texts - conditional based on exam type
+    const headers = isCompositionExam ? 
+      ['Rang', 'Prénom & Nom', 'Date Naiss.', 'Lieu Naiss.', 'Moy. Dev', 'Moy. Comp', 'Appréciation'] :
+      ['Rang', 'Prénom & Nom', 'Date Naiss.', 'Lieu Naiss.', 'Moyenne', 'Appréciation'];
+    
+    // Adjust column widths based on exam type - removed duplicate declaration
     let headerX = tableX;
     headers.forEach((header, index) => {
       const textWidth = boldFont.widthOfTextAtSize(header, 8);
@@ -407,13 +424,21 @@ export const generateBulletinClassePDF = async (
       const nomComplet = `${eleve.prenom} ${eleve.nom}`;
       const nomTronque = nomComplet.length > 18 ? nomComplet.substring(0, 18) + '...' : nomComplet;
       
-      const rowData = [
+      // Row data - conditional based on exam type
+      const rowData = isCompositionExam ? [
         eleve.rang.toString(),
         nomTronque,
         eleve.dateNaissance,
         eleve.lieuNaissance || '-',
         eleve.moyenneDevoir.toFixed(1),
         eleve.moyenneComposition.toFixed(1),
+        eleve.appreciation
+      ] : [
+        eleve.rang.toString(),
+        nomTronque,
+        eleve.dateNaissance,
+        eleve.lieuNaissance || '-',
+        eleve.moyenneGenerale.toFixed(1),
         eleve.appreciation
       ];
 
