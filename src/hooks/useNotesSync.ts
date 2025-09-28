@@ -42,15 +42,11 @@ export const useNotesSync = ({ classeId, matiereId, examId, studentId, isComposi
       isComposition
     });
 
-    // RÈGLE CRITIQUE: Nouvel examen = champs vides par défaut
-    if (!examId) {
-      console.log('useNotesSync: Nouvel examen détecté → champs vides');
-      setLocalNotes([]);
-      setHasUnsavedChanges(false);
-      return;
-    }
-
-    // Si pas de notes en base, initialiser avec une structure vide pour les élèves/matières attendus
+    // CORRECTION: Ne vider les notes que si explicitement demandé (nouveau contexte d'examen)
+    // Si on a un studentId défini, c'est qu'on est dans un contexte de consultation/saisie
+    // Dans ce cas, charger toutes les notes disponibles même sans examId spécifique
+    
+    // Si pas de notes en base, initialiser structure vide
     if (!grades.length) {
       console.log('useNotesSync: Aucune note en base de données');
       setLocalNotes([]);
@@ -68,10 +64,12 @@ export const useNotesSync = ({ classeId, matiereId, examId, studentId, isComposi
       grade_value: g.grade_value
     })));
 
-    // Filtrer les notes pour cet examen spécifique OU sans exam_id pour compatibilité
-    const filteredGrades = grades.filter(grade => 
-      !examId || grade.exam_id === examId || !grade.exam_id
-    );
+    // CORRECTION: Filtrer plus intelligemment
+    // - Si examId défini: prendre uniquement les notes de cet examen
+    // - Sinon: prendre les notes avec exam_id null/undefined (notes génériques)
+    const filteredGrades = examId 
+      ? grades.filter(grade => grade.exam_id === examId)
+      : grades.filter(grade => !grade.exam_id);
     
     console.log('useNotesSync: Notes filtrées pour cet examen:', {
       totalGrades: grades.length,

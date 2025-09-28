@@ -76,6 +76,7 @@ export default function NotesParEleve() {
   } = useNotesSync({
     classeId: classeId || undefined,
     studentId: selectedEleve?.id,
+    examId: undefined, // Pas d'examId spécifique, on récupère les notes génériques
     isComposition: examInfo?.type === 'Composition'
   });
   useEffect(() => {
