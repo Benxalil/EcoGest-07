@@ -362,7 +362,7 @@ export default function ResultatsSemestre() {
                 <TableHead className="w-12">N°</TableHead>
                 {showCalculatedRank && <TableHead className="w-16 text-center">Rang</TableHead>}
                 <TableHead>Nom et Prénom</TableHead>
-                {(isExamView && activeExamData?.exam_title?.toLowerCase().includes('composition')) ? (
+                {(activeExamData?.exam_title?.toLowerCase().includes('composition')) ? (
                   <>
                     <TableHead className="w-40 text-center bg-blue-50 border-r">Devoir</TableHead>
                     <TableHead className="w-40 text-center bg-green-50">Composition</TableHead>
@@ -376,7 +376,7 @@ export default function ResultatsSemestre() {
                 <TableHead className="w-20 text-center">Action</TableHead>
                 <TableHead className="w-40 text-center">Bulletins de notes</TableHead>
               </TableRow>
-              {(isExamView && activeExamData?.exam_title?.toLowerCase().includes('composition')) && (
+              {(activeExamData?.exam_title?.toLowerCase().includes('composition')) && (
                 <TableRow className="bg-gray-50">
                   <TableHead></TableHead>
                   {showCalculatedRank && <TableHead></TableHead>}
@@ -413,7 +413,7 @@ export default function ResultatsSemestre() {
                     )}
                     <TableCell className="font-medium">{eleve.prenom} {eleve.nom}</TableCell>
                     
-                    {(isExamView && activeExamData?.exam_title?.toLowerCase().includes('composition')) ? (
+                    {(activeExamData?.exam_title?.toLowerCase().includes('composition')) ? (
                       <>
                         {/* Colonne Devoir avec séparateur */}
                         <TableCell className="text-center bg-blue-50 border-r">
@@ -542,7 +542,7 @@ export default function ResultatsSemestre() {
                     <TableHeader>
                       <TableRow className="bg-blue-600 text-white">
                         <TableHead className="text-white font-bold">Matière</TableHead>
-                        {(isExamView && activeExamData?.exam_title?.toLowerCase().includes('composition')) ? (
+                        {(activeExamData?.exam_title?.toLowerCase().includes('composition')) ? (
                           <>
                             <TableHead className="text-white font-bold text-center">Note Devoir</TableHead>
                             <TableHead className="text-white font-bold text-center">Note Composition</TableHead>
@@ -562,7 +562,7 @@ export default function ResultatsSemestre() {
                           <TableRow key={matiere.id} className="hover:bg-gray-50">
                             <TableCell className="font-medium">{matiere.nom}</TableCell>
                             
-                            {(isExamView && activeExamData?.exam_title?.toLowerCase().includes('composition')) ? (
+                            {(activeExamData?.exam_title?.toLowerCase().includes('composition')) ? (
                               <>
                                 <TableCell className="text-center">
                                   <span className={matiereNote?.devoirNote ? getGradeColor(matiereNote.devoirNote) : "text-gray-400"}>
@@ -603,7 +603,7 @@ export default function ResultatsSemestre() {
                       const stats = getEleveStatistics(selectedEleve.id);
                       return (
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-                          {(isExamView && activeExamData?.exam_title?.toLowerCase().includes('composition')) && (
+                          {(activeExamData?.exam_title?.toLowerCase().includes('composition')) && (
                             <>
                               <div>
                                 <p className="text-sm text-gray-600">Moyenne Devoir</p>
