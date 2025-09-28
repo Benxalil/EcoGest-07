@@ -1648,6 +1648,10 @@ export type Database = {
       }
     }
     Functions: {
+      associate_orphan_grades_to_exams: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
       calculate_student_average: {
         Args: { class_id: string; semester: number; student_id: string }
         Returns: number
