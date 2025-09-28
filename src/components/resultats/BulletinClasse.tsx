@@ -148,16 +148,22 @@ export const BulletinClasse: React.FC<BulletinClasseProps> = ({
     }));
   };
 
-  const getSemestreLabel = () => {
-    if (schoolSystem === 'trimestre') {
-      return semestre === "1" ? "1er TRIMESTRE" : "2e TRIMESTRE"; } else {
-      return semestre === "1" ? "1er SEMESTRE" : "2e SEMESTRE";
+  const getExamLabel = () => {
+    // Si l'examen est de type Composition, afficher le semestre
+    if (examData?.title?.toLowerCase().includes('composition') || examData?.exam_title?.toLowerCase().includes('composition')) {
+      if (schoolSystem === 'trimestre') {
+        return semestre === "1" ? "1er TRIMESTRE" : "2e TRIMESTRE";
+      } else {
+        return semestre === "1" ? "1er SEMESTRE" : "2e SEMESTRE";
+      }
     }
+    // Sinon, afficher le nom exact de l'examen
+    return examData?.title || examData?.exam_title || 'Examen';
   };
 
   const handleExportPDF = () => {
     const elevesClasses = getElevesWithRank();
-    generateBulletinClassePDF(classe, elevesClasses as any, matieresClasse || [], semestre, schoolSystem || 'semestre', classeId || "");
+    generateBulletinClassePDF(classe, elevesClasses as any, matieresClasse || [], semestre, schoolSystem || 'semestre', classeId || "", examData);
   };
 
   const elevesClasses = getElevesWithRank();
@@ -169,10 +175,10 @@ export const BulletinClasse: React.FC<BulletinClasseProps> = ({
         <div className="text-center space-y-2">
           <h2 className="text-2xl font-bold text-blue-800">BULLETIN COLLECTIF DE LA CLASSE</h2>
           <div className="text-lg font-semibold text-blue-700">
-            {classe.session} {classe.libelle}
+            {classe.libelle}
           </div>
           <div className="text-base text-blue-600">
-            {getSemestreLabel()} - Effectif: {eleves.length} élèves
+            {getExamLabel()} - Effectif: {eleves.length} élèves
           </div>
         </div>
         

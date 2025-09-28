@@ -83,7 +83,8 @@ export const generateBulletinClassePDF = async (
   matieresClasse: Matiere[],
   semestre: string,
   schoolSystem: 'semestre' | 'trimestre',
-  classeId: string
+  classeId: string,
+  examData?: any
 ) => {
   try {
     const academicYear = await getSchoolAcademicYear();
@@ -222,11 +223,17 @@ export const generateBulletinClassePDF = async (
       return '-';
     };
 
-    const getSemestreLabel = () => {
-      if (schoolSystem === 'trimestre') {
-        return semestre === "1" ? "1er TRIMESTRE" : "2e TRIMESTRE"; } else {
-        return semestre === "1" ? "1er SEMESTRE" : "2e SEMESTRE";
+    const getExamLabel = () => {
+      // Si l'examen est de type Composition, afficher le semestre
+      if (examData?.title?.toLowerCase().includes('composition') || examData?.exam_title?.toLowerCase().includes('composition')) {
+        if (schoolSystem === 'trimestre') {
+          return semestre === "1" ? "1er TRIMESTRE" : "2e TRIMESTRE";
+        } else {
+          return semestre === "1" ? "1er SEMESTRE" : "2e SEMESTRE";
+        }
       }
+      // Sinon, afficher le nom exact de l'examen
+      return examData?.title || examData?.exam_title || 'Examen';
     };
 
     // Calculate student statistics and ranking
@@ -276,7 +283,7 @@ export const generateBulletinClassePDF = async (
 
     // =============== TITLE WITH LINES ===============
     yPos -= 35;
-    const titleText = `BULLETIN DE LA CLASSE - ${getSemestreLabel()}`;
+    const titleText = `BULLETIN DE LA CLASSE - ${getExamLabel()}`;
     const titleWidth = boldFont.widthOfTextAtSize(titleText, 12);
     const titleX = (width - titleWidth) / 2;
     
@@ -327,13 +334,13 @@ export const generateBulletinClassePDF = async (
     const rightColX = infoTableX + infoTableWidth / 2 + 8;
     let infoY = infoTableY - 18;
 
-    page.drawText(`Classe : ${classe.session} ${classe.libelle}`, { x: leftColX, y: infoY, size: 10, font: boldFont });
+    page.drawText(`Classe : ${classe.libelle}`, { x: leftColX, y: infoY, size: 10, font: boldFont });
     page.drawText(`Effectif : ${elevesWithStats.length} élèves`, { x: rightColX, y: infoY, size: 10, font: boldFont });
 
     infoY -= 16;
     const currentDate = new Date().toLocaleDateString('fr-FR');
     page.drawText(`Date : ${currentDate}`, { x: leftColX, y: infoY, size: 9, font });
-    page.drawText(`Période : ${getSemestreLabel()}`, { x: rightColX, y: infoY, size: 9, font });
+    page.drawText(`Période : ${getExamLabel()}`, { x: rightColX, y: infoY, size: 9, font });
 
     // =============== MAIN TABLE ===============
     yPos -= 75;
@@ -476,7 +483,7 @@ export const generateBulletinClassePDF = async (
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `Bulletin_Classe_${classe.session}_${classe.libelle}_${getSemestreLabel()}.pdf`;
+    a.download = `Bulletin_Classe_${classe.libelle}_${getExamLabel()}.pdf`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
