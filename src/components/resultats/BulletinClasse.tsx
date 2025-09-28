@@ -1,8 +1,10 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Download } from "lucide-react";
 import { generateBulletinClassePDF } from "@/utils/pdfGeneratorClasse";
+import { useResults } from "@/hooks/useResults";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Student {
   id: string;
@@ -50,6 +52,7 @@ interface BulletinClasseProps {
   semestre: string;
   schoolSystem?: 'semestre' | 'trimestre';
   classeId?: string;
+  examId?: string;
   onClose?: () => void;
 }
 
@@ -59,66 +62,48 @@ export const BulletinClasse: React.FC<BulletinClasseProps> = ({
   matieresClasse,
   semestre,
   schoolSystem,
-  classeId
+  classeId,
+  examId
 }) => {
-  // Fonction pour récupérer les notes d'un élève pour les matières de la classe
-  const getEleveNotesForAllMatieres = (eleveId: string) => {
-    const notesParMatiere: { [key: string]: EleveNote } = {};
-    matieresClasse.forEach(matiere => {
-      const notesKey = `notes_${classeId}_${matiere.id}`;
-      const savedNotes = localStorage.getItem(notesKey);
-      if (savedNotes) {
-        const notes = JSON.parse(savedNotes);
-        const eleveNote = notes.find((note: EleveNote) => note.eleveId === eleveId);
-        if (eleveNote) {
-          notesParMatiere[matiere.nom] = eleveNote;
-        }
-      }
-    });
-    return notesParMatiere;
-  };
+  const [studentsData, setStudentsData] = useState<any[]>([]);
+  const { getStudentExamStats } = useResults();
 
-  // Fonction pour calculer les statistiques d'un élève
+  // Récupérer les données des élèves depuis la base de données
+  useEffect(() => {
+    const fetchStudentsData = async () => {
+      if (!classeId) return;
+      
+      const { data, error } = await supabase
+        .from('students')
+        .select('id, first_name, last_name, date_of_birth, student_number')
+        .eq('class_id', classeId);
+      
+      if (error) {
+        console.error('Erreur lors de la récupération des élèves:', error);
+        return;
+      }
+      
+      setStudentsData(data || []);
+    };
+
+    fetchStudentsData();
+  }, [classeId]);
+
+  // Fonction pour récupérer les statistiques d'un élève via le hook useResults
   const getEleveStatistics = (eleveId: string) => {
-    const notesParMatiere = getEleveNotesForAllMatieres(eleveId);
-    const semestreKey = semestre === "1" ? "semestre1" : "semestre2";
-    let totalDevoir = 0;
-    let countDevoir = 0;
-    let totalComposition = 0;
-    let countComposition = 0;
+    if (!classeId || !examId) {
+      return {
+        moyenneGenerale: 0,
+        moyenneDevoir: 0,
+        moyenneComposition: 0
+      };
+    }
 
-    Object.entries(notesParMatiere).forEach(([matiere, notes]) => {
-      const notesSemestre = notes[semestreKey as keyof typeof notes];
-
-      if (notesSemestre && typeof notesSemestre === 'object' && 'devoir' in notesSemestre && 'composition' in notesSemestre) {
-        const devoirValue = typeof notesSemestre.devoir === 'string' ? parseFloat(notesSemestre.devoir) : notesSemestre.devoir;
-        const compositionValue = typeof notesSemestre.composition === 'string' ? parseFloat(notesSemestre.composition) : notesSemestre.composition;
-        
-        if (devoirValue !== -1 && !isNaN(devoirValue) && devoirValue > 0) {
-          totalDevoir += devoirValue;
-          countDevoir++;
-        }
-        if (compositionValue !== -1 && !isNaN(compositionValue) && compositionValue > 0) {
-          totalComposition += compositionValue;
-          countComposition++;
-        }
-      }
-    });
-
-    const moyenneDevoir = countDevoir > 0 ? totalDevoir / countDevoir : 0;
-    const moyenneComposition = countComposition > 0 ? totalComposition / countComposition : 0;
-    const moyenneGenerale = countDevoir > 0 && countComposition > 0 
-      ? (moyenneDevoir + moyenneComposition) / 2 
-      : countDevoir > 0 
-      ? moyenneDevoir 
-      : countComposition > 0 
-      ? moyenneComposition 
-      : 0;
-
-    return { 
-      moyenneGenerale,
-      moyenneDevoir,
-      moyenneComposition
+    const stats = getStudentExamStats(classeId, examId, eleveId);
+    return {
+      moyenneGenerale: stats?.moyenneGenerale || 0,
+      moyenneDevoir: stats?.moyenneDevoir || 0,
+      moyenneComposition: stats?.moyenneComposition || 0
     };
   };
 
@@ -132,22 +117,16 @@ export const BulletinClasse: React.FC<BulletinClasseProps> = ({
     return "Médiocre";
   };
 
-  // Fonction pour obtenir la date de naissance d'un élève
+  // Fonction pour obtenir la date de naissance d'un élève depuis la base de données
   const getDateNaissance = (eleveId: string) => {
-    try {
-      const savedStudents = localStorage.getItem("eleves");
-      if (savedStudents) {
-        const students = JSON.parse(savedStudents);
-        const student = students.find((s: any) => s.id === eleveId);
-        return student?.dateNaissance || "Non renseignée";
-      }
-    } catch (error) {
-      console.error("Erreur lors de la récupération des élèves:", error);
+    const student = studentsData.find(s => s.id === eleveId);
+    if (student?.date_of_birth) {
+      return new Date(student.date_of_birth).toLocaleDateString('fr-FR');
     }
     return "Non renseignée";
   };
 
-  // Calculer le classement des élèves
+  // Calculer le classement des élèves avec les vraies données
   const getElevesWithRank = () => {
     const elevesWithStats = eleves.map(eleve => {
       const stats = getEleveStatistics(eleve.id);

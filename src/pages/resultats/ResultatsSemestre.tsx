@@ -497,6 +497,7 @@ export default function ResultatsSemestre() {
                 matieresClasse={matieresClasse}
                 schoolSystem={schoolSystem}
                 classeId={classe.id}
+                examId={examId}
               />
             )}
           </DialogContent>
