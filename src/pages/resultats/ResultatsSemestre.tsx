@@ -516,7 +516,7 @@ export default function ResultatsSemestre() {
                   <div>
                     <h3 className="font-semibold mb-2">Informations</h3>
                     <p><strong>Classe:</strong> {selectedEleve.classe}</p>
-                    <p><strong>Numéro:</strong> {selectedEleve.numero || 'N/A'}</p>
+                    <p><strong>Matricule:</strong> {selectedEleve.numero || 'N/A'}</p>
                   </div>
                   <div>
                     <h3 className="font-semibold mb-2">Statistiques</h3>
