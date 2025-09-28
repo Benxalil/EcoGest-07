@@ -205,6 +205,25 @@ export default function ResultatsSemestre() {
     }
   };
 
+  const handleGeneratePDFForStudent = async (eleve: Student) => {
+    if (!classe) return;
+    
+    try {
+      // Créer un objet classe compatible pour generateBulletinPDF
+      const classeForPDF = {
+        id: classe.id,
+        session: classe.session,
+        libelle: classe.libelle,
+        effectif: classe.effectif
+      };
+      
+      // Générer le PDF pour l'élève spécifique
+      await generateBulletinPDF(eleve, classeForPDF, getSemestreLabel());
+    } catch (error) {
+      console.error("Erreur lors de la génération du PDF:", error);
+    }
+  };
+
   const getGradeColor = (note: number) => {
     if (note >= 16) return "text-green-600 font-semibold";
     if (note >= 14) return "text-blue-600 font-semibold";
@@ -376,7 +395,7 @@ export default function ResultatsSemestre() {
                         variant="default"
                         size="sm"
                         className="bg-green-600 hover:bg-green-700 text-white"
-                        onClick={() => handleViewDetails(eleve)}
+                        onClick={() => handleGeneratePDFForStudent(eleve)}
                       >
                         Bulletin de notes
                       </Button>
