@@ -78,55 +78,86 @@ export const generateBulletinPDF = async (
 
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-  const schoolSettings = getSchoolSettings();
 
-  // Helper functions
-  const getEleveInfo = async () => {
-    // TODO: Remplacer par hook Supabase
-    const savedEleves = null; // Temporaire - remplacer par useStudents
-    let eleveComplet = eleve;
-    
-    // First check localStorage for existing data
-    if (savedEleves) {
-      const elevesData = JSON.parse(savedEleves);
-      const eleveDetails = elevesData.find((e: any) => e.id === eleve.id);
-      if (eleveDetails) {
-        // Merge all eleve data, including numeroPerso as matricule
-        eleveComplet = { 
-          ...eleve, 
-          ...eleveDetails,
-          matricule: eleveDetails.numeroPerso || eleveDetails.matricule // Use numeroPerso as matricule
+  // Récupérer les vraies données de l'école
+  const getSchoolData = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return { nom: 'École Connectée', academic_year: '2024/2025' };
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('school_id')
+        .eq('id', user.id)
+        .single();
+
+      if (profile?.school_id) {
+        const { data: school } = await supabase
+          .from('schools')
+          .select('name, academic_year')
+          .eq('id', profile.school_id)
+          .single();
+
+        return {
+          nom: school?.name || 'École Connectée',
+          academic_year: school?.academic_year || '2024/2025'
         };
       }
+      return { nom: 'École Connectée', academic_year: '2024/2025' };
+    } catch (error) {
+      console.error('Erreur récupération école:', error);
+      return { nom: 'École Connectée', academic_year: '2024/2025' };
     }
+  };
+
+  const schoolData = await getSchoolData();
+
+  // Helper functions - Récupération des vraies données
+  const getEleveInfo = async () => {
+    let eleveComplet = eleve;
     
-    // Try to get additional data from Supabase (for newer students)
+    // Récupérer les données de l'élève depuis Supabase
     try {
       const { data: student } = await supabase
         .from('students')
-        .select('date_of_birth, place_of_birth, student_number')
-        .eq('first_name', eleve.prenom)
-        .eq('last_name', eleve.nom)
+        .select('date_of_birth, place_of_birth, student_number, class_id')
+        .eq('id', eleve.id)
         .single();
         
       if (student) {
-        if (student.date_of_birth) eleveComplet.dateNaissance = student.date_of_birth;
+        if (student.date_of_birth) {
+          eleveComplet.dateNaissance = new Date(student.date_of_birth).toLocaleDateString('fr-FR');
+        }
         if (student.place_of_birth) eleveComplet.lieuNaissance = student.place_of_birth;
         if (student.student_number) eleveComplet.matricule = student.student_number;
       }
     } catch (error) {
-      // Debug remplacé par hook Supabase
+      console.error('Erreur récupération données élève:', error);
     }
     
-    // Get classe details for series information
-    // TODO: Remplacer par hook Supabase
-    const savedClasses = null; // Temporaire - remplacer par useClasses
-    if (savedClasses) {
-      const classesData = JSON.parse(savedClasses);
-      const classeDetails = classesData.find((c: any) => c.id === classe.id);
-      if (classeDetails && classeDetails.serie) {
-        eleveComplet.serie = classeDetails.serie;
+    // Récupérer la série de la classe depuis Supabase
+    try {
+      const { data: classData } = await supabase
+        .from('classes')
+        .select('*')
+        .eq('id', classe.id)
+        .single();
+        
+      // Récupérer la série séparément si elle existe
+      if (classData) {
+        const { data: seriesData } = await supabase
+          .from('series')
+          .select('name, code')
+          .eq('school_id', classData.school_id)
+          .limit(1)
+          .single();
+          
+        if (seriesData) {
+          eleveComplet.serie = seriesData.name || seriesData.code;
+        }
       }
+    } catch (error) {
+      console.error('Erreur récupération série classe:', error);
     }
     
     return eleveComplet;
@@ -153,44 +184,79 @@ export const generateBulletinPDF = async (
     return { retards, absJustifiees, absNonJustifiees };
   };
 
-  // Get and merge data first
+  // Récupérer les vraies données
   const eleveInfo = await getEleveInfo();
-  // Remplacé par hook Supabase
-      // const savedMatieres = // localStorage.getItem("matieres") // Remplacé par hook Supabase;
-  // TODO: Remplacer par hook Supabase
-  const savedMatieres = null; // Temporaire - remplacer par useSubjects
+  
+  // Récupérer les matières de la classe depuis Supabase
   let matieresClasse: any[] = [];
-  if (savedMatieres) {
-    const allMatieres = JSON.parse(savedMatieres);
-    matieresClasse = allMatieres.filter((matiere: any) => matiere.classeId === classe.id);
+  try {
+    const { data: subjects } = await supabase
+      .from('subjects')
+      .select('id, name, coefficient, code, max_score')
+      .eq('class_id', classe.id);
+      
+    if (subjects) {
+      matieresClasse = subjects.map(subject => ({
+        id: subject.id,
+        nom: subject.name,
+        coefficient: subject.coefficient || 1,
+        code: subject.code,
+        maxScore: subject.max_score || 20
+      }));
+    }
+  } catch (error) {
+    console.error('Erreur récupération matières:', error);
   }
+
+  // Récupérer les notes depuis Supabase
+  const getNotesEleve = async () => {
+    try {
+      const { data: grades } = await supabase
+        .from('grades')
+        .select(`
+          *,
+          subjects!inner(id, name, coefficient)
+        `)
+        .eq('student_id', eleve.id)
+        .in('subject_id', matieresClasse.map(m => m.id));
+
+      return grades || [];
+    } catch (error) {
+      console.error('Erreur récupération notes:', error);
+      return [];
+    }
+  };
+
+  const notesEleve = await getNotesEleve();
 
   const getMoyenneSemestre = (semestreNum: string) => {
     let totalPoints = 0;
     let totalCoef = 0;
     
     matieresClasse.forEach((matiere) => {
-      const notesKey = `notes_${classe.id}_${matiere.id}`;
-      const savedNotes = localStorage.getItem(notesKey);
+    // Trouver les notes de cette matière pour l'élève
+    const notesMatiere = notesEleve.filter(note => 
+      note.subject_id === matiere.id && 
+      note.semester === semestreNum
+    );
       
-      if (savedNotes) {
-        const notes = JSON.parse(savedNotes);
-        const eleveNote = notes.find((note: EleveNote) => note.eleveId === eleve.id);
-        if (eleveNote) {
-          const semestreKey = semestreNum === "1" ? "semestre1" : "semestre2";
-          const notesSemestre = eleveNote[semestreKey as keyof typeof eleveNote];
-          
-          if (notesSemestre && typeof notesSemestre === 'object' && 'devoir' in notesSemestre && 'composition' in notesSemestre) {
-            const devoirValue = typeof notesSemestre.devoir === 'string' ? parseFloat(notesSemestre.devoir) : notesSemestre.devoir;
-            const compositionValue = typeof notesSemestre.composition === 'string' ? parseFloat(notesSemestre.composition) : notesSemestre.composition;
-            
-            if (devoirValue !== -1 && !isNaN(devoirValue) && compositionValue !== -1 && !isNaN(compositionValue)) {
-              const moyenne = (devoirValue + compositionValue) / 2;
-              const coef = parseFloat(matiere.coefficient) || 1; // Utiliser le coefficient de la matière
-              totalPoints += moyenne * coef;
-              totalCoef += coef;
-            }
+      if (notesMatiere.length > 0) {
+        // Calculer la moyenne des notes de cette matière
+        let totalNotesMatiere = 0;
+        let countNotes = 0;
+        
+        notesMatiere.forEach(note => {
+          if (note.grade_value && !isNaN(parseFloat(String(note.grade_value)))) {
+            totalNotesMatiere += parseFloat(String(note.grade_value));
+            countNotes++;
           }
+        });
+        
+        if (countNotes > 0) {
+          const moyenneMatiere = totalNotesMatiere / countNotes;
+          const coef = parseFloat(matiere.coefficient) || 1;
+          totalPoints += moyenneMatiere * coef;
+          totalCoef += coef;
         }
       }
     });
@@ -198,64 +264,76 @@ export const generateBulletinPDF = async (
     return totalCoef > 0 ? (totalPoints / totalCoef) : null;
   };
 
-  const getRangSemestre = (semestreNum: string) => {
-    // Get all students in the class
-    // TODO: Remplacer par hook Supabase
-    const savedEleves = null; // Temporaire - remplacer par useStudents
-    if (!savedEleves) return { rang: null, total: 0 };
-    
-    const elevesData = JSON.parse(savedEleves);
-    const elevesClasse = elevesData.filter((e: any) => e.classe === eleve.classe);
-    
-    // Calculate averages for all students
-    const moyennesEleves: { eleveId: string, moyenne: number }[] = [];
-    
-    elevesClasse.forEach((etudiant: any) => {
-      let totalPoints = 0;
-      let totalCoef = 0;
+  const getRangSemestre = async (semestreNum: string) => {
+    try {
+      // Récupérer tous les élèves de la classe
+      const { data: elevesClasse } = await supabase
+        .from('students')
+        .select('id, first_name, last_name')
+        .eq('class_id', classe.id);
       
-      matieresClasse.forEach((matiere) => {
-        const notesKey = `notes_${classe.id}_${matiere.id}`;
-        const savedNotes = localStorage.getItem(notesKey);
-        
-        if (savedNotes) {
-          const notes = JSON.parse(savedNotes);
-          const eleveNote = notes.find((note: EleveNote) => note.eleveId === etudiant.id);
-          if (eleveNote) {
-            const semestreKey = semestreNum === "1" ? "semestre1" : "semestre2";
-            const notesSemestre = eleveNote[semestreKey as keyof typeof eleveNote];
+      if (!elevesClasse) return { rang: null, total: 0 };
+      
+      // Calculer les moyennes de tous les élèves
+      const moyennesEleves: { eleveId: string, moyenne: number }[] = [];
+      
+      for (const etudiant of elevesClasse) {
+        // Récupérer les notes de cet élève
+        const { data: notesEtudiant } = await supabase
+          .from('grades')
+          .select('*')
+          .eq('student_id', etudiant.id)
+          .eq('semester', semestreNum)
+          .in('subject_id', matieresClasse.map(m => m.id));
+          
+        if (notesEtudiant && notesEtudiant.length > 0) {
+          let totalPoints = 0;
+          let totalCoef = 0;
+          
+          matieresClasse.forEach((matiere) => {
+            const notesMatiere = notesEtudiant.filter(note => note.subject_id === matiere.id);
             
-            if (notesSemestre && typeof notesSemestre === 'object' && 'devoir' in notesSemestre && 'composition' in notesSemestre) {
-              const devoirValue = typeof notesSemestre.devoir === 'string' ? parseFloat(notesSemestre.devoir) : notesSemestre.devoir;
-              const compositionValue = typeof notesSemestre.composition === 'string' ? parseFloat(notesSemestre.composition) : notesSemestre.composition;
+            if (notesMatiere.length > 0) {
+              let totalNotesMatiere = 0;
+              let countNotes = 0;
               
-              if (devoirValue !== -1 && !isNaN(devoirValue) && compositionValue !== -1 && !isNaN(compositionValue)) {
-                const moyenne = (devoirValue + compositionValue) / 2;
-                const coef = parseFloat(matiere.coefficient) || 1; // Utiliser le coefficient de la matière
-                totalPoints += moyenne * coef;
+              notesMatiere.forEach(note => {
+                if (note.grade_value && !isNaN(parseFloat(String(note.grade_value)))) {
+                  totalNotesMatiere += parseFloat(String(note.grade_value));
+                  countNotes++;
+                }
+              });
+              
+              if (countNotes > 0) {
+                const moyenneMatiere = totalNotesMatiere / countNotes;
+                const coef = parseFloat(matiere.coefficient) || 1;
+                totalPoints += moyenneMatiere * coef;
                 totalCoef += coef;
               }
             }
+          });
+          
+          if (totalCoef > 0) {
+            moyennesEleves.push({
+              eleveId: etudiant.id,
+              moyenne: totalPoints / totalCoef
+            });
           }
         }
-      });
-      
-      if (totalCoef > 0) {
-        moyennesEleves.push({
-          eleveId: etudiant.id,
-          moyenne: totalPoints / totalCoef
-        });
       }
-    });
-    
-    // Sort by average (descending)
-    moyennesEleves.sort((a, b) => b.moyenne - a.moyenne);
-    
-    // Find current student's rank
-    const rangIndex = moyennesEleves.findIndex(e => e.eleveId === eleve.id);
-    const rang = rangIndex !== -1 ? rangIndex + 1 : null;
-    
-    return { rang, total: moyennesEleves.length };
+      
+      // Trier par moyenne décroissante
+      moyennesEleves.sort((a, b) => b.moyenne - a.moyenne);
+      
+      // Trouver le rang de l'élève actuel
+      const rangIndex = moyennesEleves.findIndex(e => e.eleveId === eleve.id);
+      const rang = rangIndex !== -1 ? rangIndex + 1 : null;
+      
+      return { rang, total: moyennesEleves.length };
+    } catch (error) {
+      console.error('Erreur calcul rang:', error);
+      return { rang: null, total: 0 };
+    }
   };
 
   const drawTable = (x: number, y: number, cellWidth: number, cellHeight: number, rows: number, cols: number) => {
@@ -308,6 +386,22 @@ export const generateBulletinPDF = async (
   }
 
   const absencesData = getAbsencesRetards();
+  
+  // Calculer l'effectif réel de la classe
+  let effectifReel = classe.effectif;
+  try {
+    const { data: studentsCount } = await supabase
+      .from('students')
+      .select('id', { count: 'exact' })
+      .eq('class_id', classe.id)
+      .eq('is_active', true);
+    
+    if (studentsCount) {
+      effectifReel = studentsCount.length;
+    }
+  } catch (error) {
+    console.error('Erreur calcul effectif:', error);
+  }
 
   // EXACT REPRODUCTION OF CANVA MODEL - Precise positioning
   let yPos = height - 45;
@@ -316,7 +410,7 @@ export const generateBulletinPDF = async (
   page.drawText('RÉPUBLIQUE DU SÉNÉGAL', {
     x: 40, y: yPos, size: 10, font: boldFont
   });
-  page.drawText(schoolSettings.nom || 'École Connectée', {
+  page.drawText(schoolData.nom, {
     x: width - 180, y: yPos, size: 10, font: boldFont
   });
 
@@ -324,7 +418,7 @@ export const generateBulletinPDF = async (
   page.drawText('Ministère de l\'Éducation nationale', {
     x: 40, y: yPos, size: 8, font
   });
-  page.drawText(`Année scolaire ${academicYear}`, {
+  page.drawText(`Année scolaire ${schoolData.academic_year}`, {
     x: width - 160, y: yPos, size: 8, font
   });
 
@@ -405,7 +499,7 @@ export const generateBulletinPDF = async (
 
   infoY -= rowSpacing;
   // Fourth row - strictly aligned
-  page.drawText(`Effectif de la classe : ${classe.effectif}`, { x: leftColX, y: infoY, size: 8, font });
+  page.drawText(`Effectif de la classe : ${effectifReel}`, { x: leftColX, y: infoY, size: 8, font });
   page.drawText(`Série : ${eleveInfo.serie || '__________'}`, { x: rightColX, y: infoY, size: 8, font });
 
   // =============== MAIN GRADES TABLE ===============
@@ -556,8 +650,8 @@ export const generateBulletinPDF = async (
   const rightBlockX = leftX + 8 + semestreBlockWidth + 8;
   
   // Calculate ranks for both semesters
-  const rangSemestre1 = getRangSemestre("1");
-  const rangSemestre2 = getRangSemestre("2");
+  const rangSemestre1 = await getRangSemestre("1");
+  const rangSemestre2 = await getRangSemestre("2");
 
   // Semestre 1 block - always show
   page.drawText('Semestre 1:', { x: leftBlockX, y: row1Y - 28, size: 7, font: boldFont });
