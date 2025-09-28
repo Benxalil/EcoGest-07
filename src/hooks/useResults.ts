@@ -3,57 +3,50 @@ import { supabase } from '@/integrations/supabase/client';
 import { useUserRole } from './useUserRole';
 import { useToast } from '@/hooks/use-toast';
 
+// Interface simplifiée pour les résultats d'élèves
 export interface StudentResult {
   student_id: string;
   first_name: string;
   last_name: string;
   numero?: string;
-  class_id: string;
-  class_name: string;
   class_level: string;
   class_section: string;
+  grades: Array<{
+    subject_id: string;
+    subject_name: string;
+    grade_value: number;
+    max_grade: number;
+    coefficient: number;
+    exam_type: string;
+    semester?: string;
+  }>;
 }
 
+// Interface pour les matières
 export interface SubjectResult {
   subject_id: string;
   subject_name: string;
-  subject_abbreviation: string;
   coefficient: number;
-  max_score: number;
-  hours_per_week: number;
 }
 
+// Interface pour les examens avec structure simplifiée
 export interface ExamResult {
   exam_id: string;
   exam_title: string;
-  exam_description?: string;
   exam_date: string;
-  class_id: string;
-  class_name: string;
-  class_level: string;
-  class_section: string;
-  subjects: SubjectResult[];
+  exam_description?: string;
+  is_published: boolean;
   students: StudentResult[];
-  grades: {
-    [studentId: string]: {
-      [subjectId: string]: {
-        devoir?: number;
-        composition?: number;
-        note?: number;
-        moyenne?: number;
-        coefficient: number;
-        max_score: number;
-      };
-    };
-  };
+  subjects: SubjectResult[];
 }
 
+// Interface pour les résultats par classe
 export interface ClassResults {
   class_id: string;
   class_name: string;
   class_level: string;
   class_section: string;
-  effectif?: number; // Optionnel car la colonne n'existe peut-être pas
+  effectif: number;
   exams: ExamResult[];
 }
 
@@ -64,9 +57,10 @@ export const useResults = () => {
   const { userProfile } = useUserRole();
   const { toast } = useToast();
 
+  // Fonction pour récupérer DIRECTEMENT les vraies données de la base de données
   const fetchResults = useCallback(async () => {
     if (!userProfile?.schoolId) {
-      console.log('useResults: Pas de schoolId, arrêt du fetch');
+      console.log('useResults: Pas de schoolId trouvé');
       setResults([]);
       setLoading(false);
       return;
@@ -76,218 +70,128 @@ export const useResults = () => {
       setLoading(true);
       setError(null);
       
-      console.log('useResults: Début du fetch des résultats pour schoolId:', userProfile.schoolId);
+      console.log('useResults: Récupération des VRAIES données depuis la base pour schoolId:', userProfile.schoolId);
 
-      // 1. Récupérer toutes les classes de l'école
-      const { data: classes, error: classesError } = await supabase
+      // 1. Récupérer les classes
+      const { data: classesData, error: classesError } = await supabase
         .from('classes')
+        .select('id, name, level, section, academic_year_id')
+        .eq('school_id', userProfile.schoolId);
+
+      if (classesError) throw classesError;
+
+      // 2. Récupérer les examens  
+      const { data: examsData, error: examsError } = await supabase
+        .from('exams')
+        .select('id, title, description, exam_date, class_id, is_published')
+        .eq('school_id', userProfile.schoolId);
+
+      if (examsError) throw examsError;
+
+      // 3. Récupérer les matières
+      const { data: subjectsData, error: subjectsError } = await supabase
+        .from('subjects')
+        .select('id, name, abbreviation, coefficient, class_id')
+        .eq('school_id', userProfile.schoolId);
+
+      if (subjectsError) throw subjectsError;
+
+      // 4. Récupérer les élèves
+      const { data: studentsData, error: studentsError } = await supabase
+        .from('students')
+        .select('id, first_name, last_name, student_number, class_id')
+        .eq('school_id', userProfile.schoolId);
+
+      if (studentsError) throw studentsError;
+
+      // 5. Récupérer TOUTES les vraies notes depuis la table grades
+      const { data: gradesData, error: gradesError } = await supabase
+        .from('grades')
         .select(`
           id,
-          name,
-          level,
-          section,
-          academic_year_id
+          student_id,
+          subject_id,
+          exam_id,
+          grade_value,
+          max_grade,
+          coefficient,
+          semester,
+          exam_type,
+          school_id
         `)
-        .eq('school_id', userProfile.schoolId)
-        .order('level', { ascending: true })
-        .order('section', { ascending: true });
+        .eq('school_id', userProfile.schoolId);
 
-      if (classesError) {
-        console.error('useResults: Erreur lors de la récupération des classes:', classesError);
-        throw classesError;
-      }
+      if (gradesError) throw gradesError;
 
-      console.log('useResults: Classes récupérées:', classes?.length);
+      console.log('useResults: Données récupérées depuis la base:', {
+        classes: classesData?.length || 0,
+        exams: examsData?.length || 0,
+        subjects: subjectsData?.length || 0,
+        students: studentsData?.length || 0,
+        grades: gradesData?.length || 0
+      });
 
-      if (!classes || classes.length === 0) {
-        setResults([]);
-        setLoading(false);
-        return;
-      }
-
-      // 2. Pour chaque classe, récupérer les examens et les données associées
-      const classResults: ClassResults[] = [];
-
-      for (const classe of classes) {
-        console.log(`useResults: Traitement de la classe ${classe.name}`);
-
-        // Récupérer les examens de cette classe
-        const { data: exams, error: examsError } = await supabase
-          .from('exams')
-          .select('*')
-          .eq('class_id', classe.id)
-          .eq('school_id', userProfile.schoolId)
-          .order('exam_date', { ascending: false });
-
-        if (examsError) {
-          console.error(`useResults: Erreur lors de la récupération des examens pour la classe ${classe.name}:`, examsError);
-          continue;
-        }
-
-        if (!exams || exams.length === 0) {
-          console.log(`useResults: Aucun examen pour la classe ${classe.name}`);
-          continue;
-        }
-
-        // Récupérer les matières de cette classe
-        const { data: subjects, error: subjectsError } = await supabase
-          .from('subjects')
-          .select('*')
-          .eq('class_id', classe.id)
-          .eq('school_id', userProfile.schoolId)
-          .order('name', { ascending: true });
-
-        if (subjectsError) {
-          console.error(`useResults: Erreur lors de la récupération des matières pour la classe ${classe.name}:`, subjectsError);
-          continue;
-        }
-
-        // Récupérer les élèves de cette classe
-        const { data: students, error: studentsError } = await supabase
-          .from('students')
-          .select('*')
-          .eq('class_id', classe.id)
-          .eq('school_id', userProfile.schoolId)
-          .order('first_name', { ascending: true });
-
-        if (studentsError) {
-          console.error(`useResults: Erreur lors de la récupération des élèves pour la classe ${classe.name}:`, studentsError);
-          continue;
-        }
-
-        // Récupérer toutes les notes pour cette classe (sans jointures complexes)
-        const { data: grades, error: gradesError } = await supabase
-          .from('grades')
-          .select('*')
-          .eq('school_id', userProfile.schoolId)
-          .in('student_id', students?.map(s => s.id) || [])
-          .in('subject_id', subjects?.map(s => s.id) || []);
-
-        if (gradesError) {
-          console.error(`useResults: Erreur lors de la récupération des notes pour la classe ${classe.name}:`, gradesError);
-          continue;
-        }
-
-        // Organiser les données par examen
-        const examResults: ExamResult[] = exams.map(exam => {
-          const examGrades = grades?.filter(g => g.exam_id === exam.id) || [];
-          
-          // Organiser les notes par élève et matière
-          const gradesByStudentAndSubject: {
-            [studentId: string]: {
-              [subjectId: string]: {
-                devoir?: number;
-                composition?: number;
-                note?: number;
-                moyenne?: number;
-                coefficient: number;
-                max_score: number;
-              };
-            };
-          } = {};
-
-          // Initialiser la structure pour tous les élèves et matières
-          students?.forEach(student => {
-            gradesByStudentAndSubject[student.id] = {};
-            subjects?.forEach(subject => {
-              gradesByStudentAndSubject[student.id][subject.id] = {
-                coefficient: subject.coefficient,
-                max_score: subject?.coefficient || 1,
-              };
-            });
-          });
-
-          // Remplir avec les notes existantes
-          examGrades.forEach(grade => {
-            const studentId = grade.student_id;
-            const subjectId = grade.subject_id;
-            
-            // Trouver les informations de la matière
-            const subject = subjects?.find(s => s.id === subjectId);
-            
-            if (!gradesByStudentAndSubject[studentId]) {
-              gradesByStudentAndSubject[studentId] = {};
-            }
-            if (!gradesByStudentAndSubject[studentId][subjectId]) {
-              gradesByStudentAndSubject[studentId][subjectId] = {
-                coefficient: subject?.coefficient || 1,
-                max_score: subject?.coefficient || 1
-              };
-            }
-
-            // Détecter le type d'examen basé sur le titre
-            const isCompositionExam = exam.title.toLowerCase().includes('composition') ||
-                                   exam.title.toLowerCase().includes('première composition') ||
-                                   exam.title.toLowerCase().includes('deuxième composition');
-
-            if (isCompositionExam) {
-              // Pour les compositions, séparer devoir et composition
-              if (grade.exam_type === 'devoir') {
-                gradesByStudentAndSubject[studentId][subjectId].devoir = grade.grade_value;
-              } else if (grade.exam_type === 'composition') {
-                gradesByStudentAndSubject[studentId][subjectId].composition = grade.grade_value;
-              }
-              
-              // Calculer la moyenne pour les compositions
-              const devoir = gradesByStudentAndSubject[studentId][subjectId].devoir;
-              const composition = gradesByStudentAndSubject[studentId][subjectId].composition;
-              if (devoir !== undefined && composition !== undefined) {
-                gradesByStudentAndSubject[studentId][subjectId].moyenne = (devoir + composition) / 2;
-              } else if (devoir !== undefined) {
-                gradesByStudentAndSubject[studentId][subjectId].moyenne = devoir;
-              } else if (composition !== undefined) {
-                gradesByStudentAndSubject[studentId][subjectId].moyenne = composition;
-              }
-            } else {
-              // Pour les autres examens, note simple
-              gradesByStudentAndSubject[studentId][subjectId].note = grade.grade_value;
-              gradesByStudentAndSubject[studentId][subjectId].moyenne = grade.grade_value;
-            }
-          });
-
-          return {
-            exam_id: exam.id,
-            exam_title: exam.title,
-            exam_description: exam.description,
-            exam_date: exam.exam_date,
-            class_id: classe.id,
-            class_name: classe.name,
-            class_level: classe.level,
-            class_section: classe.section,
-            subjects: subjects?.map(subject => ({
-              subject_id: subject.id,
-              subject_name: subject.name,
-              subject_abbreviation: subject.abbreviation,
-              coefficient: subject.coefficient,
-              max_score: subject?.coefficient || 1,
-              hours_per_week: subject.hours_per_week
-            })) || [],
-            students: students?.map(student => ({
-              student_id: student.id,
-              first_name: student.first_name,
-              last_name: student.last_name,
-              numero: student.student_number,
-              class_id: classe.id,
-              class_name: classe.name,
-              class_level: classe.level,
-              class_section: classe.section
-            })) || [],
-            grades: gradesByStudentAndSubject
-          };
-        });
-
-        classResults.push({
+      // Construire les résultats avec les VRAIES notes
+      const resultsData: ClassResults[] = classesData?.map(classe => {
+        const classExams = examsData?.filter(exam => exam.class_id === classe.id) || [];
+        const classStudents = studentsData?.filter(student => student.class_id === classe.id) || [];
+        const classSubjects = subjectsData?.filter(subject => subject.class_id === classe.id) || [];
+        
+        return {
           class_id: classe.id,
           class_name: classe.name,
           class_level: classe.level,
-          class_section: classe.section,
-          effectif: 0, // Valeur par défaut car la colonne n'existe pas
-          exams: examResults
-        });
-      }
+          class_section: classe.section || '',
+          effectif: classStudents.length,
+          exams: classExams.map(exam => ({
+            exam_id: exam.id,
+            exam_title: exam.title,
+            exam_date: exam.exam_date,
+            exam_description: exam.description || '',
+            is_published: exam.is_published,
+            
+            // Récupérer les élèves avec leurs vraies notes pour cet examen
+            students: classStudents.map(student => {
+              const studentGrades = gradesData?.filter(grade => 
+                grade.student_id === student.id && 
+                grade.exam_id === exam.id
+              ) || [];
 
-      console.log('useResults: Résultats finaux:', classResults);
-      setResults(classResults);
+              return {
+                student_id: student.id,
+                first_name: student.first_name,
+                last_name: student.last_name,
+                numero: student.student_number,
+                class_level: classe.level,
+                class_section: classe.section || '',
+                grades: studentGrades.map(grade => {
+                  const subject = classSubjects.find(s => s.id === grade.subject_id);
+                  return {
+                    subject_id: grade.subject_id,
+                    subject_name: subject?.name || 'Matière inconnue',
+                    grade_value: grade.grade_value,
+                    max_grade: grade.max_grade,
+                    coefficient: grade.coefficient,
+                    exam_type: grade.exam_type,
+                    semester: grade.semester
+                  };
+                })
+              };
+            }),
+            
+            // Matières pour cet examen
+            subjects: classSubjects.map(subject => ({
+              subject_id: subject.id,
+              subject_name: subject.name,
+              coefficient: subject.coefficient || 1
+            }))
+          }))
+        };
+      }) || [];
+
+      console.log('useResults: Données finales structurées avec VRAIES notes:', resultsData);
+      setResults(resultsData);
+
     } catch (err) {
       console.error('useResults: Erreur lors de la récupération des résultats:', err);
       const errorMessage = err instanceof Error ? err.message : 'Erreur inconnue';
@@ -307,92 +211,88 @@ export const useResults = () => {
     fetchResults();
   }, [fetchResults]);
 
-  // Fonction pour calculer les statistiques d'un élève pour un examen
+  // Fonction pour calculer les statistiques d'un élève pour un examen spécifique DEPUIS LES VRAIES NOTES
   const getStudentExamStats = useCallback((classId: string, examId: string, studentId: string) => {
-    const classResult = results.find(c => c.class_id === classId);
-    if (!classResult) return null;
+    console.log('useResults: getStudentExamStats pour:', { classId, examId, studentId });
+    
+    const classData = results.find(c => c.class_id === classId);
+    if (!classData) {
+      console.log('useResults: Classe non trouvée');
+      return null;
+    }
 
-    const exam = classResult.exams.find(e => e.exam_id === examId);
-    if (!exam) return null;
+    const examData = classData.exams.find(e => e.exam_id === examId);
+    if (!examData) {
+      console.log('useResults: Examen non trouvé');
+      return null;
+    }
 
-    const studentGrades = exam.grades[studentId];
-    if (!studentGrades) return null;
+    const studentData = examData.students.find(s => s.student_id === studentId);
+    if (!studentData) {
+      console.log('useResults: Élève non trouvé');
+      return null;
+    }
 
-    const stats = {
-      totalNotes: 0,
-      totalCoefficient: 0,
-      moyenneGenerale: 0,
-      notesList: [] as { subject: string; note: number; coefficient: number; max_score: number }[],
-      totalNotesDevoir: 0,
-      moyenneDevoir: 0,
-      totalNotesComposition: 0,
-      moyenneComposition: 0,
-      isComposition: exam.exam_title.toLowerCase().includes('composition')
-    };
+    // Calculer les statistiques à partir des vraies notes récupérées de la base
+    let totalNotes = 0;
+    let totalCoefficient = 0;
+    let totalNotesDevoir = 0;
+    let totalNotesComposition = 0;
+    let coeffDevoir = 0;
+    let coeffComposition = 0;
+    const notesList: Array<{note: number, coefficient: number, subject: string}> = [];
 
-    // Calculer les statistiques pour chaque matière
-    Object.entries(studentGrades).forEach(([subjectId, gradeData]) => {
-      const subject = exam.subjects.find(s => s.subject_id === subjectId);
-      if (!subject) return;
+    console.log('useResults: Notes de cet élève depuis la base:', studentData.grades);
 
-      if (stats.isComposition) {
-        // Pour les compositions
-        if (gradeData.devoir !== undefined) {
-          stats.totalNotesDevoir += gradeData.devoir * gradeData.coefficient;
-          stats.notesList.push({
-            subject: subject.subject_name,
-            note: gradeData.devoir,
-            coefficient: gradeData.coefficient,
-            max_score: gradeData.max_score
-          });
-        }
-        if (gradeData.composition !== undefined) {
-          stats.totalNotesComposition += gradeData.composition * gradeData.coefficient;
-        }
-        if (gradeData.moyenne !== undefined) {
-          stats.totalNotes += gradeData.moyenne * gradeData.coefficient;
-          stats.totalCoefficient += gradeData.coefficient;
-        }
-      } else {
-        // Pour les autres examens
-        if (gradeData.note !== undefined) {
-          stats.totalNotes += gradeData.note * gradeData.coefficient;
-          stats.totalCoefficient += gradeData.coefficient;
-          stats.notesList.push({
-            subject: subject.subject_name,
-            note: gradeData.note,
-            coefficient: gradeData.coefficient,
-            max_score: gradeData.max_score
-          });
+    studentData.grades.forEach(grade => {
+      const note = grade.grade_value;
+      const coeff = grade.coefficient;
+      const subject = grade.subject_name;
+      
+      if (note && note > 0) {
+        totalNotes += note * coeff;
+        totalCoefficient += coeff;
+        
+        notesList.push({
+          note: note,
+          coefficient: coeff,
+          subject: subject
+        });
+
+        // Séparer par type d'examen
+        if (grade.exam_type === 'devoir') {
+          totalNotesDevoir += note * coeff;
+          coeffDevoir += coeff;
+        } else if (grade.exam_type === 'composition') {
+          totalNotesComposition += note * coeff;
+          coeffComposition += coeff;
         }
       }
     });
 
-    // Calculer les moyennes
-    if (stats.totalCoefficient > 0) {
-      stats.moyenneGenerale = stats.totalNotes / stats.totalCoefficient;
-    }
+    const moyenneGenerale = totalCoefficient > 0 ? totalNotes / totalCoefficient : 0;
+    const moyenneDevoir = coeffDevoir > 0 ? totalNotesDevoir / coeffDevoir : 0;
+    const moyenneComposition = coeffComposition > 0 ? totalNotesComposition / coeffComposition : 0;
 
-    if (stats.isComposition) {
-      const devoirCoeff = exam.subjects.reduce((sum, s) => {
-        const grade = studentGrades[s.subject_id];
-        return sum + (grade?.devoir !== undefined ? grade.coefficient : 0);
-      }, 0);
-      
-      const compositionCoeff = exam.subjects.reduce((sum, s) => {
-        const grade = studentGrades[s.subject_id];
-        return sum + (grade?.composition !== undefined ? grade.coefficient : 0);
-      }, 0);
+    console.log('useResults: Statistiques calculées depuis la vraie base:', {
+      studentId,
+      totalNotes,
+      totalCoefficient,
+      moyenneGenerale,
+      notesList: notesList.length
+    });
 
-      if (devoirCoeff > 0) {
-        stats.moyenneDevoir = stats.totalNotesDevoir / devoirCoeff;
-      }
-      if (compositionCoeff > 0) {
-        stats.moyenneComposition = stats.totalNotesComposition / compositionCoeff;
-      }
-    }
-
-    return stats;
+    return {
+      totalNotes,
+      totalCoefficient,
+      moyenneGenerale,
+      notesList,
+      totalNotesDevoir,
+      moyenneDevoir,
+      totalNotesComposition,
+      moyenneComposition,
+      isComposition: examData.exam_title.toLowerCase().includes('composition')
+    };
   }, [results]);
 
   // Fonction pour obtenir les résultats d'une classe spécifique
