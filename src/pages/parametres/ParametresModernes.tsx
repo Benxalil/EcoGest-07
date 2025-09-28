@@ -18,6 +18,7 @@ import { useSubscription } from "@/hooks/useSubscription";
 import { SubscriptionAlert } from "@/components/subscription/SubscriptionAlert";
 import { useUserRole } from "@/hooks/useUserRole";
 import { TeacherSettings } from "@/components/parametres/TeacherSettings";
+import { Database as DatabaseType } from "@/integrations/supabase/types";
 
 interface GeneralSettings {
   formatNomUtilisateur: string;
@@ -83,6 +84,16 @@ export default function ParametresModernes() {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
+  
+  // États pour les informations d'école éditables
+  const [schoolInfo, setSchoolInfo] = useState({
+    name: '',
+    phone: '',
+    address: '',
+    email: '',
+    language: 'french' as DatabaseType['public']['Enums']['language_type'],
+    schoolPrefix: ''
+  });
 
   // États pour tous les paramètres
   const [generalSettings, setGeneralSettings] = useState<GeneralSettings>({
@@ -151,6 +162,25 @@ export default function ParametresModernes() {
         systemType: schoolData.semester_type || 'semester',
         anneeScolaire: schoolData.academic_year || academicYear
       }));
+      
+      // Synchroniser les informations de l'école
+      const generateSchoolPrefix = (name: string) => {
+        return name
+          .toLowerCase()
+          .replace(/[^a-z0-9\s]/g, '') // Supprimer caractères spéciaux
+          .replace(/\s+/g, '_') // Remplacer espaces par underscores
+          .replace(/_+/g, '_') // Éviter underscores multiples
+          .replace(/^_|_$/g, ''); // Supprimer underscores début/fin
+      };
+      
+      setSchoolInfo({
+        name: schoolData.name || '',
+        phone: schoolData.phone || '',
+        address: schoolData.address || '',
+        email: schoolData.email || '',
+        language: schoolData.language || 'french',
+        schoolPrefix: schoolData.school_suffix || generateSchoolPrefix(schoolData.name || 'ecole')
+      });
       
       if (schoolData.logo_url) {
         setLogoPreview(schoolData.logo_url);
@@ -245,10 +275,12 @@ export default function ParametresModernes() {
 
       // Sauvegarder les informations de l'école via useSchoolData
       const schoolUpdateSuccess = await updateSchoolData({
-        name: schoolData.name,
-        address: schoolData.address,
-        phone: schoolData.phone,
-        email: schoolData.email,
+        name: schoolInfo.name,
+        address: schoolInfo.address,
+        phone: schoolInfo.phone,
+        email: schoolInfo.email,
+        language: schoolInfo.language,
+        school_suffix: schoolInfo.schoolPrefix,
         academic_year: generalSettings.anneeScolaire,
         semester_type: generalSettings.systemType,
         logo_url: logoPreview || schoolData.logo_url
@@ -269,6 +301,9 @@ export default function ParametresModernes() {
 
       // Déclencher un événement pour notifier les autres composants
       window.dispatchEvent(new Event('schoolSettingsUpdated'));
+      
+      // Déclencher une actualisation des données d'école pour tous les composants qui utilisent useSchoolData
+      await new Promise(resolve => setTimeout(resolve, 100)); // Petit délai pour s'assurer que la DB est mise à jour
       
       setHasUnsavedChanges(false);
       
@@ -379,9 +414,9 @@ export default function ParametresModernes() {
                     <Label htmlFor="nom">Nom de l'École</Label>
                     <Input 
                       id="nom" 
-                      value={schoolData.name || ''} 
+                      value={schoolInfo.name} 
                       onChange={e => {
-                        // Mise à jour directe via useSchoolData sera gérée dans saveAllSettings
+                        setSchoolInfo(prev => ({...prev, name: e.target.value}));
                         setHasUnsavedChanges(true);
                       }} 
                       placeholder="École Connectée" 
@@ -391,8 +426,9 @@ export default function ParametresModernes() {
                     <Label htmlFor="telephone">Téléphone</Label>
                     <Input 
                       id="telephone" 
-                      value={schoolData.phone || ''} 
+                      value={schoolInfo.phone} 
                       onChange={e => {
+                        setSchoolInfo(prev => ({...prev, phone: e.target.value}));
                         setHasUnsavedChanges(true);
                       }} 
                       placeholder="+221 XX XXX XX XX" 
@@ -404,12 +440,27 @@ export default function ParametresModernes() {
                   <Label htmlFor="adresse">Adresse Complète</Label>
                   <Textarea 
                     id="adresse" 
-                    value={schoolData.address || ''} 
+                    value={schoolInfo.address} 
                     onChange={e => {
+                      setSchoolInfo(prev => ({...prev, address: e.target.value}));
                       setHasUnsavedChanges(true);
                     }} 
                     placeholder="Adresse complète de l'école" 
                     rows={3} 
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="email">Email de l'École</Label>
+                  <Input 
+                    id="email" 
+                    type="email"
+                    value={schoolInfo.email} 
+                    onChange={e => {
+                      setSchoolInfo(prev => ({...prev, email: e.target.value}));
+                      setHasUnsavedChanges(true);
+                    }} 
+                    placeholder="contact@ecole.com" 
                   />
                 </div>
 
@@ -417,8 +468,9 @@ export default function ParametresModernes() {
                   <div>
                     <Label htmlFor="language">Langue principale</Label>
                     <Select 
-                      value={schoolData.language || 'french'} 
+                      value={schoolInfo.language} 
                       onValueChange={(value) => {
+                        setSchoolInfo(prev => ({...prev, language: value as DatabaseType['public']['Enums']['language_type']}));
                         setHasUnsavedChanges(true);
                       }}
                     >
@@ -502,10 +554,84 @@ export default function ParametresModernes() {
           <TabsContent value="users">
             <Card>
               <CardHeader>
-                <CardTitle>Gestion des utilisateurs</CardTitle>
+                <CardTitle className="flex items-center space-x-2">
+                  <Users className="w-5 h-5" />
+                  <span>Gestion des utilisateurs</span>
+                </CardTitle>
+                <CardDescription>
+                  Paramètres pour la création et gestion des comptes utilisateurs
+                </CardDescription>
               </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">Paramètres pour la création et gestion des comptes utilisateurs</p>
+              <CardContent className="space-y-6">
+                <div>
+                  <Label htmlFor="schoolPrefix">Préfixe d'école</Label>
+                  <Input 
+                    id="schoolPrefix"
+                    value={schoolInfo.schoolPrefix}
+                    onChange={e => {
+                      setSchoolInfo(prev => ({...prev, schoolPrefix: e.target.value}));
+                      setHasUnsavedChanges(true);
+                    }}
+                    placeholder="ecole_sainte_marie"
+                    className="font-mono"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Ce préfixe sera utilisé pour générer les identifiants utilisateurs (ex: Eleve001@{schoolInfo.schoolPrefix})
+                  </p>
+                </div>
+                
+                <Separator />
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label>Préfixe Élèves</Label>
+                    <Input 
+                      value={studentSettings.matriculeFormat}
+                      onChange={e => {
+                        setStudentSettings(prev => ({...prev, matriculeFormat: e.target.value}));
+                        setHasUnsavedChanges(true);
+                      }}
+                      placeholder="ELEVE"
+                    />
+                  </div>
+                  <div>
+                    <Label>Préfixe Enseignants</Label>
+                    <Input 
+                      value={teacherSettings.teacherPrefix}
+                      onChange={e => {
+                        setTeacherSettings(prev => ({...prev, teacherPrefix: e.target.value}));
+                        setHasUnsavedChanges(true);
+                      }}
+                      placeholder="PROF"
+                    />
+                  </div>
+                </div>
+                
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="autoGenMatricule">Génération automatique des matricules</Label>
+                    <Switch 
+                      id="autoGenMatricule"
+                      checked={studentSettings.autoGenerateMatricule}
+                      onCheckedChange={(checked) => {
+                        setStudentSettings(prev => ({...prev, autoGenerateMatricule: checked}));
+                        setHasUnsavedChanges(true);
+                      }}
+                    />
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="autoGenUsername">Génération automatique des noms d'utilisateur</Label>
+                    <Switch 
+                      id="autoGenUsername"
+                      checked={teacherSettings.autoGenerateUsername}
+                      onCheckedChange={(checked) => {
+                        setTeacherSettings(prev => ({...prev, autoGenerateUsername: checked}));
+                        setHasUnsavedChanges(true);
+                      }}
+                    />
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>

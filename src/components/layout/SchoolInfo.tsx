@@ -1,6 +1,7 @@
 
 import { School } from "lucide-react";
 import { useSchoolData } from "@/hooks/useSchoolData";
+import { useEffect } from "react";
 
 interface SchoolInfoProps {
   schoolName?: string;
@@ -15,7 +16,20 @@ export function SchoolInfo({
   schoolLogo, 
   className = "" 
 }: SchoolInfoProps) {
-  const { schoolData } = useSchoolData();
+  const { schoolData, refreshSchoolData } = useSchoolData();
+
+  // Écouter les mises à jour des paramètres d'école
+  useEffect(() => {
+    const handleSchoolSettingsUpdate = () => {
+      refreshSchoolData();
+    };
+
+    window.addEventListener('schoolSettingsUpdated', handleSchoolSettingsUpdate);
+    
+    return () => {
+      window.removeEventListener('schoolSettingsUpdated', handleSchoolSettingsUpdate);
+    };
+  }, [refreshSchoolData]);
 
   const displayName = schoolName || schoolData.name || "École Connectée";
   const displaySlogan = schoolSlogan || "Excellence et Innovation";
