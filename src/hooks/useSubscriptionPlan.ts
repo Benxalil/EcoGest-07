@@ -42,7 +42,7 @@ export const PLAN_FEATURES: Record<SubscriptionPlan, PlanFeatures> = {
   starter_monthly: {
     maxStudents: 200,
     maxClasses: 6,
-    hasPaymentManagement: true,
+    hasPaymentManagement: false, // Starter n'a pas la gestion des paiements
     hasPremiumSupport: false,
     hasDedicatedAssistance: false,
     supportDays: 6,
@@ -55,7 +55,7 @@ export const PLAN_FEATURES: Record<SubscriptionPlan, PlanFeatures> = {
   starter_annual: {
     maxStudents: 200,
     maxClasses: 6,
-    hasPaymentManagement: true,
+    hasPaymentManagement: false, // Starter n'a pas la gestion des paiements
     hasPremiumSupport: false,
     hasDedicatedAssistance: false,
     supportDays: 6,
@@ -66,8 +66,8 @@ export const PLAN_FEATURES: Record<SubscriptionPlan, PlanFeatures> = {
     hasLessonLog: true,
   },
   pro_monthly: {
-    maxStudents: 800,
-    maxClasses: null,
+    maxStudents: 500, // Corriger selon la base de données
+    maxClasses: 15, // Corriger selon la base de données
     hasPaymentManagement: true,
     hasPremiumSupport: false,
     hasDedicatedAssistance: false,
@@ -79,8 +79,8 @@ export const PLAN_FEATURES: Record<SubscriptionPlan, PlanFeatures> = {
     hasLessonLog: true,
   },
   pro_annual: {
-    maxStudents: 800,
-    maxClasses: null,
+    maxStudents: 500, // Corriger selon la base de données
+    maxClasses: 15, // Corriger selon la base de données
     hasPaymentManagement: true,
     hasPremiumSupport: false,
     hasDedicatedAssistance: false,
