@@ -480,17 +480,27 @@ export default function ResultatsSemestre() {
           </DialogContent>
         </Dialog>
 
-        {/* Bulletin de classe */}
-        {showBulletinClasse && classe && (
-          <BulletinClasse
-            classe={classe}
-            eleves={getElevesWithRank() as any}
-            semestre={getSemestreLabel()}
-            matieresClasse={matieresClasse}
-            schoolSystem={schoolSystem}
-            classeId={classe.id}
-          />
-        )}
+        {/* Bulletin de classe dans un modal */}
+        <Dialog open={showBulletinClasse} onOpenChange={setShowBulletinClasse}>
+          <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>
+                Bulletin de la classe - {classe?.session} {classe?.libelle}
+              </DialogTitle>
+            </DialogHeader>
+            
+            {classe && (
+              <BulletinClasse
+                classe={classe}
+                eleves={getElevesWithRank() as any}
+                semestre={getSemestreLabel()}
+                matieresClasse={matieresClasse}
+                schoolSystem={schoolSystem}
+                classeId={classe.id}
+              />
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </Layout>
   );
