@@ -12,21 +12,18 @@ import { useStudents } from "@/hooks/useStudents";
 import { useSubjects } from "@/hooks/useSubjects";
 import { useExams } from "@/hooks/useExams";
 import { useNotesSync, UnifiedNote } from "@/hooks/useNotesSync";
-
 interface Student {
   id: string;
   nom: string;
   prenom: string;
   classe: string;
 }
-
 interface Classe {
   id: string;
   session: string;
   libelle: string;
   effectif: number;
 }
-
 interface Matiere {
   id: string;
   nom: string;
@@ -36,7 +33,6 @@ interface Matiere {
   coefficient: number;
   maxScore: number;
 }
-
 export default function ConsulterNotes() {
   const [classe, setClasse] = useState<Classe | null>(null);
   const [matiere, setMatiere] = useState<Matiere | null>(null);
@@ -45,21 +41,33 @@ export default function ConsulterNotes() {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentExam, setCurrentExam] = useState<any>(null);
   const [isComposition, setIsComposition] = useState(false);
-  
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { toast } = useToast();
-
+  const {
+    toast
+  } = useToast();
   const classeId = searchParams.get('classeId');
   const matiereId = searchParams.get('matiereId');
   const examId = searchParams.get('examId');
 
   // Hooks pour récupérer les données depuis la base
-  const { classes, loading: classesLoading } = useClasses();
-  const { students, loading: studentsLoading } = useStudents();
-  const { subjects, loading: subjectsLoading } = useSubjects(classeId || '');
-  const { exams, loading: examsLoading } = useExams();
-  
+  const {
+    classes,
+    loading: classesLoading
+  } = useClasses();
+  const {
+    students,
+    loading: studentsLoading
+  } = useStudents();
+  const {
+    subjects,
+    loading: subjectsLoading
+  } = useSubjects(classeId || '');
+  const {
+    exams,
+    loading: examsLoading
+  } = useExams();
+
   // Hook de synchronisation des notes - CENTRALISÉ
   const {
     localNotes,
@@ -74,7 +82,6 @@ export default function ConsulterNotes() {
     examId: examId || undefined,
     isComposition: isComposition
   });
-
   useEffect(() => {
     if (classeId && classes.length > 0) {
       const classeFound = classes.find(c => c.id === classeId);
@@ -88,7 +95,6 @@ export default function ConsulterNotes() {
       }
     }
   }, [classeId, classes]);
-
   useEffect(() => {
     if (matiereId && subjects.length > 0) {
       const matiereFound = subjects.find(s => s.id === matiereId);
@@ -116,7 +122,10 @@ export default function ConsulterNotes() {
         // Règle unifiée : détection par le nom de l'examen
         const isCompositionExam = examTitle.toLowerCase().includes('composition');
         setIsComposition(isCompositionExam);
-        setCurrentExam({ ...examData, title: examTitle });
+        setCurrentExam({
+          ...examData,
+          title: examTitle
+        });
         console.log('ConsulterNotes: Type d\'examen détecté:', examTitle, 'isComposition:', isCompositionExam);
       } else {
         setIsComposition(false);
@@ -127,21 +136,17 @@ export default function ConsulterNotes() {
       setIsComposition(false);
     }
   }, []);
-
   useEffect(() => {
     if (classeId && students.length > 0) {
-      const elevesForClasse = students
-        .filter(student => student.class_id === classeId)
-        .map(student => ({
-          id: student.id,
-          nom: student.last_name,
-          prenom: student.first_name,
-          classe: classe?.libelle || ''
-        }));
+      const elevesForClasse = students.filter(student => student.class_id === classeId).map(student => ({
+        id: student.id,
+        nom: student.last_name,
+        prenom: student.first_name,
+        classe: classe?.libelle || ''
+      }));
       setEleves(elevesForClasse);
     }
   }, [classeId, students, classe]);
-
   const handleNoteChange = (eleveId: string, value: string, type: 'note' | 'devoir' | 'composition' = 'note') => {
     // Validation de la note
     if (value && matiere) {
@@ -150,59 +155,49 @@ export default function ConsulterNotes() {
         toast({
           title: "Note invalide",
           description: `La note ne peut pas dépasser ${matiere.maxScore} pour cette matière.`,
-          variant: "destructive",
+          variant: "destructive"
         });
         return;
       }
     }
 
     // Utiliser le système de synchronisation centralisé
-    const updates: Partial<UnifiedNote> = { 
+    const updates: Partial<UnifiedNote> = {
       coefficient: matiere?.coefficient || 1,
-      [type]: value 
+      [type]: value
     };
-    
     updateNote(eleveId, matiere?.id || '', updates);
   };
-
   const handleSaveNotes = async () => {
     if (!matiere) {
       toast({
         title: "Erreur",
         description: "Aucune matière sélectionnée.",
-        variant: "destructive",
+        variant: "destructive"
       });
       return;
     }
-
     try {
       await saveAllNotes();
-      
       toast({
         title: "Notes sauvegardées",
-        description: "Les notes ont été sauvegardées avec succès.",
+        description: "Les notes ont été sauvegardées avec succès."
       });
-
       setIsEditMode(false);
-      
     } catch (error) {
       console.error('Erreur lors de la sauvegarde des notes:', error);
       toast({
         title: "Erreur de sauvegarde",
         description: "Une erreur est survenue lors de la sauvegarde des notes.",
-        variant: "destructive",
+        variant: "destructive"
       });
     }
   };
-
-  const elevesFiltered = eleves.filter(eleve =>
-    `${eleve.prenom} ${eleve.nom}`.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const elevesFiltered = eleves.filter(eleve => `${eleve.prenom} ${eleve.nom}`.toLowerCase().includes(searchTerm.toLowerCase()));
 
   // État de chargement
   if (classesLoading || studentsLoading || subjectsLoading) {
-    return (
-      <Layout>
+    return <Layout>
         <div className="container mx-auto p-6">
           <div className="flex items-center justify-center min-h-[400px]">
             <div className="text-center">
@@ -211,13 +206,10 @@ export default function ConsulterNotes() {
             </div>
           </div>
         </div>
-      </Layout>
-    );
+      </Layout>;
   }
-
   if (!classe) {
-    return (
-      <Layout>
+    return <Layout>
         <div className="container mx-auto p-6">
           <div className="text-center py-12">
             <p className="text-gray-500">Classe non trouvée.</p>
@@ -226,22 +218,16 @@ export default function ConsulterNotes() {
             </Button>
           </div>
         </div>
-      </Layout>
-    );
+      </Layout>;
   }
 
   // Si aucune matière n'est sélectionnée, afficher la sélection de matière
   if (!matiere) {
-    return (
-      <Layout>
+    return <Layout>
         <div className="container mx-auto p-6">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-4">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => navigate(-1)}
-              >
+              <Button variant="outline" size="sm" onClick={() => navigate(-1)}>
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Retour
               </Button>
@@ -263,8 +249,7 @@ export default function ConsulterNotes() {
           </div>
 
           <div className="space-y-2">
-            {subjects.map((subject) => (
-              <div key={subject.id} className="flex items-center justify-between p-4 bg-card rounded-lg border hover:bg-muted/50 transition-colors">
+            {subjects.map(subject => <div key={subject.id} className="flex items-center justify-between p-4 bg-card rounded-lg border hover:bg-muted/50 transition-colors">
                 <div className="flex items-center gap-4 flex-1">
                   <BookOpen className="h-5 w-5 text-primary" />
                   <div className="flex items-center gap-6 flex-1">
@@ -275,38 +260,24 @@ export default function ConsulterNotes() {
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <Button
-                    variant="default"
-                    size="sm"
-                    onClick={() => navigate(`/notes/consulter?classeId=${classeId}&matiereId=${subject.id}`)}
-                  >
+                  <Button variant="default" size="sm" onClick={() => navigate(`/notes/consulter?classeId=${classeId}&matiereId=${subject.id}`)}>
                     Consulter les Notes
                   </Button>
                 </div>
-              </div>
-            ))}
+              </div>)}
           </div>
 
-          {subjects.length === 0 && (
-            <div className="text-center py-12">
+          {subjects.length === 0 && <div className="text-center py-12">
               <p className="text-gray-500">Aucune matière disponible pour cette classe.</p>
-            </div>
-          )}
+            </div>}
         </div>
-      </Layout>
-    );
+      </Layout>;
   }
-
-  return (
-    <Layout>
+  return <Layout>
       <div className="container mx-auto p-6">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-4">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate(-1)}
-            >
+            <Button variant="outline" size="sm" onClick={() => navigate(-1)}>
               <ArrowLeft className="h-4 w-4 mr-2" />
               Retour
             </Button>
@@ -321,27 +292,13 @@ export default function ConsulterNotes() {
             </div>
           </div>
           <div className="flex gap-2">
-            {!isEditMode ? (
-              <Button
-                onClick={() => setIsEditMode(true)}
-                variant="default"
-                size="sm"
-              >
+            {!isEditMode ? <Button onClick={() => setIsEditMode(true)} variant="default" size="sm">
                 <Edit3 className="h-4 w-4 mr-2" />
                 Modifier les Notes
-              </Button>
-            ) : (
-              <Button
-                onClick={handleSaveNotes}
-                variant="default"
-                size="sm"
-                className="bg-green-600 hover:bg-green-700"
-                disabled={!hasUnsavedChanges}
-              >
+              </Button> : <Button onClick={handleSaveNotes} variant="default" size="sm" className="bg-green-600 hover:bg-green-700" disabled={!hasUnsavedChanges}>
                 <Save className="h-4 w-4 mr-2" />
                 Sauvegarder
-              </Button>
-            )}
+              </Button>}
           </div>
         </div>
 
@@ -363,21 +320,14 @@ export default function ConsulterNotes() {
               <div>
                 <span className="font-medium">Effectif:</span> {classe.effectif} élèves
               </div>
-              <div>
-                <span className="font-medium">Note max:</span> {matiere.maxScore}
-              </div>
+              
             </div>
           </CardContent>
         </Card>
 
         {/* Recherche d'élèves */}
         <div className="mb-4">
-          <Input
-            placeholder="Rechercher un élève..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="max-w-sm"
-          />
+          <Input placeholder="Rechercher un élève..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="max-w-sm" />
         </div>
 
         {/* Tableau des notes */}
@@ -394,82 +344,38 @@ export default function ConsulterNotes() {
                 <TableRow>
                   <TableHead className="w-12">ID#</TableHead>
                   <TableHead>Prénom & Nom</TableHead>
-                  {isComposition ? (
-                    <>
+                  {isComposition ? <>
                       <TableHead className="text-center">Devoir /{matiere.maxScore}</TableHead>
                       <TableHead className="text-center">Composition /{matiere.maxScore}</TableHead>
-                    </>
-                  ) : (
-                    <TableHead className="text-center">{currentExam?.title || 'Note'} /{matiere.maxScore}</TableHead>
-                  )}
+                    </> : <TableHead className="text-center">{currentExam?.title || 'Note'} /{matiere.maxScore}</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {elevesFiltered.map((eleve, index) => {
-                  const noteData = getNote(eleve.id, matiere.id);
-                  
-                  return (
-                    <TableRow key={eleve.id}>
+                const noteData = getNote(eleve.id, matiere.id);
+                return <TableRow key={eleve.id}>
                       <TableCell className="font-mono text-sm">{(index + 1).toString().padStart(2, '0')}</TableCell>
                       <TableCell className="font-medium">{eleve.prenom} {eleve.nom}</TableCell>
-                      {isComposition ? (
-                        <>
+                      {isComposition ? <>
                           <TableCell className="text-center">
-                            <Input
-                              type="number"
-                              min="0"
-                              max={matiere.maxScore}
-                              step="0.25"
-                              value={noteData?.devoir || ''}
-                              onChange={(e) => handleNoteChange(eleve.id, e.target.value, 'devoir')}
-                              disabled={!isEditMode}
-                              className="w-20 text-center"
-                              placeholder=""
-                            />
+                            <Input type="number" min="0" max={matiere.maxScore} step="0.25" value={noteData?.devoir || ''} onChange={e => handleNoteChange(eleve.id, e.target.value, 'devoir')} disabled={!isEditMode} className="w-20 text-center" placeholder="" />
                           </TableCell>
                           <TableCell className="text-center">
-                            <Input
-                              type="number"
-                              min="0"
-                              max={matiere.maxScore}
-                              step="0.25"
-                              value={noteData?.composition || ''}
-                              onChange={(e) => handleNoteChange(eleve.id, e.target.value, 'composition')}
-                              disabled={!isEditMode}
-                              className="w-20 text-center"
-                              placeholder=""
-                            />
+                            <Input type="number" min="0" max={matiere.maxScore} step="0.25" value={noteData?.composition || ''} onChange={e => handleNoteChange(eleve.id, e.target.value, 'composition')} disabled={!isEditMode} className="w-20 text-center" placeholder="" />
                           </TableCell>
-                        </>
-                      ) : (
-                        <TableCell className="text-center">
-                          <Input
-                            type="number"
-                            min="0"
-                            max={matiere.maxScore}
-                            step="0.25"
-                            value={noteData?.note || ''}
-                            onChange={(e) => handleNoteChange(eleve.id, e.target.value, 'note')}
-                            disabled={!isEditMode}
-                            className="w-20 text-center"
-                            placeholder=""
-                          />
-                        </TableCell>
-                      )}
-                    </TableRow>
-                  );
-                })}
+                        </> : <TableCell className="text-center">
+                          <Input type="number" min="0" max={matiere.maxScore} step="0.25" value={noteData?.note || ''} onChange={e => handleNoteChange(eleve.id, e.target.value, 'note')} disabled={!isEditMode} className="w-20 text-center" placeholder="" />
+                        </TableCell>}
+                    </TableRow>;
+              })}
               </TableBody>
             </Table>
             
-            {elevesFiltered.length === 0 && (
-              <div className="text-center py-8">
+            {elevesFiltered.length === 0 && <div className="text-center py-8">
                 <p className="text-gray-500">Aucun élève trouvé.</p>
-              </div>
-            )}
+              </div>}
           </CardContent>
         </Card>
       </div>
-    </Layout>
-  );
+    </Layout>;
 }
