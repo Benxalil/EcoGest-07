@@ -34,12 +34,16 @@ export const useClasses = () => {
 
   const fetchClasses = useCallback(async () => {
     if (!userProfile?.schoolId) {
+      console.log('useClasses: Pas de schoolId, arrêt du chargement');
       setLoading(false);
       return;
     }
 
     try {
+      console.log('useClasses: Début du chargement des classes pour schoolId:', userProfile.schoolId);
       setLoading(true);
+      setError(null);
+      
       const { data: classesData, error } = await supabase
         .from('classes')
         .select('*')
@@ -48,7 +52,9 @@ export const useClasses = () => {
 
       if (error) throw error;
       
-      // Calculer l'effectif pour chaque classe
+      console.log('useClasses: Classes récupérées:', classesData?.length || 0);
+      
+      // Calculer l'effectif pour chaque classe de manière optimisée
       const classesWithEnrollment = await Promise.all(
         (classesData || []).map(async (classe) => {
           const { count } = await supabase
@@ -64,10 +70,12 @@ export const useClasses = () => {
         })
       );
       
+      console.log('useClasses: Classes avec effectifs calculés');
       setClasses(classesWithEnrollment);
     } catch (err) {
-      console.error('Erreur lors de la récupération des classes:', err);
+      console.error('useClasses: Erreur lors de la récupération des classes:', err);
       setError(err instanceof Error ? err.message : 'Erreur inconnue');
+      setClasses([]);
     } finally {
       setLoading(false);
     }
@@ -198,8 +206,14 @@ export const useClasses = () => {
   };
 
   useEffect(() => {
-    fetchClasses();
-  }, [fetchClasses]);
+    console.log('useClasses: useEffect triggered, schoolId:', userProfile?.schoolId);
+    if (userProfile?.schoolId) {
+      fetchClasses();
+    } else {
+      setLoading(false);
+      setClasses([]);
+    }
+  }, [userProfile?.schoolId]);
 
   return {
     classes,
