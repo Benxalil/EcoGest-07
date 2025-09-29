@@ -49,7 +49,7 @@ export const useSubscription = () => {
 
       const { data: school } = await supabase
         .from('schools')
-        .select('trial_end_date, subscription_status')
+        .select('trial_end_date, subscription_status, starter_compatible')
         .eq('id', profile.school_id)
         .single();
 

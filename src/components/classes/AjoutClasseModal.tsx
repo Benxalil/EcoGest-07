@@ -10,6 +10,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useToast } from "@/hooks/use-toast";
 import { useSubscriptionPlan } from "@/hooks/useSubscriptionPlan";
 import { useClasses } from "@/hooks/useClasses";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useDefaultSeries } from "@/hooks/useDefaultSeries";
 import { useDefaultLabels } from "@/hooks/useDefaultLabels";
 
@@ -30,8 +31,9 @@ interface AjoutClasseModalProps {
 
 export function AjoutClasseModal({ open, onOpenChange, onSuccess }: AjoutClasseModalProps) {
   const { toast } = useToast();
-  const { currentPlan, isFeatureLimited, getFeatureLimit } = useSubscriptionPlan();
+  const { currentPlan, isFeatureLimited, getFeatureLimit, checkStarterLimits, markAsNotStarterCompatible } = useSubscriptionPlan();
   const { classes, createClass } = useClasses();
+  const [showStarterWarning, setShowStarterWarning] = useState(false);
   const { series, loading: seriesLoading, error: seriesError } = useDefaultSeries();
   const { labels: classLabels, loading: labelsLoading, error: labelsError } = useDefaultLabels();
   
@@ -80,7 +82,8 @@ export function AjoutClasseModal({ open, onOpenChange, onSuccess }: AjoutClasseM
       // Vérifier les limites d'abonnement
       const currentClassCount = classes.length;
       
-      if (isFeatureLimited('classes', currentClassCount)) {
+      // Pour les plans payants, utiliser la logique existante
+      if (currentPlan !== 'trial' && isFeatureLimited('classes', currentClassCount)) {
         const limit = getFeatureLimit('classes');
         const planName = currentPlan.includes('starter') ? 'Starter' : 
                         currentPlan.includes('pro') ? 'Pro' : 'Premium';
@@ -93,10 +96,51 @@ export function AjoutClasseModal({ open, onOpenChange, onSuccess }: AjoutClasseM
         return;
       }
 
+      // Pour la période d'essai, vérifier les limites Starter et afficher un avertissement
+      if (currentPlan === 'trial') {
+        const starterLimits = checkStarterLimits('classes', currentClassCount);
+        
+        if (starterLimits.exceedsStarter) {
+          setShowStarterWarning(true);
+          return;
+        }
+      }
+
       const success = await createClass({
         name: data.name,
         level: data.level,
         section: `${data.series}${data.label}`, // Combine series and label for section
+      });
+
+      if (success) {
+        form.reset();
+        if (onOpenChange) {
+          onOpenChange(false);
+        }
+        if (onSuccess) {
+          onSuccess();
+        }
+      }
+    } catch (error) {
+      toast({
+        title: "Erreur lors de la création",
+        description: "Une erreur est survenue lors de la création de la classe.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleStarterWarningConfirm = async () => {
+    await markAsNotStarterCompatible();
+    setShowStarterWarning(false);
+    
+    // Continuer avec la création de la classe
+    const data = form.getValues();
+    try {
+      const success = await createClass({
+        name: data.name,
+        level: data.level,
+        section: `${data.series}${data.label}`,
       });
 
       if (success) {
@@ -246,8 +290,27 @@ export function AjoutClasseModal({ open, onOpenChange, onSuccess }: AjoutClasseM
 
   // Dialog mode
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+    <>
+      <AlertDialog open={showStarterWarning} onOpenChange={setShowStarterWarning}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Limite du plan Starter dépassée</AlertDialogTitle>
+            <AlertDialogDescription>
+              En ajoutant plus de 6 classes, vous ne pourrez plus choisir le plan Starter à la fin de l'essai gratuit. 
+              Vous devrez opter pour un plan Pro ou Premium. Voulez-vous continuer ?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction onClick={handleStarterWarningConfirm}>
+              Continuer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <FormField
           control={form.control}
           name="name"
@@ -365,7 +428,8 @@ export function AjoutClasseModal({ open, onOpenChange, onSuccess }: AjoutClasseM
         <Button type="submit" className="w-full" disabled={seriesLoading || labelsLoading || Boolean(seriesError) || Boolean(labelsError)}>
           {seriesLoading || labelsLoading ? 'Chargement...' : seriesError || labelsError ? 'Erreur de chargement' : 'Créer la classe'}
         </Button>
-      </form>
-    </Form>
+        </form>
+      </Form>
+    </>
   );
 }

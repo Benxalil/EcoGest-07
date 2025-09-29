@@ -180,6 +180,7 @@ export const PLAN_DETAILS = {
 export const useSubscriptionPlan = () => {
   const [currentPlan, setCurrentPlan] = useState<SubscriptionPlan>('trial');
   const [loading, setLoading] = useState(true);
+  const [starterCompatible, setStarterCompatible] = useState(true);
   const { userProfile } = useUserRole();
 
   const fetchSubscriptionPlan = async () => {
@@ -193,7 +194,7 @@ export const useSubscriptionPlan = () => {
       setLoading(true);
       const { data: school, error } = await supabase
         .from('schools')
-        .select('subscription_status, subscription_plan')
+        .select('subscription_status, subscription_plan, starter_compatible')
         .eq('id', userProfile.schoolId)
         .single();
 
@@ -205,6 +206,8 @@ export const useSubscriptionPlan = () => {
         setCurrentPlan('trial'); } else {
         setCurrentPlan('trial'); // Par défaut
       }
+      
+      setStarterCompatible(school?.starter_compatible ?? true);
     } catch (error) {
       console.error('Erreur lors de la récupération du plan d\'abonnement:', error);
       setCurrentPlan('trial');
@@ -258,14 +261,43 @@ export const useSubscriptionPlan = () => {
     return null;
   };
 
+  const markAsNotStarterCompatible = async () => {
+    if (!userProfile?.schoolId) return;
+    
+    try {
+      await supabase
+        .from('schools')
+        .update({ starter_compatible: false })
+        .eq('id', userProfile.schoolId);
+      
+      setStarterCompatible(false);
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour de la compatibilité Starter:', error);
+    }
+  };
+
+  const checkStarterLimits = (feature: 'students' | 'classes', currentCount: number) => {
+    const starterFeatures = PLAN_FEATURES['starter_monthly'];
+    const limit = feature === 'students' ? starterFeatures.maxStudents : starterFeatures.maxClasses;
+    
+    return {
+      exceedsStarter: currentCount >= (limit || 0),
+      starterLimit: limit,
+      isTrialActive: currentPlan === 'trial'
+    };
+  };
+
   return {
     currentPlan,
     loading,
+    starterCompatible,
     features: getCurrentFeatures(),
     planDetails: getCurrentPlanDetails(),
     hasFeature,
     isFeatureLimited,
     getFeatureLimit,
+    markAsNotStarterCompatible,
+    checkStarterLimits,
     refreshPlan: fetchSubscriptionPlan,
   };
 };

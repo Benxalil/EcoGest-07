@@ -8,14 +8,16 @@ import { useSubscriptionPlan } from "@/hooks/useSubscriptionPlan";
 import { useSubscriptionPlans } from "@/hooks/useSubscriptionPlans";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useToast } from "@/hooks/use-toast";
+import { useSubscription } from "@/hooks/useSubscription";
 import { supabase } from "@/integrations/supabase/client";
 
 const Abonnement = () => {
   const [isAnnual, setIsAnnual] = useState(false);
-  const { currentPlan } = useSubscriptionPlan();
+  const { currentPlan, starterCompatible } = useSubscriptionPlan();
   const { plans, loading: plansLoading, formatPrice } = useSubscriptionPlans();
   const { userProfile } = useUserRole();
   const { toast } = useToast();
+  const { subscriptionStatus } = useSubscription();
   const [isCreatingCheckout, setIsCreatingCheckout] = useState<string | null>(null);
 
   // Fonction pour déterminer si un plan est actif
@@ -168,6 +170,46 @@ const Abonnement = () => {
           <p className="text-muted-foreground text-lg max-w-2xl mx-auto mb-8">
             Sélectionnez le plan qui convient le mieux à votre école et profitez de toutes nos fonctionnalités
           </p>
+
+          {/* Section d'information sur l'essai gratuit */}
+          {subscriptionStatus.isTrialActive && (
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 mb-8 max-w-4xl mx-auto">
+              <div className="flex items-center justify-center gap-3 mb-4">
+                <div className="bg-blue-100 rounded-full p-2">
+                  <Clock className="h-6 w-6 text-blue-600" />
+                </div>
+                <h3 className="text-xl font-semibold text-blue-900">
+                  Période d'essai gratuite active
+                </h3>
+              </div>
+              <div className="space-y-3">
+                <p className="text-blue-800 text-lg">
+                  <strong>Vous êtes actuellement en période d'essai gratuite de 30 jours.</strong>
+                </p>
+                <p className="text-blue-700">
+                  Il vous reste <strong>{subscriptionStatus.daysRemaining} jour{subscriptionStatus.daysRemaining > 1 ? 's' : ''}</strong> avec un accès complet à toutes les fonctionnalités comme un compte Pro.
+                </p>
+                {!starterCompatible && (
+                  <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mt-4">
+                    <div className="flex items-start gap-3">
+                      <div className="bg-orange-100 rounded-full p-1 mt-0.5">
+                        <Shield className="h-4 w-4 text-orange-600" />
+                      </div>
+                      <div className="text-sm">
+                        <p className="font-medium text-orange-900 mb-1">
+                          Limitation du plan Starter
+                        </p>
+                        <p className="text-orange-800">
+                          Vous avez dépassé les limites du plan Starter (6 classes ou 200 élèves). 
+                          À la fin de l'essai, vous devrez choisir un plan Pro ou Premium.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
           
           {/* Toggle Switch */}
           <div className="flex items-center justify-center mb-8">
@@ -204,15 +246,18 @@ const Abonnement = () => {
             const IconComponent = plan.icon;
             const isActive = isActivePlan(plan.id);
             const currentPlan = isAnnual ? plan.dbPlans.annual : plan.dbPlans.monthly;
+            const isPlanDisabled = plan.id === 'starter' && !starterCompatible;
             
             if (!currentPlan) return null; // Ne pas afficher si le plan n'existe pas en DB
             
             return (
-              <Card 
+                <Card 
                 key={plan.id}
                 className={`relative border-2 rounded-2xl hover:shadow-lg transition-shadow ${
                   isActive 
                     ? 'border-green-500 bg-green-50/50' 
+                    : isPlanDisabled
+                    ? 'border-gray-200 bg-gray-50/50 opacity-60'
                     : 'border-gray-200'
                 }`}
               >
@@ -274,12 +319,26 @@ const Abonnement = () => {
                     ))}
                   </div>
 
+                  {isPlanDisabled && (
+                    <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 mb-4">
+                      <p className="text-xs text-orange-800 text-center">
+                        Ce plan n'est plus disponible car vous avez dépassé ses limites
+                      </p>
+                    </div>
+                  )}
+
                   <Button 
                     onClick={() => handleChoosePlan(plan.id)}
-                    disabled={isCreatingCheckout === plan.id}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg"
+                    disabled={isCreatingCheckout === plan.id || isPlanDisabled}
+                    className={`w-full font-semibold py-3 rounded-lg ${
+                      isPlanDisabled 
+                        ? 'bg-gray-400 text-gray-600 cursor-not-allowed' 
+                        : 'bg-blue-600 hover:bg-blue-700 text-white'
+                    }`}
                   >
-                    {isCreatingCheckout === plan.id 
+                    {isPlanDisabled 
+                      ? "NON DISPONIBLE"
+                      : isCreatingCheckout === plan.id 
                       ? "Redirection en cours..." 
                       : "CHOISIR LE PLAN"
                     }

@@ -1003,6 +1003,7 @@ export type Database = {
           sponsor_email: string | null
           sponsor_name: string | null
           sponsor_phone: string | null
+          starter_compatible: boolean
           subscription_plan: string | null
           subscription_status:
             | Database["public"]["Enums"]["subscription_status"]
@@ -1033,6 +1034,7 @@ export type Database = {
           sponsor_email?: string | null
           sponsor_name?: string | null
           sponsor_phone?: string | null
+          starter_compatible?: boolean
           subscription_plan?: string | null
           subscription_status?:
             | Database["public"]["Enums"]["subscription_status"]
@@ -1063,6 +1065,7 @@ export type Database = {
           sponsor_email?: string | null
           sponsor_name?: string | null
           sponsor_phone?: string | null
+          starter_compatible?: boolean
           subscription_plan?: string | null
           subscription_status?:
             | Database["public"]["Enums"]["subscription_status"]

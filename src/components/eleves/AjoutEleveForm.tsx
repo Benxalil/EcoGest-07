@@ -6,6 +6,7 @@ import { useClasses } from "@/hooks/useClasses";
 import { useStudents } from "@/hooks/useStudents";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useStudentDocuments } from "@/hooks/useStudentDocuments";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -295,7 +296,7 @@ interface AjoutEleveFormProps {
 
 export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, classId, className }: AjoutEleveFormProps) {
   const { showSuccess, showError } = useNotifications();
-  const { currentPlan, isFeatureLimited, getFeatureLimit } = useSubscriptionPlan();
+  const { currentPlan, isFeatureLimited, getFeatureLimit, checkStarterLimits, markAsNotStarterCompatible } = useSubscriptionPlan();
   const { classes, loading: classesLoading } = useClasses();
   const { addStudent, updateStudent } = useStudents();
   const { userProfile } = useUserRole();
@@ -304,6 +305,8 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [documents, setDocuments] = useState<DocumentData[]>([]);
   const [existingDocuments, setExistingDocuments] = useState<ExistingDocumentData[]>([]);
+  const [showStarterWarning, setShowStarterWarning] = useState(false);
+  const [pendingFormData, setPendingFormData] = useState<any>(null);
   
   // Fonction pour ajouter un nouveau document
   const addDocument = () => {
@@ -613,13 +616,25 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
       const eleves = existingEleves ? JSON.parse(existingEleves) : [];
       const currentStudentCount = eleves.length;
       
-      if (isFeatureLimited('students', currentStudentCount)) {
+      // Pour les plans payants, utiliser la logique existante
+      if (currentPlan !== 'trial' && isFeatureLimited('students', currentStudentCount)) {
         const limit = getFeatureLimit('students');
         showError({
           title: "Limite d'abonnement atteinte",
           description: `Votre plan ${currentPlan.replace('_', ' ').toUpperCase()} permet maximum ${limit} élèves. Passez à un forfait supérieur pour ajouter plus d'élèves.`,
         });
         return;
+      }
+
+      // Pour la période d'essai, vérifier les limites Starter et afficher un avertissement
+      if (currentPlan === 'trial') {
+        const starterLimits = checkStarterLimits('students', currentStudentCount);
+        
+        if (starterLimits.exceedsStarter) {
+          setPendingFormData(data);
+          setShowStarterWarning(true);
+          return;
+        }
       }
     }
 
@@ -705,6 +720,74 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
       });
     }
   };
+
+  const handleStarterWarningConfirm = async () => {
+    if (!pendingFormData) return;
+    
+    await markAsNotStarterCompatible();
+    setShowStarterWarning(false);
+    
+    // Continuer avec la création de l'élève en utilisant les données sauvegardées
+    const data = pendingFormData;
+    setPendingFormData(null);
+
+    try {
+      // Récupérer les informations de l'utilisateur et de l'école
+      const { data: user } = await supabase.auth.getUser();
+      let schoolId = '11111111-1111-1111-1111-111111111111'; // Default test school ID
+      
+      if (user.user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('school_id')
+          .eq('id', user.user.id)
+          .single();
+        
+        schoolId = profile?.school_id || schoolId;
+      }
+      
+      const studentData = {
+        student_number: data.numeroPerso,
+        first_name: data.prenom,
+        last_name: data.nom,
+        date_of_birth: data.dateNaissance || null,
+        place_of_birth: data.lieuNaissance || null,
+        gender: (data.sexe === 'Masculin' ? 'M' : data.sexe === 'Féminin' ? 'F' : null) as 'M' | 'F' | null,
+        address: data.adresse || null,
+        phone: data.telephone || null,
+        parent_phone: data.pereTelephone || null,
+        parent_email: data.perePrenom && data.pereNom ? `${data.perePrenom.toLowerCase()}.${data.pereNom.toLowerCase()}@parent.com` : null,
+        emergency_contact: `${data.contactUrgenceNom} - ${data.contactUrgenceTelephone} (${data.contactUrgenceRelation})`,
+        school_id: schoolId,
+        class_id: selectedClass?.id,
+        is_active: true
+      };
+
+      const result = await addStudent(studentData);
+      if (result) {
+        showSuccess({
+          title: "Succès",
+          description: "L'élève a été ajouté avec succès",
+        });
+        
+        form.reset();
+        setPhotoPreview(null);
+        setPhotoFile(null);
+        setDocuments([]);
+        
+        if (onSuccess) {
+          onSuccess();
+        }
+      }
+    } catch (error) {
+      console.error("Erreur lors de l'ajout de l'élève:", error);
+      showError({
+        title: "Erreur",
+        description: "Une erreur est survenue lors de l'ajout de l'élève",
+      });
+    }
+  };
+
   const handlePhotoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target?.files;
 
@@ -749,8 +832,28 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
     };
     reader.readAsDataURL(file);
   };
-  return <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 max-w-2xl mx-auto p-6">
+  return (
+    <>
+      <AlertDialog open={showStarterWarning} onOpenChange={setShowStarterWarning}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Limite du plan Starter dépassée</AlertDialogTitle>
+            <AlertDialogDescription>
+              En ajoutant plus de 200 élèves, vous ne pourrez plus choisir le plan Starter à la fin de l'essai gratuit. 
+              Vous devrez opter pour un plan Pro ou Premium. Voulez-vous continuer ?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction onClick={handleStarterWarningConfirm}>
+              Continuer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 max-w-2xl mx-auto p-6">
         <div className="space-y-6">
           <h2 className="text-2xl font-bold">Informations sur l'élève</h2>
           
@@ -1290,5 +1393,7 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
           Enregistrer
         </Button>
       </form>
-    </Form>;
+    </Form>
+    </>
+  );
 }
