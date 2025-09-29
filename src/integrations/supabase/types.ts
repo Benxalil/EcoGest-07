@@ -179,13 +179,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "attendances_class_id_fkey"
-            columns: ["class_id"]
-            isOneToOne: false
-            referencedRelation: "student_results"
-            referencedColumns: ["class_id"]
-          },
-          {
             foreignKeyName: "attendances_recorded_by_fkey"
             columns: ["recorded_by"]
             isOneToOne: false
@@ -198,13 +191,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "schools"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "attendances_student_id_fkey"
-            columns: ["student_id"]
-            isOneToOne: false
-            referencedRelation: "student_results"
-            referencedColumns: ["student_id"]
           },
           {
             foreignKeyName: "attendances_student_id_fkey"
@@ -413,13 +399,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "exams_class_id_fkey"
-            columns: ["class_id"]
-            isOneToOne: false
-            referencedRelation: "student_results"
-            referencedColumns: ["class_id"]
-          },
-          {
             foreignKeyName: "exams_school_id_fkey"
             columns: ["school_id"]
             isOneToOne: false
@@ -507,13 +486,6 @@ export type Database = {
             foreignKeyName: "fk_grades_student_id"
             columns: ["student_id"]
             isOneToOne: false
-            referencedRelation: "student_results"
-            referencedColumns: ["student_id"]
-          },
-          {
-            foreignKeyName: "fk_grades_student_id"
-            columns: ["student_id"]
-            isOneToOne: false
             referencedRelation: "students"
             referencedColumns: ["id"]
           },
@@ -582,13 +554,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "classes"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "lesson_logs_class_id_fkey"
-            columns: ["class_id"]
-            isOneToOne: false
-            referencedRelation: "student_results"
-            referencedColumns: ["class_id"]
           },
           {
             foreignKeyName: "lesson_logs_school_id_fkey"
@@ -790,13 +755,6 @@ export type Database = {
             foreignKeyName: "fk_payments_student_id"
             columns: ["student_id"]
             isOneToOne: false
-            referencedRelation: "student_results"
-            referencedColumns: ["student_id"]
-          },
-          {
-            foreignKeyName: "fk_payments_student_id"
-            columns: ["student_id"]
-            isOneToOne: false
             referencedRelation: "students"
             referencedColumns: ["id"]
           },
@@ -914,13 +872,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "classes"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "schedules_class_id_fkey"
-            columns: ["class_id"]
-            isOneToOne: false
-            referencedRelation: "student_results"
-            referencedColumns: ["class_id"]
           },
           {
             foreignKeyName: "schedules_school_id_fkey"
@@ -1166,13 +1117,6 @@ export type Database = {
             foreignKeyName: "student_documents_student_id_fkey"
             columns: ["student_id"]
             isOneToOne: false
-            referencedRelation: "student_results"
-            referencedColumns: ["student_id"]
-          },
-          {
-            foreignKeyName: "student_documents_student_id_fkey"
-            columns: ["student_id"]
-            isOneToOne: false
             referencedRelation: "students"
             referencedColumns: ["id"]
           },
@@ -1291,13 +1235,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "classes"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "students_class_id_fkey"
-            columns: ["class_id"]
-            isOneToOne: false
-            referencedRelation: "student_results"
-            referencedColumns: ["class_id"]
           },
           {
             foreignKeyName: "students_school_id_fkey"
@@ -1498,13 +1435,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "teacher_subjects_class_id_fkey"
-            columns: ["class_id"]
-            isOneToOne: false
-            referencedRelation: "student_results"
-            referencedColumns: ["class_id"]
-          },
-          {
             foreignKeyName: "teacher_subjects_school_id_fkey"
             columns: ["school_id"]
             isOneToOne: false
@@ -1636,22 +1566,7 @@ export type Database = {
       }
     }
     Views: {
-      student_results: {
-        Row: {
-          annual_average: number | null
-          class_id: string | null
-          class_name: string | null
-          first_name: string | null
-          last_name: string | null
-          level: string | null
-          section: string | null
-          semester1_average: number | null
-          semester2_average: number | null
-          student_id: string | null
-          student_number: string | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
       associate_orphan_grades_to_exams: {
