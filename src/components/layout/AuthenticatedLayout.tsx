@@ -1,13 +1,13 @@
 import React from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { useUserRole } from "@/hooks/useUserRole";
+import { useApp } from "@/contexts/AppContext";
 
 interface AuthenticatedLayoutProps {
   children: React.ReactNode;
 }
 
 const AuthenticatedLayout: React.FC<AuthenticatedLayoutProps> = ({ children }) => {
-  const { user, loading } = useUserRole();
+  const { user, loading, initialized } = useApp();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -19,8 +19,8 @@ const AuthenticatedLayout: React.FC<AuthenticatedLayoutProps> = ({ children }) =
     return <>{children}</>;
   }
 
-  // Show loader while checking authentication
-  if (loading) {
+  // Show loader while initializing
+  if (!initialized || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">

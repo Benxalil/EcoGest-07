@@ -4,6 +4,8 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as SonnerToaster } from "@/components/ui/sonner";
+import { ThemeProvider } from "@/components/theme-provider";
+import { AppProvider } from "@/contexts/AppContext";
 import { StudentRouteHandler } from "@/components/navigation/StudentRouteHandler";
 import AuthenticatedLayout from "@/components/layout/AuthenticatedLayout";
 import PageListeEnseignants from "./pages/enseignants/ListeEnseignants";
@@ -54,14 +56,24 @@ import AuthPage from "./pages/auth/AuthPage";
 import SchoolRegistrationPage from "./pages/auth/SchoolRegistrationPage";
 import SchoolSettings from "./pages/admin/SchoolSettings";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      gcTime: 10 * 60 * 1000, // 10 minutes
+    },
+  },
+});
 
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <Router>
-        <AuthenticatedLayout>
-          <StudentRouteHandler>
+      <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
+        <AppProvider>
+          <Router>
+            <AuthenticatedLayout>
+              <StudentRouteHandler>
             <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/enseignants" element={<PageListeEnseignants />} />
@@ -113,9 +125,11 @@ function App() {
           <Route path="/abonnement" element={<Abonnement />} />
           <Route path="/admin/paytech-config" element={<PayTechConfig />} />
             </Routes>
-          </StudentRouteHandler>
-        </AuthenticatedLayout>
-      </Router>
+              </StudentRouteHandler>
+            </AuthenticatedLayout>
+          </Router>
+        </AppProvider>
+      </ThemeProvider>
       <Toaster />
       <SonnerToaster />
     </QueryClientProvider>
