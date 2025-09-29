@@ -86,6 +86,24 @@ export const useClasses = () => {
 
       if (academicError) throw academicError;
 
+      // Vérifier si une classe avec le même nom existe déjà
+      const { data: existingClass } = await supabase
+        .from('classes')
+        .select('name')
+        .eq('school_id', userProfile.schoolId)
+        .eq('academic_year_id', academicYears.id)
+        .eq('name', classData.name)
+        .maybeSingle();
+
+      if (existingClass) {
+        toast({
+          title: 'Classe existante',
+          description: `Une classe nommée "${classData.name}" existe déjà pour cette année académique. Veuillez choisir un nom différent.`,
+          variant: 'destructive',
+        });
+        return false;
+      }
+
       const { data, error } = await supabase
         .from('classes')
         .insert({
@@ -106,11 +124,21 @@ export const useClasses = () => {
       return true;
     } catch (err) {
       console.error('Erreur lors de la création de la classe:', err);
-      toast({
-        title: 'Erreur',
-        description: err instanceof Error ? err.message : 'Erreur inconnue',
-        variant: 'destructive',
-      });
+      
+      // Gestion spécifique de l'erreur de contrainte d'unicité
+      if (err instanceof Error && err.message.includes('duplicate key value violates unique constraint')) {
+        toast({
+          title: 'Classe déjà existante',
+          description: 'Une classe avec ce nom existe déjà. Veuillez choisir un nom différent.',
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: 'Erreur',
+          description: err instanceof Error ? err.message : 'Erreur inconnue',
+          variant: 'destructive',
+        });
+      }
       return false;
     }
   };
@@ -182,5 +210,31 @@ export const useClasses = () => {
     updateClass,
     deleteClass,
     refreshClasses: fetchClasses,
+    checkClassExists: async (className: string) => {
+      if (!userProfile?.schoolId) return false;
+      
+      try {
+        const { data: academicYears } = await supabase
+          .from('academic_years')
+          .select('id')
+          .eq('school_id', userProfile.schoolId)
+          .eq('is_current', true)
+          .single();
+
+        if (!academicYears) return false;
+
+        const { data } = await supabase
+          .from('classes')
+          .select('name')
+          .eq('school_id', userProfile.schoolId)
+          .eq('academic_year_id', academicYears.id)
+          .eq('name', className)
+          .maybeSingle();
+
+        return !!data;
+      } catch {
+        return false;
+      }
+    }
   };
 };
