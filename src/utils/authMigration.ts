@@ -64,7 +64,8 @@ export const createStudentAuthAccounts = async (schoolId: string, defaultPasswor
     // Créer un compte pour chaque élève
     for (const student of students) {
       try {
-        const email = `${student.student_number}@${schoolSuffix}`;
+        const cleanSuffix = schoolSuffix.replace(/_/g, '-');
+        const email = `${student.student_number}@${cleanSuffix}.ecogest.app`;
         
         // Créer le compte d'authentification via Edge Function
         const authResult = await createAuthUser(
@@ -140,7 +141,8 @@ export const createTeacherAuthAccounts = async (schoolId: string, defaultPasswor
     // Créer un compte pour chaque enseignant
     for (const teacher of teachers) {
       try {
-        const email = `${teacher.employee_number}@${schoolSuffix}`;
+        const cleanSuffix = schoolSuffix.replace(/_/g, '-');
+        const email = `${teacher.employee_number}@${cleanSuffix}.ecogest.app`;
         
         // Créer le compte d'authentification via Edge Function
         const authResult = await createAuthUser(

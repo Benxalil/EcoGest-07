@@ -114,7 +114,7 @@ export const useSchoolIdentifiers = () => {
 
   // Valider un format d'identifiant
   const validateIdentifierFormat = useCallback((identifier: string, expectedRole?: UserRole): boolean => {
-    const identifierRegex = /^(Eleve|Prof|Parent|Admin)\d{3}@[a-z0-9_]+$/;
+    const identifierRegex = /^(Eleve|Prof|Parent|Admin)\d{3}@[a-z0-9-]+\.ecogest\.app$/;
     
     if (!identifierRegex.test(identifier)) {
       return false;
@@ -137,7 +137,7 @@ export const useSchoolIdentifiers = () => {
 
   // Extraire les informations d'un identifiant
   const parseIdentifier = useCallback((identifier: string) => {
-    const match = identifier.match(/^(Eleve|Prof|Parent|Admin)(\d{3})@([a-z0-9_]+)$/);
+    const match = identifier.match(/^(Eleve|Prof|Parent|Admin)(\d{3})@([a-z0-9-]+)\.ecogest\.app$/);
     
     if (!match) return null;
 
