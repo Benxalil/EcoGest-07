@@ -111,5 +111,18 @@
 
   body {
     @apply bg-background text-foreground;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  /* Fix webkit compatibility issues */
+  * {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Optimize loading performance */
+  .loading-skeleton {
+    @apply animate-pulse bg-muted rounded;
   }
 }

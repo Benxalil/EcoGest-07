@@ -36,6 +36,10 @@ export default defineConfig(({ mode }) => ({
   preview: {
     headers: {
       'Cache-Control': 'public, max-age=604800', // 7 days for static assets
+      'Content-Type': 'text/html; charset=utf-8',
+      'X-Content-Type-Options': 'nosniff',
+      'X-Frame-Options': 'DENY',
+      'X-XSS-Protection': '1; mode=block'
     }
   }
 }));

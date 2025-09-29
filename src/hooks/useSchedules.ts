@@ -40,11 +40,14 @@ export const useSchedules = (classId?: string) => {
   const fetchSchedules = async () => {
     if (!userProfile?.schoolId || !classId) {
       setLoading(false);
+      setSchedules([]);
       return;
     }
 
     try {
       setLoading(true);
+      setError(null);
+      
       const { data, error } = await supabase
         .from('schedules')
         .select('*')
@@ -62,9 +65,11 @@ export const useSchedules = (classId?: string) => {
       }));
 
       setSchedules(organizedSchedules);
+      setError(null);
     } catch (err) {
       console.error('Erreur lors de la récupération des emplois du temps:', err);
       setError(err instanceof Error ? err.message : 'Erreur inconnue');
+      setSchedules([]);
     } finally {
       setLoading(false);
     }
@@ -202,7 +207,9 @@ export const useSchedules = (classId?: string) => {
   };
 
   useEffect(() => {
-    fetchSchedules();
+    if (userProfile?.schoolId && classId) {
+      fetchSchedules();
+    }
   }, [userProfile?.schoolId, classId]);
 
   return {

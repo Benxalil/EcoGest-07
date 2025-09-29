@@ -40,11 +40,11 @@ interface CahierFormData {
 
 export default function EmploiDuTemps() {
   const navigate = useNavigate();
-  const { classes, loading: classesLoading } = useClasses();
   const { classeId } = useParams();
-  const { schedules, loading: schedulesLoading, createCourse, updateCourse, deleteCourse } = useSchedules(classeId);
-  const { teachers } = useTeachers();
-  const { subjects } = useSubjects(classeId);
+  const { classes, loading: classesLoading } = useClasses();
+  const { schedules, loading: schedulesLoading, createCourse, updateCourse, deleteCourse, error: schedulesError } = useSchedules(classeId);
+  const { teachers, loading: teachersLoading } = useTeachers();
+  const { subjects, loading: subjectsLoading } = useSubjects(classeId);
   const { createLessonLog, loading: lessonLoading } = useLessonLogs();
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -266,12 +266,35 @@ export default function EmploiDuTemps() {
 
   // Le nom de la classe est maintenant chargé via le hook useClasses
 
-  if (classesLoading || schedulesLoading) {
+  const isLoading = classesLoading || schedulesLoading || teachersLoading || subjectsLoading;
+  
+  if (isLoading) {
     return (
       <Layout>
         <div className="container mx-auto p-6">
           <div className="text-center py-12">
-            <p className="text-gray-500 text-lg">Chargement des données...</p>
+            <div className="loading-skeleton h-8 w-64 mx-auto mb-4"></div>
+            <div className="loading-skeleton h-4 w-48 mx-auto mb-8"></div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[...Array(6)].map((_, i) => (
+                <div key={i} className="loading-skeleton h-32 w-full"></div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (schedulesError) {
+    return (
+      <Layout>
+        <div className="container mx-auto p-6">
+          <div className="text-center py-12">
+            <p className="text-destructive text-lg">Erreur: {schedulesError}</p>
+            <Button onClick={() => window.location.reload()} className="mt-4">
+              Recharger la page
+            </Button>
           </div>
         </div>
       </Layout>
