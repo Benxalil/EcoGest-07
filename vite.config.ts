@@ -30,7 +30,7 @@ export default defineConfig(({ mode }) => ({
       }
     },
     target: 'esnext',
-    minify: 'terser'
+    minify: 'esbuild'
   },
   // Configure cache headers for static assets
   preview: {
