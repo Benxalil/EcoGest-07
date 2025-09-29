@@ -181,127 +181,147 @@ export function AjoutClasseModal({ open, onOpenChange, onSuccess }: AjoutClasseM
   // If used as a standalone form (not in a dialog)
   if (!open && !onOpenChange) {
     return (
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          <FormField
-            control={form.control}
-            name="name"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Nom de la classe</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Sélectionner une classe" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="CI">CI (Cours d'Initiation)</SelectItem>
-                    <SelectItem value="CP">CP (Cours Préparatoire)</SelectItem>
-                    <SelectItem value="CE1">CE1 (Cours Élémentaire 1)</SelectItem>
-                    <SelectItem value="CE2">CE2 (Cours Élémentaire 2)</SelectItem>
-                    <SelectItem value="CM1">CM1 (Cours Moyen 1)</SelectItem>
-                    <SelectItem value="CM2">CM2 (Cours Moyen 2)</SelectItem>
-                    <SelectItem value="6ème">6ème</SelectItem>
-                    <SelectItem value="5ème">5ème</SelectItem>
-                    <SelectItem value="4ème">4ème</SelectItem>
-                    <SelectItem value="3ème">3ème</SelectItem>
-                    <SelectItem value="Seconde">Seconde</SelectItem>
-                    <SelectItem value="Première">Première</SelectItem>
-                    <SelectItem value="Terminale">Terminale</SelectItem>
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+      <>
+        <AlertDialog open={showStarterWarning} onOpenChange={setShowStarterWarning}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Limite du plan Starter dépassée</AlertDialogTitle>
+              <AlertDialogDescription>
+                En ajoutant plus de 6 classes, vous ne pourrez plus choisir le plan Starter à la fin de l'essai gratuit. 
+                Vous devrez opter pour un plan Pro ou Premium. Voulez-vous continuer ?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Annuler</AlertDialogCancel>
+              <AlertDialogAction onClick={handleStarterWarningConfirm}>
+                Continuer
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
-          <FormField
-            control={form.control}
-            name="level"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Niveau</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Sélectionner un niveau" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="Primaire">Primaire</SelectItem>
-                    <SelectItem value="Collège">Collège</SelectItem>
-                    <SelectItem value="Lycée">Lycée</SelectItem>
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Nom de la classe</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Sélectionner une classe" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="CI">CI (Cours d'Initiation)</SelectItem>
+                      <SelectItem value="CP">CP (Cours Préparatoire)</SelectItem>
+                      <SelectItem value="CE1">CE1 (Cours Élémentaire 1)</SelectItem>
+                      <SelectItem value="CE2">CE2 (Cours Élémentaire 2)</SelectItem>
+                      <SelectItem value="CM1">CM1 (Cours Moyen 1)</SelectItem>
+                      <SelectItem value="CM2">CM2 (Cours Moyen 2)</SelectItem>
+                      <SelectItem value="6ème">6ème</SelectItem>
+                      <SelectItem value="5ème">5ème</SelectItem>
+                      <SelectItem value="4ème">4ème</SelectItem>
+                      <SelectItem value="3ème">3ème</SelectItem>
+                      <SelectItem value="Seconde">Seconde</SelectItem>
+                      <SelectItem value="Première">Première</SelectItem>
+                      <SelectItem value="Terminale">Terminale</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-          <FormField
-            control={form.control}
-            name="series"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Série</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Sélectionner une série" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {seriesLoading ? (
-                      <SelectItem value="loading" disabled>Chargement des séries...</SelectItem>
-                    ) : (
-                      series.map((s) => (
-                        <SelectItem key={s.id} value={s.code}>
-                          {s.code} - {s.name}
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+            <FormField
+              control={form.control}
+              name="level"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Niveau</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Sélectionner un niveau" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="Primaire">Primaire</SelectItem>
+                      <SelectItem value="Collège">Collège</SelectItem>
+                      <SelectItem value="Lycée">Lycée</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-          <FormField
-            control={form.control}
-            name="label"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Libellé</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Sélectionner un libellé" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {labelsLoading ? (
-                      <SelectItem value="loading" disabled>Chargement des libellés...</SelectItem>
-                    ) : (
-                      classLabels.map((label) => (
-                        <SelectItem key={label.id} value={label.code}>
-                          {label.name}
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+            <FormField
+              control={form.control}
+              name="series"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Série</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Sélectionner une série" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {seriesLoading ? (
+                        <SelectItem value="loading" disabled>Chargement des séries...</SelectItem>
+                      ) : (
+                        series.map((s) => (
+                          <SelectItem key={s.id} value={s.code}>
+                            {s.code} - {s.name}
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-          <Button type="submit" className="w-full" disabled={isSubmitting || seriesLoading || labelsLoading || Boolean(seriesError) || Boolean(labelsError)}>
-            {isSubmitting ? 'Création...' : seriesLoading || labelsLoading ? 'Chargement...' : seriesError || labelsError ? 'Erreur de chargement' : 'Créer la classe'}
-          </Button>
-        </form>
-      </Form>
+            <FormField
+              control={form.control}
+              name="label"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Libellé</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Sélectionner un libellé" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {labelsLoading ? (
+                        <SelectItem value="loading" disabled>Chargement des libellés...</SelectItem>
+                      ) : (
+                        classLabels.map((label) => (
+                          <SelectItem key={label.id} value={label.code}>
+                            {label.name}
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <Button type="submit" className="w-full" disabled={isSubmitting || seriesLoading || labelsLoading || Boolean(seriesError) || Boolean(labelsError)}>
+              {isSubmitting ? 'Création...' : seriesLoading || labelsLoading ? 'Chargement...' : seriesError || labelsError ? 'Erreur de chargement' : 'Créer la classe'}
+            </Button>
+          </form>
+        </Form>
+      </>
     );
   }
 
