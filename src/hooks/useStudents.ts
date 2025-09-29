@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserRole } from './useUserRole';
+import { useToast } from '@/hooks/use-toast';
 
 export interface Student {
   id: string;
@@ -33,6 +34,7 @@ export function useStudents(classId?: string) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { userProfile } = useUserRole();
+  const { toast } = useToast();
 
   const fetchStudents = useCallback(async () => {
     try {
@@ -85,15 +87,89 @@ export function useStudents(classId?: string) {
     fetchStudents();
   }, [fetchStudents]);
 
+  // Créer un compte d'authentification pour l'élève
+  const createStudentAuthAccount = async (studentNumber: string, schoolSuffix: string, defaultPassword: string = 'student123') => {
+    try {
+      const email = `${studentNumber}@${schoolSuffix}`;
+      
+      // Créer le compte via Edge Function
+      const { data, error } = await supabase.functions.invoke('create-user-account', {
+        body: { 
+          email, 
+          password: defaultPassword, 
+          role: 'student', 
+          first_name: '', 
+          last_name: '' 
+        }
+      });
+
+      if (error) {
+        console.error('Erreur lors de la création du compte auth:', error);
+        return null;
+      }
+
+      return data.user;
+    } catch (error) {
+      console.error('Erreur lors de la création du compte auth:', error);
+      return null;
+    }
+  };
+
   const addStudent = async (studentData: Omit<Student, 'id' | 'created_at' | 'updated_at'>) => {
     try {
+      // D'abord, récupérer le suffixe de l'école
+      const { data: schoolData } = await supabase
+        .from('schools')
+        .select('school_suffix')
+        .eq('id', userProfile?.schoolId)
+        .single();
+
+      const schoolSuffix = schoolData?.school_suffix || 'school';
+
+      // Générer l'identifiant complet avec le suffixe de l'école
+      const { data: fullIdentifier, error: identifierError } = await supabase.rpc('generate_user_identifier', {
+        school_id_param: userProfile?.schoolId,
+        role_param: 'student'
+      });
+
+      if (identifierError || !fullIdentifier) {
+        throw new Error('Impossible de générer l\'identifiant');
+      }
+
+      // Extraire le numéro de l'identifiant généré pour créer le compte auth
+      const studentNumber = fullIdentifier.split('@')[0];
+
+      // Créer le compte d'authentification
+      const authUser = await createStudentAuthAccount(studentNumber, schoolSuffix);
+      
+      if (!authUser) {
+        toast({
+          title: "Avertissement",
+          description: "L'élève a été créé mais le compte de connexion n'a pas pu être généré. Contactez l'administrateur.",
+          variant: "destructive",
+        });
+      }
+
+      // Créer l'élève avec l'ID utilisateur si le compte auth a été créé
       const { data, error } = await supabase
         .from('students')
-        .insert([studentData])
+        .insert([{
+          ...studentData,
+          student_number: studentNumber,
+          user_id: authUser?.id || null
+        }])
         .select('*')
         .single();
 
       if (error) throw error;
+
+      if (authUser) {
+        toast({
+          title: "Succès",
+          description: `Élève créé avec l'identifiant: ${fullIdentifier}`,
+          variant: "default",
+        });
+      }
 
       // Rafraîchir la liste complète pour s'assurer de la synchronisation
       await fetchStudents();

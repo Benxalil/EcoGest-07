@@ -36,6 +36,34 @@ export const useTeachers = () => {
   const { userProfile } = useUserRole();
   const { toast } = useToast();
 
+  // Créer un compte d'authentification pour l'enseignant
+  const createTeacherAuthAccount = async (employeeNumber: string, schoolSuffix: string, defaultPassword: string = 'teacher123') => {
+    try {
+      const email = `${employeeNumber}@${schoolSuffix}`;
+      
+      // Créer le compte via Edge Function
+      const { data, error } = await supabase.functions.invoke('create-user-account', {
+        body: { 
+          email, 
+          password: defaultPassword, 
+          role: 'teacher', 
+          first_name: '', 
+          last_name: '' 
+        }
+      });
+
+      if (error) {
+        console.error('Erreur lors de la création du compte auth:', error);
+        return null;
+      }
+
+      return data.user;
+    } catch (error) {
+      console.error('Erreur lors de la création du compte auth:', error);
+      return null;
+    }
+  };
+
   const fetchTeachers = async () => {
     if (!userProfile?.schoolId) {
       setLoading(false);
@@ -65,39 +93,42 @@ export const useTeachers = () => {
     if (!userProfile?.schoolId) return false;
 
     try {
-      // Utiliser le matricule fourni ou générer un nouveau
+      // D'abord, récupérer le suffixe de l'école
+      const { data: schoolData } = await supabase
+        .from('schools')
+        .select('school_suffix')
+        .eq('id', userProfile.schoolId)
+        .single();
+
+      const schoolSuffix = schoolData?.school_suffix || 'school';
+
+      // Générer l'identifiant complet avec le suffixe de l'école
+      const { data: fullIdentifier, error: identifierError } = await supabase.rpc('generate_user_identifier', {
+        school_id_param: userProfile.schoolId,
+        role_param: 'teacher'
+      });
+
+      if (identifierError || !fullIdentifier) {
+        throw new Error('Impossible de générer l\'identifiant');
+      }
+
+      // Utiliser le matricule fourni ou extraire de l'identifiant généré
       let employee_number = teacherData.employee_number;
       
       if (!employee_number) {
-        // Générer le prochain numéro de matricule (logique similaire aux élèves)
-        const { data: existingTeachers, error: countError } = await supabase
-          .from('teachers')
-          .select('employee_number')
-          .eq('school_id', userProfile.schoolId)
-          .eq('is_active', true)
-          .order('employee_number', { ascending: true });
+        // Extraire le numéro de l'identifiant généré (Prof001@ecole_best -> Prof001)
+        employee_number = fullIdentifier.split('@')[0];
+      }
 
-        if (!countError && existingTeachers) {
-          const teacherNumbers = existingTeachers.map(t => t.employee_number);
-          let nextNumber = 1;
-          
-          while (true) {
-            const formattedNumber = nextNumber.toString().padStart(2, '0');
-            const candidateNumber = `Prof${formattedNumber}`;
-            
-            if (!teacherNumbers.includes(candidateNumber)) {
-              employee_number = candidateNumber;
-              break;
-            }
-            nextNumber++;
-            
-            if (nextNumber > 999) {
-              employee_number = `Prof${Date.now().toString().slice(-3)}`;
-              break;
-            }
-          } } else {
-          employee_number = `Prof01`;
-        }
+      // Créer le compte d'authentification
+      const authUser = await createTeacherAuthAccount(employee_number, schoolSuffix);
+      
+      if (!authUser) {
+        toast({
+          title: "Avertissement",
+          description: "L'enseignant a été créé mais le compte de connexion n'a pas pu être généré. Contactez l'administrateur.",
+          variant: "destructive",
+        });
       }
 
       const { error } = await supabase
@@ -111,17 +142,21 @@ export const useTeachers = () => {
           specialization: teacherData.specialization,
           hire_date: teacherData.hire_date || new Date().toISOString().split('T')[0],
           is_active: teacherData.is_active ?? true,
-          school_id: userProfile.schoolId
+          school_id: userProfile.schoolId,
+          user_id: authUser?.id || null
         });
 
       if (error) throw error;
       
       await fetchTeachers();
       
-      toast({
-        title: "Enseignant ajouté avec succès",
-        description: `L'enseignant ${teacherData.first_name} ${teacherData.last_name} a été ajouté.`,
-      });
+      if (authUser) {
+        toast({
+          title: "Succès",
+          description: `Enseignant créé avec l'identifiant: ${fullIdentifier}`,
+          variant: "default",
+        });
+      }
       
       return true;
     } catch (err) {
