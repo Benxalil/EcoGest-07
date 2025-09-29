@@ -88,7 +88,7 @@ export function useStudents(classId?: string) {
   }, [fetchStudents]);
 
   // Créer un compte d'authentification pour l'élève
-  const createStudentAuthAccount = async (studentNumber: string, schoolSuffix: string, defaultPassword: string = 'student123') => {
+  const createStudentAuthAccount = async (studentNumber: string, schoolSuffix: string, firstName: string, lastName: string, defaultPassword: string = 'student123') => {
     try {
       const email = `${studentNumber}@${schoolSuffix}`;
       
@@ -98,8 +98,8 @@ export function useStudents(classId?: string) {
           email, 
           password: defaultPassword, 
           role: 'student', 
-          first_name: '', 
-          last_name: '' 
+          first_name: firstName, 
+          last_name: lastName 
         }
       });
 
@@ -140,7 +140,7 @@ export function useStudents(classId?: string) {
       const studentNumber = fullIdentifier.split('@')[0];
 
       // Créer le compte d'authentification
-      const authUser = await createStudentAuthAccount(studentNumber, schoolSuffix);
+      const authUser = await createStudentAuthAccount(studentNumber, schoolSuffix, studentData.first_name, studentData.last_name);
       
       if (!authUser) {
         toast({

@@ -37,7 +37,7 @@ export const useTeachers = () => {
   const { toast } = useToast();
 
   // Créer un compte d'authentification pour l'enseignant
-  const createTeacherAuthAccount = async (employeeNumber: string, schoolSuffix: string, defaultPassword: string = 'teacher123') => {
+  const createTeacherAuthAccount = async (employeeNumber: string, schoolSuffix: string, firstName: string, lastName: string, defaultPassword: string = 'teacher123') => {
     try {
       const email = `${employeeNumber}@${schoolSuffix}`;
       
@@ -47,8 +47,8 @@ export const useTeachers = () => {
           email, 
           password: defaultPassword, 
           role: 'teacher', 
-          first_name: '', 
-          last_name: '' 
+          first_name: firstName, 
+          last_name: lastName 
         }
       });
 
@@ -121,7 +121,7 @@ export const useTeachers = () => {
       }
 
       // Créer le compte d'authentification
-      const authUser = await createTeacherAuthAccount(employee_number, schoolSuffix);
+      const authUser = await createTeacherAuthAccount(employee_number, schoolSuffix, teacherData.first_name, teacherData.last_name);
       
       if (!authUser) {
         toast({
