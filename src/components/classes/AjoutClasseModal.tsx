@@ -34,6 +34,7 @@ export function AjoutClasseModal({ open, onOpenChange, onSuccess }: AjoutClasseM
   const { currentPlan, isFeatureLimited, getFeatureLimit, checkStarterLimits, markAsNotStarterCompatible } = useSubscriptionPlan();
   const { classes, createClass } = useClasses();
   const [showStarterWarning, setShowStarterWarning] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { series, loading: seriesLoading, error: seriesError } = useDefaultSeries();
   const { labels: classLabels, loading: labelsLoading, error: labelsError } = useDefaultLabels();
   
@@ -48,7 +49,12 @@ export function AjoutClasseModal({ open, onOpenChange, onSuccess }: AjoutClasseM
   });
 
   const onSubmit = async (data: FormData) => {
+    if (isSubmitting) return;
+    
     try {
+      setIsSubmitting(true);
+      console.log("Form submission started", { data, currentPlan, classesCount: classes.length });
+
       // Vérifier les erreurs de chargement des données
       if (seriesError || labelsError) {
         toast({
@@ -81,6 +87,7 @@ export function AjoutClasseModal({ open, onOpenChange, onSuccess }: AjoutClasseM
 
       // Vérifier les limites d'abonnement
       const currentClassCount = classes.length;
+      console.log("Checking limits", { currentPlan, currentClassCount });
       
       // Pour les plans payants, utiliser la logique existante
       if (currentPlan !== 'trial' && isFeatureLimited('classes', currentClassCount)) {
@@ -99,13 +106,16 @@ export function AjoutClasseModal({ open, onOpenChange, onSuccess }: AjoutClasseM
       // Pour la période d'essai, vérifier les limites Starter et afficher un avertissement
       if (currentPlan === 'trial') {
         const starterLimits = checkStarterLimits('classes', currentClassCount);
+        console.log("Starter limits check", starterLimits);
         
         if (starterLimits.exceedsStarter) {
+          console.log("Showing starter warning");
           setShowStarterWarning(true);
           return;
         }
       }
 
+      console.log("Proceeding with class creation");
       const success = await createClass({
         name: data.name,
         level: data.level,
@@ -122,21 +132,25 @@ export function AjoutClasseModal({ open, onOpenChange, onSuccess }: AjoutClasseM
         }
       }
     } catch (error) {
+      console.error("Form submission error:", error);
       toast({
         title: "Erreur lors de la création",
         description: "Une erreur est survenue lors de la création de la classe.",
         variant: "destructive",
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleStarterWarningConfirm = async () => {
-    await markAsNotStarterCompatible();
-    setShowStarterWarning(false);
-    
-    // Continuer avec la création de la classe
-    const data = form.getValues();
+    setIsSubmitting(true);
     try {
+      await markAsNotStarterCompatible();
+      setShowStarterWarning(false);
+      
+      // Continuer avec la création de la classe
+      const data = form.getValues();
       const success = await createClass({
         name: data.name,
         level: data.level,
@@ -153,11 +167,14 @@ export function AjoutClasseModal({ open, onOpenChange, onSuccess }: AjoutClasseM
         }
       }
     } catch (error) {
+      console.error("Error during starter warning confirm:", error);
       toast({
         title: "Erreur lors de la création",
         description: "Une erreur est survenue lors de la création de la classe.",
         variant: "destructive",
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -280,8 +297,8 @@ export function AjoutClasseModal({ open, onOpenChange, onSuccess }: AjoutClasseM
             )}
           />
 
-          <Button type="submit" className="w-full" disabled={seriesLoading || labelsLoading || Boolean(seriesError) || Boolean(labelsError)}>
-            {seriesLoading || labelsLoading ? 'Chargement...' : seriesError || labelsError ? 'Erreur de chargement' : 'Créer la classe'}
+          <Button type="submit" className="w-full" disabled={isSubmitting || seriesLoading || labelsLoading || Boolean(seriesError) || Boolean(labelsError)}>
+            {isSubmitting ? 'Création...' : seriesLoading || labelsLoading ? 'Chargement...' : seriesError || labelsError ? 'Erreur de chargement' : 'Créer la classe'}
           </Button>
         </form>
       </Form>
@@ -425,8 +442,8 @@ export function AjoutClasseModal({ open, onOpenChange, onSuccess }: AjoutClasseM
           )}
         />
 
-        <Button type="submit" className="w-full" disabled={seriesLoading || labelsLoading || Boolean(seriesError) || Boolean(labelsError)}>
-          {seriesLoading || labelsLoading ? 'Chargement...' : seriesError || labelsError ? 'Erreur de chargement' : 'Créer la classe'}
+        <Button type="submit" className="w-full" disabled={isSubmitting || seriesLoading || labelsLoading || Boolean(seriesError) || Boolean(labelsError)}>
+          {isSubmitting ? 'Création...' : seriesLoading || labelsLoading ? 'Chargement...' : seriesError || labelsError ? 'Erreur de chargement' : 'Créer la classe'}
         </Button>
         </form>
       </Form>
