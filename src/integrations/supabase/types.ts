@@ -1612,18 +1612,6 @@ export type Database = {
           updated_at: string
         }[]
       }
-      get_user_role: {
-        Args: Record<PropertyKey, never>
-        Returns: Database["public"]["Enums"]["user_role"]
-      }
-      get_user_school_id: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      has_role: {
-        Args: { _role: Database["public"]["Enums"]["user_role"] }
-        Returns: boolean
-      }
       initialize_new_school: {
         Args: {
           academic_year_name_param?: string
