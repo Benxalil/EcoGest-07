@@ -90,8 +90,7 @@ export function useStudents(classId?: string) {
   // Créer un compte d'authentification pour l'élève
   const createStudentAuthAccount = async (studentNumber: string, schoolSuffix: string, firstName: string, lastName: string, defaultPassword: string = 'student123') => {
     try {
-      const cleanSuffix = schoolSuffix.replace(/_/g, '-');
-      const email = `${studentNumber}@${cleanSuffix}.ecogest.app`;
+      const email = `${studentNumber}@${schoolSuffix}`;
       
       // Créer le compte via Edge Function
       const { data, error } = await supabase.functions.invoke('create-user-account', {

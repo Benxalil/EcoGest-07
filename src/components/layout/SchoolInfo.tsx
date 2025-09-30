@@ -1,6 +1,6 @@
 
 import { School } from "lucide-react";
-import { useApp } from "@/contexts/AppContext";
+import { useSchoolData } from "@/hooks/useSchoolData";
 import { useEffect } from "react";
 
 interface SchoolInfoProps {
@@ -14,7 +14,7 @@ export function SchoolInfo({
   schoolLogo, 
   className = "" 
 }: SchoolInfoProps) {
-  const { schoolData, refreshSchoolData } = useApp();
+  const { schoolData, refreshSchoolData } = useSchoolData();
 
   // Écouter les mises à jour des paramètres d'école
   useEffect(() => {

@@ -8,13 +8,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Link } from "react-router-dom";
 import { EyeIcon, EyeOffIcon, Mail, Lock, User } from "lucide-react";
 import { EcoGestLogo } from "@/assets/EcoGestLogo";
-import { useToast } from "@/hooks/use-toast";
 
 const AuthPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [loginType, setLoginType] = useState<'admin' | 'user'>('user');
-  const { toast } = useToast();
 
   // Login form state
   const [loginData, setLoginData] = useState({
@@ -42,27 +40,18 @@ const AuthPage = () => {
     try {
       let email = loginData.identifier;
       
-      // Validation basique du format d'identifiant pour les utilisateurs
-      if (loginType === 'user') {
-        const identifierRegex = /^(Eleve|Prof|Parent|Admin)\d{3}@[a-z0-9-]+\.ecogest\.app$/;
-        if (!identifierRegex.test(loginData.identifier)) {
-          toast({
-            title: "Format incorrect",
-            description: "L'identifiant doit être au format: Role000@ecole.ecogest.app",
-            variant: "destructive",
-          });
-          setIsLoading(false);
-          return;
-        }
-      }
-      
       // Format identifier based on login type
       if (loginType === 'admin') {
         // Admin login - use identifier as is (should be email)
         email = loginData.identifier;
       } else {
-        // User login - use the identifier as is (already formatted as email)
-        email = loginData.identifier;
+        // User login - format identifier to email if not already formatted
+        if (!loginData.identifier.includes('@')) {
+          // For now, we'll add a generic suffix, but this should be dynamic based on school
+          email = `${loginData.identifier}@school`;
+        } else {
+          email = loginData.identifier;
+        }
       }
 
       const { error } = await supabase.auth.signInWithPassword({
