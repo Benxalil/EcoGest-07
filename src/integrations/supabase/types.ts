@@ -1596,6 +1596,22 @@ export type Database = {
         }
         Returns: number
       }
+      get_school_profiles: {
+        Args: { target_school_id: string }
+        Returns: {
+          avatar_url: string
+          created_at: string
+          email: string
+          first_name: string
+          id: string
+          is_active: boolean
+          last_name: string
+          phone: string
+          role: Database["public"]["Enums"]["user_role"]
+          school_id: string
+          updated_at: string
+        }[]
+      }
       get_user_role: {
         Args: Record<PropertyKey, never>
         Returns: Database["public"]["Enums"]["user_role"]
