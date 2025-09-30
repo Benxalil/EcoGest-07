@@ -70,6 +70,10 @@ export const useResults = () => {
       setLoading(true);
       setError(null);
       
+      // Forcer une nouvelle récupération des données en invalidant le cache
+      console.log('useResults: Récupération des données fraîches...');
+      setError(null);
+      
       console.log('useResults: Récupération des VRAIES données depuis la base pour schoolId:', userProfile.schoolId);
 
       // 1. Récupérer les classes
@@ -214,16 +218,11 @@ export const useResults = () => {
     } finally {
       setLoading(false);
     }
-  }, [userProfile?.schoolId]);
+  }, [userProfile?.schoolId, toast]);
 
   useEffect(() => {
-    console.log('useResults: useEffect triggered with schoolId:', userProfile?.schoolId);
-    if (userProfile?.schoolId) {
-      fetchResults();
-    }
-  }, [userProfile?.schoolId]);
-
-  useEffect(() => {
+    fetchResults();
+    
     // Écouter les changements dans la section Matières pour synchroniser
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'matieresUpdated' || e.key === 'coefficientsUpdated') {
