@@ -86,104 +86,76 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const fetchUserProfile = async (userId: string) => {
     try {
-      console.log('AppContext: Récupération du profil pour userId:', userId);
-      
       // Check cache first
       const cached = cache.get<UserProfile>(`profile-${userId}`);
       if (cached) {
-        console.log('AppContext: Profil trouvé dans le cache');
         dispatch({ type: 'SET_USER_PROFILE', payload: cached });
         return;
       }
 
-      const { data: profile, error } = await supabase
+      const { data: profile } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
-        .maybeSingle();
+        .single();
 
-      if (error) {
-        console.error('AppContext: Erreur lors de la récupération du profil:', error);
-        throw error;
+      if (profile) {
+        const userProfile: UserProfile = {
+          role: profile.role,
+          firstName: profile.first_name,
+          lastName: profile.last_name,
+          id: profile.id,
+          email: profile.email,
+          schoolId: profile.school_id,
+        };
+        
+        // Cache for 5 minutes
+        cache.set(`profile-${userId}`, userProfile, 5 * 60 * 1000);
+        dispatch({ type: 'SET_USER_PROFILE', payload: userProfile });
       }
-
-      if (!profile) {
-        console.warn('AppContext: Aucun profil trouvé pour cet utilisateur');
-        dispatch({ type: 'SET_USER_PROFILE', payload: null });
-        return;
-      }
-
-      console.log('AppContext: Profil récupéré avec succès:', profile.id);
-      const userProfile: UserProfile = {
-        role: profile.role,
-        firstName: profile.first_name,
-        lastName: profile.last_name,
-        id: profile.id,
-        email: profile.email,
-        schoolId: profile.school_id,
-      };
-      
-      // Cache for 5 minutes
-      cache.set(`profile-${userId}`, userProfile, 5 * 60 * 1000);
-      dispatch({ type: 'SET_USER_PROFILE', payload: userProfile });
     } catch (error) {
-      console.error('AppContext: Erreur critique lors de la récupération du profil:', error);
-      dispatch({ type: 'SET_USER_PROFILE', payload: null });
+      console.error('Error fetching user profile:', error);
     }
   };
 
   const fetchSchoolData = async (schoolId: string) => {
     try {
-      console.log('AppContext: Récupération des données de l\'école pour schoolId:', schoolId);
-      
       // Check cache first
       const cached = cache.get<SchoolData>(`school-${schoolId}`);
       if (cached) {
-        console.log('AppContext: Données d\'école trouvées dans le cache');
         dispatch({ type: 'SET_SCHOOL_DATA', payload: cached });
         return;
       }
 
-      const { data: school, error } = await supabase
+      const { data: school } = await supabase
         .from('schools')
         .select('*')
         .eq('id', schoolId)
-        .maybeSingle();
+        .single();
 
-      if (error) {
-        console.error('AppContext: Erreur lors de la récupération des données d\'école:', error);
-        throw error;
+      if (school) {
+        // Map database schema to our interface
+        const mappedSchoolData: SchoolData = {
+          id: school.id,
+          name: school.name,
+          address: school.address || undefined,
+          phone: school.phone || undefined,  
+          email: school.email || undefined,
+          academic_year: school.academic_year || undefined,
+          slogan: school.slogan || undefined,
+          logo_url: school.logo_url || undefined,
+          school_suffix: school.school_suffix || undefined,
+          type: school.school_type as any || undefined,
+          semester_type: school.semester_type || undefined,
+          language: school.language || undefined,
+        };
+        
+        // Cache for 10 minutes
+        cache.set(`school-${schoolId}`, mappedSchoolData, 10 * 60 * 1000);
+        dispatch({ type: 'SET_SCHOOL_DATA', payload: mappedSchoolData });
       }
-
-      if (!school) {
-        console.warn('AppContext: Aucune école trouvée pour ce schoolId');
-        dispatch({ type: 'SET_SCHOOL_DATA', payload: null });
-        return;
-      }
-
-      console.log('AppContext: Données d\'école récupérées avec succès:', school.id);
-      // Map database schema to our interface
-      const mappedSchoolData: SchoolData = {
-        id: school.id,
-        name: school.name,
-        address: school.address || undefined,
-        phone: school.phone || undefined,  
-        email: school.email || undefined,
-        academic_year: school.academic_year || undefined,
-        slogan: school.slogan || undefined,
-        logo_url: school.logo_url || undefined,
-        school_suffix: school.school_suffix || undefined,
-        type: school.school_type as any || undefined,
-        semester_type: school.semester_type || undefined,
-        language: school.language || undefined,
-      };
-      
-      // Cache for 10 minutes
-      cache.set(`school-${schoolId}`, mappedSchoolData, 10 * 60 * 1000);
-      dispatch({ type: 'SET_SCHOOL_DATA', payload: mappedSchoolData });
     } catch (error) {
-      console.error('AppContext: Erreur critique lors de la récupération des données d\'école:', error);
-      dispatch({ type: 'SET_SCHOOL_DATA', payload: null });
+      console.error('Error fetching school data:', error);
     }
   };
 
@@ -211,33 +183,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const initializeAuth = async () => {
       try {
-        console.log('AppContext: Initialisation de l\'authentification...');
-        
         // Check for existing session first
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        
-        if (sessionError) {
-          console.error('AppContext: Erreur lors de la récupération de la session:', sessionError);
-          throw sessionError;
-        }
+        const { data: { session } } = await supabase.auth.getSession();
         
         if (!mounted) return;
 
-        console.log('AppContext: Session récupérée:', session ? 'Session active' : 'Pas de session');
         dispatch({ type: 'SET_AUTH', payload: { user: session?.user ?? null, session } });
 
         if (session?.user) {
-          console.log('AppContext: Utilisateur connecté, récupération du profil...');
           await fetchUserProfile(session.user.id);
-        } else {
-          console.log('AppContext: Aucun utilisateur connecté');
         }
 
         dispatch({ type: 'SET_LOADING', payload: false });
         dispatch({ type: 'SET_INITIALIZED', payload: true });
-        console.log('AppContext: Initialisation terminée');
       } catch (error) {
-        console.error('AppContext: Erreur critique lors de l\'initialisation:', error);
+        console.error('Error initializing auth:', error);
         dispatch({ type: 'SET_LOADING', payload: false });
         dispatch({ type: 'SET_INITIALIZED', payload: true });
       }
