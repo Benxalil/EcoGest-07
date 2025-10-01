@@ -35,7 +35,7 @@ export default function ListeMatieres() {
   const { classeId } = useParams();
   const { classes } = useClasses();
   const { subjects } = useSubjects(classeId);
-  const { isTeacher, isAdmin } = useUserRole();
+  const { isTeacher } = useUserRole();
   const { teacherSubjectIds } = useTeacherFilter();
 
   useEffect(() => {
@@ -64,15 +64,9 @@ export default function ListeMatieres() {
         maxScore: s.hours_per_week || 20
       }));
 
-      console.log('Toutes les matières de la classe:', matieresForClasse);
-      console.log('IDs des matières enseignant:', teacherSubjectIds);
-
       // Filtrer pour les enseignants - seulement leurs matières
-      if (isTeacher()) {
-        const beforeFilter = matieresForClasse.length;
+      if (isTeacher() && teacherSubjectIds.length > 0) {
         matieresForClasse = matieresForClasse.filter(m => teacherSubjectIds.includes(m.id));
-        console.log(`Filtrage enseignant: ${beforeFilter} matières -> ${matieresForClasse.length} matières`);
-        console.log('Matières filtrées:', matieresForClasse);
       }
 
       setMatieres(matieresForClasse);
@@ -106,24 +100,20 @@ export default function ListeMatieres() {
             </div>
           </div>
           <div className="flex gap-2">
-            {isAdmin() && (
-              <Button
-                onClick={() => navigate(`/notes/eleves?classeId=${classeId}`)}
-                variant="outline"
-                size="sm"
-              >
-                Notes par Élève
-              </Button>
-            )}
-            {isAdmin() && (
-              <Button
-                onClick={() => navigate(`/notes/consulter?classeId=${classeId}`)}
-                variant="default"
-                size="sm"
-              >
-                Consulter les Notes
-              </Button>
-            )}
+            <Button
+              onClick={() => navigate(`/notes/eleves?classeId=${classeId}`)}
+              variant="outline"
+              size="sm"
+            >
+              Notes par Élève
+            </Button>
+            <Button
+              onClick={() => navigate(`/notes/consulter?classeId=${classeId}`)}
+              variant="default"
+              size="sm"
+            >
+              Consulter les Notes
+            </Button>
           </div>
         </div>
 
@@ -173,11 +163,7 @@ export default function ListeMatieres() {
         {matieresFiltered.length === 0 && (
           <div className="text-center py-12">
             <p className="text-gray-500">
-              {searchTerm 
-                ? "Aucune matière trouvée pour cette recherche." 
-                : isTeacher() 
-                  ? "Vous n'enseignez aucune matière dans cette classe." 
-                  : "Aucune matière disponible."}
+              {searchTerm ? "Aucune matière trouvée pour cette recherche." : "Aucune matière disponible."}
             </p>
           </div>
         )}

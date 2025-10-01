@@ -40,18 +40,20 @@ interface Classe {
 
 const fetchExamens = async (): Promise<Examen[]> => {
   try {
-    // Récupérer les examens sans join (car pas de foreign key définie)
     const { data, error } = await supabase
       .from('exams')
-      .select('*')
+      .select(`
+        *,
+        classes(
+          id,
+          name,
+          level,
+          section
+        )
+      `)
       .order('exam_date', { ascending: false });
 
-    if (error) {
-      console.error("Erreur Supabase:", error);
-      throw error;
-    }
-
-    console.log('Examens récupérés:', data);
+    if (error) throw error;
 
     // Grouper les examens par titre et date pour afficher une seule bande par examen
     const groupedExams = data?.reduce((acc, exam) => {
@@ -74,14 +76,15 @@ const fetchExamens = async (): Promise<Examen[]> => {
       // Ajouter la classe à la liste des classes pour cet examen
       if (exam.class_id) {
         acc[key].classes.push(exam.class_id);
+        if (exam.classes) {
+          acc[key].classesData.push(exam.classes);
+        }
       }
       
       return acc;
     }, {} as Record<string, any>);
 
-    const result = Object.values(groupedExams || []);
-    console.log('Examens groupés:', result);
-    return result;
+    return Object.values(groupedExams || []);
   } catch (error) {
     console.error("Erreur lors de la récupération des examens:", error);
     return [];
@@ -214,23 +217,15 @@ export default function ListeExamensNotes() {
 
   // Si un examen est sélectionné, afficher ses classes
   if (selectedExamen) {
-    console.log('Examen sélectionné:', selectedExamen);
-    console.log('Classes de l\'examen:', selectedExamen.classes);
-    console.log('Toutes les classes disponibles:', classes);
-    
     let classesExamen = classes.filter(classe => 
       selectedExamen.classes.includes(classe.id)
     );
 
-    console.log('Classes filtrées pour l\'examen:', classesExamen);
-
     // Filtrer pour les enseignants - seulement leurs classes
     if (isTeacher()) {
-      console.log('Classes enseignant:', teacherClassIds);
       classesExamen = classesExamen.filter(classe => 
         teacherClassIds.includes(classe.id)
       );
-      console.log('Classes après filtre enseignant:', classesExamen);
     }
 
     return (
