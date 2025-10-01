@@ -109,7 +109,8 @@ export function CreerAnnonceModal({ open, onOpenChange, onAnnouncementCreated }:
         content: contenu,
         is_published: true,
         priority: priorite,
-        target_audience: destinataires
+        target_audience: destinataires,
+        expires_at: dateExpiration
       });
 
       if (success) {

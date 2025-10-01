@@ -27,6 +27,7 @@ export interface CreateAnnouncementData {
   is_published?: boolean;
   priority?: 'normal' | 'urgent';
   target_audience?: string[];
+  expires_at?: Date;
 }
 
 export const useAnnouncements = () => {
@@ -78,6 +79,7 @@ export const useAnnouncements = () => {
           is_published: announcementData.is_published ?? false,
           priority: announcementData.priority ?? 'normal',
           target_audience: announcementData.target_audience ?? ['tous'],
+          expires_at: announcementData.expires_at?.toISOString(),
           school_id: userProfile.schoolId,
           author_id: userProfile.id
         });
@@ -190,34 +192,35 @@ export const useAnnouncements = () => {
       return allAnnouncements;
     }
 
-    // Les enseignants voient uniquement les annonces qui leur sont destinées
-    if (isTeacher()) {
-      return allAnnouncements.filter((announcement) => {
-        // Si pas de target_audience ou vide, afficher pour tous
-        if (!announcement.target_audience || announcement.target_audience.length === 0) {
-          return true;
-        }
-        
-        // Vérifier si l'audience cible contient des valeurs pour enseignants
-        return announcement.target_audience.some((audience: string) => 
-          ['teacher', 'enseignant', 'enseignants', 'teachers', 'tous', 'all', 'toute'].includes(audience.toLowerCase())
-        );
-      });
-    }
+    // Mapper les audiences sélectionnées aux rôles de la base de données
+    const audienceToRoleMap: { [key: string]: string[] } = {
+      'élèves': ['student'],
+      'eleves': ['student'],
+      'parents': ['parent'],
+      'professeurs': ['teacher'],
+      'enseignants': ['teacher'],
+      'administration': ['school_admin'],
+      'tous': ['student', 'parent', 'teacher', 'school_admin'],
+      'all': ['student', 'parent', 'teacher', 'school_admin']
+    };
 
-    // Pour les autres rôles (élèves, parents), filtrer selon leur rôle
+    // Filtrer selon le rôle de l'utilisateur
     return allAnnouncements.filter((announcement) => {
+      // Si pas de target_audience ou vide, afficher pour tous
       if (!announcement.target_audience || announcement.target_audience.length === 0) {
         return true;
       }
+
+      const userRole = userProfile?.role?.toLowerCase() || '';
       
-      const role = userProfile?.role?.toLowerCase() || '';
-      return announcement.target_audience.some((audience: string) => 
-        audience.toLowerCase().includes(role) || 
-        ['tous', 'all', 'toute'].includes(audience.toLowerCase())
-      );
+      // Vérifier si l'audience cible inclut le rôle de l'utilisateur
+      return announcement.target_audience.some((audience: string) => {
+        const normalizedAudience = audience.toLowerCase().trim();
+        const allowedRoles = audienceToRoleMap[normalizedAudience] || [];
+        return allowedRoles.includes(userRole);
+      });
     });
-  }, [allAnnouncements, isAdmin, isTeacher, userProfile?.role]);
+  }, [allAnnouncements, isAdmin, userProfile?.role]);
 
   return {
     announcements,

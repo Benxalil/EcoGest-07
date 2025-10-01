@@ -202,7 +202,7 @@ export default function ListeAnnonces() {
                               <div className="flex items-center space-x-4">
                                 <div className="flex items-center">
                                   <Calendar className="h-4 w-4 mr-1" />
-                                  {annonce.dateCreation.toLocaleDateString()}
+                                  Expire le : {annonce.dateExpiration.toLocaleDateString()}
                                 </div>
                                 <div className="flex items-center">
                                   <Users className="h-4 w-4 mr-1" />
@@ -263,7 +263,7 @@ export default function ListeAnnonces() {
                               <div className="flex items-center space-x-4">
                                 <div className="flex items-center">
                                   <Calendar className="h-4 w-4 mr-1" />
-                                  {annonce.dateCreation.toLocaleDateString()}
+                                  Expiré le : {annonce.dateExpiration.toLocaleDateString()}
                                 </div>
                                 <div className="flex items-center">
                                   <Users className="h-4 w-4 mr-1" />
@@ -337,7 +337,7 @@ export default function ListeAnnonces() {
                               <div className="flex items-center space-x-4">
                                 <div className="flex items-center">
                                   <Calendar className="h-4 w-4 mr-1" />
-                                  {annonce.dateCreation.toLocaleDateString()}
+                                  Expire le : {annonce.dateExpiration.toLocaleDateString()}
                                 </div>
                                 <div className="flex items-center">
                                   <Users className="h-4 w-4 mr-1" />
@@ -394,7 +394,7 @@ export default function ListeAnnonces() {
                               <div className="flex items-center space-x-4">
                                 <div className="flex items-center">
                                   <Calendar className="h-4 w-4 mr-1" />
-                                  {annonce.dateCreation.toLocaleDateString()}
+                                  Expiré le : {annonce.dateExpiration.toLocaleDateString()}
                                 </div>
                                 <div className="flex items-center">
                                   <Users className="h-4 w-4 mr-1" />
@@ -468,7 +468,7 @@ export default function ListeAnnonces() {
                               <div className="flex items-center space-x-4">
                                 <div className="flex items-center">
                                   <Calendar className="h-4 w-4 mr-1" />
-                                  {annonce.dateCreation.toLocaleDateString()}
+                                  Expire le : {annonce.dateExpiration.toLocaleDateString()}
                                 </div>
                                 <div className="flex items-center">
                                   <Users className="h-4 w-4 mr-1" />
@@ -525,7 +525,7 @@ export default function ListeAnnonces() {
                               <div className="flex items-center space-x-4">
                                 <div className="flex items-center">
                                   <Calendar className="h-4 w-4 mr-1" />
-                                  {annonce.dateCreation.toLocaleDateString()}
+                                  Expiré le : {annonce.dateExpiration.toLocaleDateString()}
                                 </div>
                                 <div className="flex items-center">
                                   <Users className="h-4 w-4 mr-1" />
