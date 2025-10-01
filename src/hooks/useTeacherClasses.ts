@@ -26,12 +26,29 @@ export const useTeacherClasses = () => {
     try {
       setLoading(true);
 
+      // Trouver d'abord l'entrée teacher correspondant au user_id
+      const { data: teacherData, error: teacherError } = await supabase
+        .from('teachers')
+        .select('id')
+        .eq('school_id', userProfile.schoolId)
+        .eq('user_id', userProfile.id)
+        .maybeSingle();
+
+      if (teacherError) throw teacherError;
+
+      // Si l'enseignant n'a pas d'entrée dans teachers, retourner vide
+      if (!teacherData) {
+        setClasses([]);
+        setLoading(false);
+        return;
+      }
+
       // Trouver les classes où l'enseignant apparaît dans l'emploi du temps
       const { data: scheduleData, error: scheduleError } = await supabase
         .from('schedules')
         .select('class_id')
         .eq('school_id', userProfile.schoolId)
-        .eq('teacher_id', userProfile.id);
+        .eq('teacher_id', teacherData.id);
 
       if (scheduleError) throw scheduleError;
 
