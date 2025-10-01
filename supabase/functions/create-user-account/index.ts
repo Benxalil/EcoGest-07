@@ -57,9 +57,17 @@ serve(async (req) => {
       )
     }
 
-    // Create user with admin API
+    // Transform school_suffix to valid domain format
+    // Example: ecole_best -> ecole-best.ecogest.app
+    const [matricule, schoolSuffix] = email.split('@')
+    const validDomain = schoolSuffix.replace(/_/g, '-') + '.ecogest.app'
+    const authEmail = `${matricule}@${validDomain}`
+
+    console.log('Creating user with auth email:', authEmail)
+
+    // Create user with admin API using valid email format
     const { data: authUser, error: authError } = await supabaseClient.auth.admin.createUser({
-      email, // Format: matricule@école (ex: ELEVE001@ecole_best)
+      email: authEmail, // Format valide: Prof03@ecole-best.ecogest.app
       password,
       email_confirm: true,
       user_metadata: {
@@ -67,7 +75,9 @@ serve(async (req) => {
         first_name,
         last_name,
         school_id,
-        matricule: email.split('@')[0] // Extraire le matricule de l'email
+        matricule: matricule,
+        display_email: email, // Garder le format original pour l'affichage
+        school_suffix: schoolSuffix
       }
     })
 
