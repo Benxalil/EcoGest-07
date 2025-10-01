@@ -11,11 +11,13 @@ import { useState, useEffect } from "react";
 import { BookOpen, UserCheck, Pencil, ArrowLeft, Trash2, AlertTriangle } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useClasses } from "@/hooks/useClasses";
+import { useTeacherClasses } from "@/hooks/useTeacherClasses";
 import { useSchedules, Course, DaySchedule } from "@/hooks/useSchedules";
 import { useTeachers } from "@/hooks/useTeachers";
 import { useSubjects } from "@/hooks/useSubjects";
 import { useLessonLogs } from "@/hooks/useLessonLogs";
 import { useToast } from "@/hooks/use-toast";
+import { useUserRole } from "@/hooks/useUserRole";
 
 // Les interfaces Course et DaySchedule sont maintenant importées du hook useSchedules
 
@@ -40,7 +42,13 @@ interface CahierFormData {
 
 export default function EmploiDuTemps() {
   const navigate = useNavigate();
-  const { classes, loading: classesLoading } = useClasses();
+  const { isAdmin, isTeacher } = useUserRole();
+  
+  // Utiliser le hook approprié selon le rôle
+  const adminData = useClasses();
+  const teacherData = useTeacherClasses();
+  
+  const { classes, loading: classesLoading } = isTeacher() ? teacherData : adminData;
   const { classeId } = useParams();
   const { schedules, loading: schedulesLoading, createCourse, updateCourse, deleteCourse } = useSchedules(classeId);
   const { teachers } = useTeachers();
@@ -55,6 +63,7 @@ export default function EmploiDuTemps() {
     course: Course;
   } | null>(null);
   const [className, setClassName] = useState<string>("");
+  const [hasAccess, setHasAccess] = useState<boolean>(true);
 
   const handleBack = () => {
     navigate('/emplois');
@@ -83,15 +92,19 @@ export default function EmploiDuTemps() {
 
   // Les données sont maintenant chargées automatiquement via le hook useSchedules
 
-  // Charger le nom de la classe depuis Supabase
+  // Charger le nom de la classe depuis Supabase et vérifier l'accès
   useEffect(() => {
     if (classeId && classes.length > 0) {
       const classe = classes.find(c => c.id === classeId);
       if (classe) {
         setClassName(`${classe.name} ${classe.level}${classe.section ? ` - ${classe.section}` : ''}`);
+        setHasAccess(true);
+      } else if (isTeacher()) {
+        // Si l'enseignant essaie d'accéder à une classe qui n'est pas dans sa liste
+        setHasAccess(false);
       }
     }
-  }, [classeId, classes]);
+  }, [classeId, classes, isTeacher]);
 
   // Les matières et enseignants sont maintenant chargés via les hooks useClasses et useTeachers
 
@@ -278,6 +291,33 @@ export default function EmploiDuTemps() {
     );
   }
 
+  // Si l'enseignant n'a pas accès à cette classe
+  if (isTeacher() && !hasAccess) {
+    return (
+      <Layout>
+        <div className="container mx-auto p-6">
+          <div className="flex items-center mb-6">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleBack}
+              className="mr-4 p-2 hover:bg-gray-100"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <h1 className="text-2xl font-bold text-gray-900">Accès refusé</h1>
+          </div>
+          <div className="text-center py-12">
+            <AlertTriangle className="h-16 w-16 text-yellow-500 mx-auto mb-4" />
+            <p className="text-gray-500 text-lg mb-4">Vous n'avez pas accès à cet emploi du temps</p>
+            <p className="text-gray-400 mb-6">Cette classe ne vous est pas attribuée</p>
+            <Button onClick={handleBack}>Retour à mes classes</Button>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
   return (
     <Layout>
       <div className="container mx-auto p-6">
@@ -296,13 +336,14 @@ export default function EmploiDuTemps() {
             </h1>
           </div>
           <div className="flex items-center gap-4">
-            <Dialog open={isDialogOpen} onOpenChange={handleDialogClose}>
-              <DialogTrigger asChild>
-                <Button variant="default" className="bg-blue-500 hover:bg-blue-600 text-white">
-                  Ajouter un cours
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[425px]">
+            {isAdmin() && (
+              <Dialog open={isDialogOpen} onOpenChange={handleDialogClose}>
+                <DialogTrigger asChild>
+                  <Button variant="default" className="bg-blue-500 hover:bg-blue-600 text-white">
+                    Ajouter un cours
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
                   <DialogTitle>
                     {editingCourse ? "Modifier le cours" : "Saisir les informations"}
@@ -460,7 +501,8 @@ export default function EmploiDuTemps() {
                   </form>
                 </Form>
               </DialogContent>
-            </Dialog>
+              </Dialog>
+            )}
 
             {/* Modal Cahier de Texte */}
             <Dialog open={isCahierDialogOpen} onOpenChange={handleCahierDialogClose}>
@@ -660,10 +702,12 @@ export default function EmploiDuTemps() {
                                 className="h-3 w-3 cursor-pointer text-green-600 hover:text-green-800" 
                                 onClick={() => handleAbsenceRetardForCourse(dayIndex, course)}
                               />
-                              <Pencil 
-                                className="h-3 w-3 cursor-pointer text-gray-600 hover:text-gray-800" 
-                                onClick={() => handleEditCourse(dayIndex, originalCourseIndex, course)}
-                              />
+                              {isAdmin() && (
+                                <Pencil 
+                                  className="h-3 w-3 cursor-pointer text-gray-600 hover:text-gray-800" 
+                                  onClick={() => handleEditCourse(dayIndex, originalCourseIndex, course)}
+                                />
+                              )}
                             </div>
                           </div>
                         );
@@ -706,10 +750,12 @@ export default function EmploiDuTemps() {
                                 className="h-3 w-3 cursor-pointer text-green-600 hover:text-green-800" 
                                 onClick={() => handleAbsenceRetardForCourse(dayIndex, course)}
                               />
-                              <Pencil 
-                                className="h-3 w-3 cursor-pointer text-gray-600 hover:text-gray-800" 
-                                onClick={() => handleEditCourse(dayIndex, originalCourseIndex, course)}
-                              />
+                              {isAdmin() && (
+                                <Pencil 
+                                  className="h-3 w-3 cursor-pointer text-gray-600 hover:text-gray-800" 
+                                  onClick={() => handleEditCourse(dayIndex, originalCourseIndex, course)}
+                                />
+                              )}
                             </div>
                           </div>
                         );
