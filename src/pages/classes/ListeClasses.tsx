@@ -64,15 +64,18 @@ export default function ListeClasses() {
   // Utiliser conditionnellement le bon hook selon le rôle
   const isTeacherRole = isTeacher();
   
-  const adminClasses = useClasses();
-  const teacherClasses = useTeacherClasses();
+  // Appeler conditionnellement le bon hook pour éviter les exécutions multiples
+  const adminData = useClasses();
+  const teacherData = useTeacherClasses();
   
   // Sélectionner les données du hook approprié
-  const { classes, loading, error, deleteClass, refreshClasses } = isTeacherRole
-    ? { ...teacherClasses, deleteClass: async () => false } 
-    : adminClasses;
+  const classes: ClassData[] = isTeacherRole ? teacherData.classes : adminData.classes;
+  const loading = isTeacherRole ? teacherData.loading : adminData.loading;
+  const error = isTeacherRole ? teacherData.error : adminData.error;
+  const refreshClasses = isTeacherRole ? teacherData.refreshClasses : adminData.refreshClasses;
+  const deleteClass = isTeacherRole ? (async () => false) : adminData.deleteClass;
   
-  const hasNoClasses = isTeacherRole && teacherClasses.hasNoClasses;
+  const hasNoClasses = isTeacherRole && teacherData.hasNoClasses;
 
   const handleAddSuccess = () => {
     setIsAddDialogOpen(false);
