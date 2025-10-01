@@ -43,6 +43,30 @@ export default function ResultatsSemestre() {
   // Récupérer les données de la classe et de l'examen
   const classData = getClassResults(classeId || '');
   const examData = isExamView ? getExamResults(classeId || '', examId || '') : null;
+
+  // Vérifier si l'examen actuel a des notes, sinon chercher un examen avec le même titre
+  useEffect(() => {
+    if (isExamView && examData && classData) {
+      const hasGrades = examData.students.some(student => student.grades && student.grades.length > 0);
+      
+      if (!hasGrades) {
+        // Chercher un autre examen avec le même titre qui a des notes
+        const otherExamsWithSameTitle = classData.exams.filter(
+          exam => exam.exam_title === examData.exam_title && exam.exam_id !== examId
+        );
+        
+        const examWithGrades = otherExamsWithSameTitle.find(exam => {
+          const examResults = getExamResults(classeId || '', exam.exam_id);
+          return examResults && examResults.students.some(s => s.grades && s.grades.length > 0);
+        });
+        
+        if (examWithGrades) {
+          console.log('Redirection vers l\'examen avec notes:', examWithGrades.exam_id);
+          navigate(`/resultats/classe/${classeId}/examen/${examWithGrades.exam_id}`, { replace: true });
+        }
+      }
+    }
+  }, [examData, classData, isExamView, examId, classeId, navigate, getExamResults]);
   
   // Adapter les données pour la compatibilité avec l'interface existante
   const classe = classData ? {

@@ -2,6 +2,7 @@ import { useAcademicYear } from "@/hooks/useAcademicYear";
 import { useClasses } from "@/hooks/useClasses";
 import { useSchoolData } from "@/hooks/useSchoolData";
 import { Exam } from "@/hooks/useExams";
+import { useGrades } from "@/hooks/useGrades";
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -76,6 +77,7 @@ export const ListeExamens: React.FC<ListeExamensProps> = ({
 }) => {
   const { academicYear } = useAcademicYear();
   const { classes, loading: classesLoading } = useClasses();
+  const { grades } = useGrades(); // Pour compter les notes par examen
   const [searchTerm, setSearchTerm] = useState("");
   const [editOpen, setEditOpen] = useState(false);
   const [editingExamen, setEditingExamen] = useState<Examen | null>(null);
@@ -166,6 +168,11 @@ export const ListeExamens: React.FC<ListeExamensProps> = ({
       return "Toutes les classes";
     }
     return classesNames.join(", ");
+  };
+
+  // Compter le nombre de notes pour un examen
+  const getGradesCount = (examId: string) => {
+    return grades?.filter(grade => grade.exam_id === examId).length || 0;
   };
 
   const filteredExamens = examens.filter(examen =>
@@ -313,6 +320,11 @@ export const ListeExamens: React.FC<ListeExamensProps> = ({
                           <Users className="h-4 w-4" />
                           {getClassesNoms(examen.classes)}
                         </div>
+                        <div className="flex items-center gap-1">
+                          <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
+                            {getGradesCount(examen.id)} notes
+                          </Badge>
+                        </div>
                       </div>
                     </div>
                     
@@ -408,6 +420,11 @@ export const ListeExamens: React.FC<ListeExamensProps> = ({
                         <div className="flex items-center gap-1">
                           <Users className="h-4 w-4" />
                           {getClassesNoms(examen.classes)}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
+                            {getGradesCount(examen.id)} notes
+                          </Badge>
                         </div>
                       </div>
                     </div>

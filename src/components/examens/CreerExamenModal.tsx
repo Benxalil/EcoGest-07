@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { useAcademicYear } from "@/hooks/useAcademicYear";
 import { useClasses } from "@/hooks/useClasses";
 import { useSchoolData } from "@/hooks/useSchoolData";
-import { CreateExamData } from "@/hooks/useExams";
+import { CreateExamData, useExams } from "@/hooks/useExams";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,6 +25,7 @@ export const CreerExamenModal: React.FC<CreerExamenModalProps> = ({ createExam, 
   const { academicYear } = useAcademicYear();
   const { classes, loading: classesLoading } = useClasses();
   const { schoolData: schoolSettings } = useSchoolData();
+  const { exams } = useExams(); // Pour vérifier les examens existants
   const { toast } = useToast();
 
   const [open, setOpen] = useState(false);
@@ -140,11 +141,34 @@ export const CreerExamenModal: React.FC<CreerExamenModalProps> = ({ createExam, 
       // Déterminer les classes à utiliser
       const classesToUse = toutesClasses ? classes.map(c => c.id) : classesSelectionnees;
       
+      // Vérifier s'il existe déjà un examen avec ce titre dans ces classes
+      const examTitle = typeExamen === "Autre" ? titrePersonnalise : typeExamen;
+      const duplicates = classesToUse.filter(classId => {
+        return exams?.some(exam => 
+          exam.class_id === classId && 
+          exam.title.toLowerCase() === examTitle.toLowerCase()
+        );
+      });
+
+      if (duplicates.length > 0) {
+        const duplicateClasses = duplicates.map(classId => {
+          const classe = classes.find(c => c.id === classId);
+          return classe ? `${classe.name} ${classe.level}${classe.section ? ` - ${classe.section}` : ''}` : '';
+        }).join(', ');
+
+        toast({
+          title: "Examens dupliqués détectés",
+          description: `Un examen avec le titre "${examTitle}" existe déjà pour: ${duplicateClasses}. Veuillez utiliser un titre différent ou modifier l'examen existant.`,
+          variant: "destructive"
+        });
+        return;
+      }
+      
       // Créer un examen pour chaque classe sélectionnée
       const createPromises = classesToUse.map(classId => 
         createExam({
           class_id: classId,
-          title: typeExamen === "Autre" ? titrePersonnalise : typeExamen,
+          title: examTitle,
           exam_date: dateExamen.toISOString().split('T')[0],
           total_marks: 20,
           is_published: false
