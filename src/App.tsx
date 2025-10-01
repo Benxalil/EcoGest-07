@@ -20,6 +20,7 @@ import ListeMatieres from "./pages/matieres/ListeMatieres";
 import ListeClassesExamens from "./pages/examens/ListeClassesExamens";
 import ListeExamens from "./pages/examens/ListeExamens";
 import ListeElevesNotes from "./pages/examens/ListeElevesNotes";
+import NotesIndex from "./pages/notes/NotesIndex";
 import ListeExamensNotes from "./pages/notes/ListeExamensNotes";
 import ListeMatieresNotes from "./pages/notes/ListeMatieres";
 import ListeElevesNotesPage from "./pages/notes/ListeElevesNotes";
@@ -27,6 +28,7 @@ import EvaluerEleve from "./pages/notes/EvaluerEleve";
 import NotesParEleve from "./pages/notes/NotesParEleve";
 import ListeElevesClasse from "./pages/notes/ListeElevesClasse";
 import ConsulterNotes from "./pages/notes/ConsulterNotes";
+import ListeClassesNotes from "./pages/notes/ListeClassesNotes";
 import ListeClassesResultats from "./pages/resultats/ListeClassesResultats";
 import ResultatsSemestre from "./pages/resultats/ResultatsSemestre";
 import BulletinAnnuel from "./pages/resultats/BulletinAnnuel";
@@ -79,7 +81,10 @@ function App() {
             <Route path="/examens" element={<ListeClassesExamens />} />
             <Route path="/examens/classe/:classeId" element={<ListeExamens />} />
             <Route path="/examens/:classeId/activites/:activiteId/eleve/:eleveId/notes" element={<ListeElevesNotes />} />
-            <Route path="/notes" element={<ListeExamensNotes />} />
+            <Route path="/notes" element={<NotesIndex />} />
+            <Route path="/notes/examens" element={<ListeExamensNotes />} />
+            <Route path="/notes/classes" element={<ListeClassesNotes />} />
+            <Route path="/notes/matieres" element={<ListeMatieresNotes />} />
             <Route path="/notes/eleves" element={<ListeElevesClasse />} />
             <Route path="/notes/eleves-notes" element={<NotesParEleve />} />
             <Route path="/notes/consulter" element={<ConsulterNotes />} />
