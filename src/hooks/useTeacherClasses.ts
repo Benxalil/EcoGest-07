@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserRole } from './useUserRole';
 import type { ClassData } from './useClasses';
@@ -9,103 +9,139 @@ export const useTeacherClasses = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { userProfile, isTeacher } = useUserRole();
+  
+  // Guards contre les exécutions multiples
+  const isFetchingRef = useRef(false);
+  const retryCountRef = useRef(0);
+  const MAX_RETRIES = 2;
 
   const fetchTeacherClasses = useCallback(async () => {
-    if (!userProfile?.schoolId || !userProfile?.id) {
+    // Guard: Empêcher les exécutions multiples
+    if (isFetchingRef.current) {
+      console.log('⚠️ Fetch déjà en cours, ignoré');
+      return;
+    }
+
+    // Extraire les valeurs primitives pour stabilité
+    const schoolId = userProfile?.schoolId;
+    const userId = userProfile?.id;
+    
+    if (!schoolId || !userId) {
+      console.log('⚠️ Pas de schoolId ou userId');
       setLoading(false);
       return;
     }
 
     // Si ce n'est pas un enseignant, ne rien charger
     if (!isTeacher()) {
+      console.log('⚠️ Pas un enseignant');
       setClasses([]);
       setLoading(false);
       return;
     }
 
+    // Marquer comme en cours
+    isFetchingRef.current = true;
+    console.log('🔄 Début fetch classes enseignant');
+
     try {
       setLoading(true);
       setError(null);
 
-      // Vérifier et rafraîchir la session si nécessaire
+      // Vérification de session
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       
       if (sessionError || !session) {
-        console.error('Session expirée ou invalide, redirection vers la connexion...');
+        console.error('❌ Session invalide');
+        
+        // Tenter un refresh si on n'a pas dépassé le nombre de tentatives
+        if (retryCountRef.current < MAX_RETRIES) {
+          retryCountRef.current++;
+          console.log(`🔄 Tentative de refresh session (${retryCountRef.current}/${MAX_RETRIES})`);
+          
+          const { error: refreshError } = await supabase.auth.refreshSession();
+          if (!refreshError) {
+            console.log('✅ Session rafraîchie avec succès');
+            isFetchingRef.current = false;
+            // Retry sera géré par le useEffect qui détecte le changement
+            return;
+          }
+        }
+        
+        // Si échec après retries
         setError('Votre session a expiré. Veuillez vous reconnecter.');
-        window.location.href = '/auth';
+        setTimeout(() => {
+          window.location.href = '/auth';
+        }, 1500);
         return;
       }
 
-      // Trouver d'abord l'entrée teacher correspondant au user_id
+      console.log('✅ Session valide');
+
+      // Trouver l'entrée teacher
       const { data: teacherData, error: teacherError } = await supabase
         .from('teachers')
         .select('id')
-        .eq('school_id', userProfile.schoolId)
-        .eq('user_id', userProfile.id)
+        .eq('school_id', schoolId)
+        .eq('user_id', userId)
         .maybeSingle();
 
       if (teacherError) {
-        // Si c'est une erreur JWT, tenter de rafraîchir le token
-        if (teacherError.message?.includes('JWT')) {
-          const { error: refreshError } = await supabase.auth.refreshSession();
-          if (refreshError) {
-            console.error('Impossible de rafraîchir la session:', refreshError);
-            setError('Votre session a expiré. Veuillez vous reconnecter.');
-            window.location.href = '/auth';
-            return;
-          }
-          // Réessayer la requête après le rafraîchissement
-          return fetchTeacherClasses();
-        }
+        console.error('❌ Erreur teacher:', teacherError);
         throw teacherError;
       }
 
-      // Si l'enseignant n'a pas d'entrée dans teachers, retourner vide
       if (!teacherData) {
-        console.log('Aucune entrée teacher trouvée pour user_id:', userProfile.id);
+        console.log('⚠️ Aucune entrée teacher trouvée pour:', userId);
         setClasses([]);
         setLoading(false);
+        isFetchingRef.current = false;
         return;
       }
 
-      console.log('Teacher ID trouvé:', teacherData.id);
+      console.log('✅ Teacher trouvé:', teacherData.id);
 
-      // Trouver les classes où l'enseignant apparaît dans l'emploi du temps
+      // Trouver les schedules
       const { data: scheduleData, error: scheduleError } = await supabase
         .from('schedules')
         .select('class_id')
-        .eq('school_id', userProfile.schoolId)
+        .eq('school_id', schoolId)
         .eq('teacher_id', teacherData.id);
 
-      if (scheduleError) throw scheduleError;
+      if (scheduleError) {
+        console.error('❌ Erreur schedules:', scheduleError);
+        throw scheduleError;
+      }
 
-      console.log('Schedules trouvés:', scheduleData?.length || 0);
+      console.log('✅ Schedules trouvés:', scheduleData?.length || 0);
 
-      // Extraire les IDs uniques des classes
       const classIds = [...new Set(scheduleData?.map(s => s.class_id) || [])];
 
       if (classIds.length === 0) {
-        console.log('Aucune classe trouvée dans les emplois du temps');
+        console.log('⚠️ Aucune classe dans les emplois du temps');
         setClasses([]);
         setLoading(false);
+        isFetchingRef.current = false;
         return;
       }
 
-      console.log('Class IDs à récupérer:', classIds);
+      console.log('✅ Class IDs:', classIds);
 
-      // Récupérer les détails des classes (sans la sous-requête students pour simplifier)
+      // Récupérer les classes
       const { data: classesData, error: classesError } = await supabase
         .from('classes')
         .select('*')
         .in('id', classIds)
         .order('name');
 
-      if (classesError) throw classesError;
+      if (classesError) {
+        console.error('❌ Erreur classes:', classesError);
+        throw classesError;
+      }
 
-      console.log('Classes récupérées:', classesData?.length || 0);
+      console.log('✅ Classes récupérées:', classesData?.length || 0);
 
-      // Récupérer le nombre d'élèves pour chaque classe séparément
+      // Récupérer le nombre d'élèves pour chaque classe
       const classesWithEnrollment = await Promise.all(
         (classesData || []).map(async (classe: any) => {
           const { count } = await supabase
@@ -120,22 +156,37 @@ export const useTeacherClasses = () => {
         })
       );
 
-      console.log('Classes avec effectif:', classesWithEnrollment);
+      console.log('✅ Classes avec effectif:', classesWithEnrollment);
       setClasses(classesWithEnrollment);
-    } catch (err: any) {
-      console.error('Erreur lors de la récupération des classes enseignant:', err);
+      retryCountRef.current = 0; // Reset retry count on success
       
-      // Gérer spécifiquement les erreurs JWT
+    } catch (err: any) {
+      console.error('❌ Erreur catch:', err);
+      
+      // Gérer les erreurs JWT avec retry
       if (err?.message?.includes('JWT') || err?.code === 'PGRST301' || err?.code === 'PGRST302' || err?.code === 'PGRST303') {
+        if (retryCountRef.current < MAX_RETRIES) {
+          retryCountRef.current++;
+          console.log(`🔄 Retry JWT error (${retryCountRef.current}/${MAX_RETRIES})`);
+          
+          const { error: refreshError } = await supabase.auth.refreshSession();
+          if (!refreshError) {
+            isFetchingRef.current = false;
+            return;
+          }
+        }
+        
         setError('Votre session a expiré. Veuillez vous reconnecter.');
         setTimeout(() => {
           window.location.href = '/auth';
-        }, 2000);
+        }, 1500);
       } else {
         setError(err instanceof Error ? err.message : 'Erreur inconnue');
       }
     } finally {
       setLoading(false);
+      isFetchingRef.current = false;
+      console.log('✅ Fin fetch classes enseignant');
     }
   }, [userProfile?.schoolId, userProfile?.id, isTeacher]);
 
