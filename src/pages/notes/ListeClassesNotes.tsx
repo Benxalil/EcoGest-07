@@ -28,7 +28,7 @@ export default function ListeClassesNotes() {
   };
 
   // Filtrer les classes pour les enseignants
-  const filteredClasses = isTeacher() && teacherClassIds.length > 0
+  const filteredClasses = isTeacher() 
     ? classes.filter(classe => teacherClassIds.includes(classe.id))
     : classes;
 
@@ -36,9 +36,6 @@ export default function ListeClassesNotes() {
     classe.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     classe.level.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
-  // Message spécial pour les enseignants sans classes
-  const showNoClassesMessage = isTeacher() && teacherClassIds.length === 0;
 
   if (loading || filterLoading) {
     return (
@@ -88,57 +85,38 @@ export default function ListeClassesNotes() {
           </div>
         </div>
 
-        {showNoClassesMessage ? (
-          <Card>
-            <CardContent className="p-8 text-center">
-              <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h2 className="text-xl font-semibold mb-2">Aucune classe assignée</h2>
-              <p className="text-muted-foreground mb-6">
-                Vous n'avez pas encore de classe assignée dans votre emploi du temps.
-                <br />
-                Veuillez contacter l'administration pour qu'elle vous assigne des classes.
-              </p>
-              <Button onClick={() => navigate('/')}>
-                Retour au tableau de bord
-              </Button>
-            </CardContent>
-          </Card>
-        ) : (
-          <>
-            <div className="space-y-2">
-              {classesFiltered.map((classe) => (
-                <div key={classe.id} className="flex items-center justify-between p-4 bg-card rounded-lg border hover:bg-muted/50 transition-colors">
-                  <div className="flex items-center gap-4 flex-1">
-                    <Users className="h-5 w-5 text-primary" />
-                    <div className="flex items-center gap-6 flex-1">
-                      <h3 className="font-semibold text-base min-w-[200px]">{classe.name} {classe.level}{classe.section ? ` - ${classe.section}` : ''}</h3>
-                      <span className="text-sm text-muted-foreground">
-                        Niveau: {classe.level}
-                      </span>
-                      <span className="text-sm text-muted-foreground">
-                        Effectif: {classe.capacity || 0} élèves
-                      </span>
-                    </div>
-                  </div>
-                  <Button
-                    onClick={() => handleViewNotes(classe.id)}
-                    variant="default"
-                    size="sm"
-                  >
-                    Gérer les Notes
-                  </Button>
+        <div className="space-y-2">
+          {classesFiltered.map((classe) => (
+            <div key={classe.id} className="flex items-center justify-between p-4 bg-card rounded-lg border hover:bg-muted/50 transition-colors">
+              <div className="flex items-center gap-4 flex-1">
+                <Users className="h-5 w-5 text-primary" />
+                <div className="flex items-center gap-6 flex-1">
+                  <h3 className="font-semibold text-base min-w-[200px]">{classe.name} {classe.level}{classe.section ? ` - ${classe.section}` : ''}</h3>
+                  <span className="text-sm text-muted-foreground">
+                    Niveau: {classe.level}
+                  </span>
+                  <span className="text-sm text-muted-foreground">
+                    Effectif: {classe.capacity || 0} élèves
+                  </span>
                 </div>
-              ))}
-            </div>
-
-            {classesFiltered.length === 0 && (
-              <div className="text-center py-12">
-                <p className="text-gray-500">
-                  {searchTerm ? "Aucune classe trouvée pour cette recherche." : "Aucune classe disponible."}
-                </p>
               </div>
-            )}
-          </>
+              <Button
+                onClick={() => handleViewNotes(classe.id)}
+                variant="default"
+                size="sm"
+              >
+                Gérer les Notes
+              </Button>
+            </div>
+          ))}
+        </div>
+
+        {classesFiltered.length === 0 && (
+          <div className="text-center py-12">
+            <p className="text-gray-500">
+              {searchTerm ? "Aucune classe trouvée pour cette recherche." : "Aucune classe disponible."}
+            </p>
+          </div>
         )}
       </div>
     </Layout>
