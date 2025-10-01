@@ -40,29 +40,24 @@ export const useClasses = () => {
 
     try {
       setLoading(true);
+      // Optimisation: Une seule requête avec LEFT JOIN pour compter les élèves
       const { data: classesData, error } = await supabase
         .from('classes')
-        .select('*')
+        .select(`
+          *,
+          students:students(count)
+        `)
         .eq('school_id', userProfile.schoolId)
         .order('name');
 
       if (error) throw error;
       
-      // Calculer l'effectif pour chaque classe
-      const classesWithEnrollment = await Promise.all(
-        (classesData || []).map(async (classe) => {
-          const { count } = await supabase
-            .from('students')
-            .select('*', { count: 'exact', head: true })
-            .eq('class_id', classe.id)
-            .eq('is_active', true);
-          
-          return {
-            ...classe,
-            enrollment_count: count || 0
-          };
-        })
-      );
+      // Transformer les données pour inclure enrollment_count
+      const classesWithEnrollment = (classesData || []).map((classe: any) => ({
+        ...classe,
+        enrollment_count: classe.students?.[0]?.count || 0,
+        students: undefined // Supprimer la propriété temporaire
+      }));
       
       setClasses(classesWithEnrollment);
     } catch (err) {

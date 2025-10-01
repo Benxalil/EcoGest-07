@@ -1,112 +1,105 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Database } from '@/integrations/supabase/types';
 import { useUserRole } from './useUserRole';
+import { useOptimizedCache } from './useOptimizedCache';
 
-type SchoolRow = Database['public']['Tables']['schools']['Row'];
-type SchoolUpdate = Database['public']['Tables']['schools']['Update'];
-
-export interface SchoolData {
-  id: string;
-  name: string;
-  address?: string | null;
-  phone?: string | null;
-  email?: string | null;
-  logo_url?: string | null;
-  academic_year: string;
-  school_type?: Database['public']['Enums']['school_type'] | null;
-  currency?: Database['public']['Enums']['currency_type'] | null;
-  creation_year?: number | null;
-  timezone?: string | null;
-  language?: Database['public']['Enums']['language_type'] | null;
-  semester_type?: Database['public']['Enums']['semester_system_type'] | null;
-  sponsor_name?: string | null;
-  sponsor_phone?: string | null;
-  sponsor_email?: string | null;
-  school_suffix?: string | null;
-  subscription_status?: Database['public']['Enums']['subscription_status'] | null;
-  trial_end_date?: string | null;
-  slogan?: string | null;
-}
-
+/**
+ * Hook pour récupérer les informations de l'école
+ * Utilise le cache intelligent pour éviter les requêtes redondantes
+ */
 export const useSchoolData = () => {
-  const [schoolData, setSchoolData] = useState<SchoolData | null>(null);
+  const [schoolData, setSchoolData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
   const { userProfile } = useUserRole();
+  const cache = useOptimizedCache();
 
-  const fetchSchoolData = async () => {
+  const fetchSchoolData = useCallback(async () => {
     if (!userProfile?.schoolId) {
+      setLoading(false);
+      return;
+    }
+
+    const cacheKey = `school-info-${userProfile.schoolId}`;
+    
+    // Vérifier le cache d'abord
+    const cachedData = cache.get<any>(cacheKey);
+    if (cachedData) {
+      console.log('useSchoolData: Données chargées depuis le cache');
+      setSchoolData(cachedData);
       setLoading(false);
       return;
     }
 
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      setError(null);
+
+      const { data, error: fetchError } = await supabase
         .from('schools')
         .select('*')
         .eq('id', userProfile.schoolId)
         .single();
 
-      if (error) throw error;
+      if (fetchError) throw fetchError;
+
+      // Mettre en cache pour 30 minutes (données peu changeantes)
+      cache.set(cacheKey, data, 30 * 60 * 1000);
       
+      console.log('useSchoolData: Données école chargées:', data);
       setSchoolData(data);
     } catch (err) {
-      console.error('Erreur lors de la récupération des données d\'école:', err);
+      console.error('useSchoolData: Erreur:', err);
       setError(err instanceof Error ? err.message : 'Erreur inconnue');
     } finally {
       setLoading(false);
     }
-  };
+  }, [userProfile?.schoolId, cache]);
 
-  const updateSchoolData = async (updates: SchoolUpdate) => {
+  const updateSchoolData = useCallback(async (updates: any) => {
     if (!userProfile?.schoolId) return false;
 
     try {
-      const { error } = await supabase
+      const { data, error: updateError } = await supabase
         .from('schools')
         .update(updates)
-        .eq('id', userProfile.schoolId);
+        .eq('id', userProfile.schoolId)
+        .select()
+        .single();
 
-      if (error) throw error;
+      if (updateError) throw updateError;
+
+      // Invalider le cache et recharger
+      cache.delete(`school-info-${userProfile.schoolId}`);
+      setSchoolData(data);
       
-      // Refresh data after update
-      await fetchSchoolData();
+      // Émettre un événement pour notifier les composants
+      window.dispatchEvent(new CustomEvent('schoolSettingsUpdated'));
+      
       return true;
     } catch (err) {
-      console.error('Erreur lors de la mise à jour des données d\'école:', err);
-      setError(err instanceof Error ? err.message : 'Erreur lors de la mise à jour');
+      console.error('useSchoolData: Erreur mise à jour:', err);
       return false;
     }
-  };
+  }, [userProfile?.schoolId, cache]);
+
+  const refreshSchoolData = useCallback(() => {
+    if (userProfile?.schoolId) {
+      cache.delete(`school-info-${userProfile.schoolId}`);
+      fetchSchoolData();
+    }
+  }, [userProfile?.schoolId, cache, fetchSchoolData]);
 
   useEffect(() => {
     fetchSchoolData();
-  }, [userProfile?.schoolId]);
-
-  // Provide default values if no school data is available
-  const getDefaultSchoolData = (): SchoolData => ({
-    id: '',
-    name: 'École Connectée',
-    address: 'Adresse de l\'école',
-    phone: 'Numéro de téléphone',
-    academic_year: '2024/2025',
-    school_type: 'public',
-    currency: 'FCFA',
-    creation_year: 2024,
-    timezone: 'Africa/Dakar',
-    language: 'french',
-    semester_type: 'semester',
-    subscription_status: 'trial',
-    slogan: 'Excellence et Innovation'
-  });
+  }, [fetchSchoolData]);
 
   return {
-    schoolData: schoolData, // Retourner null si pas encore chargé, éviter les valeurs par défaut prématurées
+    schoolData,
     loading,
     error,
     updateSchoolData,
-    refreshSchoolData: fetchSchoolData
+    refreshSchoolData
   };
 };

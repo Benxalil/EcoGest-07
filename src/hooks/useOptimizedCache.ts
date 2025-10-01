@@ -8,8 +8,8 @@ interface CacheEntry<T> {
 
 class OptimizedCacheManager {
   private cache = new Map<string, CacheEntry<any>>();
-  private defaultTTL = 5 * 60 * 1000; // 5 minutes
-  private maxSize = 50; // Prevent memory leaks
+  private defaultTTL = 15 * 60 * 1000; // 15 minutes pour données peu changeantes
+  private maxSize = 100; // Augmenter la taille pour plus de données
 
   set<T>(key: string, data: T, ttl?: number): void {
     // Clean up expired entries if cache is getting full
@@ -67,6 +67,15 @@ class OptimizedCacheManager {
     }
   }
 
+  // Invalidate cache by prefix
+  invalidateByPrefix(prefix: string): void {
+    for (const key of this.cache.keys()) {
+      if (key.startsWith(prefix)) {
+        this.cache.delete(key);
+      }
+    }
+  }
+
   // Get cache stats for debugging
   getStats() {
     return {
@@ -100,12 +109,16 @@ export const useOptimizedCache = () => {
   const getStats = useCallback(() => 
     cacheRef.current.getStats(), []);
 
+  const invalidateByPrefix = useCallback((prefix: string): void => 
+    cacheRef.current.invalidateByPrefix(prefix), []);
+
   return {
     get,
     set,
     has,
     clear,
     delete: deleteKey,
-    getStats
+    getStats,
+    invalidateByPrefix
   };
 };
