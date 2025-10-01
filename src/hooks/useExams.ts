@@ -16,6 +16,12 @@ export interface Exam {
   is_published: boolean;
   created_at: string;
   updated_at: string;
+  classes?: {
+    id: string;
+    name: string;
+    level: string;
+    section?: string;
+  };
 }
 
 export interface CreateExamData {
@@ -46,7 +52,15 @@ export const useExams = (classId?: string) => {
       setLoading(true);
       const query = supabase
         .from('exams')
-        .select('*')
+        .select(`
+          *,
+          classes(
+            id,
+            name,
+            level,
+            section
+          )
+        `)
         .eq('school_id', userProfile.schoolId);
 
       if (classId) {

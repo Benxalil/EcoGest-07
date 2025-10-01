@@ -19,9 +19,14 @@ interface Examen {
   anneeAcademique: string;
   dateExamen: string;
   classes: string[];
+  classesData?: Array<{
+    id: string;
+    name: string;
+    level: string;
+    section?: string;
+  }>;
   dateCreation: string;
   statut: string;
-  
 }
 
 interface Classe {
@@ -35,7 +40,15 @@ const fetchExamens = async (): Promise<Examen[]> => {
   try {
     const { data, error } = await supabase
       .from('exams')
-      .select('*')
+      .select(`
+        *,
+        classes(
+          id,
+          name,
+          level,
+          section
+        )
+      `)
       .order('exam_date', { ascending: false });
 
     if (error) throw error;
@@ -52,6 +65,7 @@ const fetchExamens = async (): Promise<Examen[]> => {
           anneeAcademique: '2024/2025',
           dateExamen: exam.exam_date,
           classes: [],
+          classesData: [],
           dateCreation: exam.created_at,
           statut: 'planifié'
         };
@@ -60,10 +74,13 @@ const fetchExamens = async (): Promise<Examen[]> => {
       // Ajouter la classe à la liste des classes pour cet examen
       if (exam.class_id) {
         acc[key].classes.push(exam.class_id);
+        if (exam.classes) {
+          acc[key].classesData.push(exam.classes);
+        }
       }
       
       return acc;
-    }, {} as Record<string, Examen>);
+    }, {} as Record<string, any>);
 
     return Object.values(groupedExams || []);
   } catch (error) {
@@ -104,16 +121,26 @@ export default function ListeExamensNotes() {
     loadData();
   }, []);
 
-  const getClasseNom = (classeId: string) => {
+  const getClasseNom = (classeId: string, classesData?: Array<{id: string; name: string; level: string; section?: string}>) => {
+    // Utiliser d'abord les données jointes si disponibles
+    if (classesData) {
+      const classe = classesData.find(c => c.id === classeId);
+      if (classe) {
+        return `${classe.name} ${classe.level}${classe.section ? ` - ${classe.section}` : ''}`;
+      }
+    }
+    // Fallback sur la recherche dans la liste des classes (ne devrait plus être nécessaire)
     const classe = classes.find(c => c.id === classeId);
     return classe ? `${classe.name} ${classe.level}${classe.section ? ` - ${classe.section}` : ''}` : classeId;
   };
 
-  const getClassesNoms = (classesIds: string[]) => {
-    if (classesIds.length === classes.length) {
+  const getClassesNoms = (examen: Examen) => {
+    if (examen.classes.length === classes.length) {
       return "Toutes les classes";
     }
-    return classesIds.map(id => getClasseNom(id)).join(", ");
+    return examen.classes.map((id, index) => 
+      getClasseNom(id, examen.classesData)
+    ).join(", ");
   };
 
   const handleGererExamen = (examen: Examen) => {
@@ -158,7 +185,7 @@ export default function ListeExamensNotes() {
   const filteredExamens = examens.filter(examen =>
     examen.titre.toLowerCase().includes(searchTerm.toLowerCase()) ||
     examen.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    getClassesNoms(examen.classes).toLowerCase().includes(searchTerm.toLowerCase())
+    getClassesNoms(examen).toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   if (loading) {
@@ -317,7 +344,7 @@ export default function ListeExamensNotes() {
                       </div>
                       <div className="flex items-center gap-1">
                         <School className="h-4 w-4" />
-                        {getClassesNoms(examen.classes)}
+                        {getClassesNoms(examen)}
                       </div>
                     </div>
                   </div>
