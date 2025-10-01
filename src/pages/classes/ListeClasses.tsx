@@ -19,6 +19,8 @@ import jsPDF from 'jspdf';
 import { useSubscriptionPlan } from "@/hooks/useSubscriptionPlan";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useClasses, ClassData } from "@/hooks/useClasses";
+import { useTeacherClasses } from "@/hooks/useTeacherClasses";
+import { useUserRole } from "@/hooks/useUserRole";
 
 // Fonction pour définir l'ordre académique des classes
 const getClassOrder = (level: string, section: string): number => {
@@ -57,7 +59,17 @@ export default function ListeClasses() {
   const navigate = useNavigate();
   const { isFeatureLimited, getFeatureLimit, currentPlan } = useSubscriptionPlan();
   const { showError } = useNotifications();
-  const { classes, loading, error, deleteClass, refreshClasses } = useClasses();
+  const { isTeacher, isAdmin } = useUserRole();
+  
+  // Utiliser le hook approprié selon le rôle
+  const adminClasses = useClasses();
+  const teacherClasses = useTeacherClasses();
+  
+  const { classes, loading, error, deleteClass, refreshClasses } = isTeacher 
+    ? { ...teacherClasses, deleteClass: async () => false } 
+    : adminClasses;
+  
+  const hasNoClasses = isTeacher && teacherClasses.hasNoClasses;
 
   const handleAddSuccess = () => {
     setIsAddDialogOpen(false);
@@ -172,41 +184,55 @@ export default function ListeClasses() {
               >
                 <ArrowLeft className="h-5 w-5" />
               </Button>
-              <h1 className="text-2xl font-bold">Liste des Classes</h1>
+              <h1 className="text-2xl font-bold">{isTeacher ? "Mes Classes" : "Liste des Classes"}</h1>
             </div>
-            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-              <DialogTrigger asChild>
-                <Button onClick={handleOpenAddDialog}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Ajouter une Classe
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Ajouter une classe</DialogTitle>
-                </DialogHeader>
-                <AjoutClasseModal onSuccess={handleAddSuccess} />
-              </DialogContent>
-            </Dialog>
+            {!isTeacher && (
+              <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button onClick={handleOpenAddDialog}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Ajouter une Classe
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Ajouter une classe</DialogTitle>
+                  </DialogHeader>
+                  <AjoutClasseModal onSuccess={handleAddSuccess} />
+                </DialogContent>
+              </Dialog>
+            )}
           </div>
 
           <div className="text-center py-12">
-            <p className="text-gray-500 text-lg mb-4">Aucune classe n'a été créée</p>
-            <p className="text-gray-400 mb-6">Commencez par créer votre première classe</p>
-            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-              <DialogTrigger asChild>
-                <Button onClick={handleOpenAddDialog}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Créer une classe
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Ajouter une classe</DialogTitle>
-                </DialogHeader>
-                <AjoutClasseModal onSuccess={handleAddSuccess} />
-              </DialogContent>
-            </Dialog>
+            {isTeacher ? (
+              <>
+                <GraduationCap className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                <p className="text-gray-500 text-lg mb-4">Vous n'êtes encore affecté à aucune classe</p>
+                <p className="text-gray-400 mb-6">
+                  Veuillez contacter l'administrateur de l'établissement pour qu'il vous assigne des classes dans l'emploi du temps.
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="text-gray-500 text-lg mb-4">Aucune classe n'a été créée</p>
+                <p className="text-gray-400 mb-6">Commencez par créer votre première classe</p>
+                <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button onClick={handleOpenAddDialog}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Créer une classe
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Ajouter une classe</DialogTitle>
+                    </DialogHeader>
+                    <AjoutClasseModal onSuccess={handleAddSuccess} />
+                  </DialogContent>
+                </Dialog>
+              </>
+            )}
           </div>
         </div>
       </Layout>
@@ -226,22 +252,24 @@ export default function ListeClasses() {
             >
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <h1 className="text-2xl font-bold">Liste des Classes</h1>
+            <h1 className="text-2xl font-bold">{isTeacher ? "Mes Classes" : "Liste des Classes"}</h1>
           </div>
-          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-            <DialogTrigger asChild>
-              <Button onClick={handleOpenAddDialog}>
-                <Plus className="mr-2 h-4 w-4" />
-                Ajouter une Classe
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Ajouter une classe</DialogTitle>
-              </DialogHeader>
-              <AjoutClasseModal onSuccess={handleAddSuccess} />
-            </DialogContent>
-          </Dialog>
+          {!isTeacher && (
+            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+              <DialogTrigger asChild>
+                <Button onClick={handleOpenAddDialog}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Ajouter une Classe
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Ajouter une classe</DialogTitle>
+                </DialogHeader>
+                <AjoutClasseModal onSuccess={handleAddSuccess} />
+              </DialogContent>
+            </Dialog>
+          )}
         </div>
 
         {/* Cartes de statistiques */}
@@ -249,7 +277,7 @@ export default function ListeClasses() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
-                Total Classes
+                {isTeacher ? "Mes Classes" : "Total Classes"}
               </CardTitle>
               <GraduationCap className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
@@ -258,22 +286,24 @@ export default function ListeClasses() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Classes actives
-              </CardTitle>
-              <BookOpen className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">{classesActives}</div>
-            </CardContent>
-          </Card>
+          {!isTeacher && (
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Classes actives
+                </CardTitle>
+                <BookOpen className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-green-600">{classesActives}</div>
+              </CardContent>
+            </Card>
+          )}
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
-                Total des étudiants
+                {isTeacher ? "Mes Élèves" : "Total des étudiants"}
               </CardTitle>
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
@@ -304,24 +334,28 @@ export default function ListeClasses() {
                   </TableCell>
                   <TableCell className="text-center">
                     <div className="flex items-center justify-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleEditClass(classe)}
-                        className="h-8 w-8 text-blue-600 hover:text-blue-800 hover:bg-blue-50"
-                        title="Modifier la classe"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDeleteClass(classe)}
-                        className="h-8 w-8 text-red-600 hover:text-red-800 hover:bg-red-50"
-                        title="Supprimer la classe"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      {!isTeacher && (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleEditClass(classe)}
+                            className="h-8 w-8 text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+                            title="Modifier la classe"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDeleteClass(classe)}
+                            className="h-8 w-8 text-red-600 hover:text-red-800 hover:bg-red-50"
+                            title="Supprimer la classe"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </>
+                      )}
                       <Button
                         variant="ghost"
                         size="icon"
