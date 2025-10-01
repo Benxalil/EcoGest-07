@@ -55,22 +55,38 @@ const AuthPage = () => {
     try {
       let email = loginData.identifier;
       
-      // Format identifier based on login type
+      // Système hybride d'authentification
       if (loginType === 'admin') {
-        // Admin login - use identifier as is (should be email)
-        email = loginData.identifier;
-      } else {
-        // User login - identifier must be in format matricule@école
+        // Admin: email classique (doit contenir @)
         if (!loginData.identifier.includes('@')) {
           toast({
-            title: "Format d'identifiant incorrect",
-            description: `Veuillez entrer votre identifiant au format: MATRICULE@${schoolSuffix || 'ecole'}`,
+            title: "Format d'email incorrect",
+            description: "Les administrateurs doivent se connecter avec un email valide",
             variant: "destructive",
           });
           setIsLoading(false);
           return;
         }
         email = loginData.identifier.trim().toLowerCase();
+      } else {
+        // Utilisateur: matricule simple (Prof03, Eleve001, etc.)
+        const matricule = loginData.identifier.trim();
+        
+        // Vérifier que le school_suffix est disponible
+        if (!schoolSuffix) {
+          toast({
+            title: "Erreur de configuration",
+            description: "Impossible de récupérer les informations de l'école",
+            variant: "destructive",
+          });
+          setIsLoading(false);
+          return;
+        }
+        
+        // Transformer en email valide pour Supabase Auth
+        // Ex: Prof03 + ecole_best -> Prof03@ecole-best.ecogest.app
+        const validDomain = schoolSuffix.replace(/_/g, '-') + '.ecogest.app';
+        email = `${matricule}@${validDomain}`;
       }
 
       const { error } = await supabase.auth.signInWithPassword({
@@ -91,7 +107,7 @@ const AuthPage = () => {
             title: "Identifiants incorrects",
             description: loginType === 'admin' 
               ? 'Email ou mot de passe incorrect.' 
-              : `Identifiant ou mot de passe incorrect. Vérifiez le format: MATRICULE@${schoolSuffix || 'ecole'}`,
+              : `Matricule ou mot de passe incorrect. Format attendu: ${loginType === 'user' ? 'Prof03 ou Eleve001' : 'votre matricule'}`,
             variant: "destructive",
           });
         } else {
@@ -144,13 +160,13 @@ const AuthPage = () => {
             <form onSubmit={handleLogin} className="space-y-4">
               <TabsContent value="user" className="mt-0">
                 <div className="space-y-2">
-                  <Label htmlFor="login-identifier">Identifiant</Label>
+                  <Label htmlFor="login-identifier">Matricule</Label>
                   <div className="relative">
                     <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="login-identifier"
                       type="text"
-                      placeholder={schoolSuffix ? `ELEVE001@${schoolSuffix}` : "MATRICULE@ecole"}
+                      placeholder="Prof03, Eleve001, Parent001..."
                       value={loginData.identifier}
                       onChange={(e) => setLoginData({ ...loginData, identifier: e.target.value })}
                       className="pl-10"
@@ -158,8 +174,7 @@ const AuthPage = () => {
                     />
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Format: votre matricule @ le préfixe de l'école
-                    {schoolSuffix && ` (ex: ELEVE001@${schoolSuffix})`}
+                    Entrez simplement votre matricule (ex: Prof03, Eleve001)
                   </p>
                 </div>
               </TabsContent>

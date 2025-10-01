@@ -7,12 +7,13 @@ const corsHeaders = {
 }
 
 interface CreateUserRequest {
-  email: string; // Format: matricule@école (ex: ELEVE001@ecole_best)
+  email: string; // Pour admin: email classique | Pour autres: matricule (ex: Prof03)
   password: string;
   role: string;
   first_name: string;
   last_name: string;
   school_id?: string;
+  school_suffix?: string; // Nécessaire pour les non-admins
 }
 
 serve(async (req) => {
@@ -33,7 +34,7 @@ serve(async (req) => {
       }
     )
 
-    const { email, password, role, first_name, last_name, school_id }: CreateUserRequest = await req.json()
+    const { email, password, role, first_name, last_name, school_id, school_suffix }: CreateUserRequest = await req.json()
 
     // Validate input
     if (!email || !password || !role || !first_name || !last_name) {
@@ -45,29 +46,48 @@ serve(async (req) => {
         }
       )
     }
+
+    // Système hybride: admin utilise email, autres utilisent matricule
+    let authEmail: string;
+    let displayIdentifier: string;
     
-    // Validate email format (should be matricule@école)
-    if (!email.includes('@')) {
-      return new Response(
-        JSON.stringify({ error: 'Email must be in format: matricule@ecole' }),
-        { 
-          status: 400, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      )
+    if (role === 'school_admin') {
+      // Admin: email classique (doit contenir @)
+      if (!email.includes('@')) {
+        return new Response(
+          JSON.stringify({ error: 'Admin email must be a valid email address' }),
+          { 
+            status: 400, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        )
+      }
+      authEmail = email;
+      displayIdentifier = email;
+    } else {
+      // Enseignant/Élève/Parent: matricule simple
+      if (!school_suffix) {
+        return new Response(
+          JSON.stringify({ error: 'school_suffix is required for non-admin users' }),
+          { 
+            status: 400, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        )
+      }
+      
+      // Transformer en email valide pour Supabase Auth
+      // Ex: Prof03 + ecole_best -> Prof03@ecole-best.ecogest.app
+      const validDomain = school_suffix.replace(/_/g, '-') + '.ecogest.app';
+      authEmail = `${email}@${validDomain}`;
+      displayIdentifier = email; // Juste le matricule pour l'affichage
     }
 
-    // Transform school_suffix to valid domain format
-    // Example: ecole_best -> ecole-best.ecogest.app
-    const [matricule, schoolSuffix] = email.split('@')
-    const validDomain = schoolSuffix.replace(/_/g, '-') + '.ecogest.app'
-    const authEmail = `${matricule}@${validDomain}`
+    console.log('Creating user with auth email:', authEmail, 'role:', role)
 
-    console.log('Creating user with auth email:', authEmail)
-
-    // Create user with admin API using valid email format
+    // Créer l'utilisateur dans auth.users
     const { data: authUser, error: authError } = await supabaseClient.auth.admin.createUser({
-      email: authEmail, // Format valide: Prof03@ecole-best.ecogest.app
+      email: authEmail,
       password,
       email_confirm: true,
       user_metadata: {
@@ -75,9 +95,8 @@ serve(async (req) => {
         first_name,
         last_name,
         school_id,
-        matricule: matricule,
-        display_email: email, // Garder le format original pour l'affichage
-        school_suffix: schoolSuffix
+        display_identifier: displayIdentifier,
+        school_suffix: school_suffix || null
       }
     })
 
@@ -92,11 +111,39 @@ serve(async (req) => {
       )
     }
 
+    // Créer l'entrée dans profiles
+    const { error: profileError } = await supabaseClient
+      .from('profiles')
+      .insert({
+        id: authUser.user.id,
+        email: authEmail,
+        first_name,
+        last_name,
+        role,
+        school_id,
+        is_active: true
+      })
+
+    if (profileError) {
+      console.error('Profile creation error:', profileError)
+      // Supprimer l'utilisateur auth si la création du profil échoue
+      await supabaseClient.auth.admin.deleteUser(authUser.user.id)
+      
+      return new Response(
+        JSON.stringify({ error: `Failed to create profile: ${profileError.message}` }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      )
+    }
+
     return new Response(
       JSON.stringify({ 
         success: true, 
         user: authUser.user,
-        message: `User ${email} created successfully` 
+        display_identifier: displayIdentifier,
+        message: `User created successfully` 
       }),
       { 
         status: 200, 

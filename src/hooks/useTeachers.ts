@@ -40,16 +40,19 @@ export const useTeachers = () => {
   // Créer un compte d'authentification pour l'enseignant
   const createTeacherAuthAccount = async (employeeNumber: string, schoolSuffix: string, firstName: string, lastName: string, defaultPassword: string = 'teacher123') => {
     try {
-      const email = `${employeeNumber}@${schoolSuffix}`;
+      // Pour les enseignants, on envoie seulement le matricule (pas d'email)
+      // L'Edge Function va construire l'email valide pour Supabase
       
       // Créer le compte via Edge Function
       const { data, error } = await supabase.functions.invoke('create-user-account', {
         body: { 
-          email, 
+          email: employeeNumber, // Juste le matricule (ex: Prof03)
           password: defaultPassword, 
           role: 'teacher', 
           first_name: firstName, 
-          last_name: lastName 
+          last_name: lastName,
+          school_id: userProfile?.schoolId,
+          school_suffix: schoolSuffix // Nécessaire pour générer l'email valide
         }
       });
 
@@ -177,7 +180,7 @@ export const useTeachers = () => {
       if (authUser) {
         toast({
           title: "Succès",
-          description: `Enseignant créé avec l'identifiant: ${fullIdentifier}`,
+          description: `Enseignant créé avec le matricule: ${employee_number}`,
           variant: "default",
         });
       }
