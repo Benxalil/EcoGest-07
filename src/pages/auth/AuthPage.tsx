@@ -8,8 +8,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Link } from "react-router-dom";
 import { EyeIcon, EyeOffIcon, Mail, Lock, User } from "lucide-react";
 import { EcoGestLogo } from "@/assets/EcoGestLogo";
+import { useToast } from "@/hooks/use-toast";
 
 const AuthPage = () => {
+  const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [loginType, setLoginType] = useState<'admin' | 'user'>('user');
@@ -58,18 +60,17 @@ const AuthPage = () => {
         // Admin login - use identifier as is (should be email)
         email = loginData.identifier;
       } else {
-        // User login - use matricule@école format
-        // If identifier already contains @, use as is
-        // Otherwise, it's just the matricule, so we construct the full email
-        if (loginData.identifier.includes('@')) {
-          email = loginData.identifier;
-        } else {
-          // Identifier is just the matricule, add @school_suffix
-          // User must include the school suffix in their identifier
-          alert('Veuillez entrer votre identifiant complet au format: MATRICULE@ecole');
+        // User login - identifier must be in format matricule@école
+        if (!loginData.identifier.includes('@')) {
+          toast({
+            title: "Format d'identifiant incorrect",
+            description: `Veuillez entrer votre identifiant au format: MATRICULE@${schoolSuffix || 'ecole'}`,
+            variant: "destructive",
+          });
           setIsLoading(false);
           return;
         }
+        email = loginData.identifier.trim().toLowerCase();
       }
 
       const { error } = await supabase.auth.signInWithPassword({
@@ -78,20 +79,42 @@ const AuthPage = () => {
       });
 
       if (error) {
+        console.error('Login error:', error);
         if (error.message.includes('Email not confirmed')) {
-          alert('Veuillez confirmer votre email avant de vous connecter. Vérifiez votre boîte de réception.');
+          toast({
+            title: "Email non confirmé",
+            description: "Veuillez confirmer votre email avant de vous connecter. Vérifiez votre boîte de réception.",
+            variant: "destructive",
+          });
         } else if (error.message.includes('Invalid login credentials')) {
-          alert(loginType === 'admin' ? 'Email ou mot de passe incorrect.' : 'Identifiant ou mot de passe incorrect.');
+          toast({
+            title: "Identifiants incorrects",
+            description: loginType === 'admin' 
+              ? 'Email ou mot de passe incorrect.' 
+              : `Identifiant ou mot de passe incorrect. Vérifiez le format: MATRICULE@${schoolSuffix || 'ecole'}`,
+            variant: "destructive",
+          });
         } else {
-          alert('Erreur de connexion: ' + error.message);
+          toast({
+            title: "Erreur de connexion",
+            description: error.message,
+            variant: "destructive",
+          });
         }
       } else {
-        // Successful login - user will be redirected by AuthenticatedLayout
+        toast({
+          title: "Connexion réussie",
+          description: "Bienvenue !",
+        });
         window.location.href = '/';
       }
     } catch (error) {
       console.error('Login error:', error);
-      alert('Une erreur est survenue lors de la connexion.');
+      toast({
+        title: "Erreur",
+        description: "Une erreur est survenue lors de la connexion.",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
