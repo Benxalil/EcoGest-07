@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,19 +19,32 @@ const AuthPage = () => {
     identifier: "",
     password: "",
   });
+  
+  const [schoolSuffix, setSchoolSuffix] = useState<string>("");
 
-
-
-  const formatIdentifierToEmail = (identifier: string): string => {
-    // If it's already an email format (admin), return as is
-    if (identifier.includes('@') && identifier.includes('.')) {
-      return identifier;
-    }
+  // Récupérer le suffixe d'école au chargement
+  useEffect(() => {
+    const fetchSchoolSuffix = async () => {
+      try {
+        // Récupérer le premier suffixe d'école disponible (pour l'exemple de login)
+        const { data, error } = await supabase
+          .from('schools')
+          .select('school_suffix')
+          .limit(1)
+          .single();
+        
+        if (!error && data?.school_suffix) {
+          setSchoolSuffix(data.school_suffix);
+        }
+      } catch (error) {
+        console.log('Impossible de récupérer le suffixe d\'école');
+      }
+    };
     
-    // For user identifiers, we need to add the school suffix
-    // This will be handled when we have school context
-    return identifier;
-  };
+    if (loginType === 'user') {
+      fetchSchoolSuffix();
+    }
+  }, [loginType]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,12 +58,17 @@ const AuthPage = () => {
         // Admin login - use identifier as is (should be email)
         email = loginData.identifier;
       } else {
-        // User login - format identifier to email if not already formatted
-        if (!loginData.identifier.includes('@')) {
-          // For now, we'll add a generic suffix, but this should be dynamic based on school
-          email = `${loginData.identifier}@school`;
-        } else {
+        // User login - use matricule@école format
+        // If identifier already contains @, use as is
+        // Otherwise, it's just the matricule, so we construct the full email
+        if (loginData.identifier.includes('@')) {
           email = loginData.identifier;
+        } else {
+          // Identifier is just the matricule, add @school_suffix
+          // User must include the school suffix in their identifier
+          alert('Veuillez entrer votre identifiant complet au format: MATRICULE@ecole');
+          setIsLoading(false);
+          return;
         }
       }
 
@@ -109,7 +127,7 @@ const AuthPage = () => {
                     <Input
                       id="login-identifier"
                       type="text"
-                      placeholder="ELEVE001@ecole_best"
+                      placeholder={schoolSuffix ? `ELEVE001@${schoolSuffix}` : "MATRICULE@ecole"}
                       value={loginData.identifier}
                       onChange={(e) => setLoginData({ ...loginData, identifier: e.target.value })}
                       className="pl-10"
@@ -117,7 +135,8 @@ const AuthPage = () => {
                     />
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Utilisez votre identifiant complet (ex: ELEVE001@ecole_best)
+                    Format: votre matricule @ le préfixe de l'école
+                    {schoolSuffix && ` (ex: ELEVE001@${schoolSuffix})`}
                   </p>
                 </div>
               </TabsContent>

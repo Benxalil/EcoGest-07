@@ -7,11 +7,12 @@ const corsHeaders = {
 }
 
 interface CreateUserRequest {
-  email: string;
+  email: string; // Format: matricule@école (ex: ELEVE001@ecole_best)
   password: string;
   role: string;
   first_name: string;
   last_name: string;
+  school_id?: string;
 }
 
 serve(async (req) => {
@@ -32,7 +33,7 @@ serve(async (req) => {
       }
     )
 
-    const { email, password, role, first_name, last_name }: CreateUserRequest = await req.json()
+    const { email, password, role, first_name, last_name, school_id }: CreateUserRequest = await req.json()
 
     // Validate input
     if (!email || !password || !role || !first_name || !last_name) {
@@ -44,16 +45,29 @@ serve(async (req) => {
         }
       )
     }
+    
+    // Validate email format (should be matricule@école)
+    if (!email.includes('@')) {
+      return new Response(
+        JSON.stringify({ error: 'Email must be in format: matricule@ecole' }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      )
+    }
 
     // Create user with admin API
     const { data: authUser, error: authError } = await supabaseClient.auth.admin.createUser({
-      email,
+      email, // Format: matricule@école (ex: ELEVE001@ecole_best)
       password,
       email_confirm: true,
       user_metadata: {
         role,
         first_name,
-        last_name
+        last_name,
+        school_id,
+        matricule: email.split('@')[0] // Extraire le matricule de l'email
       }
     })
 

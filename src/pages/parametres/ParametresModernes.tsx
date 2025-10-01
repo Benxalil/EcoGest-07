@@ -18,6 +18,7 @@ import { useSubscription } from "@/hooks/useSubscription";
 import { SubscriptionAlert } from "@/components/subscription/SubscriptionAlert";
 import { useUserRole } from "@/hooks/useUserRole";
 import { TeacherSettings } from "@/components/parametres/TeacherSettings";
+import { SchoolPrefixManager } from "@/components/admin/SchoolPrefixManager";
 import { Database as DatabaseType } from "@/integrations/supabase/types";
 
 interface GeneralSettings {
@@ -573,6 +574,9 @@ export default function ParametresModernes() {
                 </div>
               </CardContent>
             </Card>
+            
+            {/* Gestionnaire de préfixe d'école pour les connexions */}
+            <SchoolPrefixManager />
           </TabsContent>
 
           {/* Autres onglets - contenus abrégés pour l'espace */}
