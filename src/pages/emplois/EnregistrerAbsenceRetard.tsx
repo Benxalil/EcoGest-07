@@ -30,6 +30,8 @@ interface AbsenceRetardData {
   matiere: string;
   heureDebut: string;
   heureFin: string;
+  teacherId?: string;
+  subjectId?: string;
   eleves: {
     eleveId: string;
     statut: "present" | "absent" | "retard";
@@ -51,20 +53,26 @@ const saveAbsenceRetardData = async (data: AbsenceRetardData, schoolId: string) 
         type: eleve.statut === "absent" ? "absence" as const : "retard" as const,
         reason: eleve.statut === "retard" ? eleve.motifRetard : null,
         period: `${data.heureDebut} - ${data.heureFin}`,
-        teacher_id: null, // Pourrait être ajouté plus tard
-        subject_id: null // Pourrait être ajouté plus tard
+        teacher_id: data.teacherId || null,
+        subject_id: data.subjectId || null
       }));
 
     if (attendanceRecords.length > 0) {
-      const { error } = await supabase
+      const { data: insertedData, error } = await supabase
         .from('attendances')
-        .insert(attendanceRecords);
+        .insert(attendanceRecords)
+        .select();
 
       if (error) {
         console.error('Erreur lors de l\'enregistrement des absences:', error);
         throw error;
       }
+
+      console.log('Données enregistrées avec succès:', insertedData);
+      return insertedData;
     }
+    
+    return [];
   } catch (error) {
     console.error('Erreur lors de la sauvegarde:', error);
     throw error;
@@ -91,6 +99,7 @@ export default function EnregistrerAbsenceRetard() {
   const [presences, setPresences] = useState<{[key: string]: "present" | "absent" | "retard"}>({});
   const [retardDialog, setRetardDialog] = useState<{open: boolean, eleveId: string}>({open: false, eleveId: ''});
   const [retardData, setRetardData] = useState<{motif: string, duree: string}>({motif: '', duree: ''});
+  const [retardInfos, setRetardInfos] = useState<{[key: string]: {motif: string, duree: string}}>({});
   const [enseignant, setEnseignant] = useState(teacher);
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
 
@@ -126,16 +135,28 @@ export default function EnregistrerAbsenceRetard() {
 
   const handleRetardSubmit = () => {
     if (retardData.motif.trim() && retardData.duree.trim()) {
+      // Stocker les informations de retard pour cet élève
+      setRetardInfos(prev => ({
+        ...prev,
+        [retardDialog.eleveId]: {
+          motif: retardData.motif,
+          duree: retardData.duree
+        }
+      }));
+      
       setPresences(prev => ({
         ...prev,
         [retardDialog.eleveId]: "retard"
       }));
+      
       setRetardDialog({open: false, eleveId: ''});
       setRetardData({motif: '', duree: ''});
+      
       toast({
         title: "Retard enregistré",
         description: "Le retard a été enregistré avec succès.",
-      }); } else {
+      });
+    } else {
       toast({
         title: "Informations manquantes",
         description: "Veuillez remplir le motif et la durée du retard.",
@@ -165,42 +186,66 @@ export default function EnregistrerAbsenceRetard() {
       return;
     }
 
-    // Stocker les données de retard de l'élève en cours
-    const retardInfo: {[key: string]: {motif: string, duree: string}} = {};
-    if (retardDialog.eleveId && retardData.motif && retardData.duree) {
-      retardInfo[retardDialog.eleveId] = retardData;
-    }
-
-    const absenceRetardData: AbsenceRetardData = {
-      id: `ar-${Date.now()}`,
-      classeId: classeId!,
-      date,
-      enseignant,
-      matiere: subject,
-      heureDebut: startTime,
-      heureFin: endTime,
-      eleves: Object.entries(presences).map(([eleveId, statut]) => ({
-        eleveId,
-        statut,
-        motifRetard: statut === "retard" ? (retardInfo[eleveId]?.motif || "Non précisé") : undefined,
-        dureeRetard: statut === "retard" ? (retardInfo[eleveId]?.duree || "Non précisé") : undefined,
-      }))
-    };
-
     try {
-      await saveAbsenceRetardData(absenceRetardData, currentClass.school_id);
-      
-      toast({
-        title: "✅ Enregistrement réussi",
-        description: `Les présences, absences et retards ont été enregistrés avec succès pour le cours de ${subject} du ${day}.`,
-        duration: 4000,
-      });
+      // Récupérer le teacher_id
+      const { data: teacherData } = await supabase
+        .from('teachers')
+        .select('id')
+        .eq('school_id', currentClass.school_id)
+        .or(`first_name.ilike.%${enseignant.split(' ')[0]}%,last_name.ilike.%${enseignant.split(' ').slice(-1)[0]}%`)
+        .limit(1)
+        .single();
 
-      // Retourner à l'emploi du temps après un délai
-      setTimeout(() => {
-        navigate(`/emplois-du-temps/${classeId}`);
-      }, 1500);
+      // Récupérer le subject_id
+      const { data: subjectData } = await supabase
+        .from('subjects')
+        .select('id')
+        .eq('school_id', currentClass.school_id)
+        .eq('class_id', classeId)
+        .ilike('name', `%${subject}%`)
+        .limit(1)
+        .single();
+
+      const absenceRetardData: AbsenceRetardData = {
+        id: `ar-${Date.now()}`,
+        classeId: classeId!,
+        date,
+        enseignant,
+        matiere: subject,
+        heureDebut: startTime,
+        heureFin: endTime,
+        teacherId: teacherData?.id,
+        subjectId: subjectData?.id,
+        eleves: Object.entries(presences).map(([eleveId, statut]) => ({
+          eleveId,
+          statut,
+          motifRetard: statut === "retard" ? (retardInfos[eleveId]?.motif || "Non précisé") : undefined,
+          dureeRetard: statut === "retard" ? (retardInfos[eleveId]?.duree || "Non précisé") : undefined,
+        }))
+      };
+
+      const result = await saveAbsenceRetardData(absenceRetardData, currentClass.school_id);
+      
+      if (result && result.length > 0) {
+        toast({
+          title: "✅ Enregistrement réussi",
+          description: `${result.length} enregistrement(s) sauvegardé(s) avec succès pour le cours de ${subject} du ${day}.`,
+          duration: 4000,
+        });
+
+        // Retourner à l'emploi du temps après un délai
+        setTimeout(() => {
+          navigate(`/emplois-du-temps/${classeId}`);
+        }, 1500);
+      } else {
+        toast({
+          title: "ℹ️ Aucun enregistrement",
+          description: "Tous les élèves étaient présents, aucune absence ou retard à enregistrer.",
+          duration: 3000,
+        });
+      }
     } catch (error) {
+      console.error('Erreur complète:', error);
       toast({
         title: "❌ Erreur d'enregistrement",
         description: "Une erreur est survenue lors de l'enregistrement. Veuillez réessayer.",
