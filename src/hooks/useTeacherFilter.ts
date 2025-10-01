@@ -36,16 +36,32 @@ export const useTeacherFilter = () => {
           return;
         }
 
-        // Récupérer les schedules de l'enseignant pour avoir les classes et matières
+        // Récupérer les schedules de l'enseignant pour avoir les classes et les noms des matières
         const { data: schedules } = await supabase
           .from('schedules')
-          .select('class_id, subject_id')
+          .select('class_id, subject')
           .eq('teacher_id', teacher.id)
           .eq('school_id', userProfile.schoolId);
 
         if (schedules) {
           const classIds = [...new Set(schedules.map(s => s.class_id).filter(Boolean))];
-          const subjectIds = [...new Set(schedules.map(s => s.subject_id).filter(Boolean))];
+          
+          // Récupérer les noms uniques des matières depuis les schedules
+          const subjectNames = [...new Set(schedules.map(s => s.subject).filter(Boolean))];
+          
+          // Récupérer tous les subjects de l'école pour faire la correspondance nom -> ID
+          const { data: subjects } = await supabase
+            .from('subjects')
+            .select('id, name')
+            .eq('school_id', userProfile.schoolId)
+            .in('name', subjectNames);
+
+          // Extraire les IDs des matières correspondantes
+          const subjectIds = subjects ? subjects.map(s => s.id) : [];
+
+          console.log('Schedules enseignant:', schedules);
+          console.log('Noms des matières:', subjectNames);
+          console.log('IDs des matières correspondants:', subjectIds);
 
           setData({
             teacherClassIds: classIds as string[],
