@@ -193,15 +193,15 @@ export default function ConsulterNotes() {
       });
       return;
     }
+    
+    console.log('ConsulterNotes: Début de la sauvegarde des notes');
+    
     try {
       await saveAllNotes();
-      toast({
-        title: "Notes sauvegardées",
-        description: "Les notes ont été sauvegardées avec succès."
-      });
+      console.log('ConsulterNotes: Notes sauvegardées avec succès');
       setIsEditMode(false);
     } catch (error) {
-      console.error('Erreur lors de la sauvegarde des notes:', error);
+      console.error('ConsulterNotes: Erreur lors de la sauvegarde des notes:', error);
       toast({
         title: "Erreur de sauvegarde",
         description: "Une erreur est survenue lors de la sauvegarde des notes.",
@@ -369,6 +369,7 @@ export default function ConsulterNotes() {
               <TableBody>
                 {elevesFiltered.map((eleve, index) => {
                 const noteData = getNote(eleve.id, matiere.id);
+                console.log('ConsulterNotes: Rendu note pour', eleve.prenom, eleve.nom, ':', noteData);
                 return <TableRow key={eleve.id}>
                       <TableCell className="font-mono text-sm">{(index + 1).toString().padStart(2, '0')}</TableCell>
                       <TableCell className="font-medium">{eleve.prenom} {eleve.nom}</TableCell>

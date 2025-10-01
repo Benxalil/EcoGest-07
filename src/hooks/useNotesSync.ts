@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useGrades } from './useGrades';
 import { useToast } from './use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 // Interface unifiée pour les notes - utilisée par les deux interfaces
 export interface UnifiedNote {
@@ -127,6 +128,36 @@ export const useNotesSync = ({ classeId, matiereId, examId, studentId, isComposi
     loadNotesFromDatabase();
   }, [loadNotesFromDatabase]);
 
+  // SYNCHRONISATION EN TEMPS RÉEL : Écouter les changements dans la table grades
+  useEffect(() => {
+    if (!examId) return;
+
+    console.log('useNotesSync: Configuration de l\'écoute en temps réel pour examId:', examId);
+
+    const channel = supabase
+      .channel('grades-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'grades',
+          filter: `exam_id=eq.${examId}`
+        },
+        (payload) => {
+          console.log('useNotesSync: Changement détecté dans la base de données:', payload);
+          // Recharger les notes depuis la base
+          refetchGrades();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      console.log('useNotesSync: Arrêt de l\'écoute en temps réel');
+      supabase.removeChannel(channel);
+    };
+  }, [examId, refetchGrades]);
+
   // Obtenir une note pour un élève et une matière spécifiques
   const getNote = useCallback((eleveId: string, matiereId: string): UnifiedNote | null => {
     const note = localNotes.find(n => n.eleveId === eleveId && n.matiereId === matiereId);
@@ -203,7 +234,7 @@ export const useNotesSync = ({ classeId, matiereId, examId, studentId, isComposi
             promises.push(upsertGrade({
               student_id: note.eleveId,
               subject_id: note.matiereId,
-              exam_id: examId, // TOUJOURS défini maintenant
+              exam_id: examId,
               grade_value: parseFloat(note.devoir),
               max_grade: 20,
               coefficient: note.coefficient,
@@ -216,7 +247,7 @@ export const useNotesSync = ({ classeId, matiereId, examId, studentId, isComposi
             promises.push(upsertGrade({
               student_id: note.eleveId,
               subject_id: note.matiereId,
-              exam_id: examId, // TOUJOURS défini maintenant
+              exam_id: examId,
               grade_value: parseFloat(note.composition),
               max_grade: 20,
               coefficient: note.coefficient,
@@ -230,7 +261,7 @@ export const useNotesSync = ({ classeId, matiereId, examId, studentId, isComposi
             promises.push(upsertGrade({
               student_id: note.eleveId,
               subject_id: note.matiereId,
-              exam_id: examId, // TOUJOURS défini maintenant
+              exam_id: examId,
               grade_value: parseFloat(note.note),
               max_grade: 20,
               coefficient: note.coefficient,
@@ -246,21 +277,23 @@ export const useNotesSync = ({ classeId, matiereId, examId, studentId, isComposi
       
       console.log('useNotesSync: Sauvegarde terminée avec succès');
       
+      // SYNCHRONISATION AMÉLIORÉE : Attendre que les grades soient rechargés
+      console.log('useNotesSync: Rechargement des grades depuis la base...');
+      await refetchGrades();
+      
+      // Attendre un court délai pour permettre au state de se mettre à jour
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Recharger les notes après le délai
+      console.log('useNotesSync: Rechargement des notes locales...');
+      loadNotesFromDatabase();
+      
+      setHasUnsavedChanges(false);
+      
       toast({
         title: "Notes sauvegardées",
         description: "Toutes les notes ont été sauvegardées avec succès.",
       });
-
-      // SYNCHRONISATION : Recharger depuis la base pour garantir la cohérence
-      await refetchGrades();
-      
-      // Forcer la mise à jour immédiate des notes locales après refetch
-      // On appelle loadNotesFromDatabase() immédiatement après refetchGrades()
-      // car le useEffect qui écoute les grades va déclencher loadNotesFromDatabase()
-      // mais on force un appel immédiat pour garantir la synchronisation
-      loadNotesFromDatabase();
-      
-      setHasUnsavedChanges(false);
       
     } catch (error) {
       console.error('useNotesSync: Erreur lors de la sauvegarde:', error);
@@ -270,7 +303,7 @@ export const useNotesSync = ({ classeId, matiereId, examId, studentId, isComposi
         variant: "destructive",
       });
     }
-  }, [localNotes, examId, isComposition, upsertGrade, refetchGrades, toast]);
+  }, [localNotes, examId, isComposition, upsertGrade, refetchGrades, toast, loadNotesFromDatabase]);
 
   // Forcer le rechargement des notes
   const refreshNotes = useCallback(async () => {
