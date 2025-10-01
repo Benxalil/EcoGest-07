@@ -6,6 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Users, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useClasses } from "@/hooks/useClasses";
+import { useUserRole } from "@/hooks/useUserRole";
+import { useTeacherFilter } from "@/hooks/useTeacherFilter";
 
 interface Classe {
   id: string;
@@ -18,17 +20,24 @@ export default function ListeClassesNotes() {
   const [searchTerm, setSearchTerm] = useState("");
   const navigate = useNavigate();
   const { classes, loading } = useClasses();
+  const { isTeacher } = useUserRole();
+  const { teacherClassIds, loading: filterLoading } = useTeacherFilter();
 
   const handleViewNotes = (classeId: string) => {
     navigate(`/notes/classe/${classeId}`);
   };
 
-  const classesFiltered = classes.filter((classe) =>
+  // Filtrer les classes pour les enseignants
+  const filteredClasses = isTeacher() 
+    ? classes.filter(classe => teacherClassIds.includes(classe.id))
+    : classes;
+
+  const classesFiltered = filteredClasses.filter((classe) =>
     classe.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     classe.level.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  if (loading) {
+  if (loading || filterLoading) {
     return (
       <Layout>
         <div className="container mx-auto py-8">

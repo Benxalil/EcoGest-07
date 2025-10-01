@@ -10,6 +10,8 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { useClasses } from "@/hooks/useClasses";
+import { useUserRole } from "@/hooks/useUserRole";
+import { useTeacherFilter } from "@/hooks/useTeacherFilter";
 
 interface Examen {
   id: string;
@@ -109,6 +111,8 @@ export default function ListeExamensNotes() {
   const [selectedExamen, setSelectedExamen] = useState<Examen | null>(null);
   const navigate = useNavigate();
   const { classes } = useClasses();
+  const { isTeacher } = useUserRole();
+  const { teacherClassIds } = useTeacherFilter();
 
   const safeFormatDate = (value?: string, fmt = "PPP") => {
     if (!value) return "Date non définie";
@@ -174,7 +178,15 @@ export default function ListeExamensNotes() {
     try {
       setLoading(true);
       const examensData = await fetchExamens();
-      setExamens(examensData);
+      
+      // Filtrer les examens pour les enseignants - seulement ceux des classes qu'ils enseignent
+      const filteredData = isTeacher() 
+        ? examensData.filter(exam => 
+            exam.classes.some(classId => teacherClassIds.includes(classId))
+          )
+        : examensData;
+      
+      setExamens(filteredData);
     } catch (error) {
       console.error("Erreur lors du chargement des données:", error);
     } finally {
@@ -205,9 +217,16 @@ export default function ListeExamensNotes() {
 
   // Si un examen est sélectionné, afficher ses classes
   if (selectedExamen) {
-    const classesExamen = classes.filter(classe => 
+    let classesExamen = classes.filter(classe => 
       selectedExamen.classes.includes(classe.id)
     );
+
+    // Filtrer pour les enseignants - seulement leurs classes
+    if (isTeacher()) {
+      classesExamen = classesExamen.filter(classe => 
+        teacherClassIds.includes(classe.id)
+      );
+    }
 
     return (
       <Layout>

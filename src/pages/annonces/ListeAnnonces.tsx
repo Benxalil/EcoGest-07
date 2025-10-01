@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { CreerAnnonceModal } from "@/components/annonces/CreerAnnonceModal";
 import { ModifierAnnonceModal } from "@/components/annonces/ModifierAnnonceModal";
 import { useAnnouncements } from "@/hooks/useAnnouncements";
+import { useUserRole } from "@/hooks/useUserRole";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -37,6 +38,7 @@ export default function ListeAnnonces() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   
   const { announcements, loading, createAnnouncement, updateAnnouncement, deleteAnnouncement } = useAnnouncements();
+  const { isAdmin } = useUserRole();
 
   const handleCreateAnnonce = async (annonceData: Omit<AnnonceData, 'id' | 'dateCreation'>) => {
     const success = await createAnnouncement({
@@ -139,10 +141,12 @@ export default function ListeAnnonces() {
             <h1 className="text-3xl font-bold text-gray-900">Annonces</h1>
             <p className="text-gray-600 mt-2">Gérez les annonces de votre école</p>
           </div>
-          <Button onClick={() => setIsModalOpen(true)} className="bg-blue-600 hover:bg-blue-700">
-            <Plus className="h-4 w-4 mr-2" />
-            Créer une annonce
-          </Button>
+          {isAdmin() && (
+            <Button onClick={() => setIsModalOpen(true)} className="bg-blue-600 hover:bg-blue-700">
+              <Plus className="h-4 w-4 mr-2" />
+              Créer une annonce
+            </Button>
+          )}
         </div>
 
         <Tabs defaultValue="toutes" className="w-full">
@@ -161,10 +165,12 @@ export default function ListeAnnonces() {
                   <p className="text-gray-500 text-center mb-4">
                     Commencez par créer votre première annonce pour informer votre communauté.
                   </p>
-                  <Button onClick={() => setIsModalOpen(true)} className="bg-blue-600 hover:bg-blue-700">
-                    <Plus className="h-4 w-4 mr-2" />
-                      Créer une annonce
-                    </Button>
+                  {isAdmin() && (
+                    <Button onClick={() => setIsModalOpen(true)} className="bg-blue-600 hover:bg-blue-700">
+                      <Plus className="h-4 w-4 mr-2" />
+                        Créer une annonce
+                      </Button>
+                  )}
                   </CardContent>
                 </Card>
               ) : (
@@ -203,23 +209,25 @@ export default function ListeAnnonces() {
                                   {annonce.destinataires.join(', ')}
                                 </div>
                               </div>
-                              <div className="flex items-center space-x-2">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => openEditModal(annonce)}
-                                >
-                                  <Edit2 className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => openDeleteDialog(annonce)}
-                                  className="text-red-600 hover:text-red-700"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
+                              {isAdmin() && (
+                                <div className="flex items-center space-x-2">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => openEditModal(annonce)}
+                                  >
+                                    <Edit2 className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => openDeleteDialog(annonce)}
+                                    className="text-red-600 hover:text-red-700"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              )}
                             </div>
                           </CardContent>
                         </Card>
@@ -262,24 +270,26 @@ export default function ListeAnnonces() {
                                   {annonce.destinataires.join(', ')}
                                 </div>
                               </div>
-                              <div className="flex items-center space-x-2">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => openEditModal(annonce)}
-                                  className="opacity-60"
-                                >
-                                  <Edit2 className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => openDeleteDialog(annonce)}
-                                  className="text-red-600 hover:text-red-700 opacity-60"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
+                              {isAdmin() && (
+                                <div className="flex items-center space-x-2">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => openEditModal(annonce)}
+                                    className="opacity-60"
+                                  >
+                                    <Edit2 className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => openDeleteDialog(annonce)}
+                                    className="text-red-600 hover:text-red-700 opacity-60"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              )}
                             </div>
                           </CardContent>
                         </Card>
@@ -334,23 +344,25 @@ export default function ListeAnnonces() {
                                   {annonce.destinataires.join(', ')}
                                 </div>
                               </div>
-                              <div className="flex items-center space-x-2">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => openEditModal(annonce)}
-                                >
-                                  <Edit2 className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => openDeleteDialog(annonce)}
-                                  className="text-red-600 hover:text-red-700"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
+                              {isAdmin() && (
+                                <div className="flex items-center space-x-2">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => openEditModal(annonce)}
+                                  >
+                                    <Edit2 className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => openDeleteDialog(annonce)}
+                                    className="text-red-600 hover:text-red-700"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              )}
                             </div>
                           </CardContent>
                         </Card>
@@ -389,24 +401,26 @@ export default function ListeAnnonces() {
                                   {annonce.destinataires.join(', ')}
                                 </div>
                               </div>
-                              <div className="flex items-center space-x-2">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => openEditModal(annonce)}
-                                  className="opacity-60"
-                                >
-                                  <Edit2 className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => openDeleteDialog(annonce)}
-                                  className="text-red-600 hover:text-red-700 opacity-60"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
+                              {isAdmin() && (
+                                <div className="flex items-center space-x-2">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => openEditModal(annonce)}
+                                    className="opacity-60"
+                                  >
+                                    <Edit2 className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => openDeleteDialog(annonce)}
+                                    className="text-red-600 hover:text-red-700 opacity-60"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              )}
                             </div>
                           </CardContent>
                         </Card>
@@ -461,23 +475,25 @@ export default function ListeAnnonces() {
                                   {annonce.destinataires.join(', ')}
                                 </div>
                               </div>
-                              <div className="flex items-center space-x-2">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => openEditModal(annonce)}
-                                >
-                                  <Edit2 className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => openDeleteDialog(annonce)}
-                                  className="text-red-600 hover:text-red-700"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
+                              {isAdmin() && (
+                                <div className="flex items-center space-x-2">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => openEditModal(annonce)}
+                                  >
+                                    <Edit2 className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => openDeleteDialog(annonce)}
+                                    className="text-red-600 hover:text-red-700"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              )}
                             </div>
                           </CardContent>
                         </Card>
@@ -516,24 +532,26 @@ export default function ListeAnnonces() {
                                   {annonce.destinataires.join(', ')}
                                 </div>
                               </div>
-                              <div className="flex items-center space-x-2">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => openEditModal(annonce)}
-                                  className="opacity-60"
-                                >
-                                  <Edit2 className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => openDeleteDialog(annonce)}
-                                  className="text-red-600 hover:text-red-700 opacity-60"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
+                              {isAdmin() && (
+                                <div className="flex items-center space-x-2">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => openEditModal(annonce)}
+                                    className="opacity-60"
+                                  >
+                                    <Edit2 className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => openDeleteDialog(annonce)}
+                                    className="text-red-600 hover:text-red-700 opacity-60"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              )}
                             </div>
                           </CardContent>
                         </Card>

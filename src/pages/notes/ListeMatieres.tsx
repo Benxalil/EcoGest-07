@@ -7,6 +7,8 @@ import { ArrowLeft, BookOpen, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useClasses } from "@/hooks/useClasses";
 import { useSubjects } from "@/hooks/useSubjects";
+import { useUserRole } from "@/hooks/useUserRole";
+import { useTeacherFilter } from "@/hooks/useTeacherFilter";
 
 interface Classe {
   id: string;
@@ -33,6 +35,8 @@ export default function ListeMatieres() {
   const { classeId } = useParams();
   const { classes } = useClasses();
   const { subjects } = useSubjects(classeId);
+  const { isTeacher } = useUserRole();
+  const { teacherSubjectIds } = useTeacherFilter();
 
   useEffect(() => {
     // Récupérer les informations de la classe
@@ -48,20 +52,26 @@ export default function ListeMatieres() {
       }
     }
 
-    // Récupérer les matières spécifiques à cette classe (déjà filtrées par useSubjects)
+    // Récupérer les matières spécifiques à cette classe
     if (subjects) {
-      const matieresForClasse = subjects.map((s: any) => ({
+      let matieresForClasse = subjects.map((s: any) => ({
         id: s.id,
         nom: s.name,
         abreviation: s.abbreviation || '',
-        horaires: '1h/sem', // Valeur fixe pour l'affichage
+        horaires: '1h/sem',
         classeId: s.class_id,
         coefficient: s.coefficient || 1,
-        maxScore: s.hours_per_week || 20 // Utiliser hours_per_week comme note maximale
+        maxScore: s.hours_per_week || 20
       }));
+
+      // Filtrer pour les enseignants - seulement leurs matières
+      if (isTeacher() && teacherSubjectIds.length > 0) {
+        matieresForClasse = matieresForClasse.filter(m => teacherSubjectIds.includes(m.id));
+      }
+
       setMatieres(matieresForClasse);
     }
-  }, [classeId, classes, subjects]);
+  }, [classeId, classes, subjects, isTeacher, teacherSubjectIds]);
 
   const matieresFiltered = matieres.filter((matiere) =>
     matiere.nom.toLowerCase().includes(searchTerm.toLowerCase())
