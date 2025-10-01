@@ -4,62 +4,20 @@ import { Button } from "@/components/ui/button";
 import { Users, Calendar, Clock, BookOpen, Megaphone, Award } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useUserRole } from "@/hooks/useUserRole";
-import { useDashboardData } from "@/hooks/useDashboardData";
-
-interface TeacherStats {
-  totalClasses: number;
-  totalStudents: number;
-  todaySchedules: any[];
-  announcements: any[];
-}
+import { useTeacherDashboardData } from "@/hooks/useTeacherDashboardData";
 
 const TeacherDashboard = memo(() => {
   const navigate = useNavigate();
   const { userProfile } = useUserRole();
   const { 
-    classes, 
-    students, 
-    announcements, 
-    schoolData, 
-    loading 
-  } = useDashboardData();
-
-  // Optimized stats calculation using useMemo
-  const stats = useMemo((): TeacherStats => {
-    if (!userProfile?.id || loading) {
-      return {
-        totalClasses: 0,
-        totalStudents: 0,
-        todaySchedules: [],
-        announcements: []
-      };
-    }
-
-    // Filter classes for teacher (using class assignment or subject assignment)
-    const teacherClasses = classes.filter((classe: any) => 
-      // This would be improved with proper teacher-class relations in the database
-      true // For now, showing all classes - would need teacher_subjects table
-    );
-
-    // Filter students from teacher's classes
-    const teacherStudents = students.filter((student: any) => 
-      teacherClasses.some((classe: any) => classe.id === student.class_id)
-    );
-
-    // Filter announcements for teachers
-    const teacherAnnouncements = announcements.filter((ann: any) => 
-      !ann.target_audience || 
-      ann.target_audience.includes('teacher') || 
-      ann.target_audience.includes('tous')
-    ).slice(0, 3);
-
-    return {
-      totalClasses: teacherClasses.length,
-      totalStudents: teacherStudents.length,
-      todaySchedules: [], // Would be calculated from schedules table
-      announcements: teacherAnnouncements
-    };
-  }, [userProfile?.id, classes, students, announcements, loading]);
+    teacherClasses,
+    teacherStudents,
+    todaySchedules,
+    announcements,
+    stats,
+    loading,
+    error
+  } = useTeacherDashboardData();
 
   // Memoized greeting function
   const greeting = useMemo(() => {
@@ -83,6 +41,16 @@ const TeacherDashboard = memo(() => {
     );
   }
 
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div className="text-center py-12">
+          <p className="text-red-500 text-lg">Erreur: {error}</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header de bienvenue personnalisé pour l'enseignant */}
@@ -91,7 +59,7 @@ const TeacherDashboard = memo(() => {
           {greeting}, {userProfile?.firstName} {userProfile?.lastName} !
         </h1>
         <p className="text-blue-100">
-          Voici votre tableau de bord enseignant pour {schoolData?.name || "votre école"}.
+          Bienvenue sur votre tableau de bord enseignant.
         </p>
       </div>
 
@@ -132,7 +100,7 @@ const TeacherDashboard = memo(() => {
                 Cours Aujourd'hui
               </p>
               <p className="text-2xl sm:text-3xl font-bold text-purple-600">
-                {stats.todaySchedules.length}
+                {stats.todayCoursesCount}
               </p>
             </div>
             <Clock className="h-5 w-5 sm:h-6 sm:w-6 text-purple-600 flex-shrink-0 ml-2" />
@@ -146,7 +114,7 @@ const TeacherDashboard = memo(() => {
                 Annonces
               </p>
               <p className="text-2xl sm:text-3xl font-bold text-orange-600">
-                {stats.announcements.length}
+                {stats.announcementsCount}
               </p>
             </div>
             <Megaphone className="h-5 w-5 sm:h-6 sm:w-6 text-orange-600 flex-shrink-0 ml-2" />
@@ -162,23 +130,26 @@ const TeacherDashboard = memo(() => {
             <Calendar className="h-5 w-5 text-blue-600" />
             <h3 className="font-semibold">Mon Emploi du Temps Aujourd'hui</h3>
           </div>
-          {stats.todaySchedules.length === 0 ? (
+          {todaySchedules.length === 0 ? (
             <p className="text-center text-muted-foreground py-8">
               {new Date().getDay() === 0 ? "Aucun cours prévu le dimanche" : "Aucun cours prévu aujourd'hui"}
             </p>
           ) : (
             <div className="space-y-3">
-              {stats.todaySchedules.map((schedule, index) => (
-                <div key={index} className="border rounded-lg p-3 bg-blue-50">
-                  <h4 className="font-medium text-blue-800 mb-2">{schedule.className}</h4>
-                  <div className="space-y-1">
-                    {schedule.courses?.map((course: any, courseIndex: number) => (
-                      <div key={courseIndex} className="flex items-center justify-between text-sm">
-                        <span className="font-medium">{course.subject}</span>
-                        <span className="text-blue-600">{course.startTime} - {course.endTime}</span>
-                      </div>
-                    ))}
+              {todaySchedules.map((schedule: any) => (
+                <div key={schedule.id} className="border rounded-lg p-3 bg-blue-50">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="font-medium text-blue-800">
+                      {schedule.classes?.name || 'Classe'}
+                    </h4>
+                    <span className="text-xs text-blue-600 font-medium">
+                      {schedule.start_time} - {schedule.end_time}
+                    </span>
                   </div>
+                  <p className="text-sm text-gray-700">
+                    <span className="font-medium">{schedule.subject}</span>
+                    {schedule.room && <span className="text-gray-500 ml-2">• Salle {schedule.room}</span>}
+                  </p>
                 </div>
               ))}
             </div>
@@ -201,14 +172,14 @@ const TeacherDashboard = memo(() => {
             <Megaphone className="h-5 w-5 text-orange-600" />
             <h3 className="font-semibold">Annonces Récentes</h3>
           </div>
-          {stats.announcements.length === 0 ? (
+          {announcements.length === 0 ? (
             <p className="text-center text-muted-foreground py-8">
               Aucune annonce récente
             </p>
           ) : (
             <div className="space-y-3">
-              {stats.announcements.slice(0, 3).map((announcement: any, index: number) => (
-                <div key={index} className="border rounded-lg p-3 hover:bg-orange-50">
+              {announcements.slice(0, 3).map((announcement: any) => (
+                <div key={announcement.id} className="border rounded-lg p-3 hover:bg-orange-50">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <h4 className="font-medium text-sm">{announcement.title}</h4>

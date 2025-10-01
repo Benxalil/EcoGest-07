@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserRole } from './useUserRole';
 import { useToast } from '@/hooks/use-toast';
@@ -30,10 +30,10 @@ export interface CreateAnnouncementData {
 }
 
 export const useAnnouncements = () => {
-  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [allAnnouncements, setAllAnnouncements] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { userProfile } = useUserRole();
+  const { userProfile, isTeacher, isAdmin } = useUserRole();
   const { toast } = useToast();
 
   const fetchAnnouncements = async () => {
@@ -52,7 +52,7 @@ export const useAnnouncements = () => {
 
       if (error) throw error;
       
-      setAnnouncements(data?.map(item => ({
+      setAllAnnouncements(data?.map(item => ({
         ...item,
         priority: (item as any).priority || 'normal',
         target_audience: (item as any).target_audience || ['tous']
@@ -182,6 +182,42 @@ export const useAnnouncements = () => {
   useEffect(() => {
     fetchAnnouncements();
   }, [userProfile?.schoolId]);
+
+  // Filtrer les annonces en fonction du rôle de l'utilisateur
+  const announcements = useMemo(() => {
+    // Les admins voient toutes les annonces
+    if (isAdmin()) {
+      return allAnnouncements;
+    }
+
+    // Les enseignants voient uniquement les annonces qui leur sont destinées
+    if (isTeacher()) {
+      return allAnnouncements.filter((announcement) => {
+        // Si pas de target_audience ou vide, afficher pour tous
+        if (!announcement.target_audience || announcement.target_audience.length === 0) {
+          return true;
+        }
+        
+        // Vérifier si l'audience cible contient des valeurs pour enseignants
+        return announcement.target_audience.some((audience: string) => 
+          ['teacher', 'enseignant', 'enseignants', 'teachers', 'tous', 'all', 'toute'].includes(audience.toLowerCase())
+        );
+      });
+    }
+
+    // Pour les autres rôles (élèves, parents), filtrer selon leur rôle
+    return allAnnouncements.filter((announcement) => {
+      if (!announcement.target_audience || announcement.target_audience.length === 0) {
+        return true;
+      }
+      
+      const role = userProfile?.role?.toLowerCase() || '';
+      return announcement.target_audience.some((audience: string) => 
+        audience.toLowerCase().includes(role) || 
+        ['tous', 'all', 'toute'].includes(audience.toLowerCase())
+      );
+    });
+  }, [allAnnouncements, isAdmin, isTeacher, userProfile?.role]);
 
   return {
     announcements,
