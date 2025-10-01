@@ -25,6 +25,17 @@ export const useTeacherClasses = () => {
 
     try {
       setLoading(true);
+      setError(null);
+
+      // Vérifier et rafraîchir la session si nécessaire
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError || !session) {
+        console.error('Session expirée ou invalide, redirection vers la connexion...');
+        setError('Votre session a expiré. Veuillez vous reconnecter.');
+        window.location.href = '/auth';
+        return;
+      }
 
       // Trouver d'abord l'entrée teacher correspondant au user_id
       const { data: teacherData, error: teacherError } = await supabase
@@ -34,14 +45,31 @@ export const useTeacherClasses = () => {
         .eq('user_id', userProfile.id)
         .maybeSingle();
 
-      if (teacherError) throw teacherError;
+      if (teacherError) {
+        // Si c'est une erreur JWT, tenter de rafraîchir le token
+        if (teacherError.message?.includes('JWT')) {
+          const { error: refreshError } = await supabase.auth.refreshSession();
+          if (refreshError) {
+            console.error('Impossible de rafraîchir la session:', refreshError);
+            setError('Votre session a expiré. Veuillez vous reconnecter.');
+            window.location.href = '/auth';
+            return;
+          }
+          // Réessayer la requête après le rafraîchissement
+          return fetchTeacherClasses();
+        }
+        throw teacherError;
+      }
 
       // Si l'enseignant n'a pas d'entrée dans teachers, retourner vide
       if (!teacherData) {
+        console.log('Aucune entrée teacher trouvée pour user_id:', userProfile.id);
         setClasses([]);
         setLoading(false);
         return;
       }
+
+      console.log('Teacher ID trouvé:', teacherData.id);
 
       // Trouver les classes où l'enseignant apparaît dans l'emploi du temps
       const { data: scheduleData, error: scheduleError } = await supabase
@@ -52,38 +80,60 @@ export const useTeacherClasses = () => {
 
       if (scheduleError) throw scheduleError;
 
+      console.log('Schedules trouvés:', scheduleData?.length || 0);
+
       // Extraire les IDs uniques des classes
       const classIds = [...new Set(scheduleData?.map(s => s.class_id) || [])];
 
       if (classIds.length === 0) {
+        console.log('Aucune classe trouvée dans les emplois du temps');
         setClasses([]);
         setLoading(false);
         return;
       }
 
-      // Récupérer les détails des classes avec le nombre d'élèves
+      console.log('Class IDs à récupérer:', classIds);
+
+      // Récupérer les détails des classes (sans la sous-requête students pour simplifier)
       const { data: classesData, error: classesError } = await supabase
         .from('classes')
-        .select(`
-          *,
-          students:students(count)
-        `)
+        .select('*')
         .in('id', classIds)
         .order('name');
 
       if (classesError) throw classesError;
 
-      // Transformer les données pour inclure enrollment_count
-      const classesWithEnrollment = (classesData || []).map((classe: any) => ({
-        ...classe,
-        enrollment_count: classe.students?.[0]?.count || 0,
-        students: undefined
-      }));
+      console.log('Classes récupérées:', classesData?.length || 0);
 
+      // Récupérer le nombre d'élèves pour chaque classe séparément
+      const classesWithEnrollment = await Promise.all(
+        (classesData || []).map(async (classe: any) => {
+          const { count } = await supabase
+            .from('students')
+            .select('*', { count: 'exact', head: true })
+            .eq('class_id', classe.id);
+          
+          return {
+            ...classe,
+            enrollment_count: count || 0
+          };
+        })
+      );
+
+      console.log('Classes avec effectif:', classesWithEnrollment);
       setClasses(classesWithEnrollment);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Erreur lors de la récupération des classes enseignant:', err);
-      setError(err instanceof Error ? err.message : 'Erreur inconnue');
+      
+      // Gérer spécifiquement les erreurs JWT
+      if (err?.message?.includes('JWT') || err?.code === 'PGRST301' || err?.code === 'PGRST302' || err?.code === 'PGRST303') {
+        setError('Votre session a expiré. Veuillez vous reconnecter.');
+        setTimeout(() => {
+          window.location.href = '/auth';
+        }, 2000);
+      } else {
+        setError(err instanceof Error ? err.message : 'Erreur inconnue');
+      }
     } finally {
       setLoading(false);
     }
