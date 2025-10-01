@@ -1,34 +1,41 @@
 /**
- * Configuration statique de l'école
- * Cette configuration est utilisée pour la page de connexion où l'utilisateur n'est pas encore authentifié
+ * Utilitaires pour l'authentification multi-écoles
+ * Format attendu: matricule@suffixe_école (ex: Prof04@ecole-best)
  */
 
-export const SCHOOL_CONFIG = {
-  // Suffix de l'école utilisé pour construire les emails d'authentification
-  // Format: sans underscore, avec tirets (ex: "ecole-best")
-  // Les emails seront au format: Matricule@school-suffix.ecogest.app
-  schoolSuffix: 'ecole-best',
-  
-  // Nom complet de l'école (optionnel, pour affichage)
-  schoolName: 'École Best',
-  
-  // Domaine de base pour l'authentification
-  authDomain: 'ecogest.app'
-} as const;
+const AUTH_DOMAIN = 'ecogest.app';
 
 /**
- * Construit l'email d'authentification à partir d'un matricule
- * @param matricule - Le matricule de l'utilisateur (ex: "Prof03", "Eleve001")
- * @returns L'email formaté pour Supabase Auth (ex: "Prof03@ecole-best.ecogest.app")
+ * Parse un identifiant au format matricule@suffixe_école
+ * @param identifier - L'identifiant saisi (ex: "Prof04@ecole-best")
+ * @returns { matricule, schoolSuffix } ou null si le format est invalide
  */
-export function buildAuthEmailFromMatricule(matricule: string): string {
-  return `${matricule}@${SCHOOL_CONFIG.schoolSuffix}.${SCHOOL_CONFIG.authDomain}`;
+export function parseUserIdentifier(identifier: string): { matricule: string; schoolSuffix: string } | null {
+  const trimmed = identifier.trim();
+  
+  // Vérifier le format matricule@suffixe
+  if (!trimmed.includes('@')) {
+    return null;
+  }
+  
+  const [matricule, schoolSuffix] = trimmed.split('@');
+  
+  // Valider que les deux parties existent
+  if (!matricule || !schoolSuffix) {
+    return null;
+  }
+  
+  return { matricule, schoolSuffix };
 }
 
 /**
- * Récupère le suffix de l'école configuré
- * Cette fonction remplace l'appel à useSchoolData pour la page de connexion
+ * Construit l'email d'authentification technique pour Supabase
+ * @param matricule - Le matricule de l'utilisateur (ex: "Prof04")
+ * @param schoolSuffix - Le suffixe de l'école (ex: "ecole-best" ou "ecole_best")
+ * @returns L'email formaté pour Supabase Auth (ex: "Prof04@ecole-best.ecogest.app")
  */
-export function getConfiguredSchoolSuffix(): string {
-  return SCHOOL_CONFIG.schoolSuffix;
+export function buildAuthEmail(matricule: string, schoolSuffix: string): string {
+  // Normaliser le suffixe (remplacer underscore par tiret)
+  const normalizedSuffix = schoolSuffix.replace(/_/g, '-');
+  return `${matricule}@${normalizedSuffix}.${AUTH_DOMAIN}`;
 }

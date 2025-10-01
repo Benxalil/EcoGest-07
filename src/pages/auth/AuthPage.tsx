@@ -9,7 +9,7 @@ import { Link } from "react-router-dom";
 import { EyeIcon, EyeOffIcon, Mail, Lock, User } from "lucide-react";
 import { EcoGestLogo } from "@/assets/EcoGestLogo";
 import { useToast } from "@/hooks/use-toast";
-import { buildAuthEmailFromMatricule, getConfiguredSchoolSuffix } from "@/config/schoolConfig";
+import { parseUserIdentifier, buildAuthEmail } from "@/config/schoolConfig";
 
 const AuthPage = () => {
   const { toast } = useToast();
@@ -17,15 +17,10 @@ const AuthPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loginType, setLoginType] = useState<'admin' | 'user'>('user');
 
-  // Login form state
   const [loginData, setLoginData] = useState({
     identifier: "",
     password: "",
   });
-  
-  // Utiliser la configuration statique au lieu de faire une requête Supabase
-  // Cela évite le problème RLS (406 Not Acceptable) sur la table schools
-  const schoolSuffix = getConfiguredSchoolSuffix();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,26 +29,30 @@ const AuthPage = () => {
     try {
       let email = loginData.identifier;
       
-      // Système hybride d'authentification
+      // Système d'authentification multi-écoles
       if (loginType === 'admin') {
-        // Admin: email classique (doit contenir @)
-        if (!loginData.identifier.includes('@')) {
+        // Admin: email classique
+        email = loginData.identifier.trim();
+      } else {
+        // Utilisateur: format matricule@suffixe_école (ex: Prof04@ecole-best)
+        const identifier = loginData.identifier.trim();
+        
+        // Parser l'identifiant
+        const parsed = parseUserIdentifier(identifier);
+        
+        if (!parsed) {
           toast({
-            title: "Format d'email incorrect",
-            description: "Les administrateurs doivent se connecter avec un email valide",
+            title: "Format invalide",
+            description: "Veuillez utiliser le format: matricule@suffixe_école (ex: Prof04@ecole-best)",
             variant: "destructive",
           });
           setIsLoading(false);
           return;
         }
-        email = loginData.identifier.trim().toLowerCase();
-      } else {
-        // Utilisateur: matricule simple (Prof03, Eleve001, etc.)
-        const matricule = loginData.identifier.trim();
         
-        // Transformer en email valide pour Supabase Auth en utilisant la config statique
-        // Ex: Prof03 -> Prof03@ecole-best.ecogest.app
-        email = buildAuthEmailFromMatricule(matricule);
+        // Construire l'email technique pour Supabase Auth
+        // Ex: Prof04@ecole-best -> Prof04@ecole-best.ecogest.app
+        email = buildAuthEmail(parsed.matricule, parsed.schoolSuffix);
       }
 
       const { error } = await supabase.auth.signInWithPassword({
@@ -63,27 +62,21 @@ const AuthPage = () => {
 
       if (error) {
         console.error('Login error:', error);
+        
+        let errorMessage = error.message;
         if (error.message.includes('Email not confirmed')) {
-          toast({
-            title: "Email non confirmé",
-            description: "Veuillez confirmer votre email avant de vous connecter. Vérifiez votre boîte de réception.",
-            variant: "destructive",
-          });
+          errorMessage = "Veuillez confirmer votre email avant de vous connecter.";
         } else if (error.message.includes('Invalid login credentials')) {
-          toast({
-            title: "Identifiants incorrects",
-            description: loginType === 'admin' 
-              ? 'Email ou mot de passe incorrect.' 
-              : `Matricule ou mot de passe incorrect. Format attendu: ${loginType === 'user' ? 'Prof03 ou Eleve001' : 'votre matricule'}`,
-            variant: "destructive",
-          });
-        } else {
-          toast({
-            title: "Erreur de connexion",
-            description: error.message,
-            variant: "destructive",
-          });
+          errorMessage = loginType === 'admin' 
+            ? 'Email ou mot de passe incorrect.' 
+            : 'Matricule, école ou mot de passe incorrect. Vérifiez votre identifiant au format: matricule@suffixe_école';
         }
+        
+        toast({
+          title: "Erreur de connexion",
+          description: errorMessage,
+          variant: "destructive",
+        });
       } else {
         toast({
           title: "Connexion réussie",
@@ -102,7 +95,6 @@ const AuthPage = () => {
       setIsLoading(false);
     }
   };
-
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-muted flex items-center justify-center p-4">
@@ -127,13 +119,13 @@ const AuthPage = () => {
             <form onSubmit={handleLogin} className="space-y-4">
               <TabsContent value="user" className="mt-0">
                 <div className="space-y-2">
-                  <Label htmlFor="login-identifier">Matricule</Label>
+                  <Label htmlFor="login-identifier">Identifiant</Label>
                   <div className="relative">
                     <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="login-identifier"
                       type="text"
-                      placeholder="Prof03, Eleve001, Parent001..."
+                      placeholder="Prof04@ecole-best"
                       value={loginData.identifier}
                       onChange={(e) => setLoginData({ ...loginData, identifier: e.target.value })}
                       className="pl-10"
@@ -141,7 +133,7 @@ const AuthPage = () => {
                     />
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Entrez simplement votre matricule (ex: Prof03, Eleve001)
+                    Format: matricule@suffixe_école (ex: Prof04@ecole-best, Eleve001@mon-lycee)
                   </p>
                 </div>
               </TabsContent>
@@ -193,7 +185,7 @@ const AuthPage = () => {
                 </div>
                 {loginType === 'user' && (
                   <p className="text-xs text-muted-foreground">
-                    Mot de passe par défaut : student123, teacher123 ou parent123
+                    Utilisez le mot de passe fourni lors de la création de votre compte
                   </p>
                 )}
               </div>
