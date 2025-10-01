@@ -156,10 +156,37 @@ export const useResults = () => {
             
             // Récupérer les élèves avec leurs vraies notes pour cet examen
             students: classStudents.map(student => {
-              const studentGrades = gradesData?.filter(grade => 
-                grade.student_id === student.id && 
-                grade.exam_id === exam.id
-              ) || [];
+              // Matcher les notes par exam_id OU par critères alternatifs pour les notes sans exam_id
+              const studentGrades = gradesData?.filter(grade => {
+                // Vérifier que c'est bien l'élève
+                if (grade.student_id !== student.id) return false;
+                
+                // Vérifier que la matière appartient à cette classe
+                const gradeSubject = classSubjects.find(s => s.id === grade.subject_id);
+                if (!gradeSubject) return false;
+                
+                // Si la note a un exam_id, matcher par exam_id
+                if (grade.exam_id) {
+                  return grade.exam_id === exam.id;
+                }
+                
+                // Sinon, matcher par exam_type et date approximative
+                // Pour les examens sans exam_id défini, on les associe selon le type
+                const isCompositionExam = exam.title.toLowerCase().includes('composition');
+                const gradeIsComposition = grade.exam_type === 'composition';
+                
+                // Matcher les notes de composition avec les examens de composition
+                if (isCompositionExam && gradeIsComposition) {
+                  return true;
+                }
+                
+                // Pour les autres types d'examens, inclure les notes de type "devoir" ou autres
+                if (!isCompositionExam && grade.exam_type !== 'composition') {
+                  return true;
+                }
+                
+                return false;
+              }) || [];
 
               return {
                 student_id: student.id,
