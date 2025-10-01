@@ -225,8 +225,8 @@ const Index = () => {
 
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
 
-  // Affichage conditionnel selon le rôle
-  if (isLoading || !userProfile) {
+  // Attendre que le rôle soit complètement résolu avant d'afficher quoi que ce soit
+  if (userLoading || !userProfile) {
     return (
       <Layout>
         <div className="space-y-6">
@@ -255,11 +255,30 @@ const Index = () => {
     );
   }
 
-  // Dashboard spécifique pour les enseignants
+  // Dashboard spécifique pour les enseignants - Priorité maximale
   if (isTeacher()) {
     return (
       <Layout>
         <TeacherDashboard />
+      </Layout>
+    );
+  }
+
+  // Afficher skeleton si les données sont encore en cours de chargement pour l'admin
+  if (dataLoading) {
+    return (
+      <Layout>
+        <div className="space-y-6">
+          <div className="bg-gray-100 rounded-lg p-6 animate-pulse">
+            <div className="h-8 w-64 bg-gray-200 rounded mb-2"></div>
+            <div className="h-4 w-96 bg-gray-200 rounded"></div>
+          </div>
+          <LoadingSkeleton type="stats" count={4} />
+          <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
+            <LoadingSkeleton type="list" count={3} />
+            <LoadingSkeleton type="list" count={3} />
+          </div>
+        </div>
       </Layout>
     );
   }

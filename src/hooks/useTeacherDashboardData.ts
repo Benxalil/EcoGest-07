@@ -36,95 +36,109 @@ export const useTeacherDashboardData = () => {
         setTeacherClasses([]);
         setTeacherStudents([]);
         setTodaySchedules([]);
+        setAnnouncements([]);
         setLoading(false);
         return;
       }
 
       const teacherId = teacherData.id;
 
-      // 2. Récupérer les IDs des classes que l'enseignant enseigne via schedules
-      const { data: scheduleData, error: scheduleError } = await supabase
-        .from('schedules')
-        .select('class_id')
-        .eq('school_id', userProfile.schoolId)
-        .eq('teacher_id', teacherId);
-
-      if (scheduleError) throw scheduleError;
-
-      const classIds = [...new Set(scheduleData?.map(s => s.class_id) || [])];
-
-      if (classIds.length === 0) {
-        setTeacherClasses([]);
-        setTeacherStudents([]);
-        setTodaySchedules([]);
-        setLoading(false);
-        return;
-      }
-
-      // 3. Récupérer les détails des classes
-      const { data: classesData, error: classesError } = await supabase
-        .from('classes')
-        .select('*')
-        .in('id', classIds)
-        .order('name');
-
-      if (classesError) throw classesError;
-
-      // 4. Récupérer les élèves de ces classes
-      const { data: studentsData, error: studentsError } = await supabase
-        .from('students')
-        .select('*')
-        .in('class_id', classIds)
-        .eq('is_active', true);
-
-      if (studentsError) throw studentsError;
-
-      // 5. Récupérer les cours d'aujourd'hui pour cet enseignant
+      // Optimisation: Récupérer le nom du jour une seule fois
       const today = new Date();
       const dayNames = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
       const todayName = dayNames[today.getDay()];
 
-      const { data: todaySchedulesData, error: todaySchedulesError } = await supabase
-        .from('schedules')
-        .select(`
-          *,
-          classes:class_id (
-            id,
-            name,
-            level
-          )
-        `)
-        .eq('school_id', userProfile.schoolId)
-        .eq('teacher_id', teacherId)
-        .eq('day', todayName)
-        .order('start_time');
+      // 2-6. Exécuter toutes les requêtes en parallèle pour améliorer les performances
+      const [
+        scheduleDataResult,
+        todaySchedulesResult,
+        announcementsResult
+      ] = await Promise.all([
+        // Récupérer les IDs des classes via schedules
+        supabase
+          .from('schedules')
+          .select('class_id')
+          .eq('school_id', userProfile.schoolId)
+          .eq('teacher_id', teacherId),
+        
+        // Récupérer les cours d'aujourd'hui
+        supabase
+          .from('schedules')
+          .select(`
+            *,
+            classes:class_id (
+              id,
+              name,
+              level
+            )
+          `)
+          .eq('school_id', userProfile.schoolId)
+          .eq('teacher_id', teacherId)
+          .eq('day', todayName)
+          .order('start_time'),
+        
+        // Récupérer les annonces
+        supabase
+          .from('announcements')
+          .select('*')
+          .eq('school_id', userProfile.schoolId)
+          .eq('is_published', true)
+          .order('created_at', { ascending: false })
+      ]);
 
-      if (todaySchedulesError) throw todaySchedulesError;
+      if (scheduleDataResult.error) throw scheduleDataResult.error;
+      if (todaySchedulesResult.error) throw todaySchedulesResult.error;
+      if (announcementsResult.error) throw announcementsResult.error;
 
-      // 6. Récupérer les annonces pour enseignants
-      const { data: announcementsData, error: announcementsError } = await supabase
-        .from('announcements')
-        .select('*')
-        .eq('school_id', userProfile.schoolId)
-        .eq('is_published', true)
-        .order('created_at', { ascending: false });
+      const classIds = [...new Set(scheduleDataResult.data?.map(s => s.class_id) || [])];
 
-      if (announcementsError) throw announcementsError;
+      if (classIds.length === 0) {
+        setTeacherClasses([]);
+        setTeacherStudents([]);
+        setTodaySchedules(todaySchedulesResult.data || []);
+        // Filtrer les annonces même si pas de classes
+        const filteredAnnouncements = (announcementsResult.data || []).filter((ann: any) => {
+          if (!ann.target_audience || ann.target_audience.length === 0) return true;
+          return ann.target_audience.some((audience: string) => 
+            ['teacher', 'enseignant', 'tous', 'all'].includes(audience.toLowerCase())
+          );
+        });
+        setAnnouncements(filteredAnnouncements);
+        setLoading(false);
+        return;
+      }
+
+      // 3-4. Récupérer classes et élèves en parallèle
+      const [classesResult, studentsResult] = await Promise.all([
+        supabase
+          .from('classes')
+          .select('*')
+          .in('id', classIds)
+          .order('name'),
+        
+        supabase
+          .from('students')
+          .select('*')
+          .in('class_id', classIds)
+          .eq('is_active', true)
+      ]);
+
+      if (classesResult.error) throw classesResult.error;
+      if (studentsResult.error) throw studentsResult.error;
 
       // Filtrer les annonces qui ciblent les enseignants ou tous
-      const filteredAnnouncements = (announcementsData || []).filter((ann: any) => {
+      const filteredAnnouncements = (announcementsResult.data || []).filter((ann: any) => {
         if (!ann.target_audience || ann.target_audience.length === 0) {
-          return true; // Si pas de cible spécifiée, afficher pour tous
+          return true;
         }
-        // Vérifier si l'audience cible contient 'teacher', 'enseignant' ou 'tous'
         return ann.target_audience.some((audience: string) => 
           ['teacher', 'enseignant', 'tous', 'all'].includes(audience.toLowerCase())
         );
       });
 
-      setTeacherClasses(classesData || []);
-      setTeacherStudents(studentsData || []);
-      setTodaySchedules(todaySchedulesData || []);
+      setTeacherClasses(classesResult.data || []);
+      setTeacherStudents(studentsResult.data || []);
+      setTodaySchedules(todaySchedulesResult.data || []);
       setAnnouncements(filteredAnnouncements);
 
     } catch (err: any) {

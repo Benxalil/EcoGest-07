@@ -45,14 +45,36 @@ export const useUserRole = () => {
   };
 
   useEffect(() => {
-    // Optimized auth state listener
+    let isMounted = true;
+
+    // Check for existing session immediately
+    const initSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!isMounted) return;
+      
+      setSession(session);
+      setUser(session?.user ?? null);
+      
+      if (session?.user) {
+        await fetchUserProfile(session.user.id);
+      } else {
+        setLoading(false);
+      }
+    };
+
+    initSession();
+
+    // Then set up the listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        if (!isMounted) return;
+        
         setSession(session);
         setUser(session?.user ?? null);
 
         if (session?.user) {
-          fetchUserProfile(session.user.id);
+          await fetchUserProfile(session.user.id);
         } else {
           setUserProfile(null);
           setLoading(false);
@@ -60,19 +82,10 @@ export const useUserRole = () => {
       }
     );
 
-    // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      if (session?.user) {
-        fetchUserProfile(session.user.id);
-      } else {
-        setLoading(false);
-      }
-    });
-
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const isAdmin = () => userProfile?.role === "school_admin";

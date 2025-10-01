@@ -124,11 +124,11 @@ export function Sidebar({
   const { subscriptionStatus } = useSubscription();
   const { isAdmin, isTeacher, isStudent, isParent, loading } = useUserRole();
 
-  // Filtrer les éléments du menu selon le rôle avec fallback
+  // Filtrer les éléments du menu selon le rôle - Ne rien afficher pendant le chargement
   const menuItems = useMemo(() => {
-    // Si encore en chargement après 2 secondes, afficher par défaut comme admin
+    // Pendant le chargement, retourner un tableau vide pour éviter d'afficher le menu admin
     if (loading) {
-      return allMenuItems; // Afficher tous les éléments par défaut
+      return [];
     }
     
     if (isAdmin()) {
@@ -147,8 +147,8 @@ export function Sidebar({
       return allMenuItems.filter(item => item.parentAccess || false); // Les parents voient seulement les sections autorisées
     }
     
-    // Fallback: si aucun rôle détecté, traiter comme admin par défaut
-    return allMenuItems;
+    // Fallback: si aucun rôle détecté, retourner un tableau vide
+    return [];
   }, [loading, isAdmin, isTeacher, isStudent, isParent]);
   const toggleCollapse = () => {
     const newCollapsed = !isCollapsed;
