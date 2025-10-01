@@ -1615,6 +1615,10 @@ export type Database = {
           updated_at: string
         }[]
       }
+      get_user_school_id: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       initialize_new_school: {
         Args: {
           academic_year_name_param?: string

@@ -27,9 +27,7 @@ export default function Utilisateurs() {
 
   const formatLogin = (matricule: string) => {
     if (!schoolSuffix) return matricule;
-    // Supprimer les underscores et ajouter .ecogest.app
-    const cleanSuffix = schoolSuffix.replace(/_/g, '-');
-    return `${matricule}@${cleanSuffix}.ecogest.app`;
+    return `${matricule}@${schoolSuffix}`;
   };
 
   return (
@@ -141,22 +139,18 @@ export default function Utilisateurs() {
                               </div>
                             </TableCell>
                             <TableCell>
-                              {student.parent_matricule ? (
-                                <div className="flex items-center gap-2">
-                                  <code className="text-sm bg-muted px-2 py-1 rounded">
-                                    {formatLogin(student.parent_matricule)}
-                                  </code>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => copyToClipboard(formatLogin(student.parent_matricule!))}
-                                  >
-                                    <Copy className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                              ) : (
-                                <span className="text-muted-foreground text-sm">Non configuré</span>
-                              )}
+                              <div className="flex items-center gap-2">
+                                <code className="text-sm bg-muted px-2 py-1 rounded">
+                                  {formatLogin(student.parent_matricule)}
+                                </code>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => copyToClipboard(formatLogin(student.parent_matricule))}
+                                >
+                                  <Copy className="h-4 w-4" />
+                                </Button>
+                              </div>
                             </TableCell>
                             <TableCell>
                               <div className="flex items-center gap-2">

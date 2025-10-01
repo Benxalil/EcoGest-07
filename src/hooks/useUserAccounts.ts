@@ -67,19 +67,29 @@ export const useUserAccounts = (classId?: string) => {
 
       if (studentsError) throw studentsError;
 
-      const formattedStudents: StudentAccount[] = (studentsData || []).map((student: any) => ({
-        id: student.id,
-        student_number: student.student_number,
-        parent_matricule: student.parent_matricule,
-        first_name: student.first_name,
-        last_name: student.last_name,
-        class_id: student.class_id,
-        class_name: student.classes 
-          ? `${student.classes.name} ${student.classes.level}${student.classes.section ? ' - ' + student.classes.section : ''}`
-          : 'Sans classe',
-        defaultPassword: 'student123',
-        parentPassword: 'parent123'
-      }));
+      const formattedStudents: StudentAccount[] = (studentsData || []).map((student: any) => {
+        // Générer le matricule parent si manquant
+        const generateParentMatricule = (studentMatricule: string): string => {
+          // Remplacer ELEVE ou Eleve par PARENT ou Parent
+          return studentMatricule
+            .replace(/ELEVE/g, 'PARENT')
+            .replace(/Eleve/g, 'Parent');
+        };
+
+        return {
+          id: student.id,
+          student_number: student.student_number,
+          parent_matricule: student.parent_matricule || generateParentMatricule(student.student_number),
+          first_name: student.first_name,
+          last_name: student.last_name,
+          class_id: student.class_id,
+          class_name: student.classes 
+            ? `${student.classes.name} ${student.classes.level}${student.classes.section ? ' - ' + student.classes.section : ''}`
+            : 'Sans classe',
+          defaultPassword: 'student123',
+          parentPassword: 'parent123'
+        };
+      });
 
       setStudents(formattedStudents);
 
