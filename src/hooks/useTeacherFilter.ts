@@ -36,16 +36,25 @@ export const useTeacherFilter = () => {
           return;
         }
 
-        // Récupérer les schedules de l'enseignant pour avoir les classes et matières
-        const { data: schedules } = await supabase
-          .from('schedules')
+        // Récupérer les matières et classes depuis teacher_subjects
+        const { data: teacherSubjects, error } = await supabase
+          .from('teacher_subjects')
           .select('class_id, subject_id')
           .eq('teacher_id', teacher.id)
           .eq('school_id', userProfile.schoolId);
 
-        if (schedules) {
-          const classIds = [...new Set(schedules.map(s => s.class_id).filter(Boolean))];
-          const subjectIds = [...new Set(schedules.map(s => s.subject_id).filter(Boolean))];
+        if (error) {
+          console.error('Erreur lors de la récupération des matières enseignant:', error);
+          setData({ teacherClassIds: [], teacherSubjectIds: [], loading: false });
+          return;
+        }
+
+        if (teacherSubjects && teacherSubjects.length > 0) {
+          const classIds = [...new Set(teacherSubjects.map(ts => ts.class_id).filter(Boolean))];
+          const subjectIds = [...new Set(teacherSubjects.map(ts => ts.subject_id).filter(Boolean))];
+
+          console.log('Teacher class IDs:', classIds);
+          console.log('Teacher subject IDs:', subjectIds);
 
           setData({
             teacherClassIds: classIds as string[],
@@ -53,6 +62,7 @@ export const useTeacherFilter = () => {
             loading: false
           });
         } else {
+          console.log('Aucune matière trouvée pour cet enseignant');
           setData({ teacherClassIds: [], teacherSubjectIds: [], loading: false });
         }
       } catch (error) {

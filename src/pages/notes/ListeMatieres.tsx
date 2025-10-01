@@ -64,9 +64,15 @@ export default function ListeMatieres() {
         maxScore: s.hours_per_week || 20
       }));
 
+      console.log('Toutes les matières de la classe:', matieresForClasse);
+      console.log('IDs des matières enseignant:', teacherSubjectIds);
+
       // Filtrer pour les enseignants - seulement leurs matières
       if (isTeacher()) {
+        const beforeFilter = matieresForClasse.length;
         matieresForClasse = matieresForClasse.filter(m => teacherSubjectIds.includes(m.id));
+        console.log(`Filtrage enseignant: ${beforeFilter} matières -> ${matieresForClasse.length} matières`);
+        console.log('Matières filtrées:', matieresForClasse);
       }
 
       setMatieres(matieresForClasse);
