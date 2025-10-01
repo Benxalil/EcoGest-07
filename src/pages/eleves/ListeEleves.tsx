@@ -52,22 +52,79 @@ interface ClasseWithStudents {
 // Fonction pour récupérer les élèves organisés par classe
 const fetchStudentsByClass = async (userProfile?: any, isTeacher?: boolean): Promise<ClasseWithStudents[]> => {
   try {
-    // Récupérer les classes
-    const { data: classes, error: classesError } = await supabase
+    let allowedClassIds: string[] = [];
+
+    // Si c'est un enseignant, récupérer uniquement ses classes
+    if (isTeacher && userProfile?.id && userProfile?.schoolId) {
+      // Trouver l'entrée teacher correspondant au user_id
+      const { data: teacherData, error: teacherError } = await supabase
+        .from('teachers')
+        .select('id')
+        .eq('school_id', userProfile.schoolId)
+        .eq('user_id', userProfile.id)
+        .maybeSingle();
+
+      if (teacherError) {
+        console.error('❌ Erreur teacher:', teacherError);
+        throw teacherError;
+      }
+
+      if (!teacherData) {
+        console.log('⚠️ Aucune entrée teacher trouvée');
+        return [];
+      }
+
+      // Récupérer les classes de l'enseignant depuis schedules
+      const { data: scheduleData, error: scheduleError } = await supabase
+        .from('schedules')
+        .select('class_id')
+        .eq('school_id', userProfile.schoolId)
+        .eq('teacher_id', teacherData.id);
+
+      if (scheduleError) {
+        console.error('❌ Erreur schedules:', scheduleError);
+        throw scheduleError;
+      }
+
+      // Extraire les IDs uniques des classes
+      allowedClassIds = [...new Set(scheduleData?.map(s => s.class_id) || [])];
+
+      if (allowedClassIds.length === 0) {
+        console.log('⚠️ Aucune classe trouvée pour cet enseignant');
+        return [];
+      }
+
+      console.log('✅ Classes enseignant:', allowedClassIds);
+    }
+
+    // Récupérer les classes (filtrées pour les enseignants)
+    let classesQuery = supabase
       .from('classes')
       .select('*')
       .order('name');
 
+    if (isTeacher && allowedClassIds.length > 0) {
+      classesQuery = classesQuery.in('id', allowedClassIds);
+    }
+
+    const { data: classes, error: classesError } = await classesQuery;
+
     if (classesError) throw classesError;
 
-    // Récupérer les élèves
-    const { data: students, error: studentsError } = await supabase
+    // Récupérer les élèves (filtrés par classes pour les enseignants)
+    let studentsQuery = supabase
       .from('students')
       .select(`
         *,
         classes!inner(*)
       `)
       .order('first_name');
+
+    if (isTeacher && allowedClassIds.length > 0) {
+      studentsQuery = studentsQuery.in('class_id', allowedClassIds);
+    }
+
+    const { data: students, error: studentsError } = await studentsQuery;
 
     if (studentsError) throw studentsError;
 
