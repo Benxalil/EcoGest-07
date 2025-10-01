@@ -1,8 +1,9 @@
 import { useAcademicYear } from "@/hooks/useAcademicYear";
 import { useClasses } from "@/hooks/useClasses";
 import { useSchoolData } from "@/hooks/useSchoolData";
-import { Exam } from "@/hooks/useExams";
+import { Exam, useExams } from "@/hooks/useExams";
 import { useGrades } from "@/hooks/useGrades";
+import { useToast } from "@/hooks/use-toast";
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -78,6 +79,8 @@ export const ListeExamens: React.FC<ListeExamensProps> = ({
   const { academicYear } = useAcademicYear();
   const { classes, loading: classesLoading } = useClasses();
   const { grades } = useGrades(); // Pour compter les notes par examen
+  const { toast } = useToast();
+  const { createExam } = useExams();
   const [searchTerm, setSearchTerm] = useState("");
   const [editOpen, setEditOpen] = useState(false);
   const [editingExamen, setEditingExamen] = useState<Examen | null>(null);
@@ -199,8 +202,17 @@ export const ListeExamens: React.FC<ListeExamensProps> = ({
     setEditSemestre(examen.semestre);
     setEditAnnee(examen.anneeAcademique);
     setEditDate(examen.dateExamen && !isNaN(new Date(examen.dateExamen).getTime()) ? new Date(examen.dateExamen).toISOString().slice(0, 10) : "");
-    setEditToutesClasses(examen.classes.length === classes.length);
-    setEditClassesSelectionnees(examen.classes);
+    
+    // Récupérer les IDs des classes associées à cet examen
+    const examsForThisExam = exams?.filter(exam => 
+      exam.title === examen.titre && 
+      exam.exam_date === examen.dateExamen
+    ) || [];
+    
+    const classIds = examsForThisExam.map(exam => exam.class_id);
+    
+    setEditToutesClasses(classIds.length === classes.length);
+    setEditClassesSelectionnees(classIds);
     setEditOpen(true);
   };
 
@@ -240,19 +252,65 @@ export const ListeExamens: React.FC<ListeExamensProps> = ({
     if (!editingExamen) return;
 
     try {
-      // Trouver l'examen correspondant dans les données de la base
-      const examToUpdate = exams?.find(e => e.id === editingExamen.id);
-      if (!examToUpdate) {
-        console.error('Examen non trouvé');
-        return;
+      // Trouver tous les examens du groupe (même titre et date)
+      const examsInGroup = exams?.filter(exam => 
+        exam.title === editingExamen.titre && 
+        exam.exam_date === editingExamen.dateExamen
+      ) || [];
+
+      const currentClassIds = examsInGroup.map(exam => exam.class_id);
+      const selectedClassIds = editToutesClasses 
+        ? classes.map(c => c.id)
+        : editClassesSelectionnees;
+
+      // Classes à supprimer (dans current mais pas dans selected)
+      const classesToRemove = currentClassIds.filter(id => !selectedClassIds.includes(id));
+      
+      // Classes à ajouter (dans selected mais pas dans current)
+      const classesToAdd = selectedClassIds.filter(id => !currentClassIds.includes(id));
+      
+      // Classes à mettre à jour (dans les deux)
+      const classesToUpdate = currentClassIds.filter(id => selectedClassIds.includes(id));
+
+      const newTitle = editTypeExamen === 'Autre' && editTitre.trim() 
+        ? editTitre 
+        : (editTypeExamen === 'Autre' ? editingExamen.titre : editTypeExamen);
+      
+      const newDate = editDate ? new Date(editDate).toISOString().split('T')[0] : editingExamen.dateExamen;
+
+      // Supprimer les examens des classes non sélectionnées
+      for (const classId of classesToRemove) {
+        const examToDelete = examsInGroup.find(exam => exam.class_id === classId);
+        if (examToDelete) {
+          await deleteExam(examToDelete.id);
+        }
       }
 
-      // Mettre à jour l'examen via le hook useExams
-      await updateExam(examToUpdate.id, {
-        title: editTypeExamen === 'Autre' && editTitre.trim() ? editTitre : (editTypeExamen === 'Autre' ? editingExamen.titre : editTypeExamen),
-        exam_date: editDate ? new Date(editDate).toISOString().split('T')[0] : examToUpdate.exam_date,
-        // Autres champs peuvent être ajoutés selon les besoins
-      });
+      // Mettre à jour les examens des classes qui restent
+      for (const classId of classesToUpdate) {
+        const examToUpdate = examsInGroup.find(exam => exam.class_id === classId);
+        if (examToUpdate) {
+          await updateExam(examToUpdate.id, {
+            title: newTitle,
+            exam_date: newDate,
+          });
+        }
+      }
+
+      // Créer de nouveaux examens pour les classes ajoutées
+      for (const classId of classesToAdd) {
+        // Trouver le subject_id du premier examen du groupe pour cohérence
+        const firstExam = examsInGroup[0];
+        await createExam({
+          class_id: classId,
+          subject_id: firstExam?.subject_id,
+          title: newTitle,
+          exam_date: newDate,
+          start_time: firstExam?.start_time,
+          total_marks: firstExam?.total_marks,
+          is_published: firstExam?.is_published ?? false,
+        });
+      }
 
       setEditOpen(false);
       setEditingExamen(null);
@@ -261,6 +319,11 @@ export const ListeExamens: React.FC<ListeExamensProps> = ({
       refreshExams();
     } catch (error) {
       console.error('Erreur lors de la mise à jour de l\'examen:', error);
+      toast({
+        title: "Erreur",
+        description: "Une erreur est survenue lors de la mise à jour de l'examen.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -544,7 +607,18 @@ export const ListeExamens: React.FC<ListeExamensProps> = ({
             {/* Classes */}
             <div className="space-y-2">
               <div className="flex items-center space-x-2">
-                <Checkbox id="edit-toutes-classes" checked={editToutesClasses} onCheckedChange={(c) => setEditToutesClasses(Boolean(c))} />
+                <Checkbox 
+                  id="edit-toutes-classes" 
+                  checked={editToutesClasses} 
+                  onCheckedChange={(checked) => {
+                    setEditToutesClasses(checked as boolean);
+                    if (checked) {
+                      setEditClassesSelectionnees(classes.map(c => c.id));
+                    } else {
+                      setEditClassesSelectionnees([]);
+                    }
+                  }} 
+                />
                 <Label htmlFor="edit-toutes-classes">Toutes les classes</Label>
               </div>
               {!editToutesClasses && (
