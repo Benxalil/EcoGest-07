@@ -1170,6 +1170,25 @@ export default function Parametres() {
 
                 <Separator />
 
+                <div className="space-y-4">
+                  <div>
+                    <Label>Migration des comptes utilisateurs</Label>
+                    <p className="text-sm text-gray-500 mb-3">
+                      Créez automatiquement des comptes de connexion pour tous les utilisateurs existants
+                    </p>
+                    <Button 
+                      onClick={() => window.location.href = '/admin/user-migration'} 
+                      variant="outline"
+                      className="w-full"
+                    >
+                      <Users className="w-4 h-4 mr-2" />
+                      Gérer la migration des comptes
+                    </Button>
+                  </div>
+                </div>
+
+                <Separator />
+
                 <div className="space-y-2">
                   <Label>Statut des services</Label>
                   <div className="space-y-2">
