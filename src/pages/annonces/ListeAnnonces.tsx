@@ -40,17 +40,6 @@ export default function ListeAnnonces() {
   const { announcements, loading, createAnnouncement, updateAnnouncement, deleteAnnouncement } = useAnnouncements();
   const { isAdmin } = useUserRole();
 
-  const handleCreateAnnonce = async (annonceData: Omit<AnnonceData, 'id' | 'dateCreation'>) => {
-    const success = await createAnnouncement({
-      title: annonceData.titre,
-      content: annonceData.contenu,
-      is_published: true
-    });
-
-    if (success) {
-      setIsModalOpen(false);
-    }
-  };
 
   const handleEditAnnonce = async (id: string, annonceData: Partial<AnnonceData>) => {
     const success = await updateAnnouncement(id, {
@@ -568,7 +557,6 @@ export default function ListeAnnonces() {
         <CreerAnnonceModal 
           open={isModalOpen} 
           onOpenChange={setIsModalOpen}
-          onAnnouncementCreated={handleCreateAnnonce}
         />
 
         {selectedAnnonce && (

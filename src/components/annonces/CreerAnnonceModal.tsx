@@ -44,7 +44,6 @@ interface AnnonceData {
 interface CreerAnnonceModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAnnouncementCreated?: (annonce: AnnonceData) => void;
 }
 
 const destinatairesOptions = [
@@ -55,7 +54,7 @@ const destinatairesOptions = [
   { id: "administration", label: "Administration" },
 ];
 
-export function CreerAnnonceModal({ open, onOpenChange, onAnnouncementCreated }: CreerAnnonceModalProps) {
+export function CreerAnnonceModal({ open, onOpenChange }: CreerAnnonceModalProps) {
   const { showSuccess, showError } = useNotifications();
   const { createAnnouncement } = useAnnouncements();
   const [titre, setTitre] = useState("");
@@ -120,18 +119,6 @@ export function CreerAnnonceModal({ open, onOpenChange, onAnnouncementCreated }:
         });
         resetForm();
         onOpenChange(false);
-        
-        // Créer l'objet pour le callback
-        const nouvelleAnnonce: AnnonceData = {
-          id: Date.now().toString(),
-          titre,
-          contenu,
-          dateExpiration,
-          destinataires,
-          priorite,
-          dateCreation: new Date(),
-        };
-        onAnnouncementCreated?.(nouvelleAnnonce);
       }
     } catch (error) {
       showError({

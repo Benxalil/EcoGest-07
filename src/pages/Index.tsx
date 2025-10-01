@@ -599,7 +599,6 @@ const Index = () => {
         <CreerAnnonceModal 
           open={modals.annonce} 
           onOpenChange={(open) => !open && closeModal("annonce")}
-          onAnnouncementCreated={handleModalSuccess}
         />
       </div>
     </Layout>
