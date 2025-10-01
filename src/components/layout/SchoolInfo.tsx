@@ -1,37 +1,21 @@
-
 import { School } from "lucide-react";
-import { useSchoolData } from "@/hooks/useSchoolData";
-import { useEffect } from "react";
 
 interface SchoolInfoProps {
   schoolName?: string;
   schoolLogo?: string;
+  schoolSlogan?: string;
   className?: string;
 }
 
 export function SchoolInfo({ 
   schoolName, 
-  schoolLogo, 
+  schoolLogo,
+  schoolSlogan,
   className = "" 
 }: SchoolInfoProps) {
-  const { schoolData, refreshSchoolData } = useSchoolData();
-
-  // Écouter les mises à jour des paramètres d'école
-  useEffect(() => {
-    const handleSchoolSettingsUpdate = () => {
-      refreshSchoolData();
-    };
-
-    window.addEventListener('schoolSettingsUpdated', handleSchoolSettingsUpdate);
-    
-    return () => {
-      window.removeEventListener('schoolSettingsUpdated', handleSchoolSettingsUpdate);
-    };
-  }, [refreshSchoolData]);
-
-  const displayName = schoolName || schoolData?.name || "École Connectée";
-  const displaySlogan = schoolData?.slogan || "Excellence et Innovation";
-  const displayLogo = schoolLogo || schoolData?.logo_url;
+  const displayName = schoolName || "École Connectée";
+  const displaySlogan = schoolSlogan || "Excellence et Innovation";
+  const displayLogo = schoolLogo;
   return (
     <div className={`flex items-center space-x-3 ${className}`}>
       <div className="text-right">

@@ -1,36 +1,23 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserRole } from './useUserRole';
-import { useOptimizedCache } from './useOptimizedCache';
 
 /**
- * Hook pour récupérer les informations de l'école
- * Utilise le cache intelligent pour éviter les requêtes redondantes
+ * Hook simplifié pour récupérer les informations de l'école
+ * Sans cache complexe pour éviter les boucles infinies
  */
 export const useSchoolData = () => {
   const [schoolData, setSchoolData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
   
   const { userProfile } = useUserRole();
-  const cache = useOptimizedCache();
-  const schoolIdRef = useRef<string | null>(null);
 
-  // Effet principal pour charger les données
   useEffect(() => {
+    let isMounted = true;
+
     const fetchSchoolData = async () => {
       if (!userProfile?.schoolId) {
-        setLoading(false);
-        return;
-      }
-
-      const cacheKey = `school-info-${userProfile.schoolId}`;
-      
-      // Vérifier le cache d'abord
-      const cachedData = cache.get<any>(cacheKey);
-      if (cachedData) {
-        setSchoolData(cachedData);
         setLoading(false);
         return;
       }
@@ -47,22 +34,28 @@ export const useSchoolData = () => {
 
         if (fetchError) throw fetchError;
 
-        // Mettre en cache pour 30 minutes (données peu changeantes)
-        cache.set(cacheKey, data, 30 * 60 * 1000);
-        
-        setSchoolData(data);
+        if (isMounted) {
+          setSchoolData(data);
+        }
       } catch (err) {
-        console.error('useSchoolData: Erreur:', err);
-        setError(err instanceof Error ? err.message : 'Erreur inconnue');
+        if (isMounted) {
+          console.error('useSchoolData: Erreur:', err);
+          setError(err instanceof Error ? err.message : 'Erreur inconnue');
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
     fetchSchoolData();
-  }, [userProfile?.schoolId, refreshTrigger, cache]);
 
-  // Fonction pour mettre à jour les données de l'école
+    return () => {
+      isMounted = false;
+    };
+  }, [userProfile?.schoolId]);
+
   const updateSchoolData = async (updates: any) => {
     if (!userProfile?.schoolId) return false;
 
@@ -76,11 +69,7 @@ export const useSchoolData = () => {
 
       if (updateError) throw updateError;
 
-      // Invalider le cache et mettre à jour l'état
-      cache.delete(`school-info-${userProfile.schoolId}`);
       setSchoolData(data);
-      
-      // Émettre un événement pour notifier les composants
       window.dispatchEvent(new CustomEvent('schoolSettingsUpdated'));
       
       return true;
@@ -90,11 +79,20 @@ export const useSchoolData = () => {
     }
   };
 
-  // Fonction pour forcer un rechargement
-  const refreshSchoolData = () => {
-    if (userProfile?.schoolId) {
-      cache.delete(`school-info-${userProfile.schoolId}`);
-      setRefreshTrigger(prev => prev + 1);
+  const refreshSchoolData = async () => {
+    if (!userProfile?.schoolId) return;
+
+    try {
+      const { data, error: fetchError } = await supabase
+        .from('schools')
+        .select('*')
+        .eq('id', userProfile.schoolId)
+        .single();
+
+      if (fetchError) throw fetchError;
+      setSchoolData(data);
+    } catch (err) {
+      console.error('useSchoolData: Erreur refresh:', err);
     }
   };
 
