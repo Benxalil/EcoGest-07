@@ -100,13 +100,15 @@ export default function ListeMatieres() {
             </div>
           </div>
           <div className="flex gap-2">
-            <Button
-              onClick={() => navigate(`/notes/eleves?classeId=${classeId}`)}
-              variant="outline"
-              size="sm"
-            >
-              Notes par Élève
-            </Button>
+            {!isTeacher() && (
+              <Button
+                onClick={() => navigate(`/notes/eleves?classeId=${classeId}`)}
+                variant="outline"
+                size="sm"
+              >
+                Notes par Élève
+              </Button>
+            )}
             <Button
               onClick={() => navigate(`/notes/consulter?classeId=${classeId}`)}
               variant="default"

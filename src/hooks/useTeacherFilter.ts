@@ -78,6 +78,30 @@ export const useTeacherFilter = () => {
     };
 
     fetchTeacherData();
+
+    // Souscription en temps réel pour les changements d'emploi du temps
+    if (userProfile?.schoolId && isTeacher()) {
+      const subscription = supabase
+        .channel('schedules-changes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'schedules',
+            filter: `school_id=eq.${userProfile.schoolId}`
+          },
+          () => {
+            console.log('Changement détecté dans les schedules, rechargement...');
+            fetchTeacherData();
+          }
+        )
+        .subscribe();
+
+      return () => {
+        subscription.unsubscribe();
+      };
+    }
   }, [userProfile?.schoolId, userProfile?.id, isTeacher]);
 
   return data;
