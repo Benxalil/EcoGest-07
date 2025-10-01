@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserRole } from './useUserRole';
 import { useToast } from '@/hooks/use-toast';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 
 export interface ClassData {
   id: string;
@@ -71,6 +72,9 @@ export const useClasses = () => {
   const createClass = async (classData: CreateClassData) => {
     if (!userProfile?.schoolId) return false;
 
+    const tempId = `temp-${Date.now()}`;
+    let optimisticClass: ClassData | null = null;
+
     try {
       const { data: academicYears, error: academicError } = await supabase
         .from('academic_years')
@@ -99,6 +103,21 @@ export const useClasses = () => {
         return false;
       }
 
+      // Mise à jour optimiste
+      optimisticClass = {
+        ...classData,
+        id: tempId,
+        school_id: userProfile.schoolId,
+        academic_year_id: academicYears.id,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        enrollment_count: 0
+      };
+
+      setClasses(prev => [...prev, optimisticClass!].sort((a, b) => 
+        a.name.localeCompare(b.name)
+      ));
+
       const { data, error } = await supabase
         .from('classes')
         .insert({
@@ -111,13 +130,20 @@ export const useClasses = () => {
 
       if (error) throw error;
 
-      setClasses(prev => [...prev, data]);
+      // Remplacer l'élément optimiste par le réel
+      setClasses(prev => prev.map(c => c.id === tempId ? { ...data, enrollment_count: 0 } : c));
+
       toast({
         title: 'Succès',
         description: 'Classe créée avec succès',
       });
       return true;
     } catch (err) {
+      // Rollback en cas d'erreur
+      if (optimisticClass) {
+        setClasses(prev => prev.filter(c => c.id !== tempId));
+      }
+
       console.error('Erreur lors de la création de la classe:', err);
       
       // Gestion spécifique de l'erreur de contrainte d'unicité
@@ -139,7 +165,14 @@ export const useClasses = () => {
   };
 
   const updateClass = async (id: string, classData: Partial<CreateClassData>) => {
+    const previousState = classes.find(c => c.id === id);
+
     try {
+      // Mise à jour optimiste
+      setClasses(prev => prev.map(c => 
+        c.id === id ? { ...c, ...classData, updated_at: new Date().toISOString() } : c
+      ));
+
       const { data, error } = await supabase
         .from('classes')
         .update(classData)
@@ -149,13 +182,20 @@ export const useClasses = () => {
 
       if (error) throw error;
 
-      setClasses(prev => prev.map(cls => cls.id === id ? data : cls));
+      // Remplacer avec les données réelles
+      setClasses(prev => prev.map(c => c.id === id ? { ...data, enrollment_count: c.enrollment_count } : c));
+
       toast({
         title: 'Succès',
         description: 'Classe mise à jour avec succès',
       });
       return true;
     } catch (err) {
+      // Rollback en cas d'erreur
+      if (previousState) {
+        setClasses(prev => prev.map(c => c.id === id ? previousState : c));
+      }
+
       console.error('Erreur lors de la mise à jour de la classe:', err);
       toast({
         title: 'Erreur',
@@ -167,7 +207,12 @@ export const useClasses = () => {
   };
 
   const deleteClass = async (id: string) => {
+    const previousState = classes.find(c => c.id === id);
+
     try {
+      // Suppression optimiste
+      setClasses(prev => prev.filter(c => c.id !== id));
+
       const { error } = await supabase
         .from('classes')
         .delete()
@@ -175,13 +220,17 @@ export const useClasses = () => {
 
       if (error) throw error;
 
-      setClasses(prev => prev.filter(cls => cls.id !== id));
       toast({
         title: 'Succès',
         description: 'Classe supprimée avec succès',
       });
       return true;
     } catch (err) {
+      // Rollback en cas d'erreur
+      if (previousState) {
+        setClasses(prev => [...prev, previousState]);
+      }
+
       console.error('Erreur lors de la suppression de la classe:', err);
       toast({
         title: 'Erreur',
@@ -195,6 +244,47 @@ export const useClasses = () => {
   useEffect(() => {
     fetchClasses();
   }, [fetchClasses]);
+
+  // Realtime synchronization
+  useEffect(() => {
+    if (!userProfile?.schoolId) return;
+
+    const channel: RealtimeChannel = supabase
+      .channel('classes-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'classes',
+          filter: `school_id=eq.${userProfile.schoolId}`
+        },
+        async (payload) => {
+          if (payload.eventType === 'INSERT') {
+            const newClass = payload.new as ClassData;
+            setClasses(prev => {
+              const exists = prev.some(c => c.id === newClass.id);
+              if (exists) return prev;
+              return [...prev, { ...newClass, enrollment_count: 0 }].sort((a, b) => 
+                a.name.localeCompare(b.name)
+              );
+            });
+          } else if (payload.eventType === 'UPDATE') {
+            const updatedClass = payload.new as ClassData;
+            setClasses(prev => prev.map(c => 
+              c.id === updatedClass.id ? { ...updatedClass, enrollment_count: c.enrollment_count } : c
+            ));
+          } else if (payload.eventType === 'DELETE') {
+            setClasses(prev => prev.filter(c => c.id !== payload.old.id));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [userProfile?.schoolId]);
 
   return {
     classes,

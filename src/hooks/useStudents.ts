@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserRole } from './useUserRole';
 import { useToast } from '@/hooks/use-toast';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 
 export interface Student {
   id: string;
@@ -87,6 +88,79 @@ export function useStudents(classId?: string) {
     fetchStudents();
   }, [fetchStudents]);
 
+  // Realtime synchronization
+  useEffect(() => {
+    if (!userProfile?.schoolId) return;
+
+    const channel: RealtimeChannel = supabase
+      .channel('students-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'students',
+          filter: `school_id=eq.${userProfile.schoolId}`
+        },
+        async (payload) => {
+          if (payload.eventType === 'INSERT') {
+            // Récupérer les données complètes avec la classe
+            const { data } = await supabase
+              .from('students')
+              .select(`
+                *,
+                classes (
+                  id,
+                  name,
+                  level,
+                  section
+                )
+              `)
+              .eq('id', payload.new.id)
+              .single();
+
+            if (data) {
+              setStudents(prev => {
+                const exists = prev.some(s => s.id === data.id);
+                if (exists) return prev;
+                return [...prev, data].sort((a, b) => 
+                  a.first_name.localeCompare(b.first_name)
+                );
+              });
+            }
+          } else if (payload.eventType === 'UPDATE') {
+            // Récupérer les données complètes avec la classe
+            const { data } = await supabase
+              .from('students')
+              .select(`
+                *,
+                classes (
+                  id,
+                  name,
+                  level,
+                  section
+                )
+              `)
+              .eq('id', payload.new.id)
+              .single();
+
+            if (data) {
+              setStudents(prev => prev.map(s => 
+                s.id === data.id ? data : s
+              ));
+            }
+          } else if (payload.eventType === 'DELETE') {
+            setStudents(prev => prev.filter(s => s.id !== payload.old.id));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [userProfile?.schoolId]);
+
   // Créer un compte d'authentification pour l'élève
   const createStudentAuthAccount = async (studentNumber: string, schoolSuffix: string, firstName: string, lastName: string, defaultPassword: string = 'student123') => {
     try {
@@ -116,6 +190,9 @@ export function useStudents(classId?: string) {
   };
 
   const addStudent = async (studentData: Omit<Student, 'id' | 'created_at' | 'updated_at'>) => {
+    const tempId = `temp-${Date.now()}`;
+    let optimisticStudent: Student | null = null;
+
     try {
       // D'abord, récupérer le suffixe de l'école
       const { data: schoolData } = await supabase
@@ -139,6 +216,22 @@ export function useStudents(classId?: string) {
       // Extraire le numéro de l'identifiant généré pour créer le compte auth
       const studentNumber = fullIdentifier.split('@')[0];
 
+      // Générer le matricule parent
+      const parentMatricule = studentNumber.replace('ELEVE', 'PARENT').replace('Eleve', 'Parent');
+
+      // Mise à jour optimiste
+      optimisticStudent = {
+        ...studentData,
+        id: tempId,
+        student_number: studentNumber,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
+      setStudents(prev => [...prev, optimisticStudent!].sort((a, b) => 
+        a.first_name.localeCompare(b.first_name)
+      ));
+
       // Créer le compte d'authentification pour l'élève
       const authUser = await createStudentAuthAccount(studentNumber, schoolSuffix, studentData.first_name, studentData.last_name);
       
@@ -150,11 +243,8 @@ export function useStudents(classId?: string) {
         });
       }
 
-      // Générer le matricule parent
-      const parentMatricule = studentNumber.replace('ELEVE', 'PARENT').replace('Eleve', 'Parent');
-
       // Créer le compte d'authentification pour le parent
-      const parentAuthUser = await createStudentAuthAccount(
+      await createStudentAuthAccount(
         parentMatricule, 
         schoolSuffix, 
         'Parent de ' + studentData.first_name, 
@@ -171,10 +261,21 @@ export function useStudents(classId?: string) {
           parent_matricule: parentMatricule,
           user_id: authUser?.id || null
         }])
-        .select('*')
+        .select(`
+          *,
+          classes (
+            id,
+            name,
+            level,
+            section
+          )
+        `)
         .single();
 
       if (error) throw error;
+
+      // Remplacer l'élément optimiste par le réel
+      setStudents(prev => prev.map(s => s.id === tempId ? data : s));
 
       if (authUser) {
         toast({
@@ -184,47 +285,94 @@ export function useStudents(classId?: string) {
         });
       }
 
-      // Rafraîchir la liste complète pour s'assurer de la synchronisation
-      await fetchStudents();
       return data;
     } catch (err) {
+      // Rollback en cas d'erreur
+      if (optimisticStudent) {
+        setStudents(prev => prev.filter(s => s.id !== tempId));
+      }
+
       console.error('Erreur lors de l\'ajout de l\'élève:', err);
+      toast({
+        title: "Erreur",
+        description: err instanceof Error ? err.message : "Une erreur est survenue.",
+        variant: "destructive",
+      });
       throw err;
     }
   };
 
   const updateStudent = async (id: string, studentData: Partial<Omit<Student, 'id' | 'created_at' | 'updated_at'>>) => {
+    const previousState = students.find(s => s.id === id);
+
     try {
+      // Mise à jour optimiste
+      setStudents(prev => prev.map(s => 
+        s.id === id ? { ...s, ...studentData, updated_at: new Date().toISOString() } : s
+      ));
+
       const { data, error } = await supabase
         .from('students')
         .update(studentData)
         .eq('id', id)
-        .select('*')
+        .select(`
+          *,
+          classes (
+            id,
+            name,
+            level,
+            section
+          )
+        `)
         .single();
 
       if (error) throw error;
 
-      // Rafraîchir la liste complète pour s'assurer de la synchronisation
-      await fetchStudents();
+      // Remplacer avec les données réelles
+      setStudents(prev => prev.map(s => s.id === id ? data : s));
+
       return data;
     } catch (err) {
+      // Rollback en cas d'erreur
+      if (previousState) {
+        setStudents(prev => prev.map(s => s.id === id ? previousState : s));
+      }
+
       console.error('Erreur lors de la mise à jour de l\'élève:', err);
+      toast({
+        title: "Erreur",
+        description: err instanceof Error ? err.message : "Une erreur est survenue.",
+        variant: "destructive",
+      });
       throw err;
     }
   };
 
   const deleteStudent = async (id: string) => {
+    const previousState = students.find(s => s.id === id);
+
     try {
+      // Suppression optimiste
+      setStudents(prev => prev.filter(s => s.id !== id));
+
       const { error } = await supabase
         .from('students')
         .delete()
         .eq('id', id);
 
       if (error) throw error;
-
-      setStudents(prev => prev.filter(student => student.id !== id));
     } catch (err) {
+      // Rollback en cas d'erreur
+      if (previousState) {
+        setStudents(prev => [...prev, previousState]);
+      }
+
       console.error('Erreur lors de la suppression de l\'élève:', err);
+      toast({
+        title: "Erreur",
+        description: err instanceof Error ? err.message : "Une erreur est survenue.",
+        variant: "destructive",
+      });
       throw err;
     }
   };

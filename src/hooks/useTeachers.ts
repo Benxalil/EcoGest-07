@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserRole } from './useUserRole';
 import { useToast } from '@/hooks/use-toast';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 
 export interface TeacherData {
   id: string;
@@ -64,7 +65,7 @@ export const useTeachers = () => {
     }
   };
 
-  const fetchTeachers = async () => {
+  const fetchTeachers = useCallback(async () => {
     if (!userProfile?.schoolId) {
       setLoading(false);
       return;
@@ -87,10 +88,13 @@ export const useTeachers = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [userProfile?.schoolId]);
 
   const createTeacher = async (teacherData: CreateTeacherData & { employee_number?: string }) => {
     if (!userProfile?.schoolId) return false;
+
+    const tempId = `temp-${Date.now()}`;
+    let optimisticTeacher: TeacherData | null = null;
 
     try {
       // D'abord, récupérer le suffixe de l'école
@@ -116,9 +120,26 @@ export const useTeachers = () => {
       let employee_number = teacherData.employee_number;
       
       if (!employee_number) {
-        // Extraire le numéro de l'identifiant généré (Prof001@ecole_best -> Prof001)
         employee_number = fullIdentifier.split('@')[0];
       }
+
+      // Mise à jour optimiste
+      optimisticTeacher = {
+        id: tempId,
+        first_name: teacherData.first_name,
+        last_name: teacherData.last_name,
+        employee_number,
+        phone: teacherData.phone,
+        address: teacherData.address,
+        specialization: teacherData.specialization,
+        hire_date: teacherData.hire_date || new Date().toISOString().split('T')[0],
+        is_active: teacherData.is_active ?? true,
+        school_id: userProfile.schoolId,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
+      setTeachers(prev => [...prev, optimisticTeacher!]);
 
       // Créer le compte d'authentification
       const authUser = await createTeacherAuthAccount(employee_number, schoolSuffix, teacherData.first_name, teacherData.last_name);
@@ -131,7 +152,7 @@ export const useTeachers = () => {
         });
       }
 
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('teachers')
         .insert({
           first_name: teacherData.first_name,
@@ -144,11 +165,14 @@ export const useTeachers = () => {
           is_active: teacherData.is_active ?? true,
           school_id: userProfile.schoolId,
           user_id: authUser?.id || null
-        });
+        })
+        .select()
+        .single();
 
       if (error) throw error;
-      
-      await fetchTeachers();
+
+      // Remplacer l'élément optimiste par le réel
+      setTeachers(prev => prev.map(t => t.id === tempId ? data : t));
       
       if (authUser) {
         toast({
@@ -160,6 +184,11 @@ export const useTeachers = () => {
       
       return true;
     } catch (err) {
+      // Rollback en cas d'erreur
+      if (optimisticTeacher) {
+        setTeachers(prev => prev.filter(t => t.id !== tempId));
+      }
+      
       console.error('Erreur lors de la création de l\'enseignant:', err);
       toast({
         title: "Erreur lors de la création",
@@ -173,7 +202,14 @@ export const useTeachers = () => {
   const updateTeacher = async (id: string, teacherData: Partial<CreateTeacherData>) => {
     if (!userProfile?.schoolId) return false;
 
+    const previousState = teachers.find(t => t.id === id);
+
     try {
+      // Mise à jour optimiste
+      setTeachers(prev => prev.map(t => 
+        t.id === id ? { ...t, ...teacherData, updated_at: new Date().toISOString() } : t
+      ));
+
       const { error } = await supabase
         .from('teachers')
         .update(teacherData)
@@ -182,8 +218,6 @@ export const useTeachers = () => {
 
       if (error) throw error;
       
-      await fetchTeachers();
-      
       toast({
         title: "Enseignant mis à jour",
         description: "L'enseignant a été mis à jour avec succès.",
@@ -191,6 +225,11 @@ export const useTeachers = () => {
       
       return true;
     } catch (err) {
+      // Rollback en cas d'erreur
+      if (previousState) {
+        setTeachers(prev => prev.map(t => t.id === id ? previousState : t));
+      }
+      
       console.error('Erreur lors de la mise à jour de l\'enseignant:', err);
       toast({
         title: "Erreur lors de la mise à jour",
@@ -204,7 +243,12 @@ export const useTeachers = () => {
   const deleteTeacher = async (id: string) => {
     if (!userProfile?.schoolId) return false;
 
+    const previousState = teachers.find(t => t.id === id);
+
     try {
+      // Suppression optimiste
+      setTeachers(prev => prev.filter(t => t.id !== id));
+
       const { error } = await supabase
         .from('teachers')
         .delete()
@@ -213,8 +257,6 @@ export const useTeachers = () => {
 
       if (error) throw error;
       
-      await fetchTeachers();
-      
       toast({
         title: "Enseignant supprimé",
         description: "L'enseignant a été supprimé avec succès.",
@@ -222,6 +264,11 @@ export const useTeachers = () => {
       
       return true;
     } catch (err) {
+      // Rollback en cas d'erreur
+      if (previousState) {
+        setTeachers(prev => [...prev, previousState]);
+      }
+      
       console.error('Erreur lors de la suppression de l\'enseignant:', err);
       toast({
         title: "Erreur lors de la suppression",
@@ -234,6 +281,45 @@ export const useTeachers = () => {
 
   useEffect(() => {
     fetchTeachers();
+  }, [fetchTeachers]);
+
+  // Realtime synchronization
+  useEffect(() => {
+    if (!userProfile?.schoolId) return;
+
+    const channel: RealtimeChannel = supabase
+      .channel('teachers-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'teachers',
+          filter: `school_id=eq.${userProfile.schoolId}`
+        },
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            setTeachers(prev => {
+              const exists = prev.some(t => t.id === payload.new.id);
+              if (exists) return prev;
+              return [...prev, payload.new as TeacherData].sort((a, b) => 
+                a.last_name.localeCompare(b.last_name)
+              );
+            });
+          } else if (payload.eventType === 'UPDATE') {
+            setTeachers(prev => prev.map(t => 
+              t.id === payload.new.id ? payload.new as TeacherData : t
+            ));
+          } else if (payload.eventType === 'DELETE') {
+            setTeachers(prev => prev.filter(t => t.id !== payload.old.id));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [userProfile?.schoolId]);
 
   return {

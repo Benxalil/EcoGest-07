@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserRole } from './useUserRole';
 import { useToast } from '@/hooks/use-toast';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 
 export interface Exam {
   id: string;
@@ -42,7 +43,7 @@ export const useExams = (classId?: string) => {
   const { userProfile } = useUserRole();
   const { toast } = useToast();
 
-  const fetchExams = async () => {
+  const fetchExams = useCallback(async () => {
     if (!userProfile?.schoolId) {
       setLoading(false);
       return;
@@ -78,18 +79,39 @@ export const useExams = (classId?: string) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [userProfile?.schoolId, classId]);
 
   const createExam = async (examData: CreateExamData) => {
     if (!userProfile?.schoolId) return false;
 
+    const tempId = `temp-${Date.now()}`;
+    let optimisticExam: Exam | null = null;
+
     try {
-      const { error } = await supabase
+      // Mise à jour optimiste
+      optimisticExam = {
+        id: tempId,
+        school_id: userProfile.schoolId,
+        class_id: examData.class_id,
+        subject_id: examData.subject_id || null,
+        title: examData.title,
+        exam_date: examData.exam_date,
+        start_time: examData.start_time,
+        end_time: undefined,
+        total_marks: examData.total_marks,
+        is_published: examData.is_published ?? false,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
+      setExams(prev => [optimisticExam!, ...prev]);
+
+      const { data, error } = await supabase
         .from('exams')
         .insert({
           class_id: examData.class_id,
           subject_id: examData.subject_id || null,
-          teacher_id: null, // Explicitement null pour éviter l'erreur
+          teacher_id: null,
           title: examData.title,
           exam_date: examData.exam_date,
           start_time: examData.start_time,
@@ -97,11 +119,22 @@ export const useExams = (classId?: string) => {
           total_points: examData.total_marks,
           is_published: examData.is_published ?? false,
           school_id: userProfile.schoolId
-        });
+        })
+        .select(`
+          *,
+          classes(
+            id,
+            name,
+            level,
+            section
+          )
+        `)
+        .single();
 
       if (error) throw error;
 
-      await fetchExams();
+      // Remplacer l'élément optimiste par le réel
+      setExams(prev => prev.map(e => e.id === tempId ? data : e));
 
       toast({
         title: "Examen créé avec succès",
@@ -110,6 +143,11 @@ export const useExams = (classId?: string) => {
 
       return true;
     } catch (err) {
+      // Rollback en cas d'erreur
+      if (optimisticExam) {
+        setExams(prev => prev.filter(e => e.id !== tempId));
+      }
+
       console.error('Erreur lors de la création de l\'examen:', err);
       toast({
         title: "Erreur lors de la création",
@@ -123,7 +161,14 @@ export const useExams = (classId?: string) => {
   const updateExam = async (id: string, examData: Partial<CreateExamData>) => {
     if (!userProfile?.schoolId) return false;
 
+    const previousState = exams.find(e => e.id === id);
+
     try {
+      // Mise à jour optimiste
+      setExams(prev => prev.map(e => 
+        e.id === id ? { ...e, ...examData, updated_at: new Date().toISOString() } : e
+      ));
+
       const { error } = await supabase
         .from('exams')
         .update(examData)
@@ -132,8 +177,6 @@ export const useExams = (classId?: string) => {
 
       if (error) throw error;
 
-      await fetchExams();
-
       toast({
         title: "Examen mis à jour",
         description: "L'examen a été mis à jour avec succès.",
@@ -141,6 +184,11 @@ export const useExams = (classId?: string) => {
 
       return true;
     } catch (err) {
+      // Rollback en cas d'erreur
+      if (previousState) {
+        setExams(prev => prev.map(e => e.id === id ? previousState : e));
+      }
+
       console.error('Erreur lors de la mise à jour de l\'examen:', err);
       toast({
         title: "Erreur lors de la mise à jour",
@@ -154,7 +202,12 @@ export const useExams = (classId?: string) => {
   const deleteExam = async (id: string) => {
     if (!userProfile?.schoolId) return false;
 
+    const previousState = exams.find(e => e.id === id);
+
     try {
+      // Suppression optimiste
+      setExams(prev => prev.filter(e => e.id !== id));
+
       const { error } = await supabase
         .from('exams')
         .delete()
@@ -163,8 +216,6 @@ export const useExams = (classId?: string) => {
 
       if (error) throw error;
 
-      await fetchExams();
-
       toast({
         title: "Examen supprimé",
         description: "L'examen a été supprimé avec succès.",
@@ -172,6 +223,11 @@ export const useExams = (classId?: string) => {
 
       return true;
     } catch (err) {
+      // Rollback en cas d'erreur
+      if (previousState) {
+        setExams(prev => [...prev, previousState]);
+      }
+
       console.error('Erreur lors de la suppression de l\'examen:', err);
       toast({
         title: "Erreur lors de la suppression",
@@ -184,7 +240,78 @@ export const useExams = (classId?: string) => {
 
   useEffect(() => {
     fetchExams();
-  }, [userProfile?.schoolId, classId]);
+  }, [fetchExams]);
+
+  // Realtime synchronization
+  useEffect(() => {
+    if (!userProfile?.schoolId) return;
+
+    const channel: RealtimeChannel = supabase
+      .channel('exams-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'exams',
+          filter: `school_id=eq.${userProfile.schoolId}`
+        },
+        async (payload) => {
+          if (payload.eventType === 'INSERT') {
+            // Récupérer les données complètes avec la classe
+            const { data } = await supabase
+              .from('exams')
+              .select(`
+                *,
+                classes(
+                  id,
+                  name,
+                  level,
+                  section
+                )
+              `)
+              .eq('id', payload.new.id)
+              .single();
+
+            if (data) {
+              setExams(prev => {
+                const exists = prev.some(e => e.id === data.id);
+                if (exists) return prev;
+                return [data, ...prev];
+              });
+            }
+          } else if (payload.eventType === 'UPDATE') {
+            // Récupérer les données complètes avec la classe
+            const { data } = await supabase
+              .from('exams')
+              .select(`
+                *,
+                classes(
+                  id,
+                  name,
+                  level,
+                  section
+                )
+              `)
+              .eq('id', payload.new.id)
+              .single();
+
+            if (data) {
+              setExams(prev => prev.map(e => 
+                e.id === data.id ? data : e
+              ));
+            }
+          } else if (payload.eventType === 'DELETE') {
+            setExams(prev => prev.filter(e => e.id !== payload.old.id));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [userProfile?.schoolId]);
 
   return {
     exams,
