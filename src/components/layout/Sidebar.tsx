@@ -30,7 +30,8 @@ const allMenuItems: MenuItem[] = [{
   title: "Classes",
   icon: School,
   path: "/classes",
-  adminOnly: true
+  adminOnly: true,
+  teacherAccess: true
 }, {
   title: "Élèves",
   icon: Users,
