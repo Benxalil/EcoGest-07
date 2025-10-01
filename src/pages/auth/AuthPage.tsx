@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +9,7 @@ import { Link } from "react-router-dom";
 import { EyeIcon, EyeOffIcon, Mail, Lock, User } from "lucide-react";
 import { EcoGestLogo } from "@/assets/EcoGestLogo";
 import { useToast } from "@/hooks/use-toast";
+import { buildAuthEmailFromMatricule, getConfiguredSchoolSuffix } from "@/config/schoolConfig";
 
 const AuthPage = () => {
   const { toast } = useToast();
@@ -22,31 +23,9 @@ const AuthPage = () => {
     password: "",
   });
   
-  const [schoolSuffix, setSchoolSuffix] = useState<string>("");
-
-  // Récupérer le suffixe d'école au chargement
-  useEffect(() => {
-    const fetchSchoolSuffix = async () => {
-      try {
-        // Récupérer le premier suffixe d'école disponible (pour l'exemple de login)
-        const { data, error } = await supabase
-          .from('schools')
-          .select('school_suffix')
-          .limit(1)
-          .single();
-        
-        if (!error && data?.school_suffix) {
-          setSchoolSuffix(data.school_suffix);
-        }
-      } catch (error) {
-        console.log('Impossible de récupérer le suffixe d\'école');
-      }
-    };
-    
-    if (loginType === 'user') {
-      fetchSchoolSuffix();
-    }
-  }, [loginType]);
+  // Utiliser la configuration statique au lieu de faire une requête Supabase
+  // Cela évite le problème RLS (406 Not Acceptable) sur la table schools
+  const schoolSuffix = getConfiguredSchoolSuffix();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,21 +51,9 @@ const AuthPage = () => {
         // Utilisateur: matricule simple (Prof03, Eleve001, etc.)
         const matricule = loginData.identifier.trim();
         
-        // Vérifier que le school_suffix est disponible
-        if (!schoolSuffix) {
-          toast({
-            title: "Erreur de configuration",
-            description: "Impossible de récupérer les informations de l'école",
-            variant: "destructive",
-          });
-          setIsLoading(false);
-          return;
-        }
-        
-        // Transformer en email valide pour Supabase Auth
-        // Ex: Prof03 + ecole_best -> Prof03@ecole-best.ecogest.app
-        const validDomain = schoolSuffix.replace(/_/g, '-') + '.ecogest.app';
-        email = `${matricule}@${validDomain}`;
+        // Transformer en email valide pour Supabase Auth en utilisant la config statique
+        // Ex: Prof03 -> Prof03@ecole-best.ecogest.app
+        email = buildAuthEmailFromMatricule(matricule);
       }
 
       const { error } = await supabase.auth.signInWithPassword({
