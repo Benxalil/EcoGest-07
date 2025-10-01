@@ -55,7 +55,7 @@ export const useSchoolData = () => {
     } finally {
       setLoading(false);
     }
-  }, [userProfile?.schoolId, cache]);
+  }, [userProfile?.schoolId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const updateSchoolData = useCallback(async (updates: any) => {
     if (!userProfile?.schoolId) return false;
@@ -82,14 +82,14 @@ export const useSchoolData = () => {
       console.error('useSchoolData: Erreur mise à jour:', err);
       return false;
     }
-  }, [userProfile?.schoolId, cache]);
+  }, [userProfile?.schoolId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const refreshSchoolData = useCallback(() => {
     if (userProfile?.schoolId) {
       cache.delete(`school-info-${userProfile.schoolId}`);
       fetchSchoolData();
     }
-  }, [userProfile?.schoolId, cache, fetchSchoolData]);
+  }, [userProfile?.schoolId, fetchSchoolData]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     fetchSchoolData();
