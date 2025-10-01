@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { useAcademicYear } from "@/hooks/useAcademicYear";
 import { useClasses } from "@/hooks/useClasses";
 import { useSchoolData } from "@/hooks/useSchoolData";
-import { useExams } from "@/hooks/useExams";
+import { CreateExamData } from "@/hooks/useExams";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,14 +17,14 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 
 interface CreerExamenModalProps {
+  createExam: (examData: CreateExamData) => Promise<boolean>;
   onExamenCreated?: () => void;
 }
 
-export const CreerExamenModal: React.FC<CreerExamenModalProps> = ({ onExamenCreated }) => {
+export const CreerExamenModal: React.FC<CreerExamenModalProps> = ({ createExam, onExamenCreated }) => {
   const { academicYear } = useAcademicYear();
   const { classes, loading: classesLoading } = useClasses();
   const { schoolData: schoolSettings } = useSchoolData();
-  const { createExam } = useExams();
   const { toast } = useToast();
 
   const [open, setOpen] = useState(false);

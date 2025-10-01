@@ -1,7 +1,7 @@
 import { useAcademicYear } from "@/hooks/useAcademicYear";
 import { useClasses } from "@/hooks/useClasses";
 import { useSchoolData } from "@/hooks/useSchoolData";
-import { useExams } from "@/hooks/useExams";
+import { Exam } from "@/hooks/useExams";
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -59,10 +59,23 @@ const getSemestreBadge = (semestre: string) => {
   );
 };
 
-export const ListeExamens: React.FC = () => {
+interface ListeExamensProps {
+  exams: Exam[];
+  loading: boolean;
+  updateExam: (id: string, examData: any) => Promise<boolean>;
+  deleteExam: (id: string) => Promise<boolean>;
+  refreshExams: () => void;
+}
+
+export const ListeExamens: React.FC<ListeExamensProps> = ({ 
+  exams, 
+  loading: examsLoading, 
+  updateExam, 
+  deleteExam,
+  refreshExams 
+}) => {
   const { academicYear } = useAcademicYear();
   const { classes, loading: classesLoading } = useClasses();
-  const { exams, loading: examsLoading, updateExam, deleteExam } = useExams();
   const [searchTerm, setSearchTerm] = useState("");
   const [editOpen, setEditOpen] = useState(false);
   const [editingExamen, setEditingExamen] = useState<Examen | null>(null);
@@ -207,6 +220,9 @@ export const ListeExamens: React.FC = () => {
       for (const exam of examsToDelete) {
         await deleteExam(exam.id);
       }
+      
+      // Rafraîchir la liste après suppression
+      refreshExams();
     } catch (error) {
       console.error("Erreur lors de la suppression de l'examen:", error);
     }
@@ -233,6 +249,9 @@ export const ListeExamens: React.FC = () => {
 
       setEditOpen(false);
       setEditingExamen(null);
+      
+      // Rafraîchir la liste après modification
+      refreshExams();
     } catch (error) {
       console.error('Erreur lors de la mise à jour de l\'examen:', error);
     }

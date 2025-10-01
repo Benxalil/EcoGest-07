@@ -8,6 +8,7 @@ import { ExamensStats } from "@/components/examens/ExamensStats";
 import { CreerExamenModal } from "@/components/examens/CreerExamenModal";
 import { ListeExamens } from "@/components/examens/ListeExamens";
 import { useClasses } from "@/hooks/useClasses";
+import { useExams } from "@/hooks/useExams";
 
 interface Classe {
   id: string;
@@ -19,10 +20,11 @@ interface Classe {
 export default function ListeClassesExamens() {
   const navigate = useNavigate();
   const { classes, loading } = useClasses();
+  const { exams, loading: examsLoading, createExam, updateExam, deleteExam, refreshExams } = useExams();
 
   const handleExamenCreated = () => {
-    // Rafraîchir la liste des examens si nécessaire
-    console.log('Examen créé avec succès');
+    // Rafraîchir la liste des examens automatiquement
+    refreshExams();
   };
 
   const handleClasseClick = (classe: any) => {
@@ -94,6 +96,7 @@ export default function ListeClassesExamens() {
             </div>
           </div>
           <CreerExamenModal 
+            createExam={createExam}
             onExamenCreated={handleExamenCreated} 
           />
         </div>
@@ -102,7 +105,13 @@ export default function ListeClassesExamens() {
         <ExamensStats classes={classes} />
 
         {/* Liste des examens */}
-        <ListeExamens />
+        <ListeExamens 
+          exams={exams}
+          loading={examsLoading}
+          updateExam={updateExam}
+          deleteExam={deleteExam}
+          refreshExams={refreshExams}
+        />
       </div>
     </Layout>
   );
