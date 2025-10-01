@@ -31,25 +31,30 @@ export function UserProfile({
 
   const handleLogout = async () => {
     try {
-      const { error } = await supabase.auth.signOut();
+      // Utiliser scope local pour éviter les erreurs 403
+      const { error } = await supabase.auth.signOut({ scope: 'local' });
+      
+      // Même en cas d'erreur (session invalide), on redirige vers la page de connexion
       if (error) {
-        toast({
-          title: "Erreur de déconnexion",
-          description: error.message,
-          variant: "destructive",
-        }); } else {
-        toast({
-          title: "Déconnexion réussie",
-          description: "À bientôt !",
-        });
-        navigate("/auth");
+        console.warn('Erreur de déconnexion (ignorée):', error.message);
       }
-    } catch (error) {
+      
+      // Nettoyer le localStorage
+      localStorage.clear();
+      
+      // Toujours rediriger vers la page de connexion
       toast({
-        title: "Erreur",
-        description: "Une erreur inattendue s'est produite",
-        variant: "destructive",
+        title: "Déconnexion réussie",
+        description: "À bientôt !",
       });
+      
+      // Rediriger et forcer le rechargement pour nettoyer l'état
+      window.location.href = "/auth";
+    } catch (error) {
+      console.error('Erreur inattendue lors de la déconnexion:', error);
+      // Même en cas d'erreur, on déconnecte localement
+      localStorage.clear();
+      window.location.href = "/auth";
     }
   };
 
