@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserRole } from './useUserRole';
+import { useTeacherId } from './useTeacherId';
 
 interface TeacherFilterData {
   teacherClassIds: string[];
@@ -15,32 +16,31 @@ export const useTeacherFilter = () => {
     loading: true
   });
   const { userProfile, isTeacher } = useUserRole();
+  const { teacherId, loading: teacherIdLoading } = useTeacherId();
+  
+  const isTeacherRole = isTeacher();
 
   useEffect(() => {
     const fetchTeacherData = async () => {
-      if (!userProfile?.schoolId || !isTeacher()) {
+      if (!userProfile?.schoolId || !isTeacherRole || teacherIdLoading) {
+        if (!teacherIdLoading) {
+          setData({ teacherClassIds: [], teacherSubjectIds: [], loading: false });
+        }
+        return;
+      }
+
+      if (!teacherId) {
         setData({ teacherClassIds: [], teacherSubjectIds: [], loading: false });
         return;
       }
 
       try {
-        // Récupérer l'enseignant
-        const { data: teacher } = await supabase
-          .from('teachers')
-          .select('id')
-          .eq('user_id', userProfile.id)
-          .single();
-
-        if (!teacher) {
-          setData({ teacherClassIds: [], teacherSubjectIds: [], loading: false });
-          return;
-        }
 
         // Récupérer les schedules de l'enseignant pour avoir les classes et les noms des matières
         const { data: schedules } = await supabase
           .from('schedules')
           .select('class_id, subject')
-          .eq('teacher_id', teacher.id)
+          .eq('teacher_id', teacherId)
           .eq('school_id', userProfile.schoolId);
 
         if (schedules) {
@@ -80,7 +80,7 @@ export const useTeacherFilter = () => {
     fetchTeacherData();
 
     // Souscription en temps réel pour les changements d'emploi du temps
-    if (userProfile?.schoolId && isTeacher()) {
+    if (userProfile?.schoolId && isTeacherRole && teacherId) {
       const subscription = supabase
         .channel('schedules-changes')
         .on(
@@ -102,7 +102,7 @@ export const useTeacherFilter = () => {
         subscription.unsubscribe();
       };
     }
-  }, [userProfile?.schoolId, userProfile?.id, isTeacher]);
+  }, [userProfile?.schoolId, isTeacherRole, teacherId, teacherIdLoading]);
 
   return data;
 };

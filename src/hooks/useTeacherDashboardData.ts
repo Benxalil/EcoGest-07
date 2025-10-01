@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useUserRole } from './useUserRole';
+import { useTeacherId } from './useTeacherId';
 import { supabase } from '@/integrations/supabase/client';
 
 export const useTeacherDashboardData = () => {
@@ -11,9 +12,18 @@ export const useTeacherDashboardData = () => {
   const [error, setError] = useState<string | null>(null);
   
   const { userProfile } = useUserRole();
+  const { teacherId, loading: teacherIdLoading } = useTeacherId();
 
   const fetchTeacherData = useCallback(async () => {
-    if (!userProfile?.schoolId || !userProfile?.id) {
+    if (!userProfile?.schoolId || teacherIdLoading) {
+      return;
+    }
+
+    if (!teacherId) {
+      setTeacherClasses([]);
+      setTeacherStudents([]);
+      setTodaySchedules([]);
+      setAnnouncements([]);
       setLoading(false);
       return;
     }
@@ -21,27 +31,6 @@ export const useTeacherDashboardData = () => {
     try {
       setLoading(true);
       setError(null);
-
-      // 1. Récupérer l'ID de l'enseignant depuis la table teachers
-      const { data: teacherData, error: teacherError } = await supabase
-        .from('teachers')
-        .select('id')
-        .eq('school_id', userProfile.schoolId)
-        .eq('user_id', userProfile.id)
-        .maybeSingle();
-
-      if (teacherError) throw teacherError;
-      
-      if (!teacherData) {
-        setTeacherClasses([]);
-        setTeacherStudents([]);
-        setTodaySchedules([]);
-        setAnnouncements([]);
-        setLoading(false);
-        return;
-      }
-
-      const teacherId = teacherData.id;
 
       // Optimisation: Récupérer le nom du jour une seule fois
       const today = new Date();
@@ -147,7 +136,7 @@ export const useTeacherDashboardData = () => {
     } finally {
       setLoading(false);
     }
-  }, [userProfile?.schoolId, userProfile?.id]);
+  }, [userProfile?.schoolId, teacherId, teacherIdLoading]);
 
   useEffect(() => {
     fetchTeacherData();
