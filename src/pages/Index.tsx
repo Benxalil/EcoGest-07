@@ -225,8 +225,8 @@ const Index = () => {
 
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
 
-  // Attendre que le rôle soit complètement résolu avant d'afficher quoi que ce soit
-  if (userLoading || !userProfile) {
+  // Attendre uniquement que le chargement du rôle soit terminé
+  if (userLoading) {
     return (
       <Layout>
         <div className="space-y-6">

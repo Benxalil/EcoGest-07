@@ -65,17 +65,18 @@ export const useUserRole = () => {
 
     initSession();
 
-    // Then set up the listener
+    // Then set up the listener - NO double fetch
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (event, session) => {
         if (!isMounted) return;
         
         setSession(session);
         setUser(session?.user ?? null);
 
-        if (session?.user) {
-          await fetchUserProfile(session.user.id);
-        } else {
+        // Only refetch on SIGNED_IN event to avoid duplicate calls
+        if (event === 'SIGNED_IN' && session?.user) {
+          setTimeout(() => fetchUserProfile(session.user.id), 0);
+        } else if (!session) {
           setUserProfile(null);
           setLoading(false);
         }

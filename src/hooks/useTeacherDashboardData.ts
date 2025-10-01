@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useUserRole } from './useUserRole';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -12,7 +12,7 @@ export const useTeacherDashboardData = () => {
   
   const { userProfile } = useUserRole();
 
-  const fetchTeacherData = async () => {
+  const fetchTeacherData = useCallback(async () => {
     if (!userProfile?.schoolId || !userProfile?.id) {
       setLoading(false);
       return;
@@ -147,11 +147,11 @@ export const useTeacherDashboardData = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [userProfile?.schoolId, userProfile?.id]);
 
   useEffect(() => {
     fetchTeacherData();
-  }, [userProfile?.schoolId, userProfile?.id]);
+  }, [fetchTeacherData]);
 
   const stats = useMemo(() => ({
     totalClasses: teacherClasses.length,
