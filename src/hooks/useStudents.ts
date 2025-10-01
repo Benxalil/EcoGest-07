@@ -139,7 +139,7 @@ export function useStudents(classId?: string) {
       // Extraire le numéro de l'identifiant généré pour créer le compte auth
       const studentNumber = fullIdentifier.split('@')[0];
 
-      // Créer le compte d'authentification
+      // Créer le compte d'authentification pour l'élève
       const authUser = await createStudentAuthAccount(studentNumber, schoolSuffix, studentData.first_name, studentData.last_name);
       
       if (!authUser) {
@@ -150,12 +150,25 @@ export function useStudents(classId?: string) {
         });
       }
 
+      // Générer le matricule parent
+      const parentMatricule = studentNumber.replace('ELEVE', 'PARENT').replace('Eleve', 'Parent');
+
+      // Créer le compte d'authentification pour le parent
+      const parentAuthUser = await createStudentAuthAccount(
+        parentMatricule, 
+        schoolSuffix, 
+        'Parent de ' + studentData.first_name, 
+        studentData.last_name,
+        'parent123'
+      );
+
       // Créer l'élève avec l'ID utilisateur si le compte auth a été créé
       const { data, error } = await supabase
         .from('students')
         .insert([{
           ...studentData,
           student_number: studentNumber,
+          parent_matricule: parentMatricule,
           user_id: authUser?.id || null
         }])
         .select('*')

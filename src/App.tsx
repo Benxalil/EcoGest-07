@@ -54,6 +54,7 @@ import AuthPage from "./pages/auth/AuthPage";
 import SchoolRegistrationPage from "./pages/auth/SchoolRegistrationPage";
 import SchoolSettings from "./pages/admin/SchoolSettings";
 import UserMigration from "./pages/admin/UserMigration";
+import Utilisateurs from "./pages/utilisateurs/Utilisateurs";
 
 const queryClient = new QueryClient();
 
@@ -114,6 +115,7 @@ function App() {
           <Route path="/abonnement" element={<Abonnement />} />
           <Route path="/admin/paytech-config" element={<PayTechConfig />} />
           <Route path="/admin/user-migration" element={<UserMigration />} />
+          <Route path="/utilisateurs" element={<Utilisateurs />} />
             </Routes>
           </StudentRouteHandler>
         </AuthenticatedLayout>

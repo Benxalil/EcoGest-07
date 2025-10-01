@@ -88,6 +88,11 @@ const allMenuItems: MenuItem[] = [{
   studentAccess: true,
   parentAccess: true
 }, {
+  title: "Utilisateurs",
+  icon: UserCheck,
+  path: "/utilisateurs",
+  adminOnly: true
+}, {
   title: "Paramètres",
   icon: Settings,
   path: "/parametres",

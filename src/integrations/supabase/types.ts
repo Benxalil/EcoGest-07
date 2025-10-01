@@ -1178,6 +1178,7 @@ export type Database = {
           is_active: boolean | null
           last_name: string
           parent_email: string | null
+          parent_matricule: string | null
           parent_phone: string | null
           phone: string | null
           place_of_birth: string | null
@@ -1199,6 +1200,7 @@ export type Database = {
           is_active?: boolean | null
           last_name: string
           parent_email?: string | null
+          parent_matricule?: string | null
           parent_phone?: string | null
           phone?: string | null
           place_of_birth?: string | null
@@ -1220,6 +1222,7 @@ export type Database = {
           is_active?: boolean | null
           last_name?: string
           parent_email?: string | null
+          parent_matricule?: string | null
           parent_phone?: string | null
           phone?: string | null
           place_of_birth?: string | null
