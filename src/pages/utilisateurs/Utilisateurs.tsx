@@ -12,9 +12,9 @@ import { useNotifications } from "@/hooks/useNotifications";
 import { useSchoolData } from "@/hooks/useSchoolData";
 
 export default function Utilisateurs() {
-  const [selectedClassId, setSelectedClassId] = useState<string>("");
+  const [selectedClassId, setSelectedClassId] = useState<string>("all");
   const { classes } = useClasses();
-  const { students, teachers, loading } = useUserAccounts(selectedClassId);
+  const { students, teachers, loading } = useUserAccounts(selectedClassId === "all" ? undefined : selectedClassId);
   const { showSuccess } = useNotifications();
   const { schoolData } = useSchoolData();
 
@@ -57,7 +57,7 @@ export default function Utilisateurs() {
                 <SelectValue placeholder="Toutes les classes" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Toutes les classes</SelectItem>
+                <SelectItem value="all">Toutes les classes</SelectItem>
                 {classes.map((classe) => (
                   <SelectItem key={classe.id} value={classe.id}>
                     {classe.name} {classe.level} {classe.section && `- ${classe.section}`}
@@ -90,7 +90,7 @@ export default function Utilisateurs() {
                   <p className="text-muted-foreground">Chargement...</p>
                 ) : students.length === 0 ? (
                   <p className="text-muted-foreground">
-                    Aucun élève {selectedClassId ? 'dans cette classe' : 'enregistré'}
+                    Aucun élève {selectedClassId !== "all" ? 'dans cette classe' : 'enregistré'}
                   </p>
                 ) : (
                   <div className="overflow-x-auto">
