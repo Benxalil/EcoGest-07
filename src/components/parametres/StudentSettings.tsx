@@ -8,7 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserRole } from "@/hooks/useUserRole";
 import { Layout } from "@/components/layout/Layout";
-import { Save, User, LogOut, Phone, MapPin, Calendar } from "lucide-react";
+import { User, LogOut, Phone, MapPin, Calendar } from "lucide-react";
 
 interface StudentProfile {
   firstName: string;
@@ -38,7 +38,6 @@ export const StudentSettings = () => {
     parentPhone: '',
     parentEmail: ''
   });
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   useEffect(() => {
     if (userProfile) {
@@ -92,67 +91,6 @@ export const StudentSettings = () => {
     }
   };
 
-  const handleInputChange = (field: keyof StudentProfile, value: string) => {
-    setProfile(prev => ({ ...prev, [field]: value }));
-    setHasUnsavedChanges(true);
-  };
-
-  const saveProfile = async () => {
-    try {
-      if (!userProfile?.id) {
-        toast({
-          title: "Erreur",
-          description: "Utilisateur non identifié",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      // Mettre à jour le profil utilisateur
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({
-          first_name: profile.firstName,
-          last_name: profile.lastName,
-          phone: profile.phone,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', userProfile.id);
-
-      if (profileError) throw profileError;
-
-      // Mettre à jour les informations de l'élève
-      const { error: studentError } = await supabase
-        .from('students')
-        .update({
-          first_name: profile.firstName,
-          last_name: profile.lastName,
-          phone: profile.phone,
-          address: profile.address,
-          updated_at: new Date().toISOString()
-        })
-        .eq('user_id', userProfile.id);
-
-      if (studentError) throw studentError;
-
-      setHasUnsavedChanges(false);
-      toast({
-        title: "✅ Profil mis à jour",
-        description: "Vos informations ont été enregistrées avec succès",
-        className: "bg-green-50 border-green-200 text-green-800"
-      });
-
-      // Recharger le profil
-      loadStudentProfile();
-    } catch (error) {
-      console.error('Erreur lors de la sauvegarde:', error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de sauvegarder les modifications",
-        variant: "destructive"
-      });
-    }
-  };
 
   const handleLogout = async () => {
     try {
@@ -176,26 +114,16 @@ export const StudentSettings = () => {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-foreground">Mon Profil</h1>
-            <p className="text-muted-foreground">Consultez et modifiez vos informations personnelles</p>
+            <p className="text-muted-foreground">Consultez vos informations personnelles</p>
           </div>
-          <div className="flex items-center gap-2">
-            <Button
-              onClick={saveProfile}
-              disabled={!hasUnsavedChanges}
-              size="sm"
-            >
-              <Save className="w-4 h-4 mr-2" />
-              Sauvegarder
-            </Button>
-            <Button
-              onClick={handleLogout}
-              variant="outline"
-              size="sm"
-            >
-              <LogOut className="w-4 h-4 mr-2" />
-              Déconnexion
-            </Button>
-          </div>
+          <Button
+            onClick={handleLogout}
+            variant="outline"
+            size="sm"
+          >
+            <LogOut className="w-4 h-4 mr-2" />
+            Déconnexion
+          </Button>
         </div>
 
         {/* Informations personnelles */}
@@ -206,7 +134,7 @@ export const StudentSettings = () => {
               Informations Personnelles
             </CardTitle>
             <CardDescription>
-              Vos informations d'identité et de contact
+              Vos informations d'identité et de contact (lecture seule)
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -216,8 +144,8 @@ export const StudentSettings = () => {
                 <Input
                   id="firstName"
                   value={profile.firstName}
-                  onChange={(e) => handleInputChange('firstName', e.target.value)}
-                  placeholder="Votre prénom"
+                  disabled
+                  className="bg-muted"
                 />
               </div>
               <div>
@@ -225,8 +153,8 @@ export const StudentSettings = () => {
                 <Input
                   id="lastName"
                   value={profile.lastName}
-                  onChange={(e) => handleInputChange('lastName', e.target.value)}
-                  placeholder="Votre nom"
+                  disabled
+                  className="bg-muted"
                 />
               </div>
             </div>
@@ -240,8 +168,8 @@ export const StudentSettings = () => {
                 <Input
                   id="phone"
                   value={profile.phone}
-                  onChange={(e) => handleInputChange('phone', e.target.value)}
-                  placeholder="+221 XX XXX XX XX"
+                  disabled
+                  className="bg-muted"
                 />
               </div>
               <div>
@@ -267,8 +195,8 @@ export const StudentSettings = () => {
               <Textarea
                 id="address"
                 value={profile.address}
-                onChange={(e) => handleInputChange('address', e.target.value)}
-                placeholder="Votre adresse complète"
+                disabled
+                className="bg-muted"
                 rows={3}
               />
             </div>

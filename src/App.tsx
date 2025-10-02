@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as SonnerToaster } from "@/components/ui/sonner";
 import { StudentRouteHandler } from "@/components/navigation/StudentRouteHandler";
+import { ParentRouteHandler } from "@/components/navigation/ParentRouteHandler";
 import AuthenticatedLayout from "@/components/layout/AuthenticatedLayout";
 import PageListeEnseignants from "./pages/enseignants/ListeEnseignants";
 import ModifierEnseignant from "./pages/enseignants/ModifierEnseignant";
@@ -65,7 +66,8 @@ function App() {
       <Router>
         <AuthenticatedLayout>
           <StudentRouteHandler>
-            <Routes>
+            <ParentRouteHandler>
+              <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/enseignants" element={<PageListeEnseignants />} />
             <Route path="/enseignants/modifier" element={<ModifierEnseignant />} />
@@ -119,6 +121,7 @@ function App() {
           <Route path="/admin/user-migration" element={<UserMigration />} />
           <Route path="/utilisateurs" element={<Utilisateurs />} />
             </Routes>
+            </ParentRouteHandler>
           </StudentRouteHandler>
         </AuthenticatedLayout>
       </Router>
