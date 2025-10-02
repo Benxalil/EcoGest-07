@@ -25,8 +25,9 @@
     
     <!-- DNS Prefetch & Preconnect for faster external resource loading -->
     <link rel="dns-prefetch" href="https://uoqierhqpnqnbsnbzaqa.supabase.co" />
-    <link rel="preconnect" href="https://uoqierhqpnqnbsnbzaqa.supabase.co" crossorigin />
+    <link rel="preconnect" href="https://uoqierhqpnqnbsnbzaqa.supabase.co" crossorigin="anonymous" />
     <link rel="dns-prefetch" href="https://cdn.gpteng.co" />
+    <link rel="preconnect" href="https://cdn.gpteng.co" crossorigin="anonymous" />
     
     <!-- Preload critical resources to break request chains -->
     <link rel="modulepreload" href="/src/main.tsx" />
@@ -34,6 +35,9 @@
     <link rel="modulepreload" href="/src/pages/Index.tsx" />
     <link rel="modulepreload" href="/src/pages/auth/AuthPage.tsx" />
     <link rel="modulepreload" href="/src/integrations/supabase/client.ts" />
+    
+    <!-- Preload critical stylesheets -->
+    <link rel="preload" href="/src/index.css" as="style" />
     
     <title>EcoGest - Gestion Scolaire Moderne</title>
     <meta name="description" content="Système de gestion scolaire moderne et performant pour les établissements" />
@@ -48,6 +52,7 @@
 
   <body>
     <div id="root"></div>
+    <script src="https://cdn.gpteng.co/gptengineer.js" type="module"></script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
