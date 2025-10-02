@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
-import { httpCache } from '@/utils/httpCache';
 
 type UserRole = "school_admin" | "teacher" | "student" | "parent" | "super_admin";
 
@@ -21,22 +20,12 @@ export const useUserRole = () => {
   const [loading, setLoading] = useState(true);
 
   const fetchUserProfile = async (userId: string) => {
-    const cacheKey = `profile:${userId}`;
-    
     try {
-      // Use HTTP cache with stale-while-revalidate strategy
-      const profile = await httpCache.get(
-        cacheKey,
-        async () => {
-          const { data } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', userId)
-            .single();
-          return data;
-        },
-        { ttl: 5 * 60 * 1000, strategy: 'stale-while-revalidate' }
-      );
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
 
       if (profile) {
         setUserProfile({
