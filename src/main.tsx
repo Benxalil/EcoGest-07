@@ -4,7 +4,6 @@ import App from './App.tsx'
 import './index.css'
 import { performanceMonitor } from './utils/performanceMonitor'
 import { initializePerformanceOptimizations } from './utils/performanceOptimizer'
-import './utils/criticalCSS'
 
 // Initialize performance monitoring and optimizations
 if (typeof window !== 'undefined') {

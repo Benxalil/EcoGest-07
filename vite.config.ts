@@ -91,10 +91,8 @@ export default defineConfig(({ mode }) => ({
     },
     // Increase chunk size warning limit
     chunkSizeWarningLimit: 1000,
-    // Enable CSS code splitting - each route gets its own CSS
+    // Enable CSS code splitting
     cssCodeSplit: true,
-    // Optimize CSS output
-    cssMinify: 'lightningcss',
     // Source maps for production debugging
     sourcemap: mode === 'production' ? false : true,
   },
