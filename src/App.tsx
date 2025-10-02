@@ -31,6 +31,7 @@ import ListeClassesResultats from "./pages/resultats/ListeClassesResultats";
 import ResultatsSemestre from "./pages/resultats/ResultatsSemestre";
 import BulletinAnnuel from "./pages/resultats/BulletinAnnuel";
 import MesResultats from "./pages/resultats/MesResultats";
+import DetailsResultatEleve from "./pages/resultats/DetailsResultatEleve";
 import ListeEmplois from "./pages/emplois/ListeEmplois";
 import EmploiDuTemps from "./pages/emplois/EmploiDuTemps";
 import CahierDeTexte from "./pages/emplois/CahierDeTexte";
@@ -89,6 +90,7 @@ function App() {
             <Route path="/resultats" element={<ListeClassesResultats />} />
             <Route path="/resultats/mes-resultats" element={<MesResultats />} />
             <Route path="/resultats/resultats-enfant" element={<ResultatsEnfant />} />
+            <Route path="/resultats/eleve/:studentId/examen/:examId" element={<DetailsResultatEleve />} />
             <Route path="/resultats/classe/:classeId/semestre/:semestre" element={<ResultatsSemestre />} />
             <Route path="/resultats/classe/:classeId/examen/:examId" element={<ResultatsSemestre />} />
             <Route path="/resultats/classe/:classeId/tous" element={<BulletinAnnuel />} />
