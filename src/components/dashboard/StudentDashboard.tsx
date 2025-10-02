@@ -4,12 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Calendar, Megaphone } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useOptimizedUserData } from "@/hooks/useOptimizedUserData";
+import { useOptimizedCache } from "@/hooks/useOptimizedCache";
 import { LoadingSkeleton } from "@/components/ui/loading-skeleton";
 import { supabase } from "@/integrations/supabase/client";
 
 const StudentDashboard = memo(() => {
   const navigate = useNavigate();
   const { profile } = useOptimizedUserData();
+  const cache = useOptimizedCache();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [todaySchedules, setTodaySchedules] = useState<any[]>([]);
@@ -29,16 +31,29 @@ const StudentDashboard = memo(() => {
   // Charger les données de l'élève
   useEffect(() => {
     const loadStudentData = async () => {
-      if (!profile?.id) return;
+      if (!profile?.id || !profile?.schoolId) return;
 
       try {
         setLoading(true);
 
-        // Récupérer les informations de l'élève
+        // Vérifier le cache (30 secondes)
+        const cacheKey = `student-dashboard-${profile.id}`;
+        const cachedData = cache.get<any>(cacheKey);
+        
+        if (cachedData) {
+          setStudentData(cachedData.student);
+          setTodaySchedules(cachedData.schedules);
+          setAnnouncements(cachedData.announcements);
+          setLoading(false);
+          return;
+        }
+
+        // Récupérer les informations de l'élève avec filtre school_id
         const { data: student, error: studentError } = await supabase
           .from('students')
           .select('*, classes(id, name, level, section)')
           .eq('user_id', profile.id)
+          .eq('school_id', profile.schoolId)
           .single();
 
         if (studentError) throw studentError;
@@ -75,6 +90,13 @@ const StudentDashboard = memo(() => {
           setAnnouncements(announcementsData);
         }
 
+        // Mettre en cache pour 30 secondes
+        cache.set(cacheKey, {
+          student,
+          schedules: todaySchedules,
+          announcements: announcementsData || []
+        }, 30 * 1000);
+
       } catch (err: any) {
         console.error("Erreur lors du chargement des données:", err);
         setError(err.message);
@@ -84,7 +106,7 @@ const StudentDashboard = memo(() => {
     };
 
     loadStudentData();
-  }, [profile]);
+  }, [profile, cache]);
 
   if (loading) {
     return (
