@@ -40,11 +40,11 @@ export const ParentChildSelector = memo(({ children, selectedChildId, onChildSel
         <User className="h-5 w-5 text-primary" />
         <div className="flex-1">
           <label className="text-sm font-medium text-muted-foreground block mb-2">
-            Sélectionner un enfant
+            Sélectionner un élève
           </label>
           <Select value={selectedChildId || undefined} onValueChange={onChildSelect}>
             <SelectTrigger className="w-full">
-              <SelectValue placeholder="Choisir un enfant" />
+              <SelectValue placeholder="Choisir un élève" />
             </SelectTrigger>
             <SelectContent>
               {children.map((child) => (
