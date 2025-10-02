@@ -44,26 +44,19 @@ export default function MesPaiements() {
           `${s.first_name} ${s.last_name}`.toLowerCase() === `${userProfile.firstName} ${userProfile.lastName}`.toLowerCase()
         );
         
-        if (student) {
+        if (student && allPayments.length > 0) {
           // Filtrer les paiements pour cet élève
           const studentPayments = allPayments.filter((p) => p.student_id === student.id);
           
-          // Générer les mois de l'année académique avec les statuts
-          const academicMonths = generateAcademicMonths();
-          const paymentsWithStatus = academicMonths.map((month, index) => {
-            const existingPayment = studentPayments.find((p) => p.payment_month === month);
-            const dueDate = new Date();
-            dueDate.setMonth(8 + index); // Septembre = index 8
-            dueDate.setDate(5); // 5 de chaque mois
-            
-            return {
-              id: existingPayment?.id || `${student.id}-${index}`,
-              month,
-              amount: existingPayment?.amount || 50000, // Montant par défaut
-              status: getPaymentStatus(existingPayment, dueDate),
-              dueDate: dueDate.toISOString().split('T')[0]
-            };
-          });
+          // Transformer les paiements réels de la base de données
+          const paymentsWithStatus: Payment[] = studentPayments.map((payment) => ({
+            id: payment.id,
+            month: payment.payment_month || 'Non défini',
+            amount: Number(payment.amount),
+            status: (payment.payment_method === 'paid' || payment.payment_type === 'scolarite' ? 'paid' : 'pending') as 'paid' | 'pending' | 'overdue',
+            paidDate: payment.payment_date,
+            dueDate: payment.payment_date
+          }));
           
           setPayments(paymentsWithStatus);
         }
@@ -120,18 +113,13 @@ export default function MesPaiements() {
     );
   }
 
-  const generateAcademicMonths = (): string[] => {
-    return [
-      'Septembre', 'Octobre', 'Novembre', 'Décembre',
-      'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin'
-    ];
-  };
-
-  const getPaymentStatus = (payment: any, dueDate: Date): 'paid' | 'pending' | 'overdue' => {
-    if (payment?.status === 'paid') return 'paid';
+  const getPaymentStatus = (payment: any): 'paid' | 'pending' | 'overdue' => {
+    if (payment?.payment_method === 'paid' || payment?.payment_type === 'scolarite') return 'paid';
     
     const now = new Date();
-    if (now > dueDate) return 'overdue';
+    const paymentDate = payment?.payment_date ? new Date(payment.payment_date) : new Date();
+    
+    if (now > paymentDate && payment?.payment_method !== 'paid') return 'overdue';
     
     return 'pending';
   };
@@ -185,8 +173,6 @@ export default function MesPaiements() {
 
   const paidCount = payments.filter(p => p.status === 'paid').length;
   const overdueCount = payments.filter(p => p.status === 'overdue').length;
-  const totalAmount = payments.reduce((sum, p) => sum + p.amount, 0);
-  const paidAmount = payments.filter(p => p.status === 'paid').reduce((sum, p) => sum + p.amount, 0);
 
   return (
     <Layout>
@@ -197,7 +183,7 @@ export default function MesPaiements() {
         </div>
 
         {/* Statistiques */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center gap-3">
@@ -217,30 +203,6 @@ export default function MesPaiements() {
                 <div>
                   <p className="text-2xl font-bold text-red-600">{overdueCount}</p>
                   <p className="text-sm text-gray-500">En retard</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center gap-3">
-                <CreditCard className="h-8 w-8 text-blue-600" />
-                <div>
-                  <p className="text-lg font-bold text-blue-600">{formatAmount(paidAmount)}</p>
-                  <p className="text-sm text-gray-500">Montant payé</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center gap-3">
-                <Calendar className="h-8 w-8 text-purple-600" />
-                <div>
-                  <p className="text-lg font-bold text-purple-600">{formatAmount(totalAmount)}</p>
-                  <p className="text-sm text-gray-500">Total année</p>
                 </div>
               </div>
             </CardContent>
