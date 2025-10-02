@@ -133,8 +133,8 @@ class PerformanceMonitor {
           const resource = entry as PerformanceResourceTiming;
           const duration = resource.responseEnd - resource.startTime;
           
-          // Alert on slow resources (>1s)
-          if (duration > 1000) {
+          // Alert on slow resources (>2s for network requests)
+          if (duration > 2000) {
             console.warn(`Slow resource detected: ${resource.name} (${Math.round(duration)}ms)`);
           }
         }
