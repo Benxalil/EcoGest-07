@@ -5,6 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { User, Calendar, MapPin, Phone, Mail, Users, FileText } from "lucide-react";
 import { useUserRole } from "@/hooks/useUserRole";
+import { supabase } from "@/integrations/supabase/client";
 
 interface StudentProfile {
   id: string;
@@ -45,43 +46,49 @@ export default function MonProfil() {
     try {
       setLoading(true);
       
-      // Pour un élève, récupérer ses données depuis localStorage
-      const savedStudents = localStorage.getItem('eleves');
-      if (savedStudents && userProfile) {
-        const students = JSON.parse(savedStudents);
-        // Trouver l'élève correspondant à l'utilisateur connecté
-        const studentProfile = students.find((student: any) => 
-          student.email === userProfile.email || 
-          `${student.prenom} ${student.nom}`.toLowerCase() === `${userProfile.firstName} ${userProfile.lastName}`.toLowerCase()
-        );
+      if (!userProfile?.id || !userProfile?.schoolId) return;
+      
+      // Récupérer les données de l'élève depuis Supabase
+      const { data: student, error } = await supabase
+        .from('students')
+        .select('*, classes(id, name, level, section)')
+        .eq('user_id', userProfile.id)
+        .eq('school_id', userProfile.schoolId)
+        .single();
+
+      if (error) {
+        console.error("Erreur lors du chargement du profil élève:", error);
+        return;
+      }
+      
+      if (student) {
+        const className = `${student.classes.name} ${student.classes.level}${student.classes.section ? ` - ${student.classes.section}` : ''}`;
         
-        if (studentProfile) {
-          setStudentData({
-            id: studentProfile.id,
-            nom: studentProfile.nom,
-            prenom: studentProfile.prenom,
-            classe: studentProfile.classe,
-            dateNaissance: studentProfile.dateNaissance,
-            lieuNaissance: studentProfile.lieuNaissance,
-            adresse: studentProfile.adresse,
-            telephone: studentProfile.pereTelephone || studentProfile.mereTelephone,
-            email: studentProfile.email,
-            numeroPerso: studentProfile.numeroPerso,
-            sexe: studentProfile.sexe,
-            photo: studentProfile.photo,
-            perePrenom: studentProfile.perePrenom,
-            pereNom: studentProfile.pereNom,
-            pereAdresse: studentProfile.pereAdresse,
-            pereTelephone: studentProfile.pereTelephone,
-            merePrenom: studentProfile.merePrenom,
-            mereNom: studentProfile.mereNom,
-            mereAdresse: studentProfile.mereAdresse,
-            mereTelephone: studentProfile.mereTelephone,
-            contactUrgenceNom: studentProfile.contactUrgenceNom,
-            contactUrgenceTelephone: studentProfile.contactUrgenceTelephone,
-            contactUrgenceRelation: studentProfile.contactUrgenceRelation,
-          });
-        }
+        setStudentData({
+          id: student.id,
+          nom: student.last_name,
+          prenom: student.first_name,
+          classe: className,
+          dateNaissance: student.date_of_birth,
+          lieuNaissance: student.place_of_birth,
+          adresse: student.address,
+          telephone: student.phone,
+          email: student.parent_email,
+          numeroPerso: student.student_number,
+          sexe: student.gender,
+          photo: null,
+          perePrenom: null,
+          pereNom: null,
+          pereAdresse: null,
+          pereTelephone: student.parent_phone,
+          merePrenom: null,
+          mereNom: null,
+          mereAdresse: null,
+          mereTelephone: null,
+          contactUrgenceNom: null,
+          contactUrgenceTelephone: student.emergency_contact,
+          contactUrgenceRelation: null,
+        });
       }
     } catch (error) {
       console.error("Erreur lors du chargement du profil élève:", error);

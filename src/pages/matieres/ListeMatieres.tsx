@@ -4,6 +4,7 @@ import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Plus, Pencil, Trash2, ChevronDown, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
   DialogContent,
@@ -20,6 +21,7 @@ import {
 } from "@/components/ui/collapsible";
 import { useClasses } from "@/hooks/useClasses";
 import { useSubjects } from "@/hooks/useSubjects";
+import { useUserRole } from "@/hooks/useUserRole";
 
 interface Matiere {
   id: number;
@@ -32,31 +34,69 @@ interface Matiere {
 
 export default function ListeMatieres() {
   const { classes, loading: classesLoading } = useClasses();
+  const { userProfile } = useUserRole();
   const [matieres, setMatieres] = useState<Matiere[]>([]);
   const [newMatiere, setNewMatiere] = useState({ nom: "", abreviation: "", moyenne: "", coefficient: "", classeId: "" });
   const [editingMatiere, setEditingMatiere] = useState<Matiere | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [expandedClasses, setExpandedClasses] = useState<Set<string>>(new Set());
+  const [studentClassId, setStudentClassId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   // Récupérer toutes les matières depuis la base de données
   const { subjects, loading: subjectsLoading, createSubject, updateSubject, deleteSubject } = useSubjects();
 
+  // Récupérer la classe de l'élève si c'est un élève
+  useEffect(() => {
+    const loadStudentClass = async () => {
+      if (userProfile?.role === 'student' && userProfile?.id && userProfile?.schoolId) {
+        try {
+          const { data: student, error } = await supabase
+            .from('students')
+            .select('class_id')
+            .eq('user_id', userProfile.id)
+            .eq('school_id', userProfile.schoolId)
+            .single();
+
+          if (!error && student) {
+            setStudentClassId(student.class_id);
+          }
+        } catch (err) {
+          console.error("Erreur lors du chargement de la classe de l'élève:", err);
+        } finally {
+          setLoading(false);
+        }
+      } else {
+        setLoading(false);
+      }
+    };
+
+    loadStudentClass();
+  }, [userProfile]);
+
   useEffect(() => {
     // Convertir les subjects de la base vers le format local
     if (subjects.length > 0) {
-      const matieresFromDB = subjects.map(subject => ({
-        id: parseInt(subject.id.replace(/\D/g, '')) || Date.now(), // Convertir UUID en nombre
+      let filteredSubjects = subjects;
+      
+      // Si c'est un élève, filtrer uniquement les matières de sa classe
+      if (userProfile?.role === 'student' && studentClassId) {
+        filteredSubjects = subjects.filter(subject => subject.class_id === studentClassId);
+      }
+      
+      const matieresFromDB = filteredSubjects.map(subject => ({
+        id: parseInt(subject.id.replace(/\D/g, '')) || Date.now(),
         nom: subject.name,
         abreviation: subject.abbreviation || '',
-        moyenne: (subject.hours_per_week || 20).toString(), // Utiliser hours_per_week comme note maximale
+        moyenne: (subject.hours_per_week || 20).toString(),
         coefficient: (subject.coefficient || 1).toString(),
         classeId: subject.class_id
       }));
       setMatieres(matieresFromDB);
     }
-  }, [subjects]);
+  }, [subjects, studentClassId, userProfile]);
 
   const handleAddMatiere = async () => {
     if (newMatiere.nom && newMatiere.classeId && newMatiere.moyenne && newMatiere.coefficient) {
@@ -138,19 +178,7 @@ export default function ListeMatieres() {
     return `${classe.name} ${classe.level}${classe.section ? ` - ${classe.section}` : ''}`;
   };
 
-  if (classesLoading) {
-    return (
-      <Layout>
-        <div className="container mx-auto py-8">
-          <div className="text-center">
-            <p className="text-gray-500 text-lg">Chargement des classes...</p>
-          </div>
-        </div>
-      </Layout>
-    );
-  }
-
-  if (classesLoading || subjectsLoading) {
+  if (classesLoading || subjectsLoading || loading) {
     return (
       <Layout>
         <div className="container mx-auto p-6">
@@ -207,6 +235,11 @@ export default function ListeMatieres() {
     );
   }
 
+  // Filtrer les classes pour les élèves
+  const displayedClasses = userProfile?.role === 'student' && studentClassId
+    ? classes.filter(c => c.id === studentClassId)
+    : classes;
+
   return (
     <Layout>
       <div className="container mx-auto p-6">
@@ -220,12 +253,14 @@ export default function ListeMatieres() {
             >
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <h1 className="text-2xl font-bold">Gestion des Matières par Classe</h1>
+            <h1 className="text-2xl font-bold">
+              {userProfile?.role === 'student' ? 'Mes Matières' : 'Gestion des Matières par Classe'}
+            </h1>
           </div>
         </div>
 
         <div className="space-y-4">
-          {classes.map((classe) => {
+          {displayedClasses.map((classe) => {
             const matieresClasse = getMatieresForClasse(classe.id);
             const isExpanded = expandedClasses.has(classe.id);
             
@@ -251,17 +286,19 @@ export default function ListeMatieres() {
                       </div>
                     </CollapsibleTrigger>
                       
-                          <Button
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setNewMatiere({ ...newMatiere, classeId: classe.id });
-                              setDialogOpen(true);
-                            }}
-                          >
-                            <Plus className="mr-2 h-4 w-4" />
-                            Ajouter une Matière
-                          </Button>
+                          {userProfile?.role !== 'student' && (
+                            <Button
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setNewMatiere({ ...newMatiere, classeId: classe.id });
+                                setDialogOpen(true);
+                              }}
+                            >
+                              <Plus className="mr-2 h-4 w-4" />
+                              Ajouter une Matière
+                            </Button>
+                          )}
                     </div>
                   
                   <CollapsibleContent>
@@ -284,22 +321,24 @@ export default function ListeMatieres() {
                                   </h4>
                                   <p className="text-sm text-gray-500">Moyenne: {matiere.moyenne} | Coefficient: {matiere.coefficient}</p>
                                 </div>
-                                <div className="flex gap-2">
-                                  <Button
-                                    variant="outline"
-                                    size="icon"
-                                    onClick={() => handleEditMatiere(matiere)}
-                                  >
-                                    <Pencil className="h-4 w-4" />
-                                  </Button>
-                                  <Button
-                                    variant="outline"
-                                    size="icon"
-                                    onClick={() => handleDeleteMatiere(matiere.id)}
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </div>
+                                {userProfile?.role !== 'student' && (
+                                  <div className="flex gap-2">
+                                    <Button
+                                      variant="outline"
+                                      size="icon"
+                                      onClick={() => handleEditMatiere(matiere)}
+                                    >
+                                      <Pencil className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                      variant="outline"
+                                      size="icon"
+                                      onClick={() => handleDeleteMatiere(matiere.id)}
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                )}
                               </div>
                             ))}
                           </div>
