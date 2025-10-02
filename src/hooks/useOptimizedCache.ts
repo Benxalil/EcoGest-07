@@ -6,10 +6,13 @@ interface CacheEntry<T> {
   ttl: number;
 }
 
+type CacheEventListener = (key: string) => void;
+
 class OptimizedCacheManager {
   private cache = new Map<string, CacheEntry<any>>();
   private defaultTTL = 15 * 60 * 1000; // 15 minutes pour données peu changeantes
   private maxSize = 100; // Augmenter la taille pour plus de données
+  private listeners = new Map<string, Set<CacheEventListener>>();
 
   set<T>(key: string, data: T, ttl?: number): void {
     // Clean up expired entries if cache is getting full
@@ -83,6 +86,44 @@ class OptimizedCacheManager {
       keys: Array.from(this.cache.keys())
     };
   }
+
+  // Event system for cache invalidation notifications
+  on(event: string, listener: CacheEventListener): void {
+    if (!this.listeners.has(event)) {
+      this.listeners.set(event, new Set());
+    }
+    this.listeners.get(event)!.add(listener);
+  }
+
+  off(event: string, listener: CacheEventListener): void {
+    const listeners = this.listeners.get(event);
+    if (listeners) {
+      listeners.delete(listener);
+    }
+  }
+
+  private emit(event: string, key: string): void {
+    const listeners = this.listeners.get(event);
+    if (listeners) {
+      listeners.forEach(listener => listener(key));
+    }
+  }
+
+  // Enhanced delete with event emission
+  deleteWithEvent(key: string): void {
+    this.cache.delete(key);
+    this.emit('invalidate', key);
+  }
+
+  // Enhanced invalidateByPrefix with event emission
+  invalidateByPrefixWithEvent(prefix: string): void {
+    for (const key of this.cache.keys()) {
+      if (key.startsWith(prefix)) {
+        this.cache.delete(key);
+        this.emit('invalidate', key);
+      }
+    }
+  }
 }
 
 // Single global instance to avoid memory leaks
@@ -112,6 +153,18 @@ export const useOptimizedCache = () => {
   const invalidateByPrefix = useCallback((prefix: string): void => 
     cacheRef.current.invalidateByPrefix(prefix), []);
 
+  const on = useCallback((event: string, listener: CacheEventListener): void => 
+    cacheRef.current.on(event, listener), []);
+
+  const off = useCallback((event: string, listener: CacheEventListener): void => 
+    cacheRef.current.off(event, listener), []);
+
+  const deleteWithEvent = useCallback((key: string): void => 
+    cacheRef.current.deleteWithEvent(key), []);
+
+  const invalidateByPrefixWithEvent = useCallback((prefix: string): void => 
+    cacheRef.current.invalidateByPrefixWithEvent(prefix), []);
+
   return {
     get,
     set,
@@ -119,6 +172,10 @@ export const useOptimizedCache = () => {
     clear,
     delete: deleteKey,
     getStats,
-    invalidateByPrefix
+    invalidateByPrefix,
+    on,
+    off,
+    deleteWithEvent,
+    invalidateByPrefixWithEvent
   };
 };

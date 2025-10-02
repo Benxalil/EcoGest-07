@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserRole } from './useUserRole';
 import { useToast } from '@/hooks/use-toast';
+import { useOptimizedCache } from './useOptimizedCache';
 
 export interface Course {
   id?: string;
@@ -24,6 +25,7 @@ export interface DaySchedule {
 export interface CreateCourseData {
   subject: string;
   teacher?: string;
+  teacher_id?: string;
   start_time: string;
   end_time: string;
   day: string;
@@ -36,6 +38,7 @@ export const useSchedules = (classId?: string) => {
   const [error, setError] = useState<string | null>(null);
   const { userProfile } = useUserRole();
   const { toast } = useToast();
+  const cache = useOptimizedCache();
 
   const fetchSchedules = async () => {
     if (!userProfile?.schoolId || !classId) {
@@ -92,6 +95,7 @@ export const useSchedules = (classId?: string) => {
         .insert({
           subject: courseData.subject,
           teacher: courseData.teacher || '',
+          teacher_id: courseData.teacher_id || null,
           start_time: courseData.start_time,
           end_time: courseData.end_time,
           day: dbDay,
@@ -101,6 +105,11 @@ export const useSchedules = (classId?: string) => {
         });
 
       if (error) throw error;
+
+      // Invalider le cache de l'enseignant concerné
+      if (courseData.teacher_id) {
+        cache.invalidateByPrefixWithEvent(`teacher-dashboard-${courseData.teacher_id}`);
+      }
 
       await fetchSchedules();
 
@@ -125,6 +134,13 @@ export const useSchedules = (classId?: string) => {
     if (!userProfile?.schoolId) return false;
 
     try {
+      // Récupérer l'emploi du temps avant modification pour invalider le cache
+      const { data: existingSchedule } = await supabase
+        .from('schedules')
+        .select('teacher_id')
+        .eq('id', id)
+        .single();
+
       // Convertir le format d'affichage vers le format DB si nécessaire
       const dayMapping: { [key: string]: string } = {
         'LUNDI': 'Lundi',
@@ -151,6 +167,14 @@ export const useSchedules = (classId?: string) => {
 
       if (error) throw error;
 
+      // Invalider les caches des enseignants concernés (ancien et nouveau)
+      if (existingSchedule?.teacher_id) {
+        cache.invalidateByPrefixWithEvent(`teacher-dashboard-${existingSchedule.teacher_id}`);
+      }
+      if (courseData.teacher_id && courseData.teacher_id !== existingSchedule?.teacher_id) {
+        cache.invalidateByPrefixWithEvent(`teacher-dashboard-${courseData.teacher_id}`);
+      }
+
       await fetchSchedules();
 
       toast({
@@ -174,6 +198,13 @@ export const useSchedules = (classId?: string) => {
     if (!userProfile?.schoolId) return false;
 
     try {
+      // Récupérer l'emploi du temps avant suppression pour invalider le cache
+      const { data: existingSchedule } = await supabase
+        .from('schedules')
+        .select('teacher_id')
+        .eq('id', id)
+        .single();
+
       const { error } = await supabase
         .from('schedules')
         .delete()
@@ -181,6 +212,11 @@ export const useSchedules = (classId?: string) => {
         .eq('school_id', userProfile.schoolId);
 
       if (error) throw error;
+
+      // Invalider le cache de l'enseignant concerné
+      if (existingSchedule?.teacher_id) {
+        cache.invalidateByPrefixWithEvent(`teacher-dashboard-${existingSchedule.teacher_id}`);
+      }
 
       await fetchSchedules();
 

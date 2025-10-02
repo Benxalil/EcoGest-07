@@ -45,7 +45,7 @@ export const useOptimizedTeacherData = () => {
 
     const cacheKey = `teacher-dashboard-${teacherId}`;
     
-    // Vérifier le cache (2 minutes pour données enseignant)
+    // Vérifier le cache (30 secondes pour emplois du temps - données dynamiques)
     const cached = cache.get<Omit<TeacherDashboardData, 'loading' | 'error'>>(cacheKey);
     if (cached) {
       setData({ ...cached, loading: false, error: null });
@@ -58,27 +58,48 @@ export const useOptimizedTeacherData = () => {
       const today = new Date();
       const dayOfWeek = today.getDay();
 
-      // Requêtes optimisées en parallèle avec sélection minimale
-      const [
-        { data: schedulesData, error: schedulesError },
-        { data: teacherSubjectsData, error: teacherSubjectsError },
-        { data: announcementsData, error: announcementsError }
-      ] = await Promise.all([
-        supabase
-          .from('schedules')
-          .select('id, subject, start_time, end_time, class_id, classes(name)')
-          .eq('teacher_id', teacherId)
-          .eq('school_id', profile.schoolId)
-          .eq('day_of_week', dayOfWeek),
-        supabase
-          .from('teacher_subjects')
-          .select(`
-            class_id,
-            classes(id, name, effectif),
-            subjects(id, name)
-          `)
-          .eq('teacher_id', teacherId)
-          .eq('school_id', profile.schoolId),
+      // Une seule requête optimisée pour récupérer classes + emplois du temps
+      const { data: schedulesData, error: schedulesError } = await supabase
+        .from('schedules')
+        .select(`
+          id,
+          subject,
+          start_time,
+          end_time,
+          day_of_week,
+          class_id,
+          classes(id, name, effectif)
+        `)
+        .eq('teacher_id', teacherId)
+        .eq('school_id', profile.schoolId);
+
+      if (schedulesError) {
+        throw new Error(schedulesError.message);
+      }
+
+      // Extraire les classes uniques depuis les schedules
+      const uniqueClassesMap = new Map();
+      (schedulesData || []).forEach(schedule => {
+        if (schedule.classes && !uniqueClassesMap.has(schedule.classes.id)) {
+          uniqueClassesMap.set(schedule.classes.id, schedule.classes);
+        }
+      });
+      const uniqueClasses = Array.from(uniqueClassesMap.values());
+
+      // Filtrer les emplois du temps d'aujourd'hui
+      const todaySchedules = (schedulesData || []).filter(s => s.day_of_week === dayOfWeek);
+
+      // Récupérer les étudiants et annonces en parallèle
+      const classIds = uniqueClasses.map(c => c.id);
+      const [studentsResult, announcementsResult] = await Promise.all([
+        classIds.length > 0
+          ? supabase
+              .from('students')
+              .select('id, first_name, last_name, class_id')
+              .eq('school_id', profile.schoolId)
+              .eq('is_active', true)
+              .in('class_id', classIds)
+          : Promise.resolve({ data: [] }),
         supabase
           .from('announcements')
           .select('id, title, content, created_at, priority')
@@ -88,49 +109,21 @@ export const useOptimizedTeacherData = () => {
           .limit(5)
       ]);
 
-      if (schedulesError || teacherSubjectsError || announcementsError) {
-        throw new Error(schedulesError?.message || teacherSubjectsError?.message || announcementsError?.message);
-      }
-
-      // Extraire les classes uniques
-      const uniqueClasses = Array.from(
-        new Map(
-          (teacherSubjectsData || [])
-            .filter(ts => ts.classes)
-            .map(ts => [ts.classes.id, ts.classes])
-        ).values()
-      );
-
-      // Récupérer les étudiants uniquement pour les classes de l'enseignant
-      const classIds = uniqueClasses.map(c => c.id);
-      let studentsData: any[] = [];
-      
-      if (classIds.length > 0) {
-        const { data: students } = await supabase
-          .from('students')
-          .select('id, first_name, last_name, class_id')
-          .eq('school_id', profile.schoolId)
-          .eq('is_active', true)
-          .in('class_id', classIds);
-        
-        studentsData = students || [];
-      }
-
       const teacherData = {
         classes: uniqueClasses,
-        students: studentsData,
-        todaySchedules: schedulesData || [],
-        announcements: announcementsData || [],
+        students: studentsResult.data || [],
+        todaySchedules: todaySchedules,
+        announcements: announcementsResult.data || [],
         stats: {
           totalClasses: uniqueClasses.length,
-          totalStudents: studentsData.length,
-          todayCourses: (schedulesData || []).length,
-          totalAnnouncements: (announcementsData || []).length
+          totalStudents: (studentsResult.data || []).length,
+          todayCourses: todaySchedules.length,
+          totalAnnouncements: (announcementsResult.data || []).length
         }
       };
 
-      // Cache pour 2 minutes (données plus dynamiques)
-      cache.set(cacheKey, teacherData, 2 * 60 * 1000);
+      // Cache pour 30 secondes (données d'emploi du temps dynamiques)
+      cache.set(cacheKey, teacherData, 30 * 1000);
       
       setData({
         ...teacherData,
@@ -150,7 +143,36 @@ export const useOptimizedTeacherData = () => {
 
   useEffect(() => {
     fetchTeacherData();
-  }, [fetchTeacherData]);
+
+    // Supabase Realtime - Écoute des changements d'emploi du temps
+    if (!profile?.schoolId || !teacherId || profile.role !== 'teacher') {
+      return;
+    }
+
+    const channel = supabase
+      .channel('teacher-schedules-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'schedules',
+          filter: `teacher_id=eq.${teacherId}`
+        },
+        (payload) => {
+          console.log('Schedule change detected:', payload);
+          // Invalider le cache et recharger
+          const cacheKey = `teacher-dashboard-${teacherId}`;
+          cache.deleteWithEvent(cacheKey);
+          fetchTeacherData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [fetchTeacherData, profile?.schoolId, teacherId, profile?.role, cache]);
 
   return useMemo(() => ({
     ...data,
