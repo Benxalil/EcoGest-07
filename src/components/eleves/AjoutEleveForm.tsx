@@ -578,27 +578,31 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
     }
   };
 
-  // Fonction pour vérifier si un parent existe par son matricule
-  const verifyParentExists = async (matricule: string): Promise<boolean> => {
-    if (!matricule.trim() || !userProfile?.schoolId) return false;
+  // Fonction pour vérifier si un parent existe par son matricule et récupérer le contact urgent
+  const verifyParentExists = async (matricule: string): Promise<{ exists: boolean; emergencyContact?: string }> => {
+    if (!matricule.trim() || !userProfile?.schoolId) return { exists: false };
     
     try {
       const { data, error } = await supabase
         .from('students')
-        .select('parent_matricule')
+        .select('parent_matricule, emergency_contact')
         .eq('school_id', userProfile.schoolId)
         .eq('parent_matricule', matricule.trim())
-        .limit(1);
+        .limit(1)
+        .maybeSingle();
 
       if (error) {
         console.error('Erreur lors de la vérification du matricule parent:', error);
-        return false;
+        return { exists: false };
       }
 
-      return data && data.length > 0;
+      return { 
+        exists: !!data, 
+        emergencyContact: data?.emergency_contact || undefined 
+      };
     } catch (error) {
       console.error('Erreur lors de la vérification du matricule parent:', error);
-      return false;
+      return { exists: false };
     }
   };
   // Fonction pour uploader les documents vers Supabase
@@ -639,26 +643,33 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
       return;
     }
 
-    // Vérifier si les matricules parents existent (si utilisés)
-    if (useFatherExisting) {
-      const fatherExists = await verifyParentExists(fatherMatricule);
-      if (!fatherExists) {
+    // Vérifier les matricules parents et récupérer le contact urgent s'ils existent
+    let recoveredEmergencyContact: string | undefined;
+
+    if (useFatherExisting && fatherMatricule) {
+      const fatherResult = await verifyParentExists(fatherMatricule);
+      if (!fatherResult.exists) {
         showError({
           title: "Erreur",
           description: "Ce matricule parent (père) n'existe pas dans le système",
         });
         return;
       }
+      recoveredEmergencyContact = fatherResult.emergencyContact;
     }
 
-    if (useMotherExisting) {
-      const motherExists = await verifyParentExists(motherMatricule);
-      if (!motherExists) {
+    if (useMotherExisting && motherMatricule) {
+      const motherResult = await verifyParentExists(motherMatricule);
+      if (!motherResult.exists) {
         showError({
           title: "Erreur",
           description: "Ce matricule parent (mère) n'existe pas dans le système",
         });
         return;
+      }
+      // Si pas encore récupéré du père, utiliser celui de la mère
+      if (!recoveredEmergencyContact) {
+        recoveredEmergencyContact = motherResult.emergencyContact;
       }
     }
 
@@ -716,7 +727,7 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
         phone: data.telephone || null,
         parent_phone: data.pereTelephone || null,
         parent_email: data.perePrenom && data.pereNom ? `${data.perePrenom.toLowerCase()}.${data.pereNom.toLowerCase()}@parent.com` : null,
-        emergency_contact: `${data.contactUrgenceNom} - ${data.contactUrgenceTelephone} (${data.contactUrgenceRelation})`,
+        emergency_contact: recoveredEmergencyContact || `${data.contactUrgenceNom} - ${data.contactUrgenceTelephone} (${data.contactUrgenceRelation})`,
         school_id: schoolId,
         class_id: classId || selectedClass?.id,
         is_active: true,
@@ -1254,40 +1265,75 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
 
         <div className="space-y-6">
           <h2 className="text-2xl font-bold">Contact d'urgence</h2>
+          {(useFatherExisting || useMotherExisting) && (
+            <p className="text-sm text-muted-foreground bg-primary/5 border border-primary/20 rounded-lg p-3">
+              ℹ️ Le contact urgent sera automatiquement récupéré depuis le parent existant
+            </p>
+          )}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <FormField control={form.control} name="contactUrgenceNom" rules={{
-            required: "Le nom du contact d'urgence est requis"
+            required: (useFatherExisting || useMotherExisting) ? false : "Le nom du contact d'urgence est requis"
           }} render={({
             field
           }) => <FormItem>
-                  <FormLabel>Nom</FormLabel>
+                  <FormLabel>
+                    Nom
+                    {(useFatherExisting || useMotherExisting) && (
+                      <span className="text-muted-foreground text-sm ml-2">(Facultatif)</span>
+                    )}
+                  </FormLabel>
                   <FormControl>
-                    <Input {...field} placeholder="par exemple : John" />
+                    <Input 
+                      {...field} 
+                      placeholder="par exemple : John"
+                      disabled={useFatherExisting || useMotherExisting}
+                      className={useFatherExisting || useMotherExisting ? "bg-muted" : ""}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>} />
 
             <FormField control={form.control} name="contactUrgenceTelephone" rules={{
-            required: "Le téléphone du contact d'urgence est requis"
+            required: (useFatherExisting || useMotherExisting) ? false : "Le téléphone du contact d'urgence est requis"
           }} render={({
             field
           }) => <FormItem>
-                  <FormLabel>Téléphone</FormLabel>
+                  <FormLabel>
+                    Téléphone
+                    {(useFatherExisting || useMotherExisting) && (
+                      <span className="text-muted-foreground text-sm ml-2">(Facultatif)</span>
+                    )}
+                  </FormLabel>
                   <FormControl>
-                    <Input type="tel" {...field} placeholder="par exemple : +237xxx" />
+                    <Input 
+                      type="tel" 
+                      {...field} 
+                      placeholder="par exemple : +237xxx"
+                      disabled={useFatherExisting || useMotherExisting}
+                      className={useFatherExisting || useMotherExisting ? "bg-muted" : ""}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>} />
 
             <FormField control={form.control} name="contactUrgenceRelation" rules={{
-            required: "La relation est requise"
+            required: (useFatherExisting || useMotherExisting) ? false : "La relation est requise"
           }} render={({
             field
           }) => <FormItem>
-                  <FormLabel>Relation</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormLabel>
+                    Relation
+                    {(useFatherExisting || useMotherExisting) && (
+                      <span className="text-muted-foreground text-sm ml-2">(Facultatif)</span>
+                    )}
+                  </FormLabel>
+                  <Select 
+                    onValueChange={field.onChange} 
+                    defaultValue={field.value}
+                    disabled={useFatherExisting || useMotherExisting}
+                  >
                     <FormControl>
-                      <SelectTrigger>
+                      <SelectTrigger className={useFatherExisting || useMotherExisting ? "bg-muted" : ""}>
                         <SelectValue placeholder="Parent" />
                       </SelectTrigger>
                     </FormControl>
