@@ -77,6 +77,7 @@ export const useParentChildren = (): UseParentChildrenReturn => {
       console.log('Extracted parent matricule:', parentMatricule);
 
       // Récupérer tous les enfants liés au parent via parent_email ou parent_matricule
+      // Utilisation de ilike pour une recherche insensible à la casse
       const { data: childrenData, error: fetchError } = await supabase
         .from('students')
         .select(`
@@ -88,9 +89,15 @@ export const useParentChildren = (): UseParentChildrenReturn => {
             section
           )
         `)
-        .or(`parent_email.eq.${profile.email}${parentMatricule ? `,parent_matricule.eq.${parentMatricule}` : ''}`)
+        .or(`parent_email.ilike.${profile.email}${parentMatricule ? `,parent_matricule.ilike.${parentMatricule}` : ''}`)
         .eq('is_active', true)
         .order('first_name', { ascending: true });
+
+      console.log('Supabase query result:', { 
+        data: childrenData, 
+        error: fetchError,
+        count: childrenData?.length 
+      });
 
       if (fetchError) throw fetchError;
 
@@ -98,6 +105,9 @@ export const useParentChildren = (): UseParentChildrenReturn => {
         ...child,
         classes: Array.isArray(child.classes) ? child.classes[0] : child.classes
       }));
+
+      console.log('Formatted children:', formattedChildren);
+      console.log('Number of children found:', formattedChildren.length);
 
       setChildren(formattedChildren);
       
