@@ -70,9 +70,7 @@ export default function ResultatsEnfant() {
       
       if (classData && classData.exams) {
         // Convertir les examens du hook vers le format attendu
-        // Filtrer uniquement les examens publiés
         const examensClasse: Examen[] = classData.exams
-          .filter(exam => exam.is_published) // Filtrer les examens publiés
           .map(exam => ({
             id: exam.exam_id,
             titre: exam.exam_title,
