@@ -12,16 +12,11 @@ import { Database } from "@/integrations/supabase/types";
 import { useNavigate } from "react-router-dom";
 
 type Payment = Database['public']['Tables']['payments']['Row'];
-type PaymentCategory = Database['public']['Tables']['payment_categories']['Row'];
-
-interface PaymentWithCategory extends Payment {
-  category?: PaymentCategory | null;
-}
 
 export default function PaiementsEnfant() {
   const { hasFeature, currentPlan } = useSubscriptionPlan();
   const navigate = useNavigate();
-  const [payments, setPayments] = useState<PaymentWithCategory[]>([]);
+  const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
   const { children, selectedChild, setSelectedChildId, loading: childrenLoading } = useParentChildren();
 
@@ -38,23 +33,15 @@ export default function PaiementsEnfant() {
         // Récupérer les paiements de l'enfant
         const { data: paymentsData, error } = await supabase
           .from('payments')
-          .select(`
-            *,
-            category:payment_categories(*)
-          `)
-        .eq('student_id', selectedChild.id)
-        .order('payment_date', { ascending: true });
+          .select('*')
+          .eq('student_id', selectedChild.id)
+          .order('payment_date', { ascending: false });
 
         if (error) {
           console.error('Erreur lors de la récupération des paiements:', error);
           setPayments([]);
         } else {
-          // Type conversion to handle Supabase query result
-          const paymentsWithCategory = (paymentsData || []).map(payment => ({
-            ...payment,
-            category: payment.category || null
-          })) as unknown as PaymentWithCategory[];
-          setPayments(paymentsWithCategory);
+          setPayments(paymentsData || []);
         }
       } catch (error) {
         console.error('Erreur:', error);
