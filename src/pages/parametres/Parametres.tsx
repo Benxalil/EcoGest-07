@@ -21,6 +21,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useUserRole } from "@/hooks/useUserRole";
 import { TeacherSettings } from "@/components/parametres/TeacherSettings";
 import { StudentSettings } from "@/components/parametres/StudentSettings";
+import { ParentSettings } from "@/components/parametres/ParentSettings";
 interface GeneralSettings {
   formatNomUtilisateur: string;
   motDePasseDefaut: string;
@@ -367,8 +368,13 @@ export default function Parametres() {
     );
   }
 
-  // Interface spécifique pour les élèves et parents - SAUF si on est en mode simulation
-  if ((isStudent() || isParent()) && !isSimulating()) {
+  // Interface spécifique pour les parents - SAUF si on est en mode simulation
+  if (isParent() && !isSimulating()) {
+    return <ParentSettings />;
+  }
+
+  // Interface spécifique pour les élèves - SAUF si on est en mode simulation
+  if (isStudent() && !isSimulating()) {
     return <StudentSettings />;
   }
 
