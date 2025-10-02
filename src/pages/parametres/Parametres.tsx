@@ -20,6 +20,7 @@ import { SubscriptionAlert } from "@/components/subscription/SubscriptionAlert";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserRole } from "@/hooks/useUserRole";
 import { TeacherSettings } from "@/components/parametres/TeacherSettings";
+import { StudentSettings } from "@/components/parametres/StudentSettings";
 interface GeneralSettings {
   formatNomUtilisateur: string;
   motDePasseDefaut: string;
@@ -75,7 +76,7 @@ export default function Parametres() {
     updateAcademicYear
   } = useAcademicYear();
   const { subscriptionStatus, simulateSubscriptionState } = useSubscription();
-  const { isTeacher, loading, userProfile, simulateRole, resetRoleSimulation, isSimulating } = useUserRole();
+  const { isTeacher, isStudent, isParent, loading, userProfile, simulateRole, resetRoleSimulation, isSimulating } = useUserRole();
   const { schoolData, updateSchoolData } = useSchoolData();
   const [showPasswords, setShowPasswords] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -362,6 +363,21 @@ export default function Parametres() {
     return (
       <Layout>
         <TeacherSettings />
+      </Layout>
+    );
+  }
+
+  // Interface spécifique pour les élèves et parents - SAUF si on est en mode simulation
+  if ((isStudent() || isParent()) && !isSimulating()) {
+    return <StudentSettings />;
+  }
+
+  if (loading) {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+        </div>
       </Layout>
     );
   }
