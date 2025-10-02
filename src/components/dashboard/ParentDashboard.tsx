@@ -5,6 +5,7 @@ import { Calendar, Megaphone } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useOptimizedUserData } from "@/hooks/useOptimizedUserData";
 import { useParentChildren } from "@/hooks/useParentChildren";
+import { useParentInfo } from "@/hooks/useParentInfo";
 import { ParentChildSelector } from "@/components/parent/ParentChildSelector";
 import { LoadingSkeleton } from "@/components/ui/loading-skeleton";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -13,6 +14,7 @@ import { useParentDashboardData } from "@/hooks/useParentDashboardData";
 const ParentDashboard = memo(() => {
   const navigate = useNavigate();
   const { profile } = useOptimizedUserData();
+  const { parentInfo } = useParentInfo();
   const { children, selectedChild, setSelectedChildId, loading: childrenLoading } = useParentChildren();
   
   const { todaySchedules, announcements, loading } = useParentDashboardData(
@@ -54,7 +56,7 @@ const ParentDashboard = memo(() => {
       {/* Header de bienvenue - GARDER LA COULEUR BLEUE D'ORIGINE */}
       <div className="bg-blue-600 rounded-lg p-6 text-white">
         <h1 className="text-2xl font-bold mb-2">
-          {greeting}, {profile?.firstName} {profile?.lastName} !
+          {greeting}, {parentInfo?.firstName || profile?.firstName} {parentInfo?.lastName || profile?.lastName} !
         </h1>
         <p className="text-blue-100">
           Bienvenue sur votre espace parent.

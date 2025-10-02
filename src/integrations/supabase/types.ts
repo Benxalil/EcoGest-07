@@ -1178,6 +1178,8 @@ export type Database = {
           is_active: boolean | null
           last_name: string
           parent_email: string | null
+          parent_first_name: string | null
+          parent_last_name: string | null
           parent_matricule: string | null
           parent_phone: string | null
           phone: string | null
@@ -1200,6 +1202,8 @@ export type Database = {
           is_active?: boolean | null
           last_name: string
           parent_email?: string | null
+          parent_first_name?: string | null
+          parent_last_name?: string | null
           parent_matricule?: string | null
           parent_phone?: string | null
           phone?: string | null
@@ -1222,6 +1226,8 @@ export type Database = {
           is_active?: boolean | null
           last_name?: string
           parent_email?: string | null
+          parent_first_name?: string | null
+          parent_last_name?: string | null
           parent_matricule?: string | null
           parent_phone?: string | null
           phone?: string | null

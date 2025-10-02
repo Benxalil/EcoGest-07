@@ -5,9 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { useUserRole } from "@/hooks/useUserRole";
+import { useParentInfo } from "@/hooks/useParentInfo";
 import { supabase } from "@/integrations/supabase/client";
-import { LogOut, User, Mail, Phone, MapPin, Hash } from "lucide-react";
+import { LogOut, User, Mail, Phone, Hash } from "lucide-react";
 
 interface ParentProfile {
   firstName: string;
@@ -20,7 +20,7 @@ interface ParentProfile {
 
 export function ParentSettings() {
   const { toast } = useToast();
-  const { userProfile } = useUserRole();
+  const { parentInfo, loading } = useParentInfo();
   const [profile, setProfile] = useState<ParentProfile>({
     firstName: "",
     lastName: "",
@@ -29,54 +29,19 @@ export function ParentSettings() {
     address: "",
     parentMatricule: ""
   });
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (userProfile?.id) {
-      loadParentProfile();
-    }
-  }, [userProfile]);
-
-  const loadParentProfile = async () => {
-    try {
-      setLoading(true);
-      
-      // Récupérer les informations du profil
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userProfile?.id)
-        .single();
-
-      if (profileError) throw profileError;
-
-      // Chercher dans la table students pour récupérer le parent_matricule
-      const { data: studentData } = await supabase
-        .from('students')
-        .select('parent_matricule, parent_phone, parent_email')
-        .eq('parent_matricule', profileData.email)
-        .limit(1)
-        .single();
-
+    if (parentInfo) {
       setProfile({
-        firstName: profileData.first_name || "",
-        lastName: profileData.last_name || "",
-        email: profileData.email || "",
-        phone: studentData?.parent_phone || profileData.phone || "",
+        firstName: parentInfo.firstName,
+        lastName: parentInfo.lastName,
+        email: parentInfo.email,
+        phone: parentInfo.phone,
         address: "",
-        parentMatricule: studentData?.parent_matricule || profileData.email || ""
+        parentMatricule: parentInfo.matricule
       });
-    } catch (error) {
-      console.error("Erreur lors du chargement du profil parent:", error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de charger les informations du profil",
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
     }
-  };
+  }, [parentInfo]);
 
   const handleLogout = async () => {
     try {
