@@ -12,6 +12,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { generateUUID } from "@/utils/uuid";
 interface DocumentData {
@@ -307,6 +308,10 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
   const [existingDocuments, setExistingDocuments] = useState<ExistingDocumentData[]>([]);
   const [showStarterWarning, setShowStarterWarning] = useState(false);
   const [pendingFormData, setPendingFormData] = useState<any>(null);
+  const [useFatherExisting, setUseFatherExisting] = useState(false);
+  const [useMotherExisting, setUseMotherExisting] = useState(false);
+  const [fatherMatricule, setFatherMatricule] = useState("");
+  const [motherMatricule, setMotherMatricule] = useState("");
   
   // Fonction pour ajouter un nouveau document
   const addDocument = () => {
@@ -572,6 +577,30 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
       });
     }
   };
+
+  // Fonction pour vérifier si un parent existe par son matricule
+  const verifyParentExists = async (matricule: string): Promise<boolean> => {
+    if (!matricule.trim() || !userProfile?.schoolId) return false;
+    
+    try {
+      const { data, error } = await supabase
+        .from('students')
+        .select('parent_matricule')
+        .eq('school_id', userProfile.schoolId)
+        .eq('parent_matricule', matricule.trim())
+        .limit(1);
+
+      if (error) {
+        console.error('Erreur lors de la vérification du matricule parent:', error);
+        return false;
+      }
+
+      return data && data.length > 0;
+    } catch (error) {
+      console.error('Erreur lors de la vérification du matricule parent:', error);
+      return false;
+    }
+  };
   // Fonction pour uploader les documents vers Supabase
   const uploadDocuments = async (studentId: string, schoolId: string, studentData: any) => {
     if (!documents || documents.length === 0) return;
@@ -608,6 +637,29 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
         description: "Aucune classe disponible pour ajouter l'élève",
       });
       return;
+    }
+
+    // Vérifier si les matricules parents existent (si utilisés)
+    if (useFatherExisting) {
+      const fatherExists = await verifyParentExists(fatherMatricule);
+      if (!fatherExists) {
+        showError({
+          title: "Erreur",
+          description: "Ce matricule parent (père) n'existe pas dans le système",
+        });
+        return;
+      }
+    }
+
+    if (useMotherExisting) {
+      const motherExists = await verifyParentExists(motherMatricule);
+      if (!motherExists) {
+        showError({
+          title: "Erreur",
+          description: "Ce matricule parent (mère) n'existe pas dans le système",
+        });
+        return;
+      }
     }
 
     // Vérifier les limites d'abonnement uniquement pour les nouveaux élèves
@@ -667,7 +719,8 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
         emergency_contact: `${data.contactUrgenceNom} - ${data.contactUrgenceTelephone} (${data.contactUrgenceRelation})`,
         school_id: schoolId,
         class_id: classId || selectedClass?.id,
-        is_active: true
+        is_active: true,
+        parent_matricule: useFatherExisting ? fatherMatricule : (useMotherExisting ? motherMatricule : null)
       };
 
       let result;
@@ -989,148 +1042,214 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
 
         <div className="space-y-6">
           <h2 className="text-2xl font-bold">Informations du père</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField control={form.control} name="perePrenom" rules={{
-            required: "Le prénom du père est requis"
-          }} render={({
-            field
-          }) => <FormItem>
-                  <FormLabel>Prénom</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>} />
-
-            <FormField control={form.control} name="pereNom" rules={{
-            required: "Le nom du père est requis"
-          }} render={({
-            field
-          }) => <FormItem>
-                  <FormLabel>Nom</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>} />
+          
+          <div className="flex items-center space-x-2 mb-4">
+            <Checkbox 
+              id="useFatherExisting"
+              checked={useFatherExisting}
+              onCheckedChange={(checked) => setUseFatherExisting(checked as boolean)}
+            />
+            <label
+              htmlFor="useFatherExisting"
+              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+            >
+              Ce parent existe déjà dans le système
+            </label>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField control={form.control} name="pereAdresse" rules={{
-            required: "L'adresse du père est requise"
-          }} render={({
-            field
-          }) => <FormItem>
-                  <FormLabel>Adresse</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>} />
+          {useFatherExisting ? (
+            <FormItem>
+              <FormLabel>Matricule du parent (père)</FormLabel>
+              <FormControl>
+                <Input 
+                  value={fatherMatricule}
+                  onChange={(e) => setFatherMatricule(e.target.value)}
+                  placeholder="Ex: PAR001"
+                />
+              </FormControl>
+              <p className="text-xs text-muted-foreground mt-1">
+                Entrez le matricule du parent existant pour l'associer à cet élève
+              </p>
+            </FormItem>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField control={form.control} name="perePrenom" rules={{
+                required: "Le prénom du père est requis"
+              }} render={({
+                field
+              }) => <FormItem>
+                      <FormLabel>Prénom</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>} />
 
-            <FormField control={form.control} name="pereTelephone" rules={{
-            required: "Le numéro de téléphone du père est requis"
-          }} render={({
-            field
-          }) => <FormItem>
-                  <FormLabel>Numéro de téléphone</FormLabel>
-                  <FormControl>
-                    <Input type="tel" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>} />
-          </div>
+                <FormField control={form.control} name="pereNom" rules={{
+                required: "Le nom du père est requis"
+              }} render={({
+                field
+              }) => <FormItem>
+                      <FormLabel>Nom</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>} />
+              </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField control={form.control} name="pereNomUtilisateur" render={({
-            field
-          }) => <FormItem>
-                  <FormLabel>Nom d'utilisateur</FormLabel>
-                  <FormControl>
-                    <Input {...field} readOnly className="bg-muted" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>} />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField control={form.control} name="pereAdresse" rules={{
+                required: "L'adresse du père est requise"
+              }} render={({
+                field
+              }) => <FormItem>
+                      <FormLabel>Adresse</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>} />
 
-            <FormField control={form.control} name="pereMotDePasse" render={({
-            field
-          }) => <FormItem>
-                  <FormLabel>Mot de passe</FormLabel>
-                  <FormControl>
-                    <Input {...field} readOnly className="bg-muted" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>} />
-          </div>
+                <FormField control={form.control} name="pereTelephone" rules={{
+                required: "Le numéro de téléphone du père est requis"
+              }} render={({
+                field
+              }) => <FormItem>
+                      <FormLabel>Numéro de téléphone</FormLabel>
+                      <FormControl>
+                        <Input type="tel" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>} />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField control={form.control} name="pereNomUtilisateur" render={({
+                field
+              }) => <FormItem>
+                      <FormLabel>Nom d'utilisateur</FormLabel>
+                      <FormControl>
+                        <Input {...field} readOnly className="bg-muted" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>} />
+
+                <FormField control={form.control} name="pereMotDePasse" render={({
+                field
+              }) => <FormItem>
+                      <FormLabel>Mot de passe</FormLabel>
+                      <FormControl>
+                        <Input {...field} readOnly className="bg-muted" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>} />
+              </div>
+            </>
+          )}
         </div>
 
         <div className="space-y-6">
           <h2 className="text-2xl font-bold">Informations de la mère</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField control={form.control} name="merePrenom" render={({
-            field
-          }) => <FormItem>
-                  <FormLabel>Prénom (optionnel)</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>} />
-
-            <FormField control={form.control} name="mereNom" render={({
-            field
-          }) => <FormItem>
-                  <FormLabel>Nom (optionnel)</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>} />
+          
+          <div className="flex items-center space-x-2 mb-4">
+            <Checkbox 
+              id="useMotherExisting"
+              checked={useMotherExisting}
+              onCheckedChange={(checked) => setUseMotherExisting(checked as boolean)}
+            />
+            <label
+              htmlFor="useMotherExisting"
+              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+            >
+              Ce parent existe déjà dans le système
+            </label>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField control={form.control} name="mereAdresse" render={({
-            field
-          }) => <FormItem>
-                  <FormLabel>Adresse (optionnel)</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>} />
+          {useMotherExisting ? (
+            <FormItem>
+              <FormLabel>Matricule du parent (mère)</FormLabel>
+              <FormControl>
+                <Input 
+                  value={motherMatricule}
+                  onChange={(e) => setMotherMatricule(e.target.value)}
+                  placeholder="Ex: PAR001"
+                />
+              </FormControl>
+              <p className="text-xs text-muted-foreground mt-1">
+                Entrez le matricule du parent existant pour l'associer à cet élève
+              </p>
+            </FormItem>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField control={form.control} name="merePrenom" render={({
+                field
+              }) => <FormItem>
+                      <FormLabel>Prénom (optionnel)</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>} />
 
-            <FormField control={form.control} name="mereTelephone" render={({
-            field
-          }) => <FormItem>
-                  <FormLabel>Numéro de téléphone (optionnel)</FormLabel>
-                  <FormControl>
-                    <Input type="tel" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>} />
-          </div>
+                <FormField control={form.control} name="mereNom" render={({
+                field
+              }) => <FormItem>
+                      <FormLabel>Nom (optionnel)</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>} />
+              </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField control={form.control} name="mereNomUtilisateur" render={({
-            field
-          }) => <FormItem>
-                  <FormLabel>Nom d'utilisateur (optionnel)</FormLabel>
-                  <FormControl>
-                    <Input {...field} readOnly className="bg-muted" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>} />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField control={form.control} name="mereAdresse" render={({
+                field
+              }) => <FormItem>
+                      <FormLabel>Adresse (optionnel)</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>} />
 
-            <FormField control={form.control} name="mereMotDePasse" render={({
-            field
-          }) => <FormItem>
-                  <FormLabel>Mot de passe (optionnel)</FormLabel>
-                  <FormControl>
-                    <Input {...field} readOnly className="bg-muted" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>} />
-          </div>
+                <FormField control={form.control} name="mereTelephone" render={({
+                field
+              }) => <FormItem>
+                      <FormLabel>Numéro de téléphone (optionnel)</FormLabel>
+                      <FormControl>
+                        <Input type="tel" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>} />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField control={form.control} name="mereNomUtilisateur" render={({
+                field
+              }) => <FormItem>
+                      <FormLabel>Nom d'utilisateur (optionnel)</FormLabel>
+                      <FormControl>
+                        <Input {...field} readOnly className="bg-muted" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>} />
+
+                <FormField control={form.control} name="mereMotDePasse" render={({
+                field
+              }) => <FormItem>
+                      <FormLabel>Mot de passe (optionnel)</FormLabel>
+                      <FormControl>
+                        <Input {...field} readOnly className="bg-muted" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>} />
+              </div>
+            </>
+          )}
         </div>
 
         <div className="space-y-6">
