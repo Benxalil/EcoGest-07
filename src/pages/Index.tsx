@@ -12,6 +12,7 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLe
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { SubscriptionAlert } from "@/components/subscription/SubscriptionAlert";
 import { TeacherDashboard } from "@/components/dashboard/OptimizedTeacherDashboard";
+import { StudentDashboard } from "@/components/dashboard/StudentDashboard";
 import { AjoutEleveModal } from "@/components/eleves/AjoutEleveModal";
 import { AjoutEnseignantModal } from "@/components/enseignants/AjoutEnseignantModal";
 import { AjoutClasseModal } from "@/components/classes/AjoutClasseModal";
@@ -57,8 +58,9 @@ const Index = () => {
   const [activeTab, setActiveTab] = useState<"apercu" | "analytique">("apercu");
   const [showMoreSchedules, setShowMoreSchedules] = useState(false);
   
-  // Helper pour vérifier si l'utilisateur est enseignant
+  // Helper pour vérifier le rôle de l'utilisateur
   const isTeacher = profile?.role === 'teacher';
+  const isStudent = profile?.role === 'student';
   
   // Hook optimisé pour charger toutes les données en parallèle
   const { 
@@ -263,6 +265,15 @@ const Index = () => {
     return (
       <Layout>
         <TeacherDashboard />
+      </Layout>
+    );
+  }
+
+  // Dashboard spécifique pour les élèves
+  if (isStudent) {
+    return (
+      <Layout>
+        <StudentDashboard />
       </Layout>
     );
   }
