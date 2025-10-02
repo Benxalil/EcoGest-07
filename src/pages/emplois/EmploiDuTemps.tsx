@@ -694,14 +694,18 @@ export default function EmploiDuTemps() {
                               {course.start_time} à {course.end_time}
                             </div>
                             <div className="flex justify-center gap-2">
-                              <BookOpen 
-                                className="h-3 w-3 cursor-pointer text-blue-600 hover:text-blue-800" 
-                                onClick={() => handleOpenCahierModal(dayIndex, originalCourseIndex, course)}
-                              />
-                              <UserCheck 
-                                className="h-3 w-3 cursor-pointer text-green-600 hover:text-green-800" 
-                                onClick={() => handleAbsenceRetardForCourse(dayIndex, course)}
-                              />
+                              {(isAdmin() || isTeacher()) && (
+                                <>
+                                  <BookOpen 
+                                    className="h-3 w-3 cursor-pointer text-blue-600 hover:text-blue-800" 
+                                    onClick={() => handleOpenCahierModal(dayIndex, originalCourseIndex, course)}
+                                  />
+                                  <UserCheck 
+                                    className="h-3 w-3 cursor-pointer text-green-600 hover:text-green-800" 
+                                    onClick={() => handleAbsenceRetardForCourse(dayIndex, course)}
+                                  />
+                                </>
+                              )}
                               {isAdmin() && (
                                 <Pencil 
                                   className="h-3 w-3 cursor-pointer text-gray-600 hover:text-gray-800" 
