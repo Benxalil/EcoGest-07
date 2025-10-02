@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { httpCache } from '@/utils/httpCache';
 
 export interface SubscriptionStatus {
   isTrialActive: boolean;
@@ -39,19 +40,35 @@ export const useSubscription = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('school_id')
-        .eq('id', user.id)
-        .single();
+      // Cache profile lookup
+      const profile = await httpCache.get(
+        `profile:${user.id}:school_id`,
+        async () => {
+          const { data } = await supabase
+            .from('profiles')
+            .select('school_id')
+            .eq('id', user.id)
+            .single();
+          return data;
+        },
+        { ttl: 2 * 60 * 1000, strategy: 'stale-while-revalidate' }
+      );
 
       if (!profile?.school_id) return;
 
-      const { data: school } = await supabase
-        .from('schools')
-        .select('trial_end_date, subscription_status, starter_compatible')
-        .eq('id', profile.school_id)
-        .single();
+      // Cache school subscription data
+      const school = await httpCache.get(
+        `school:${profile.school_id}:subscription`,
+        async () => {
+          const { data } = await supabase
+            .from('schools')
+            .select('trial_end_date, subscription_status, starter_compatible')
+            .eq('id', profile.school_id)
+            .single();
+          return data;
+        },
+        { ttl: 2 * 60 * 1000, strategy: 'stale-while-revalidate' }
+      );
 
       if (!school) return;
 
@@ -76,7 +93,8 @@ export const useSubscription = () => {
           daysRemaining: 0,
           showWarning: false,
           isExpired: true,
-        }); } else {
+        });
+      } else {
         // Trial status
         const isTrialActive = daysRemaining > 0;
         const showWarning = daysRemaining <= 5 && daysRemaining > 0;
@@ -117,6 +135,9 @@ export const useSubscription = () => {
           subscription_status: 'trial'
         })
         .eq('id', profile.school_id);
+      
+      // Invalidate caches
+      httpCache.invalidateByPrefix(`school:${profile.school_id}`);
     }
     
     checkSubscriptionStatus();
