@@ -26,6 +26,9 @@ interface Child {
     level: string;
     section: string | null;
   };
+  profiles?: {
+    avatar_url: string | null;
+  };
 }
 
 interface UseParentChildrenReturn {
@@ -87,6 +90,9 @@ export const useParentChildren = (): UseParentChildrenReturn => {
             name,
             level,
             section
+          ),
+          profiles:user_id (
+            avatar_url
           )
         `)
         .or(`parent_email.ilike.${profile.email}${parentMatricule ? `,parent_matricule.ilike.${parentMatricule}` : ''}`)
@@ -103,7 +109,8 @@ export const useParentChildren = (): UseParentChildrenReturn => {
 
       const formattedChildren = (childrenData || []).map(child => ({
         ...child,
-        classes: Array.isArray(child.classes) ? child.classes[0] : child.classes
+        classes: Array.isArray(child.classes) ? child.classes[0] : child.classes,
+        profiles: Array.isArray(child.profiles) ? child.profiles[0] : child.profiles
       }));
 
       console.log('Formatted children:', formattedChildren);
