@@ -31,9 +31,9 @@
     <!-- Preload critical resources to break request chains -->
     <link rel="modulepreload" href="/src/main.tsx" />
     <link rel="modulepreload" href="/src/App.tsx" />
-    <link rel="modulepreload" href="/src/pages/Index.tsx" as="script" />
-    <link rel="modulepreload" href="/src/pages/auth/AuthPage.tsx" as="script" />
-    <link rel="modulepreload" href="/src/integrations/supabase/client.ts" as="script" />
+    <link rel="modulepreload" href="/src/pages/Index.tsx" />
+    <link rel="modulepreload" href="/src/pages/auth/AuthPage.tsx" />
+    <link rel="modulepreload" href="/src/integrations/supabase/client.ts" />
     
     <title>EcoGest - Gestion Scolaire Moderne</title>
     <meta name="description" content="Système de gestion scolaire moderne et performant pour les établissements" />
@@ -48,7 +48,6 @@
 
   <body>
     <div id="root"></div>
-    <script src="https://cdn.gpteng.co/gptengineer.js" type="module"></script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
