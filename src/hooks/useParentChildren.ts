@@ -65,9 +65,12 @@ export const useParentChildren = (): UseParentChildrenReturn => {
       
       if (cachedData) {
         setChildren(cachedData);
-        if (cachedData.length > 0 && !selectedChildId) {
-          setSelectedChildId(cachedData[0].id);
-        }
+        setSelectedChildId(prev => {
+          if (!prev && cachedData.length > 0) {
+            return cachedData[0].id;
+          }
+          return prev;
+        });
         setLoading(false);
         return;
       }
@@ -76,11 +79,7 @@ export const useParentChildren = (): UseParentChildrenReturn => {
       const emailMatch = profile.email.match(/Parent(\d+)@/i);
       const parentMatricule = emailMatch ? `PARENT${emailMatch[1].padStart(3, '0')}` : null;
 
-      console.log('Parent email:', profile.email);
-      console.log('Extracted parent matricule:', parentMatricule);
-
       // Récupérer tous les enfants liés au parent via parent_email ou parent_matricule
-      // Utilisation de ilike pour une recherche insensible à la casse
       const { data: childrenData, error: fetchError } = await supabase
         .from('students')
         .select(`
@@ -99,12 +98,6 @@ export const useParentChildren = (): UseParentChildrenReturn => {
         .eq('is_active', true)
         .order('first_name', { ascending: true });
 
-      console.log('Supabase query result:', { 
-        data: childrenData, 
-        error: fetchError,
-        count: childrenData?.length 
-      });
-
       if (fetchError) throw fetchError;
 
       const formattedChildren = (childrenData || []).map(child => ({
@@ -113,15 +106,15 @@ export const useParentChildren = (): UseParentChildrenReturn => {
         profiles: Array.isArray(child.profiles) ? child.profiles[0] : child.profiles
       }));
 
-      console.log('Formatted children:', formattedChildren);
-      console.log('Number of children found:', formattedChildren.length);
-
       setChildren(formattedChildren);
       
       // Sélectionner automatiquement le premier enfant
-      if (formattedChildren.length > 0 && !selectedChildId) {
-        setSelectedChildId(formattedChildren[0].id);
-      }
+      setSelectedChildId(prev => {
+        if (!prev && formattedChildren.length > 0) {
+          return formattedChildren[0].id;
+        }
+        return prev;
+      });
 
       // Mettre en cache pour 5 minutes
       cache.set(cacheKey, formattedChildren, 5 * 60 * 1000);
@@ -132,7 +125,7 @@ export const useParentChildren = (): UseParentChildrenReturn => {
     } finally {
       setLoading(false);
     }
-  }, [profile?.email, cache, selectedChildId]);
+  }, [profile?.email, cache]);
 
   useEffect(() => {
     fetchChildren();
