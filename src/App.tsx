@@ -7,8 +7,12 @@ import { Toaster as SonnerToaster } from "@/components/ui/sonner";
 import { StudentRouteHandler } from "@/components/navigation/StudentRouteHandler";
 import AuthenticatedLayout from "@/components/layout/AuthenticatedLayout";
 
-// Lazy load all route components for better code splitting
-const Index = lazy(() => import("./pages/Index"));
+// Critical pages loaded immediately (not lazy) to reduce LCP
+import Index from "./pages/Index";
+import AuthPage from "./pages/auth/AuthPage";
+import SchoolRegistrationPage from "./pages/auth/SchoolRegistrationPage";
+
+// Lazy load non-critical route components for better code splitting
 const PageListeEnseignants = lazy(() => import("./pages/enseignants/ListeEnseignants"));
 const ModifierEnseignant = lazy(() => import("./pages/enseignants/ModifierEnseignant"));
 const ListeEleves = lazy(() => import("./pages/eleves/ListeEleves"));
@@ -51,13 +55,11 @@ const ListeAnnonces = lazy(() => import("./pages/annonces/ListeAnnonces"));
 const Abonnement = lazy(() => import("@/pages/abonnement/Abonnement"));
 const PayTechConfig = lazy(() => import("@/pages/admin/PayTechConfig"));
 const Parametres = lazy(() => import("./pages/parametres/Parametres"));
-const AuthPage = lazy(() => import("./pages/auth/AuthPage"));
-const SchoolRegistrationPage = lazy(() => import("./pages/auth/SchoolRegistrationPage"));
 const SchoolSettings = lazy(() => import("./pages/admin/SchoolSettings"));
 const UserMigration = lazy(() => import("./pages/admin/UserMigration"));
 const Utilisateurs = lazy(() => import("./pages/utilisateurs/Utilisateurs"));
 
-// Loading fallback component
+// Optimized loading fallback - minimal CSS
 const LoadingFallback = () => (
   <div className="flex items-center justify-center min-h-screen">
     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>

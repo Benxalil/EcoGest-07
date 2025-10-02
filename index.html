@@ -4,6 +4,25 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     
+    <!-- Critical inline styles for instant render -->
+    <style>
+      *,::before,::after{box-sizing:border-box}
+      html{line-height:1.5;font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+      body{margin:0}
+      .flex{display:flex}
+      .items-center{align-items:center}
+      .justify-center{justify-content:center}
+      .min-h-screen{min-height:100vh}
+      .animate-spin{animation:spin 1s linear infinite}
+      .rounded-full{border-radius:9999px}
+      .h-12{height:3rem}
+      .w-12{width:3rem}
+      .border-b-2{border-bottom-width:2px}
+      .border-primary{border-color:#150095}
+      @keyframes spin{to{transform:rotate(360deg)}}
+      #root{min-height:100vh}
+    </style>
+    
     <!-- DNS Prefetch & Preconnect for faster external resource loading -->
     <link rel="dns-prefetch" href="https://uoqierhqpnqnbsnbzaqa.supabase.co" />
     <link rel="preconnect" href="https://uoqierhqpnqnbsnbzaqa.supabase.co" crossorigin />
@@ -12,6 +31,8 @@
     <!-- Preload critical resources to break request chains -->
     <link rel="modulepreload" href="/src/main.tsx" />
     <link rel="modulepreload" href="/src/App.tsx" />
+    <link rel="modulepreload" href="/src/pages/Index.tsx" as="script" />
+    <link rel="modulepreload" href="/src/pages/auth/AuthPage.tsx" as="script" />
     <link rel="modulepreload" href="/src/integrations/supabase/client.ts" as="script" />
     
     <title>EcoGest - Gestion Scolaire Moderne</title>
