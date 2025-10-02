@@ -42,7 +42,7 @@ interface CahierFormData {
 
 export default function EmploiDuTemps() {
   const navigate = useNavigate();
-  const { isAdmin, isTeacher } = useUserRole();
+  const { isAdmin, isTeacher, isParent, isStudent } = useUserRole();
   
   // Utiliser le hook approprié selon le rôle
   const adminData = useClasses();
@@ -622,14 +622,16 @@ export default function EmploiDuTemps() {
               </DialogContent>
             </Dialog>
 
-            <Button 
-              variant="default" 
-              className="bg-yellow-500 hover:bg-yellow-600 text-white"
-              onClick={handleRetardAbsence}
-            >
-              <AlertTriangle className="h-4 w-4 mr-2" />
-              Retard & Absence
-            </Button>
+            {!isParent() && !isStudent() && (
+              <Button 
+                variant="default" 
+                className="bg-yellow-500 hover:bg-yellow-600 text-white"
+                onClick={handleRetardAbsence}
+              >
+                <AlertTriangle className="h-4 w-4 mr-2" />
+                Retard & Absence
+              </Button>
+            )}
           </div>
         </div>
 
