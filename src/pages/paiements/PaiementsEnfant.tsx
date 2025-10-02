@@ -4,7 +4,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Layout } from "@/components/layout/Layout";
 import { supabase } from "@/integrations/supabase/client";
-import { useUserRole } from "@/hooks/useUserRole";
+import { useParentChildren } from "@/hooks/useParentChildren";
+import { ParentChildSelector } from "@/components/parent/ParentChildSelector";
 import { useSubscriptionPlan } from "@/hooks/useSubscriptionPlan";
 import { Check, Clock, X, Lock, Crown } from "lucide-react";
 import { Database } from "@/integrations/supabase/types";
@@ -12,38 +13,27 @@ import { useNavigate } from "react-router-dom";
 
 type Payment = Database['public']['Tables']['payments']['Row'];
 type PaymentCategory = Database['public']['Tables']['payment_categories']['Row'];
-type Student = Database['public']['Tables']['students']['Row'];
 
 interface PaymentWithCategory extends Payment {
   category?: PaymentCategory | null;
 }
 
 export default function PaiementsEnfant() {
-  const { userProfile } = useUserRole();
   const { hasFeature, currentPlan } = useSubscriptionPlan();
   const navigate = useNavigate();
   const [payments, setPayments] = useState<PaymentWithCategory[]>([]);
-  const [student, setStudent] = useState<Student | null>(null);
   const [loading, setLoading] = useState(true);
+  const { children, selectedChild, setSelectedChildId, loading: childrenLoading } = useParentChildren();
 
   useEffect(() => {
     const fetchChildPayments = async () => {
-      if (!userProfile?.email) return;
+      if (!selectedChild?.id) {
+        setLoading(false);
+        return;
+      }
 
       try {
-        // Trouver l'enfant lié au parent
-        const { data: childData, error: childError } = await supabase
-          .from('students')
-          .select('*')
-          .eq('parent_email', userProfile.email)
-          .single();
-
-        if (childError) {
-          console.error('Erreur lors de la récupération de l\'enfant:', childError);
-          return;
-        }
-
-        setStudent(childData);
+        setLoading(true);
 
         // Récupérer les paiements de l'enfant
         const { data: paymentsData, error } = await supabase
@@ -52,7 +42,7 @@ export default function PaiementsEnfant() {
             *,
             category:payment_categories(*)
           `)
-        .eq('student_id', childData.id)
+        .eq('student_id', selectedChild.id)
         .order('payment_date', { ascending: true });
 
         if (error) {
@@ -74,7 +64,7 @@ export default function PaiementsEnfant() {
     };
 
     fetchChildPayments();
-  }, [userProfile]);
+  }, [selectedChild?.id]);
 
   // Vérifier si l'utilisateur a accès à la gestion des paiements
   if (!hasFeature('hasPaymentManagement')) {
@@ -152,7 +142,7 @@ export default function PaiementsEnfant() {
     'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
   ];
 
-  if (loading) {
+  if (childrenLoading || loading) {
     return (
       <Layout>
         <div className="p-6">
@@ -169,7 +159,7 @@ export default function PaiementsEnfant() {
     );
   }
 
-  if (!student) {
+  if (children.length === 0) {
     return (
       <Layout>
         <div className="p-6">
@@ -188,12 +178,23 @@ export default function PaiementsEnfant() {
     );
   }
 
+  if (!selectedChild) {
+    return null;
+  }
+
   return (
     <Layout>
       <div className="p-6 space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold">Paiements - {student.first_name} {student.last_name}</h1>
+          <h1 className="text-3xl font-bold">Paiements - {selectedChild.first_name} {selectedChild.last_name}</h1>
         </div>
+
+        {/* Sélecteur d'enfant */}
+        <ParentChildSelector 
+          children={children}
+          selectedChildId={selectedChild.id}
+          onChildSelect={setSelectedChildId}
+        />
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {payments.map((payment) => {

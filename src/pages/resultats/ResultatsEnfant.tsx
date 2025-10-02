@@ -3,11 +3,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Layout } from "@/components/layout/Layout";
 import { supabase } from "@/integrations/supabase/client";
-import { useUserRole } from "@/hooks/useUserRole";
+import { useParentChildren } from "@/hooks/useParentChildren";
+import { ParentChildSelector } from "@/components/parent/ParentChildSelector";
 import { Database } from "@/integrations/supabase/types";
 
 type StudentGrade = Database['public']['Tables']['student_grades']['Row'];
-type Student = Database['public']['Tables']['students']['Row'];
 type Subject = Database['public']['Tables']['subjects']['Row'];
 
 interface GradeWithSubject extends StudentGrade {
@@ -16,28 +16,18 @@ interface GradeWithSubject extends StudentGrade {
 
 export default function ResultatsEnfant() {
   const [grades, setGrades] = useState<GradeWithSubject[]>([]);
-  const [student, setStudent] = useState<Student | null>(null);
   const [loading, setLoading] = useState(true);
-  const { userProfile } = useUserRole();
+  const { children, selectedChild, setSelectedChildId, loading: childrenLoading } = useParentChildren();
 
   useEffect(() => {
     const fetchChildResults = async () => {
-      if (!userProfile?.email) return;
+      if (!selectedChild?.id) {
+        setLoading(false);
+        return;
+      }
 
       try {
-        // Trouver l'enfant lié au parent
-        const { data: childData, error: childError } = await supabase
-          .from('students')
-          .select('*')
-          .eq('parent_email', userProfile.email)
-          .single();
-
-        if (childError) {
-          console.error('Erreur lors de la récupération de l\'enfant:', childError);
-          return;
-        }
-
-        setStudent(childData);
+        setLoading(true);
 
         // Récupérer les notes de l'enfant
         const { data: gradesData, error } = await supabase
@@ -47,7 +37,7 @@ export default function ResultatsEnfant() {
             class:class_id(id, name),
             subject:subject_id(*)
           `)
-          .eq('student_id', childData.id)
+          .eq('student_id', selectedChild.id)
           .order('created_at', { ascending: false });
 
         if (error) {
@@ -89,7 +79,7 @@ export default function ResultatsEnfant() {
     };
 
     fetchChildResults();
-  }, [userProfile]);
+  }, [selectedChild?.id]);
 
   const getGradeColor = (score: number, maxScore: number) => {
     const percentage = (score / maxScore) * 100;
@@ -112,7 +102,7 @@ export default function ResultatsEnfant() {
     return acc;
   }, {} as Record<number, GradeWithSubject[]>);
 
-  if (loading) {
+  if (childrenLoading || loading) {
     return (
       <Layout>
         <div className="p-6">
@@ -129,7 +119,7 @@ export default function ResultatsEnfant() {
     );
   }
 
-  if (!student) {
+  if (children.length === 0) {
     return (
       <Layout>
         <div className="p-6">
@@ -148,12 +138,23 @@ export default function ResultatsEnfant() {
     );
   }
 
+  if (!selectedChild) {
+    return null;
+  }
+
   return (
     <Layout>
       <div className="p-6 space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold">Résultats - {student.first_name} {student.last_name}</h1>
+          <h1 className="text-3xl font-bold">Résultats - {selectedChild.first_name} {selectedChild.last_name}</h1>
         </div>
+
+        {/* Sélecteur d'enfant */}
+        <ParentChildSelector 
+          children={children}
+          selectedChildId={selectedChild.id}
+          onChildSelect={setSelectedChildId}
+        />
 
         {Object.entries(gradesBySemester).map(([semester, semesterGrades]) => {
           const average = calculateAverage(parseInt(semester));

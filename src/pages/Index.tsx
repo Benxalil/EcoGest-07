@@ -13,6 +13,7 @@ import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, PieChart, Pie, Cell }
 import { SubscriptionAlert } from "@/components/subscription/SubscriptionAlert";
 import { TeacherDashboard } from "@/components/dashboard/OptimizedTeacherDashboard";
 import { StudentDashboard } from "@/components/dashboard/StudentDashboard";
+import { ParentDashboard } from "@/components/dashboard/ParentDashboard";
 import { AjoutEleveModal } from "@/components/eleves/AjoutEleveModal";
 import { AjoutEnseignantModal } from "@/components/enseignants/AjoutEnseignantModal";
 import { AjoutClasseModal } from "@/components/classes/AjoutClasseModal";
@@ -274,6 +275,16 @@ const Index = () => {
     return (
       <Layout>
         <StudentDashboard />
+      </Layout>
+    );
+  }
+
+  // Dashboard spécifique pour les parents
+  const isParent = profile?.role === 'parent';
+  if (isParent) {
+    return (
+      <Layout>
+        <ParentDashboard />
       </Layout>
     );
   }

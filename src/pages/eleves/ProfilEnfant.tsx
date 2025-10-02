@@ -1,44 +1,11 @@
-import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Layout } from "@/components/layout/Layout";
-import { supabase } from "@/integrations/supabase/client";
-import { useUserRole } from "@/hooks/useUserRole";
-import { Database } from "@/integrations/supabase/types";
-
-type Student = Database['public']['Tables']['students']['Row'];
-type Profile = Database['public']['Tables']['profiles']['Row'];
+import { useParentChildren } from "@/hooks/useParentChildren";
+import { ParentChildSelector } from "@/components/parent/ParentChildSelector";
 
 export default function ProfilEnfant() {
-  const [student, setStudent] = useState<Student | null>(null);
-  const [loading, setLoading] = useState(true);
-  const { userProfile } = useUserRole();
-
-  useEffect(() => {
-    const fetchChildProfile = async () => {
-      if (!userProfile?.id) return;
-
-      try {
-        // Trouver l'enfant lié au parent via l'email parent
-        const { data: childData, error } = await supabase
-          .from('students')
-          .select('*')
-          .eq('parent_email', userProfile.email)
-          .single();
-
-        if (error) {
-          console.error('Erreur lors de la récupération du profil de l\'enfant:', error); } else {
-          setStudent(childData);
-        }
-      } catch (error) {
-        console.error('Erreur:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchChildProfile();
-  }, [userProfile]);
+  const { children, selectedChild, setSelectedChildId, loading } = useParentChildren();
 
   if (loading) {
     return (
@@ -57,7 +24,7 @@ export default function ProfilEnfant() {
     );
   }
 
-  if (!student) {
+  if (children.length === 0) {
     return (
       <Layout>
         <div className="p-6">
@@ -77,6 +44,10 @@ export default function ProfilEnfant() {
     );
   }
 
+  if (!selectedChild) {
+    return null;
+  }
+
   return (
     <Layout>
       <div className="p-6 space-y-6">
@@ -84,12 +55,19 @@ export default function ProfilEnfant() {
           <h1 className="text-3xl font-bold">Profil de votre enfant</h1>
         </div>
 
+        {/* Sélecteur d'enfant */}
+        <ParentChildSelector 
+          children={children}
+          selectedChildId={selectedChild.id}
+          onChildSelect={setSelectedChildId}
+        />
+
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               Informations personnelles
-              <Badge variant={student.is_active ? "default" : "secondary"}>
-                {student.is_active ? "Actif" : "Inactif"}
+              <Badge variant={selectedChild.is_active ? "default" : "secondary"}>
+                {selectedChild.is_active ? "Actif" : "Inactif"}
               </Badge>
             </CardTitle>
           </CardHeader>
@@ -97,47 +75,47 @@ export default function ProfilEnfant() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="text-sm font-medium text-muted-foreground">Prénom</label>
-                <p className="text-lg">{student.first_name}</p>
+                <p className="text-lg">{selectedChild.first_name}</p>
               </div>
               <div>
                 <label className="text-sm font-medium text-muted-foreground">Nom</label>
-                <p className="text-lg">{student.last_name}</p>
+                <p className="text-lg">{selectedChild.last_name}</p>
               </div>
               <div>
                 <label className="text-sm font-medium text-muted-foreground">Numéro d'élève</label>
-                <p className="text-lg">{student.student_number}</p>
+                <p className="text-lg">{selectedChild.student_number}</p>
               </div>
               <div>
                 <label className="text-sm font-medium text-muted-foreground">Date de naissance</label>
                 <p className="text-lg">
-                  {student.date_of_birth ? new Date(student.date_of_birth).toLocaleDateString('fr-FR') : 'Non renseignée'}
+                  {selectedChild.date_of_birth ? new Date(selectedChild.date_of_birth).toLocaleDateString('fr-FR') : 'Non renseignée'}
                 </p>
               </div>
               <div>
                 <label className="text-sm font-medium text-muted-foreground">Lieu de naissance</label>
-                <p className="text-lg">{student.place_of_birth || 'Non renseigné'}</p>
+                <p className="text-lg">{selectedChild.place_of_birth || 'Non renseigné'}</p>
               </div>
               <div>
                 <label className="text-sm font-medium text-muted-foreground">Genre</label>
                 <p className="text-lg">
-                  {student.gender === 'M' ? 'Masculin' : student.gender === 'F' ? 'Féminin' : 'Non renseigné'}
+                  {selectedChild.gender === 'M' ? 'Masculin' : selectedChild.gender === 'F' ? 'Féminin' : 'Non renseigné'}
                 </p>
               </div>
               <div>
                 <label className="text-sm font-medium text-muted-foreground">Date d'inscription</label>
                 <p className="text-lg">
-                  {student.enrollment_date ? new Date(student.enrollment_date).toLocaleDateString('fr-FR') : 'Non renseignée'}
+                  {selectedChild.enrollment_date ? new Date(selectedChild.enrollment_date).toLocaleDateString('fr-FR') : 'Non renseignée'}
                 </p>
               </div>
               <div>
                 <label className="text-sm font-medium text-muted-foreground">Téléphone</label>
-                <p className="text-lg">{student.phone || 'Non renseigné'}</p>
+                <p className="text-lg">{selectedChild.phone || 'Non renseigné'}</p>
               </div>
             </div>
 
             <div>
               <label className="text-sm font-medium text-muted-foreground">Adresse</label>
-              <p className="text-lg">{student.address || 'Non renseignée'}</p>
+              <p className="text-lg">{selectedChild.address || 'Non renseignée'}</p>
             </div>
           </CardContent>
         </Card>
@@ -150,15 +128,15 @@ export default function ProfilEnfant() {
             <div className="space-y-2">
               <div>
                 <label className="text-sm font-medium text-muted-foreground">Téléphone des parents</label>
-                <p className="text-lg">{student.parent_phone || 'Non renseigné'}</p>
+                <p className="text-lg">{selectedChild.parent_phone || 'Non renseigné'}</p>
               </div>
               <div>
                 <label className="text-sm font-medium text-muted-foreground">Email des parents</label>
-                <p className="text-lg">{student.parent_email || 'Non renseigné'}</p>
+                <p className="text-lg">{selectedChild.parent_email || 'Non renseigné'}</p>
               </div>
               <div>
                 <label className="text-sm font-medium text-muted-foreground">Contact d'urgence</label>
-                <p className="text-lg">{student.emergency_contact || 'Non renseigné'}</p>
+                <p className="text-lg">{selectedChild.emergency_contact || 'Non renseigné'}</p>
               </div>
             </div>
           </CardContent>
