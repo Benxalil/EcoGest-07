@@ -16,13 +16,17 @@ import { Calendar, FileText, AlertTriangle } from "lucide-react";
 import { useClasses } from "@/hooks/useClasses";
 import { useTeacherClasses } from "@/hooks/useTeacherClasses";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useParentChildren } from "@/hooks/useParentChildren";
 import { LoadingSkeleton } from "@/components/ui/loading-skeleton";
 
 export default function ListeEmplois() {
   const navigate = useNavigate();
-  const { isAdmin, isTeacher, userProfile } = useUserRole();
+  const { isAdmin, isTeacher, isParent, userProfile } = useUserRole();
   const [studentClassId, setStudentClassId] = useState<string | null>(null);
   const [studentLoading, setStudentLoading] = useState(true);
+  
+  // Hook pour les enfants du parent
+  const { children, loading: parentChildrenLoading } = useParentChildren();
   
   // Utiliser le hook approprié selon le rôle
   const adminData = useClasses();
@@ -59,13 +63,22 @@ export default function ListeEmplois() {
     loadStudentClass();
   }, [userProfile]);
 
-  // Filtrer les classes pour les élèves
-  const displayedClasses = userProfile?.role === 'student' && studentClassId
-    ? classes.filter(c => c.id === studentClassId)
-    : classes;
+  // Filtrer les classes pour les élèves et parents
+  let displayedClasses = classes;
+  
+  if (userProfile?.role === 'student' && studentClassId) {
+    displayedClasses = classes.filter(c => c.id === studentClassId);
+  } else if (isParent() && children.length > 0) {
+    // Extraire les IDs de classe uniques des enfants du parent
+    const childrenClassIds = [...new Set(children
+      .filter(child => child.class_id)
+      .map(child => child.class_id)
+    )];
+    displayedClasses = classes.filter(c => childrenClassIds.includes(c.id));
+  }
 
   // Si aucune classe n'a été enregistrée
-  if (loading || studentLoading) {
+  if (loading || studentLoading || (isParent() && parentChildrenLoading)) {
     return (
       <Layout>
         <div className="container mx-auto p-6">
@@ -117,9 +130,11 @@ export default function ListeEmplois() {
           <h1 className="text-2xl font-bold text-gray-900">
             {userProfile?.role === 'student' 
               ? "Mon Emploi du Temps" 
-              : isTeacher() 
-                ? "Mes classes" 
-                : "Liste des classes du Primaire"}
+              : isParent()
+                ? "Emploi du temps de mes enfants"
+                : isTeacher() 
+                  ? "Mes classes" 
+                  : "Liste des classes du Primaire"}
           </h1>
         </div>
 
@@ -132,7 +147,9 @@ export default function ListeEmplois() {
                 {userProfile?.role !== 'student' && (
                   <>
                     <TableHead className="w-1/4 text-center">Absence & Retard</TableHead>
-                    <TableHead className="w-1/4 text-center">Cahier de Texte</TableHead>
+                    {!isParent() && (
+                      <TableHead className="w-1/4 text-center">Cahier de Texte</TableHead>
+                    )}
                   </>
                 )}
               </TableRow>
@@ -168,17 +185,19 @@ export default function ListeEmplois() {
                           Absence & retard
                         </Button>
                       </TableCell>
-                      <TableCell className="text-center">
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          className="bg-red-500 text-white hover:bg-red-600"
-                          onClick={() => navigate(`/matieres-cahier/${classe.id}`)}
-                        >
-                          <FileText className="h-4 w-4 mr-2" />
-                          Cahier de texte
-                        </Button>
-                      </TableCell>
+                      {!isParent() && (
+                        <TableCell className="text-center">
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            className="bg-red-500 text-white hover:bg-red-600"
+                            onClick={() => navigate(`/matieres-cahier/${classe.id}`)}
+                          >
+                            <FileText className="h-4 w-4 mr-2" />
+                            Cahier de texte
+                          </Button>
+                        </TableCell>
+                      )}
                     </>
                   )}
                 </TableRow>
