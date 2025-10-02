@@ -15,6 +15,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Calendar, User } from "lucide-react";
 import { useClasses } from "@/hooks/useClasses";
+import { useParentChildren } from "@/hooks/useParentChildren";
+import { useUserRole } from "@/hooks/useUserRole";
 import { supabase } from "@/integrations/supabase/client";
 
 interface AttendanceRecord {
@@ -34,12 +36,17 @@ export default function ConsulterAbsencesRetards() {
   const { classeId } = useParams<{ classeId: string }>();
   const navigate = useNavigate();
   const { classes } = useClasses();
+  const { isParent } = useUserRole();
+  const { children, loading: childrenLoading } = useParentChildren();
   
   const [attendances, setAttendances] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [dateFilter, setDateFilter] = useState("");
   const [eleveFilter, setEleveFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
+  
+  // Récupérer les IDs des enfants du parent
+  const childrenIds = isParent() ? children.map(child => child.id) : [];
 
   const classe = classes.find(c => c.id === classeId);
 
@@ -89,6 +96,11 @@ export default function ConsulterAbsencesRetards() {
   }, [classeId]);
 
   const filteredAttendances = attendances.filter(record => {
+    // Si parent, filtrer uniquement ses enfants
+    if (isParent() && childrenIds.length > 0 && !childrenIds.includes(record.student_id)) {
+      return false;
+    }
+    
     if (dateFilter && !record.date.includes(dateFilter)) return false;
     if (eleveFilter !== "all" && !`${record.students?.first_name} ${record.students?.last_name}`.toLowerCase().includes(eleveFilter.toLowerCase())) return false;
     if (typeFilter !== "all" && record.type !== typeFilter) return false;
@@ -147,7 +159,7 @@ export default function ConsulterAbsencesRetards() {
       }));
   };
 
-  if (loading) {
+  if (loading || childrenLoading) {
     return (
       <Layout>
         <div className="container mx-auto p-6">
@@ -188,7 +200,10 @@ export default function ConsulterAbsencesRetards() {
               Retour
             </Button>
             <h1 className="text-2xl font-bold text-gray-900">
-              Absences & Retards - {classe.name} {classe.level}{classe.section ? ` - ${classe.section}` : ''}
+              {isParent() 
+                ? `Absences & Retards de mes enfants` 
+                : `Absences & Retards - ${classe.name} ${classe.level}${classe.section ? ` - ${classe.section}` : ''}`
+              }
             </h1>
           </div>
         </div>
@@ -288,9 +303,11 @@ export default function ConsulterAbsencesRetards() {
               <Calendar className="h-12 w-12 mx-auto text-gray-400 mb-4" />
               <p className="text-gray-500 text-lg mb-2">Aucun enregistrement trouvé</p>
               <p className="text-gray-400">
-                {attendances.length === 0 
-                  ? "Aucune donnée de présence n'a encore été enregistrée pour cette classe."
-                  : "Aucun résultat ne correspond aux filtres appliqués."
+                {isParent()
+                  ? "Aucun de vos enfants n'a été signalé absent ou en retard."
+                  : attendances.length === 0 
+                    ? "Aucune donnée de présence n'a encore été enregistrée pour cette classe."
+                    : "Aucun résultat ne correspond aux filtres appliqués."
                 }
               </p>
             </CardContent>
