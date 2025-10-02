@@ -1,9 +1,9 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowLeft, Award, Book, FileText, Loader2, AlertCircle } from "lucide-react";
+import { ArrowLeft, Loader2, FileText, Calculator, Eye, AlertCircle, Printer } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -12,149 +12,184 @@ interface ExamDetails {
   title: string;
   exam_date: string;
   is_published: boolean;
+  class_level: string;
+  class_section: string;
 }
 
 interface SubjectGrade {
-  matiere: string;
-  devoirNote: number;
-  compositionNote: number;
-  note: number;
+  subject_name: string;
+  devoir_note?: number;
+  composition_note?: number;
+  note?: number;
   coefficient: number;
-  moyenne: number;
+  moyenne?: number;
 }
 
 interface StudentStats {
-  moyenneGenerale: number;
-  moyenneDevoir: number;
-  moyenneComposition: number;
-  isComposition: boolean;
-  notesList: SubjectGrade[];
+  general_average: number;
+  devoir_average?: number;
+  composition_average?: number;
+  total_devoir_notes?: number;
+  total_composition_notes?: number;
+  grades: SubjectGrade[];
 }
 
 export default function DetailsResultatEleve() {
-  const navigate = useNavigate();
-  const { studentId, examId } = useParams();
   const [loading, setLoading] = useState(true);
   const [examDetails, setExamDetails] = useState<ExamDetails | null>(null);
   const [studentStats, setStudentStats] = useState<StudentStats | null>(null);
   const [studentName, setStudentName] = useState("");
+  const [studentNumber, setStudentNumber] = useState(0);
+  const [showCalculatedRank] = useState(false);
+  const navigate = useNavigate();
+  const { studentId, examId } = useParams();
 
   useEffect(() => {
-    loadExamAndGrades();
+    if (studentId && examId) {
+      loadExamAndGrades();
+    }
   }, [studentId, examId]);
 
   const loadExamAndGrades = async () => {
     try {
       setLoading(true);
 
-      // Charger les détails de l'examen
+      // Fetch exam details with class info
       const { data: examData, error: examError } = await supabase
-        .from('exams')
-        .select('*')
-        .eq('id', examId)
+        .from("exams")
+        .select(`
+          id, 
+          title, 
+          exam_date, 
+          is_published,
+          classes (
+            level,
+            section
+          )
+        `)
+        .eq("id", examId)
         .single();
 
       if (examError) throw examError;
+      
+      setExamDetails({
+        ...examData,
+        class_level: examData.classes?.level || "",
+        class_section: examData.classes?.section || ""
+      });
 
-      setExamDetails(examData);
-
-      // Vérifier si l'examen est publié
-      if (!examData.is_published) {
-        setLoading(false);
-        return;
-      }
-
-      // Charger les informations de l'élève
+      // Fetch student details
       const { data: studentData, error: studentError } = await supabase
-        .from('students')
-        .select('first_name, last_name')
-        .eq('id', studentId)
+        .from("students")
+        .select("first_name, last_name, student_number")
+        .eq("id", studentId)
         .single();
 
       if (studentError) throw studentError;
-
       setStudentName(`${studentData.first_name} ${studentData.last_name}`);
+      
+      // Extract numeric part from student_number (e.g., "Eleve001" -> 1)
+      const numMatch = studentData.student_number?.match(/\d+/);
+      setStudentNumber(numMatch ? parseInt(numMatch[0]) : 1);
 
-      // Charger les notes de l'élève pour cet examen
+      // Fetch grades with subject information
       const { data: gradesData, error: gradesError } = await supabase
-        .from('grades')
+        .from("grades")
         .select(`
-          *,
+          grade_value,
+          max_grade,
+          coefficient,
+          exam_type,
           subjects (
-            name,
-            coefficient
+            name
           )
         `)
-        .eq('student_id', studentId)
-        .eq('exam_id', examId);
+        .eq("student_id", studentId)
+        .eq("exam_id", examId);
 
       if (gradesError) throw gradesError;
 
-      // Calculer les statistiques
-      const isComposition = examData.title.toLowerCase().includes('composition');
-      let totalWeightedGrades = 0;
-      let totalCoefficients = 0;
-      let totalWeightedDevoir = 0;
-      let totalCoeffDevoir = 0;
-      let totalWeightedComposition = 0;
-      let totalCoeffComposition = 0;
+      // Process grades
+      const isComposition = examData.title.toLowerCase().includes("composition");
+      const gradesMap = new Map<string, SubjectGrade>();
 
-      const notesList: SubjectGrade[] = gradesData.map((grade: any) => {
-        const coefficient = grade.subjects?.coefficient || 1;
-        const maxGrade = grade.max_grade || 20;
+      gradesData.forEach((grade: any) => {
+        const subjectName = grade.subjects.name;
         
-        let devoirNote = 0;
-        let compositionNote = 0;
-        let note = 0;
-        let moyenne = 0;
-
-        if (isComposition) {
-          // Pour les compositions, gérer devoir et composition séparément
-          if (grade.exam_type === 'devoir') {
-            devoirNote = (grade.grade_value / maxGrade) * 20;
-            totalWeightedDevoir += devoirNote * coefficient;
-            totalCoeffDevoir += coefficient;
-          } else if (grade.exam_type === 'composition') {
-            compositionNote = (grade.grade_value / maxGrade) * 20;
-            totalWeightedComposition += compositionNote * coefficient;
-            totalCoeffComposition += coefficient;
-          }
-          
-          // Calculer la moyenne de la matière (devoir + composition)
-          if (devoirNote > 0 || compositionNote > 0) {
-            moyenne = ((devoirNote + compositionNote) / (devoirNote > 0 && compositionNote > 0 ? 2 : 1));
-            totalWeightedGrades += moyenne * coefficient;
-            totalCoefficients += coefficient;
-          }
-        } else {
-          // Pour les autres examens
-          note = (grade.grade_value / maxGrade) * 20;
-          moyenne = note;
-          totalWeightedGrades += note * coefficient;
-          totalCoefficients += coefficient;
+        if (!gradesMap.has(subjectName)) {
+          gradesMap.set(subjectName, {
+            subject_name: subjectName,
+            coefficient: grade.coefficient || 1,
+          });
         }
 
-        return {
-          matiere: grade.subjects?.name || 'Matière inconnue',
-          devoirNote,
-          compositionNote,
-          note,
-          coefficient,
-          moyenne
-        };
+        const subjectGrade = gradesMap.get(subjectName)!;
+
+        if (isComposition) {
+          if (grade.exam_type === "devoir") {
+            subjectGrade.devoir_note = (grade.grade_value / grade.max_grade) * 20;
+          } else if (grade.exam_type === "composition") {
+            subjectGrade.composition_note = (grade.grade_value / grade.max_grade) * 20;
+          }
+        } else {
+          subjectGrade.note = (grade.grade_value / grade.max_grade) * 20;
+        }
+      });
+
+      // Calculate averages
+      const grades = Array.from(gradesMap.values());
+      let totalWeighted = 0;
+      let totalCoefficient = 0;
+      let devoirWeighted = 0;
+      let devoirCoefficient = 0;
+      let compositionWeighted = 0;
+      let compositionCoefficient = 0;
+      let totalDevoirNotes = 0;
+      let totalCompositionNotes = 0;
+
+      grades.forEach((grade) => {
+        if (isComposition) {
+          if (grade.devoir_note !== undefined && grade.devoir_note > 0) {
+            devoirWeighted += grade.devoir_note * grade.coefficient;
+            devoirCoefficient += grade.coefficient;
+            totalDevoirNotes += grade.devoir_note;
+          }
+          if (grade.composition_note !== undefined && grade.composition_note > 0) {
+            compositionWeighted += grade.composition_note * grade.coefficient;
+            compositionCoefficient += grade.coefficient;
+            totalCompositionNotes += grade.composition_note;
+          }
+          
+          // Calculate subject average (40% devoir, 60% composition)
+          if (grade.devoir_note !== undefined && grade.composition_note !== undefined) {
+            grade.moyenne = (grade.devoir_note * 0.4 + grade.composition_note * 0.6);
+            totalWeighted += grade.moyenne * grade.coefficient;
+            totalCoefficient += grade.coefficient;
+          }
+        } else {
+          if (grade.note !== undefined && grade.note > 0) {
+            totalWeighted += grade.note * grade.coefficient;
+            totalCoefficient += grade.coefficient;
+            grade.moyenne = grade.note;
+          }
+        }
       });
 
       const stats: StudentStats = {
-        moyenneGenerale: totalCoefficients > 0 ? totalWeightedGrades / totalCoefficients : 0,
-        moyenneDevoir: totalCoeffDevoir > 0 ? totalWeightedDevoir / totalCoeffDevoir : 0,
-        moyenneComposition: totalCoeffComposition > 0 ? totalWeightedComposition / totalCoeffComposition : 0,
-        isComposition,
-        notesList: notesList.filter(n => n.devoirNote > 0 || n.compositionNote > 0 || n.note > 0)
+        general_average: totalCoefficient > 0 ? totalWeighted / totalCoefficient : 0,
+        grades,
       };
+
+      if (isComposition) {
+        stats.devoir_average = devoirCoefficient > 0 ? devoirWeighted / devoirCoefficient : 0;
+        stats.composition_average = compositionCoefficient > 0 ? compositionWeighted / compositionCoefficient : 0;
+        stats.total_devoir_notes = totalDevoirNotes;
+        stats.total_composition_notes = totalCompositionNotes;
+      }
 
       setStudentStats(stats);
     } catch (error) {
-      console.error("Erreur lors du chargement des résultats:", error);
+      console.error("Error loading exam and grades:", error);
     } finally {
       setLoading(false);
     }
@@ -168,35 +203,28 @@ export default function DetailsResultatEleve() {
     return "text-red-600 font-semibold";
   };
 
+  const handleGeneratePDF = () => {
+    // Placeholder for PDF generation - non-functional for students
+    console.log("PDF generation not available for students");
+  };
+
+  // Loading state
   if (loading) {
     return (
       <Layout>
-        <div className="container mx-auto p-6">
-          <div className="text-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-            <p className="text-gray-500 text-lg">Chargement des résultats...</p>
-          </div>
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin" />
+          <span className="ml-2">Chargement des résultats...</span>
         </div>
       </Layout>
     );
   }
 
+  // Check if exam is published
   if (!examDetails || !examDetails.is_published) {
     return (
       <Layout>
         <div className="container mx-auto p-6">
-          <div className="flex items-center gap-4 mb-6">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate(-1)}
-              className="hover:bg-gray-100"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <h1 className="text-2xl font-bold text-primary">Résultats</h1>
-          </div>
-
           <Card>
             <CardContent className="flex items-center justify-center py-12">
               <div className="text-center">
@@ -207,9 +235,10 @@ export default function DetailsResultatEleve() {
                 <p className="text-gray-500">
                   Les résultats de cet examen n'ont pas encore été publiés par l'administrateur.
                 </p>
-                <p className="text-sm text-gray-400 mt-2">
-                  Vous serez notifié dès que les résultats seront disponibles.
-                </p>
+                <Button onClick={() => navigate(-1)} className="mt-4">
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Retour
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -218,22 +247,11 @@ export default function DetailsResultatEleve() {
     );
   }
 
+  // Check if we have student stats
   if (!studentStats) {
     return (
       <Layout>
         <div className="container mx-auto p-6">
-          <div className="flex items-center gap-4 mb-6">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate(-1)}
-              className="hover:bg-gray-100"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <h1 className="text-2xl font-bold text-primary">Résultats</h1>
-          </div>
-
           <Card>
             <CardContent className="flex items-center justify-center py-12">
               <div className="text-center">
@@ -244,6 +262,10 @@ export default function DetailsResultatEleve() {
                 <p className="text-gray-500">
                   Aucune note n'a été enregistrée pour cet examen.
                 </p>
+                <Button onClick={() => navigate(-1)} className="mt-4">
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Retour
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -252,132 +274,202 @@ export default function DetailsResultatEleve() {
     );
   }
 
+  const isComposition = examDetails.title.toLowerCase().includes("composition");
+
   return (
     <Layout>
-      <div className="container mx-auto p-6">
-        <div className="flex items-center gap-4 mb-6">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate(-1)}
-            className="hover:bg-gray-100"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div>
-            <h1 className="text-2xl font-bold text-primary">{examDetails.title}</h1>
-            <p className="text-gray-600">{studentName}</p>
+      <div className="p-6 space-y-6">
+        {/* Header - Exact Admin Format */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <Button
+              variant="outline"
+              onClick={() => navigate(-1)}
+              className="flex items-center"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Retour
+            </Button>
+            <div>
+              <h1 className="text-2xl font-bold">
+                {examDetails.class_level} {examDetails.class_section}
+              </h1>
+              <p className="text-gray-600">
+                Liste des élèves pour cette classe (Nombre d'élèves : 1)
+              </p>
+              {examDetails && (
+                <p className="text-sm text-gray-500">
+                  Date: {new Date(examDetails.exam_date).toLocaleDateString()}
+                </p>
+              )}
+            </div>
+          </div>
+          
+          {/* Action Buttons - Disabled for students but visible */}
+          <div className="flex space-x-2">
+            <Button
+              variant="outline"
+              onClick={handleGeneratePDF}
+              disabled
+              className="flex items-center bg-orange-500 hover:bg-orange-600 text-white opacity-50 cursor-not-allowed"
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              Bulletin du Classe
+            </Button>
+            
+            <Button
+              variant="outline"
+              disabled
+              className="flex items-center bg-blue-500 hover:bg-blue-600 text-white opacity-50 cursor-not-allowed"
+            >
+              <Calculator className="h-4 w-4 mr-2" />
+              Calcul du Rang
+            </Button>
           </div>
         </div>
 
-        {/* Statistiques générales */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <Award className="h-8 w-8 text-blue-600" />
-                <div>
-                  <p className="text-2xl font-bold text-blue-600">
-                    {studentStats.moyenneGenerale.toFixed(2)}/20
-                  </p>
-                  <p className="text-sm text-gray-600">Moyenne générale</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {studentStats.isComposition && (
-            <>
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-3">
-                    <FileText className="h-8 w-8 text-purple-600" />
-                    <div>
-                      <p className="text-2xl font-bold text-purple-600">
-                        {studentStats.moyenneDevoir > 0 ? studentStats.moyenneDevoir.toFixed(2) : '-'}/20
-                      </p>
-                      <p className="text-sm text-gray-600">Moyenne Devoir</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-3">
-                    <Book className="h-8 w-8 text-green-600" />
-                    <div>
-                      <p className="text-2xl font-bold text-green-600">
-                        {studentStats.moyenneComposition > 0 ? studentStats.moyenneComposition.toFixed(2) : '-'}/20
-                      </p>
-                      <p className="text-sm text-gray-600">Moyenne Composition</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </>
-          )}
-        </div>
-
-        {/* Tableau des notes */}
-        <Card>
+        {/* Results Table with Exact Admin Format */}
+        <div className="bg-white rounded-lg shadow">
+          {/* Blue Bar with Exam Title */}
           <div className="bg-blue-600 text-white text-center py-3 rounded-t-lg">
-            <h2 className="text-lg font-semibold">Notes par matière</h2>
+            <h2 className="text-lg font-semibold">{examDetails.title}</h2>
           </div>
-
-          <CardContent className="p-6">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Matière</TableHead>
-                  {studentStats.isComposition ? (
-                    <>
-                      <TableHead className="text-center">Devoir</TableHead>
-                      <TableHead className="text-center">Composition</TableHead>
-                    </>
-                  ) : (
-                    <TableHead className="text-center">Note</TableHead>
-                  )}
-                  <TableHead className="text-center">Coefficient</TableHead>
-                  <TableHead className="text-center">Moyenne</TableHead>
+          
+          {/* Black Bar */}
+          <div className="bg-black text-white text-center py-2">
+            <span className="text-sm font-medium">Tous les bulletins</span>
+          </div>
+          
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-12">N°</TableHead>
+                {showCalculatedRank && <TableHead className="w-16 text-center">Rang</TableHead>}
+                <TableHead>Nom et Prénom</TableHead>
+                {isComposition ? (
+                  <>
+                    <TableHead className="w-40 text-center bg-blue-50 border-r">Devoir</TableHead>
+                    <TableHead className="w-40 text-center bg-green-50">Composition</TableHead>
+                  </>
+                ) : (
+                  <>
+                    <TableHead className="w-32 text-center">Note</TableHead>
+                    <TableHead className="w-32 text-center">Moyenne</TableHead>
+                  </>
+                )}
+                <TableHead className="w-20 text-center">Action</TableHead>
+                <TableHead className="w-40 text-center">Bulletins de notes</TableHead>
+              </TableRow>
+              {isComposition && (
+                <TableRow className="bg-gray-50">
+                  <TableHead></TableHead>
+                  {showCalculatedRank && <TableHead></TableHead>}
+                  <TableHead></TableHead>
+                  <TableHead className="text-center text-sm bg-blue-50 border-r">
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <span className="font-medium">Notes</span>
+                      <span className="font-medium">Moyenne</span>
+                    </div>
+                  </TableHead>
+                  <TableHead className="text-center text-sm bg-green-50">
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <span className="font-medium">Notes</span>
+                      <span className="font-medium">Moyenne</span>
+                    </div>
+                  </TableHead>
+                  <TableHead></TableHead>
+                  <TableHead></TableHead>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {studentStats.notesList.map((note, index) => (
-                  <TableRow key={index}>
-                    <TableCell className="font-medium">{note.matiere}</TableCell>
-                    {studentStats.isComposition ? (
-                      <>
-                        <TableCell className="text-center">
-                          <span className={note.devoirNote > 0 ? getGradeColor(note.devoirNote) : 'text-gray-400'}>
-                            {note.devoirNote > 0 ? note.devoirNote.toFixed(2) : '-'}
-                          </span>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <span className={note.compositionNote > 0 ? getGradeColor(note.compositionNote) : 'text-gray-400'}>
-                            {note.compositionNote > 0 ? note.compositionNote.toFixed(2) : '-'}
-                          </span>
-                        </TableCell>
-                      </>
-                    ) : (
-                      <TableCell className="text-center">
-                        <span className={note.note > 0 ? getGradeColor(note.note) : 'text-gray-400'}>
-                          {note.note > 0 ? note.note.toFixed(2) : '-'}
-                        </span>
-                      </TableCell>
-                    )}
-                    <TableCell className="text-center">{note.coefficient}</TableCell>
+              )}
+            </TableHeader>
+            <TableBody>
+              <TableRow>
+                <TableCell className="font-medium">{studentNumber}</TableCell>
+                {showCalculatedRank && (
+                  <TableCell className="text-center font-bold text-blue-600">
+                    1
+                  </TableCell>
+                )}
+                <TableCell className="font-medium">{studentName}</TableCell>
+                
+                {isComposition ? (
+                  <>
+                    {/* Devoir Column with Separator */}
+                    <TableCell className="text-center bg-blue-50 border-r">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="text-sm font-medium text-gray-700">
+                          {studentStats.total_devoir_notes && studentStats.total_devoir_notes > 0 
+                            ? studentStats.total_devoir_notes.toFixed(1) 
+                            : "-"}
+                        </div>
+                        <div className={`text-sm font-bold ${studentStats.devoir_average && studentStats.devoir_average > 0 ? getGradeColor(studentStats.devoir_average) : "text-gray-400"}`}>
+                          {studentStats.devoir_average && studentStats.devoir_average > 0 
+                            ? studentStats.devoir_average.toFixed(2) 
+                            : "-"}
+                        </div>
+                      </div>
+                    </TableCell>
+                    
+                    {/* Composition Column */}
+                    <TableCell className="text-center bg-green-50">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="text-sm font-medium text-gray-700">
+                          {studentStats.total_composition_notes && studentStats.total_composition_notes > 0 
+                            ? studentStats.total_composition_notes.toFixed(1) 
+                            : "-"}
+                        </div>
+                        <div className={`text-sm font-bold ${studentStats.composition_average && studentStats.composition_average > 0 ? getGradeColor(studentStats.composition_average) : "text-gray-400"}`}>
+                          {studentStats.composition_average && studentStats.composition_average > 0 
+                            ? studentStats.composition_average.toFixed(2) 
+                            : "-"}
+                        </div>
+                      </div>
+                    </TableCell>
+                  </>
+                ) : (
+                  <>
                     <TableCell className="text-center">
-                      <span className={`font-semibold ${note.moyenne > 0 ? getGradeColor(note.moyenne) : 'text-gray-400'}`}>
-                        {note.moyenne > 0 ? note.moyenne.toFixed(2) : '-'}
+                      <span className={`text-sm font-medium ${getGradeColor(studentStats.general_average)}`}>
+                        {studentStats.general_average > 0 ? studentStats.general_average.toFixed(2) : "-"}
                       </span>
                     </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+                    <TableCell className="text-center">
+                      <span className={`text-sm font-bold ${getGradeColor(studentStats.general_average)}`}>
+                        {studentStats.general_average > 0 ? studentStats.general_average.toFixed(2) : "-"}
+                      </span>
+                    </TableCell>
+                  </>
+                )}
+                
+                {/* Action Column - Eye icon disabled */}
+                <TableCell className="text-center">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled
+                    className="opacity-50 cursor-not-allowed"
+                  >
+                    <Eye className="h-4 w-4" />
+                  </Button>
+                </TableCell>
+                
+                {/* Bulletin Button - Disabled for students */}
+                <TableCell className="text-center">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleGeneratePDF}
+                    disabled
+                    className="bg-green-500 hover:bg-green-600 text-white opacity-50 cursor-not-allowed"
+                  >
+                    <Printer className="h-4 w-4 mr-2" />
+                    Bulletin de notes
+                  </Button>
+                </TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </div>
       </div>
     </Layout>
   );
