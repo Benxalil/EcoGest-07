@@ -53,7 +53,7 @@ export const useParentInfo = (): UseParentInfoReturn => {
       // Récupérer les informations du parent depuis la table students
       const { data: studentData, error: fetchError } = await supabase
         .from('students')
-        .select('parent_first_name, parent_last_name, parent_phone, parent_email, parent_matricule')
+        .select('parent_first_name, parent_last_name, parent_phone, parent_email, parent_matricule, emergency_contact')
         .or(`parent_email.ilike.${profile.email}${parentMatricule ? `,parent_matricule.ilike.${parentMatricule}` : ''}`)
         .limit(1)
         .single();
@@ -72,10 +72,29 @@ export const useParentInfo = (): UseParentInfoReturn => {
         return;
       }
 
+      // Extraire le nom depuis emergency_contact si parent_first_name et parent_last_name sont vides
+      let firstName = studentData.parent_first_name || '';
+      let lastName = studentData.parent_last_name || '';
+      
+      if (!firstName && !lastName && studentData.emergency_contact) {
+        // Format attendu: "Prénom Nom - Téléphone (Relation)"
+        const nameMatch = studentData.emergency_contact.match(/^([^\-]+)\s-\s/);
+        if (nameMatch) {
+          const fullName = nameMatch[1].trim();
+          const nameParts = fullName.split(' ');
+          if (nameParts.length >= 2) {
+            firstName = nameParts[0];
+            lastName = nameParts.slice(1).join(' ');
+          } else {
+            firstName = fullName;
+          }
+        }
+      }
+
       // Si on a trouvé les données dans students, les utiliser
       const info: ParentInfo = {
-        firstName: studentData.parent_first_name || profile.firstName || '',
-        lastName: studentData.parent_last_name || profile.lastName || '',
+        firstName: firstName || profile.firstName || '',
+        lastName: lastName || profile.lastName || '',
         email: studentData.parent_email || profile.email || '',
         phone: studentData.parent_phone || profile.phone || '',
         matricule: studentData.parent_matricule || parentMatricule || profile.email || ''
