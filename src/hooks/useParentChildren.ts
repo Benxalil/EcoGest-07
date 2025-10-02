@@ -69,6 +69,13 @@ export const useParentChildren = (): UseParentChildrenReturn => {
         return;
       }
 
+      // Extraire le matricule parent depuis l'email (format: ParentXXX@ecole.app)
+      const emailMatch = profile.email.match(/Parent(\d+)@/i);
+      const parentMatricule = emailMatch ? `PARENT${emailMatch[1].padStart(3, '0')}` : null;
+
+      console.log('Parent email:', profile.email);
+      console.log('Extracted parent matricule:', parentMatricule);
+
       // Récupérer tous les enfants liés au parent via parent_email ou parent_matricule
       const { data: childrenData, error: fetchError } = await supabase
         .from('students')
@@ -81,7 +88,7 @@ export const useParentChildren = (): UseParentChildrenReturn => {
             section
           )
         `)
-        .or(`parent_email.eq.${profile.email},parent_matricule.eq.${profile.email}`)
+        .or(`parent_email.eq.${profile.email}${parentMatricule ? `,parent_matricule.eq.${parentMatricule}` : ''}`)
         .eq('is_active', true)
         .order('first_name', { ascending: true });
 
