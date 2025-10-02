@@ -21,7 +21,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Session } from "@supabase/supabase-js";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import { LoadingSkeleton } from "@/components/ui/loading-skeleton";
-import { useUserRole } from "@/hooks/useUserRole";
+import { useOptimizedUserData } from "@/hooks/useOptimizedUserData";
 
 const stats = [
   {
@@ -52,10 +52,13 @@ const stats = [
 
 const Index = () => {
   const navigate = useNavigate();
-  // Hooks Supabase
-  const { isTeacher, loading: userLoading, userProfile } = useUserRole();
+  // Hooks optimisés
+  const { profile, loading: userLoading } = useOptimizedUserData();
   const [activeTab, setActiveTab] = useState<"apercu" | "analytique">("apercu");
   const [showMoreSchedules, setShowMoreSchedules] = useState(false);
+  
+  // Helper pour vérifier si l'utilisateur est enseignant
+  const isTeacher = profile?.role === 'teacher';
   
   // Hook optimisé pour charger toutes les données en parallèle
   const { 
@@ -255,8 +258,8 @@ const Index = () => {
     );
   }
 
-  // Dashboard spécifique pour les enseignants - Priorité maximale
-  if (isTeacher()) {
+  // Dashboard spécifique pour les enseignants - Affichage immédiat sans attendre les données
+  if (isTeacher) {
     return (
       <Layout>
         <TeacherDashboard />

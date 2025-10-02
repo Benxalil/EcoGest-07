@@ -3,21 +3,22 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Users, Calendar, Clock, BookOpen, Megaphone, Award } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useUserRole } from "@/hooks/useUserRole";
-import { useTeacherDashboardData } from "@/hooks/useTeacherDashboardData";
+import { useOptimizedUserData } from "@/hooks/useOptimizedUserData";
+import { useOptimizedTeacherData } from "@/hooks/useOptimizedTeacherData";
+import { LoadingSkeleton } from "@/components/ui/loading-skeleton";
 
 const TeacherDashboard = memo(() => {
   const navigate = useNavigate();
-  const { userProfile } = useUserRole();
+  const { profile } = useOptimizedUserData();
   const { 
-    teacherClasses,
-    teacherStudents,
+    classes,
+    students,
     todaySchedules,
     announcements,
     stats,
     loading,
     error
-  } = useTeacherDashboardData();
+  } = useOptimizedTeacherData();
 
   // Memoized greeting function
   const greeting = useMemo(() => {
@@ -33,10 +34,9 @@ const TeacherDashboard = memo(() => {
 
   if (loading) {
     return (
-      <div className="space-y-6">
-        <div className="text-center py-12">
-          <p className="text-gray-500 text-lg">Chargement des données...</p>
-        </div>
+      <div className="p-8 space-y-6">
+        <LoadingSkeleton type="stats" count={4} />
+        <LoadingSkeleton type="card" count={2} />
       </div>
     );
   }
@@ -56,7 +56,7 @@ const TeacherDashboard = memo(() => {
       {/* Header de bienvenue personnalisé pour l'enseignant */}
       <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg p-6 text-white">
         <h1 className="text-2xl font-bold mb-2">
-          {greeting}, {userProfile?.firstName} {userProfile?.lastName} !
+          {greeting}, {profile?.firstName} {profile?.lastName} !
         </h1>
         <p className="text-blue-100">
           Bienvenue sur votre tableau de bord enseignant.
@@ -100,7 +100,7 @@ const TeacherDashboard = memo(() => {
                 Cours Aujourd'hui
               </p>
               <p className="text-2xl sm:text-3xl font-bold text-purple-600">
-                {stats.todayCoursesCount}
+                {stats.todayCourses}
               </p>
             </div>
             <Clock className="h-5 w-5 sm:h-6 sm:w-6 text-purple-600 flex-shrink-0 ml-2" />
@@ -114,7 +114,7 @@ const TeacherDashboard = memo(() => {
                 Annonces
               </p>
               <p className="text-2xl sm:text-3xl font-bold text-orange-600">
-                {stats.announcementsCount}
+                {stats.totalAnnouncements}
               </p>
             </div>
             <Megaphone className="h-5 w-5 sm:h-6 sm:w-6 text-orange-600 flex-shrink-0 ml-2" />

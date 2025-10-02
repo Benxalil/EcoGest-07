@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useUserRole } from './useUserRole';
+import { useOptimizedUserData } from './useOptimizedUserData';
 import { supabase } from '@/integrations/supabase/client';
-import { useCache } from './useCache';
+import { useOptimizedCache } from './useOptimizedCache';
 
 export interface DashboardData {
   classes: any[];
@@ -15,6 +15,9 @@ export interface DashboardData {
 }
 
 export const useDashboardData = () => {
+  const { profile, loading: userLoading } = useOptimizedUserData();
+  const cache = useOptimizedCache();
+  
   const [data, setData] = useState<DashboardData>({
     classes: [],
     students: [],
@@ -25,17 +28,14 @@ export const useDashboardData = () => {
     loading: true,
     error: null
   });
-  
-  const { userProfile, loading: userLoading } = useUserRole();
-  const cache = useCache();
 
   // Optimized single data fetch function
   const fetchAllDashboardData = useCallback(async () => {
-    if (!userProfile?.schoolId || userLoading) return;
+    if (!profile?.schoolId || userLoading) return;
 
-    const cacheKey = `dashboard-${userProfile.schoolId}`;
+    const cacheKey = `dashboard-${profile.schoolId}-${profile.role}`;
     
-    // Check cache first
+    // Check cache first (5 minutes pour données dashboard)
     const cached = cache.get<Omit<DashboardData, 'loading' | 'error'>>(cacheKey);
     if (cached) {
       setData(prev => ({ ...cached, loading: false, error: null }));
@@ -45,7 +45,7 @@ export const useDashboardData = () => {
     try {
       setData(prev => ({ ...prev, loading: true, error: null }));
 
-      // Single optimized query for all data
+      // Single optimized query - sélection minimale des colonnes nécessaires
       const [
         { data: classes, error: classesError },
         { data: students, error: studentsError },
@@ -54,12 +54,12 @@ export const useDashboardData = () => {
         { data: announcements, error: announcementsError },
         { data: academicYears, error: academicError }
       ] = await Promise.all([
-        supabase.from('classes').select('*').eq('school_id', userProfile.schoolId).order('name'),
-        supabase.from('students').select('*').eq('school_id', userProfile.schoolId).eq('is_active', true),
-        supabase.from('teachers').select('*').eq('school_id', userProfile.schoolId).eq('is_active', true),
-        supabase.from('schools').select('*').eq('id', userProfile.schoolId).single(),
-        supabase.from('announcements').select('*').eq('school_id', userProfile.schoolId).eq('is_published', true).order('created_at', { ascending: false }),
-        supabase.from('academic_years').select('*').eq('school_id', userProfile.schoolId).eq('is_current', true)
+        supabase.from('classes').select('id, name, level, section, effectif').eq('school_id', profile.schoolId).order('name'),
+        supabase.from('students').select('id, first_name, last_name, class_id').eq('school_id', profile.schoolId).eq('is_active', true),
+        supabase.from('teachers').select('id, first_name, last_name').eq('school_id', profile.schoolId).eq('is_active', true),
+        supabase.from('schools').select('id, name, logo_url, slogan').eq('id', profile.schoolId).single(),
+        supabase.from('announcements').select('id, title, content, created_at, priority').eq('school_id', profile.schoolId).eq('is_published', true).order('created_at', { ascending: false }).limit(10),
+        supabase.from('academic_years').select('name').eq('school_id', profile.schoolId).eq('is_current', true).limit(1)
       ]);
 
       // Handle errors
@@ -77,7 +77,7 @@ export const useDashboardData = () => {
         academicYear: academicYears?.[0]?.name || '2024/2025'
       };
 
-      // Cache the results for 5 minutes
+      // Cache the results for 5 minutes (données dashboard)
       cache.set(cacheKey, dashboardData, 5 * 60 * 1000);
       
       setData({
@@ -94,7 +94,7 @@ export const useDashboardData = () => {
         error: error instanceof Error ? error.message : 'Error loading dashboard data'
       }));
     }
-  }, [userProfile?.schoolId, userLoading, cache]);
+  }, [profile?.schoolId, profile?.role, userLoading, cache]);
 
   // Fetch data when user profile is ready
   useEffect(() => {
