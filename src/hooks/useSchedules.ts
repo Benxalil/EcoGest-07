@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserRole } from './useUserRole';
 import { useToast } from '@/hooks/use-toast';
@@ -40,9 +40,10 @@ export const useSchedules = (classId?: string) => {
   const { toast } = useToast();
   const cache = useOptimizedCache();
 
-  const fetchSchedules = async () => {
+  const fetchSchedules = useCallback(async () => {
     if (!userProfile?.schoolId || !classId) {
       setLoading(false);
+      setSchedules([]);
       return;
     }
 
@@ -65,13 +66,15 @@ export const useSchedules = (classId?: string) => {
       }));
 
       setSchedules(organizedSchedules);
+      setError(null);
     } catch (err) {
       console.error('Erreur lors de la récupération des emplois du temps:', err);
       setError(err instanceof Error ? err.message : 'Erreur inconnue');
+      setSchedules([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, [userProfile?.schoolId, classId]);
 
   const createCourse = async (courseData: CreateCourseData) => {
     if (!userProfile?.schoolId) return false;
@@ -239,7 +242,7 @@ export const useSchedules = (classId?: string) => {
 
   useEffect(() => {
     fetchSchedules();
-  }, [userProfile?.schoolId, classId]);
+  }, [fetchSchedules]);
 
   return {
     schedules,
