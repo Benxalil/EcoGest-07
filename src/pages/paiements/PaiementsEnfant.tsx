@@ -7,18 +7,62 @@ import { supabase } from "@/integrations/supabase/client";
 import { useParentChildren } from "@/hooks/useParentChildren";
 import { ParentChildSelector } from "@/components/parent/ParentChildSelector";
 import { useSubscriptionPlan } from "@/hooks/useSubscriptionPlan";
-import { Check, Clock, X, Lock, Crown } from "lucide-react";
+import { CreditCard, CheckCircle, Clock, XCircle, Lock, Crown } from "lucide-react";
 import { Database } from "@/integrations/supabase/types";
 import { useNavigate } from "react-router-dom";
 
 type Payment = Database['public']['Tables']['payments']['Row'];
 
+interface PaymentMonth {
+  id: string;
+  month: string;
+  amount: number;
+  status: 'paid' | 'pending' | 'overdue';
+  paidDate?: string;
+  dueDate: string;
+  payment?: Payment;
+}
+
 export default function PaiementsEnfant() {
   const { hasFeature, currentPlan } = useSubscriptionPlan();
   const navigate = useNavigate();
-  const [payments, setPayments] = useState<Payment[]>([]);
+  const [paymentMonths, setPaymentMonths] = useState<PaymentMonth[]>([]);
   const [loading, setLoading] = useState(true);
   const { children, selectedChild, setSelectedChildId, loading: childrenLoading } = useParentChildren();
+
+  // Générer tous les mois de l'année scolaire
+  const generateAcademicYearMonths = () => {
+    const months = [
+      { name: 'Septembre', dueDay: 30 },
+      { name: 'Octobre', dueDay: 31 },
+      { name: 'Novembre', dueDay: 30 },
+      { name: 'Décembre', dueDay: 31 },
+      { name: 'Janvier', dueDay: 31 },
+      { name: 'Février', dueDay: 28 },
+      { name: 'Mars', dueDay: 31 },
+      { name: 'Avril', dueDay: 30 },
+      { name: 'Mai', dueDay: 31 },
+      { name: 'Juin', dueDay: 30 },
+      { name: 'Juillet', dueDay: 31 }
+    ];
+
+    const currentYear = new Date().getFullYear();
+    const currentMonth = new Date().getMonth();
+    
+    // Si on est entre janvier et août, l'année scolaire a commencé l'année précédente
+    const startYear = currentMonth >= 0 && currentMonth < 8 ? currentYear - 1 : currentYear;
+    
+    return months.map((month, index) => {
+      const monthIndex = index + 8; // Septembre = 8
+      const year = monthIndex > 11 ? startYear + 1 : startYear;
+      const actualMonthIndex = monthIndex > 11 ? monthIndex - 12 : monthIndex;
+      
+      return {
+        name: month.name,
+        dueDate: new Date(year, actualMonthIndex, month.dueDay).toISOString()
+      };
+    });
+  };
 
   useEffect(() => {
     const fetchChildPayments = async () => {
@@ -30,19 +74,55 @@ export default function PaiementsEnfant() {
       try {
         setLoading(true);
 
-        // Récupérer les paiements de l'enfant
+        // Récupérer tous les paiements de l'enfant
         const { data: paymentsData, error } = await supabase
           .from('payments')
           .select('*')
-          .eq('student_id', selectedChild.id)
-          .order('payment_date', { ascending: false });
+          .eq('student_id', selectedChild.id);
 
         if (error) {
           console.error('Erreur lors de la récupération des paiements:', error);
-          setPayments([]);
-        } else {
-          setPayments(paymentsData || []);
         }
+
+        // Générer tous les mois de l'année scolaire
+        const academicMonths = generateAcademicYearMonths();
+        
+        // Créer un map des paiements existants par mois
+        const paymentsMap = new Map<string, Payment>();
+        (paymentsData || []).forEach(payment => {
+          if (payment.payment_month) {
+            paymentsMap.set(payment.payment_month.toLowerCase(), payment);
+          }
+        });
+
+        // Construire la liste complète avec statuts
+        const now = new Date();
+        const monthsWithStatus: PaymentMonth[] = academicMonths.map(month => {
+          const payment = paymentsMap.get(month.name.toLowerCase());
+          const dueDate = new Date(month.dueDate);
+          
+          let status: 'paid' | 'pending' | 'overdue' = 'pending';
+          
+          if (payment) {
+            // Si un paiement existe, le statut est "paid"
+            status = 'paid';
+          } else if (now > dueDate) {
+            // Si la date d'échéance est dépassée et pas de paiement, c'est "overdue"
+            status = 'overdue';
+          }
+
+          return {
+            id: payment?.id || `${month.name}-${selectedChild.id}`,
+            month: month.name,
+            amount: payment ? Number(payment.amount) : 0,
+            status,
+            paidDate: payment?.payment_date,
+            dueDate: month.dueDate,
+            payment
+          };
+        });
+
+        setPaymentMonths(monthsWithStatus);
       } catch (error) {
         console.error('Erreur:', error);
       } finally {
@@ -51,6 +131,28 @@ export default function PaiementsEnfant() {
     };
 
     fetchChildPayments();
+
+    // Écouter les changements en temps réel sur la table payments
+    const channel = supabase
+      .channel('payments-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'payments',
+          filter: `student_id=eq.${selectedChild?.id}`
+        },
+        () => {
+          // Recharger les paiements quand il y a un changement
+          fetchChildPayments();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [selectedChild?.id]);
 
   // Vérifier si l'utilisateur a accès à la gestion des paiements
@@ -98,45 +200,44 @@ export default function PaiementsEnfant() {
     );
   }
 
-  const getPaymentStatusIcon = (payment: Payment) => {
-    const now = new Date();
-    const paymentDate = new Date(payment.payment_date);
-    
-    if (payment.payment_type === 'paid') {
-      return <Check className="h-4 w-4 text-green-600" />;
-    } else if (paymentDate < now) {
-      return <X className="h-4 w-4 text-red-600" />;
-    } else {
-      return <Clock className="h-4 w-4 text-yellow-600" />;
+  const getStatusIcon = (status: 'paid' | 'pending' | 'overdue') => {
+    switch (status) {
+      case 'paid':
+        return <CheckCircle className="h-5 w-5 text-green-600" />;
+      case 'pending':
+        return <Clock className="h-5 w-5 text-yellow-600" />;
+      case 'overdue':
+        return <XCircle className="h-5 w-5 text-red-600" />;
     }
   };
 
-  const getPaymentStatusBadge = (payment: Payment) => {
-    const now = new Date();
-    const paymentDate = new Date(payment.payment_date);
-    
-    if (payment.payment_type === 'paid') {
-      return <Badge variant="default" className="bg-green-100 text-green-800">Payé</Badge>;
-    } else if (paymentDate < now) {
-      return <Badge variant="destructive">En retard</Badge>;
-    } else {
-      return <Badge variant="secondary">En attente</Badge>;
+  const getStatusBadge = (status: 'paid' | 'pending' | 'overdue') => {
+    switch (status) {
+      case 'paid':
+        return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Payé</Badge>;
+      case 'pending':
+        return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">En attente</Badge>;
+      case 'overdue':
+        return <Badge className="bg-red-100 text-red-800 hover:bg-red-100">En retard</Badge>;
     }
   };
 
-  const monthNames = [
-    'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
-    'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
-  ];
+  const formatAmount = (amount: number) => {
+    return new Intl.NumberFormat('fr-FR', {
+      style: 'currency',
+      currency: 'XOF',
+      minimumFractionDigits: 0
+    }).format(amount);
+  };
 
   if (childrenLoading || loading) {
     return (
       <Layout>
-        <div className="p-6">
-          <div className="animate-pulse">
-            <div className="h-8 bg-gray-200 rounded w-1/4 mb-6"></div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {[...Array(6)].map((_, i) => (
+        <div className="container mx-auto py-8">
+          <div className="animate-pulse space-y-4">
+            <div className="h-8 bg-gray-200 rounded w-64"></div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {[1, 2, 3, 4, 5, 6].map(i => (
                 <div key={i} className="h-32 bg-gray-200 rounded"></div>
               ))}
             </div>
@@ -149,7 +250,7 @@ export default function PaiementsEnfant() {
   if (children.length === 0) {
     return (
       <Layout>
-        <div className="p-6">
+        <div className="container mx-auto py-8">
           <Card>
             <CardHeader>
               <CardTitle>Paiements de votre enfant</CardTitle>
@@ -169,74 +270,135 @@ export default function PaiementsEnfant() {
     return null;
   }
 
+  const paidCount = paymentMonths.filter(p => p.status === 'paid').length;
+  const overdueCount = paymentMonths.filter(p => p.status === 'overdue').length;
+
   return (
     <Layout>
-      <div className="p-6 space-y-6">
-        <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold">Paiements - {selectedChild.first_name} {selectedChild.last_name}</h1>
+      <div className="container mx-auto py-8 space-y-8">
+        <div className="flex items-center gap-4">
+          <CreditCard className="h-8 w-8 text-blue-600" />
+          <h1 className="text-3xl font-bold text-gray-900">
+            Paiements - {selectedChild.first_name} {selectedChild.last_name}
+          </h1>
         </div>
 
-        {/* Sélecteur d'enfant */}
-        <ParentChildSelector 
-          children={children}
-          selectedChildId={selectedChild.id}
-          onChildSelect={setSelectedChildId}
-        />
+        {/* Sélecteur d'enfant si plusieurs enfants */}
+        {children.length > 1 && (
+          <ParentChildSelector 
+            children={children}
+            selectedChildId={selectedChild.id}
+            onChildSelect={setSelectedChildId}
+          />
+        )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {payments.map((payment) => {
-            const paymentMonth = new Date(payment.payment_date).getMonth();
-            const monthName = monthNames[paymentMonth];
-            
-            return (
-              <Card key={payment.id} className="relative">
-                <CardHeader className="pb-2">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      {getPaymentStatusIcon(payment)}
-                      {monthName}
-                    </CardTitle>
-                    {getPaymentStatusBadge(payment)}
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Type de paiement</p>
-                    <p className="font-medium">{payment.payment_type}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Montant</p>
-                    <p className="font-bold text-lg">{payment.amount} FCFA</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Date de paiement</p>
-                    <p className="text-sm">{new Date(payment.payment_date).toLocaleDateString('fr-FR')}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Méthode</p>
-                    <p className="text-sm">{payment.payment_method}</p>
-                  </div>
-                  {payment.payment_month && (
-                    <div>
-                      <p className="text-sm text-muted-foreground">Mois concerné</p>
-                      <p className="text-sm">{payment.payment_month}</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-
-        {payments.length === 0 && (
+        {/* Statistiques */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <Card>
-            <CardContent className="text-center py-8">
-              <p className="text-muted-foreground">
-                Aucun paiement enregistré pour votre enfant.
-              </p>
+            <CardContent className="p-6">
+              <div className="flex items-center gap-3">
+                <CheckCircle className="h-8 w-8 text-green-600" />
+                <div>
+                  <p className="text-2xl font-bold text-green-600">{paidCount}</p>
+                  <p className="text-sm text-gray-500">Mois payés</p>
+                </div>
+              </div>
             </CardContent>
           </Card>
-        )}
+
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center gap-3">
+                <XCircle className="h-8 w-8 text-red-600" />
+                <div>
+                  <p className="text-2xl font-bold text-red-600">{overdueCount}</p>
+                  <p className="text-sm text-gray-500">En retard</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Liste des paiements par mois */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {paymentMonths.map((paymentMonth) => (
+            <Card key={paymentMonth.id} className="hover:shadow-md transition-shadow">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg">{paymentMonth.month}</CardTitle>
+                  {getStatusIcon(paymentMonth.status)}
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {paymentMonth.payment && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-500">Montant:</span>
+                      <span className="font-semibold">{formatAmount(paymentMonth.amount)}</span>
+                    </div>
+                  )}
+                  
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-500">Échéance:</span>
+                    <span className="text-sm">{new Date(paymentMonth.dueDate).toLocaleDateString('fr-FR')}</span>
+                  </div>
+                  
+                  {paymentMonth.paidDate && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-500">Payé le:</span>
+                      <span className="text-sm text-green-600">{new Date(paymentMonth.paidDate).toLocaleDateString('fr-FR')}</span>
+                    </div>
+                  )}
+                  
+                  {paymentMonth.payment?.payment_method && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-500">Méthode:</span>
+                      <span className="text-sm">{paymentMonth.payment.payment_method}</span>
+                    </div>
+                  )}
+                  
+                  <div className="pt-2">
+                    {getStatusBadge(paymentMonth.status)}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Légende */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Légende des statuts</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="flex items-center gap-3">
+                <CheckCircle className="h-5 w-5 text-green-600" />
+                <div>
+                  <p className="font-medium text-green-600">Payé</p>
+                  <p className="text-sm text-gray-500">Mois déjà payé</p>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-3">
+                <Clock className="h-5 w-5 text-yellow-600" />
+                <div>
+                  <p className="font-medium text-yellow-600">En attente</p>
+                  <p className="text-sm text-gray-500">Mois en cours ou pas encore arrivé</p>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-3">
+                <XCircle className="h-5 w-5 text-red-600" />
+                <div>
+                  <p className="font-medium text-red-600">En retard</p>
+                  <p className="text-sm text-gray-500">Mois dépassé et non payé</p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </Layout>
   );
