@@ -62,7 +62,7 @@ const Index = () => {
   const isTeacher = profile?.role === 'teacher';
   const isStudent = profile?.role === 'student';
   
-  // Hook optimisé pour charger toutes les données en parallèle
+  // Hook optimisé pour charger toutes les données en parallèle (uniquement pour admin)
   const { 
     classes, 
     students, 

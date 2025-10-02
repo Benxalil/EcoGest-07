@@ -32,6 +32,12 @@ export const useDashboardData = () => {
   // Optimized single data fetch function
   const fetchAllDashboardData = useCallback(async () => {
     if (!profile?.schoolId || userLoading) return;
+    
+    // Ne charger les données que pour les administrateurs
+    if (profile.role === 'student' || profile.role === 'teacher' || profile.role === 'parent') {
+      setData(prev => ({ ...prev, loading: false }));
+      return;
+    }
 
     const cacheKey = `dashboard-${profile.schoolId}-${profile.role}`;
     

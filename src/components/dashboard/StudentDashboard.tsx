@@ -1,22 +1,25 @@
-import React, { memo, useMemo, useCallback, useEffect, useState } from "react";
+import React, { memo, useMemo, useCallback } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Calendar, Megaphone } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useOptimizedUserData } from "@/hooks/useOptimizedUserData";
-import { useOptimizedCache } from "@/hooks/useOptimizedCache";
+import { useStudentDashboardData } from "@/hooks/useStudentDashboardData";
 import { LoadingSkeleton } from "@/components/ui/loading-skeleton";
-import { supabase } from "@/integrations/supabase/client";
 
 const StudentDashboard = memo(() => {
   const navigate = useNavigate();
   const { profile } = useOptimizedUserData();
-  const cache = useOptimizedCache();
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [todaySchedules, setTodaySchedules] = useState<any[]>([]);
-  const [announcements, setAnnouncements] = useState<any[]>([]);
-  const [studentData, setStudentData] = useState<any>(null);
+  
+  // Utiliser le hook optimisé qui gère tout en une seule fois
+  const { 
+    student: studentData, 
+    classInfo,
+    todaySchedules, 
+    announcements, 
+    loading, 
+    error 
+  } = useStudentDashboardData();
 
   // Memoized greeting function
   const greeting = useMemo(() => {
@@ -27,86 +30,6 @@ const StudentDashboard = memo(() => {
   // Optimized navigation handlers
   const navigateToSchedules = useCallback(() => navigate("/emplois-du-temps"), [navigate]);
   const navigateToAnnouncements = useCallback(() => navigate("/annonces"), [navigate]);
-
-  // Charger les données de l'élève
-  useEffect(() => {
-    const loadStudentData = async () => {
-      if (!profile?.id || !profile?.schoolId) return;
-
-      try {
-        setLoading(true);
-
-        // Vérifier le cache (30 secondes)
-        const cacheKey = `student-dashboard-${profile.id}`;
-        const cachedData = cache.get<any>(cacheKey);
-        
-        if (cachedData) {
-          setStudentData(cachedData.student);
-          setTodaySchedules(cachedData.schedules);
-          setAnnouncements(cachedData.announcements);
-          setLoading(false);
-          return;
-        }
-
-        // Récupérer les informations de l'élève avec filtre school_id
-        const { data: student, error: studentError } = await supabase
-          .from('students')
-          .select('*, classes(id, name, level, section)')
-          .eq('user_id', profile.id)
-          .eq('school_id', profile.schoolId)
-          .single();
-
-        if (studentError) throw studentError;
-        
-        setStudentData(student);
-
-        // Récupérer l'emploi du temps du jour pour la classe de l'élève
-        if (student?.class_id) {
-          const today = new Date().getDay(); // 0 = dimanche, 1 = lundi, etc.
-          const daysMap = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-          const dayName = daysMap[today];
-
-          const { data: schedules, error: schedulesError } = await supabase
-            .from('schedules')
-            .select('*, subjects(name)')
-            .eq('class_id', student.class_id)
-            .eq('day_of_week', today)
-            .order('start_time');
-
-          if (!schedulesError && schedules) {
-            setTodaySchedules(schedules);
-          }
-        }
-
-        // Récupérer les 3 dernières annonces
-        const { data: announcementsData, error: announcementsError } = await supabase
-          .from('announcements')
-          .select('*')
-          .eq('school_id', profile.schoolId)
-          .order('created_at', { ascending: false })
-          .limit(3);
-
-        if (!announcementsError && announcementsData) {
-          setAnnouncements(announcementsData);
-        }
-
-        // Mettre en cache pour 30 secondes
-        cache.set(cacheKey, {
-          student,
-          schedules: todaySchedules,
-          announcements: announcementsData || []
-        }, 30 * 1000);
-
-      } catch (err: any) {
-        console.error("Erreur lors du chargement des données:", err);
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadStudentData();
-  }, [profile, cache]);
 
   if (loading) {
     return (
@@ -135,9 +58,9 @@ const StudentDashboard = memo(() => {
         </h1>
         <p className="text-primary-foreground/90">
           Bienvenue sur votre tableau de bord étudiant.
-          {studentData?.classes && (
+          {classInfo && (
             <span className="block mt-1">
-              Classe : <span className="font-semibold">{studentData.classes.name} {studentData.classes.level}</span>
+              Classe : <span className="font-semibold">{classInfo.name} {classInfo.level}</span>
             </span>
           )}
         </p>

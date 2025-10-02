@@ -18,6 +18,8 @@ interface PerformanceThreshold {
 class PerformanceMonitor {
   private metrics: PerformanceMetric[] = [];
   private observers: PerformanceObserver[] = [];
+  private logThrottle: Map<string, number> = new Map();
+  private enabled: boolean = true;
   
   private thresholds: Record<string, PerformanceThreshold> = {
     FCP: { warning: 1800, critical: 3000 },
@@ -28,6 +30,12 @@ class PerformanceMonitor {
   };
 
   initialize() {
+    // Désactiver en production pour améliorer les performances
+    if (typeof window !== 'undefined' && import.meta.env.PROD) {
+      this.enabled = false;
+      return;
+    }
+    
     if (typeof window === 'undefined' || !('PerformanceObserver' in window)) {
       return;
     }
@@ -133,9 +141,16 @@ class PerformanceMonitor {
           const resource = entry as PerformanceResourceTiming;
           const duration = resource.responseEnd - resource.startTime;
           
-          // Alert on slow resources (>2s for network requests)
-          if (duration > 2000) {
-            console.warn(`Slow resource detected: ${resource.name} (${Math.round(duration)}ms)`);
+          // Alert on slow resources (>3s for network requests) avec throttling
+          if (duration > 3000 && this.enabled) {
+            const now = Date.now();
+            const lastLog = this.logThrottle.get(resource.name) || 0;
+            
+            // Log seulement si plus de 10 secondes depuis le dernier log pour cette ressource
+            if (now - lastLog > 10000) {
+              console.warn(`Slow resource detected: ${resource.name} (${Math.round(duration)}ms)`);
+              this.logThrottle.set(resource.name, now);
+            }
           }
         }
       });
@@ -161,15 +176,24 @@ class PerformanceMonitor {
   }
 
   private checkThreshold(metricName: string, value: number) {
+    if (!this.enabled) return;
+    
     const threshold = this.thresholds[metricName];
     if (!threshold) return;
 
+    // Throttling des logs : max 1 log par métrique toutes les 10 secondes
+    const now = Date.now();
+    const lastLog = this.logThrottle.get(metricName) || 0;
+    if (now - lastLog < 10000) {
+      return; // Skip ce log
+    }
+
     if (value > threshold.critical) {
       console.error(`🔴 CRITICAL: ${metricName} is ${Math.round(value)}ms (threshold: ${threshold.critical}ms)`);
+      this.logThrottle.set(metricName, now);
     } else if (value > threshold.warning) {
       console.warn(`🟡 WARNING: ${metricName} is ${Math.round(value)}ms (threshold: ${threshold.warning}ms)`);
-    } else {
-      console.log(`🟢 GOOD: ${metricName} is ${Math.round(value)}ms`);
+      this.logThrottle.set(metricName, now);
     }
   }
 
@@ -271,6 +295,14 @@ class PerformanceMonitor {
     this.metrics = [];
     this.observers.forEach(observer => observer.disconnect());
     this.observers = [];
+    this.logThrottle.clear();
+  }
+  
+  /**
+   * Enable or disable monitoring
+   */
+  setEnabled(enabled: boolean) {
+    this.enabled = enabled;
   }
 }
 
