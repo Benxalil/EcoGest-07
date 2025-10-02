@@ -4,19 +4,34 @@ import path from "path";
 import { componentTagger } from "lovable-tagger";
 import type { Plugin } from "vite";
 
-// Custom plugin for cache headers
+// Custom plugin for cache headers and MIME types
 const cacheHeadersPlugin = (): Plugin => ({
   name: 'cache-headers',
   configureServer(server) {
     server.middlewares.use((req, res, next) => {
       const url = req.url || '';
       
-      // Long-term cache for static assets (JS, CSS, images)
-      if (url.match(/\.(js|css|woff2?|ttf|otf|eot|svg|png|jpg|jpeg|gif|webp|ico)$/)) {
+      // Set correct MIME types for JavaScript modules
+      if (url.match(/\.(js|mjs|jsx|ts|tsx)$/)) {
+        res.setHeader('Content-Type', 'text/javascript');
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      }
+      // CSS files
+      else if (url.endsWith('.css')) {
+        res.setHeader('Content-Type', 'text/css');
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      }
+      // Fonts
+      else if (url.match(/\.(woff2?|ttf|otf|eot)$/)) {
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      }
+      // Images
+      else if (url.match(/\.(svg|png|jpg|jpeg|gif|webp|ico)$/)) {
         res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
       }
       // Short cache for HTML
       else if (url.endsWith('.html') || url === '/') {
+        res.setHeader('Content-Type', 'text/html');
         res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
       }
       // API routes - no cache
