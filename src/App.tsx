@@ -1,60 +1,68 @@
 
-import React from "react";
+import React, { Suspense, lazy } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as SonnerToaster } from "@/components/ui/sonner";
 import { StudentRouteHandler } from "@/components/navigation/StudentRouteHandler";
 import AuthenticatedLayout from "@/components/layout/AuthenticatedLayout";
-import PageListeEnseignants from "./pages/enseignants/ListeEnseignants";
-import ModifierEnseignant from "./pages/enseignants/ModifierEnseignant";
-import ListeEleves from "./pages/eleves/ListeEleves";
-import ElevesParClasse from "./pages/eleves/ElevesParClasse";
-import ModifierEleve from "./pages/eleves/ModifierEleve";
-import MonProfil from "./pages/eleves/MonProfil";
-import ProfilEnfant from "./pages/eleves/ProfilEnfant";
-import Index from "./pages/Index";
-import ListeClasses from "./pages/classes/ListeClasses";
-import ModifierClasse from "./pages/classes/ModifierClasse";
-import ListeMatieres from "./pages/matieres/ListeMatieres";
-import ListeClassesExamens from "./pages/examens/ListeClassesExamens";
-import ListeExamens from "./pages/examens/ListeExamens";
-import ListeElevesNotes from "./pages/examens/ListeElevesNotes";
-import ListeExamensNotes from "./pages/notes/ListeExamensNotes";
-import ListeMatieresNotes from "./pages/notes/ListeMatieres";
-import ListeElevesNotesPage from "./pages/notes/ListeElevesNotes";
-import EvaluerEleve from "./pages/notes/EvaluerEleve";
-import NotesParEleve from "./pages/notes/NotesParEleve";
-import ListeElevesClasse from "./pages/notes/ListeElevesClasse";
-import ConsulterNotes from "./pages/notes/ConsulterNotes";
-import ListeClassesResultats from "./pages/resultats/ListeClassesResultats";
-import ResultatsSemestre from "./pages/resultats/ResultatsSemestre";
-import BulletinAnnuel from "./pages/resultats/BulletinAnnuel";
-import MesResultats from "./pages/resultats/MesResultats";
-import ListeEmplois from "./pages/emplois/ListeEmplois";
-import EmploiDuTemps from "./pages/emplois/EmploiDuTemps";
-import CahierDeTexte from "./pages/emplois/CahierDeTexte";
-import AbsenceRetardClasse from "./pages/emplois/AbsenceRetardClasse";
-import ListeMatieresCahier from "./pages/emplois/ListeMatieresCahier";
-import ConsultationCahier from "./pages/emplois/ConsultationCahier";
-import ConsulterAbsencesRetards from "./pages/emplois/ConsulterAbsencesRetards";
-import EnregistrerAbsenceRetard from "./pages/emplois/EnregistrerAbsenceRetard";
-import ListeCahiersClasse from "./pages/emplois/ListeCahiersClasse";
-import GestionPaiements from "./pages/paiements/GestionPaiements";
-import PaiementsClasse from "./pages/paiements/PaiementsClasse";
-import MesPaiements from "./pages/paiements/MesPaiements";
-import PaiementsEnfant from "./pages/paiements/PaiementsEnfant";
-import ResultatsEnfant from "./pages/resultats/ResultatsEnfant";
-import ListeAnnonces from "./pages/annonces/ListeAnnonces";
 
-import Abonnement from "@/pages/abonnement/Abonnement";
-import PayTechConfig from "@/pages/admin/PayTechConfig";
-import Parametres from "./pages/parametres/Parametres";
-import AuthPage from "./pages/auth/AuthPage";
-import SchoolRegistrationPage from "./pages/auth/SchoolRegistrationPage";
-import SchoolSettings from "./pages/admin/SchoolSettings";
-import UserMigration from "./pages/admin/UserMigration";
-import Utilisateurs from "./pages/utilisateurs/Utilisateurs";
+// Lazy load all route components for better code splitting
+const Index = lazy(() => import("./pages/Index"));
+const PageListeEnseignants = lazy(() => import("./pages/enseignants/ListeEnseignants"));
+const ModifierEnseignant = lazy(() => import("./pages/enseignants/ModifierEnseignant"));
+const ListeEleves = lazy(() => import("./pages/eleves/ListeEleves"));
+const ElevesParClasse = lazy(() => import("./pages/eleves/ElevesParClasse"));
+const ModifierEleve = lazy(() => import("./pages/eleves/ModifierEleve"));
+const MonProfil = lazy(() => import("./pages/eleves/MonProfil"));
+const ProfilEnfant = lazy(() => import("./pages/eleves/ProfilEnfant"));
+const ListeClasses = lazy(() => import("./pages/classes/ListeClasses"));
+const ModifierClasse = lazy(() => import("./pages/classes/ModifierClasse"));
+const ListeMatieres = lazy(() => import("./pages/matieres/ListeMatieres"));
+const ListeClassesExamens = lazy(() => import("./pages/examens/ListeClassesExamens"));
+const ListeExamens = lazy(() => import("./pages/examens/ListeExamens"));
+const ListeElevesNotes = lazy(() => import("./pages/examens/ListeElevesNotes"));
+const ListeExamensNotes = lazy(() => import("./pages/notes/ListeExamensNotes"));
+const ListeMatieresNotes = lazy(() => import("./pages/notes/ListeMatieres"));
+const ListeElevesNotesPage = lazy(() => import("./pages/notes/ListeElevesNotes"));
+const EvaluerEleve = lazy(() => import("./pages/notes/EvaluerEleve"));
+const NotesParEleve = lazy(() => import("./pages/notes/NotesParEleve"));
+const ListeElevesClasse = lazy(() => import("./pages/notes/ListeElevesClasse"));
+const ConsulterNotes = lazy(() => import("./pages/notes/ConsulterNotes"));
+const ListeClassesResultats = lazy(() => import("./pages/resultats/ListeClassesResultats"));
+const ResultatsSemestre = lazy(() => import("./pages/resultats/ResultatsSemestre"));
+const BulletinAnnuel = lazy(() => import("./pages/resultats/BulletinAnnuel"));
+const MesResultats = lazy(() => import("./pages/resultats/MesResultats"));
+const ListeEmplois = lazy(() => import("./pages/emplois/ListeEmplois"));
+const EmploiDuTemps = lazy(() => import("./pages/emplois/EmploiDuTemps"));
+const CahierDeTexte = lazy(() => import("./pages/emplois/CahierDeTexte"));
+const AbsenceRetardClasse = lazy(() => import("./pages/emplois/AbsenceRetardClasse"));
+const ListeMatieresCahier = lazy(() => import("./pages/emplois/ListeMatieresCahier"));
+const ConsultationCahier = lazy(() => import("./pages/emplois/ConsultationCahier"));
+const ConsulterAbsencesRetards = lazy(() => import("./pages/emplois/ConsulterAbsencesRetards"));
+const EnregistrerAbsenceRetard = lazy(() => import("./pages/emplois/EnregistrerAbsenceRetard"));
+const ListeCahiersClasse = lazy(() => import("./pages/emplois/ListeCahiersClasse"));
+const GestionPaiements = lazy(() => import("./pages/paiements/GestionPaiements"));
+const PaiementsClasse = lazy(() => import("./pages/paiements/PaiementsClasse"));
+const MesPaiements = lazy(() => import("./pages/paiements/MesPaiements"));
+const PaiementsEnfant = lazy(() => import("./pages/paiements/PaiementsEnfant"));
+const ResultatsEnfant = lazy(() => import("./pages/resultats/ResultatsEnfant"));
+const ListeAnnonces = lazy(() => import("./pages/annonces/ListeAnnonces"));
+const Abonnement = lazy(() => import("@/pages/abonnement/Abonnement"));
+const PayTechConfig = lazy(() => import("@/pages/admin/PayTechConfig"));
+const Parametres = lazy(() => import("./pages/parametres/Parametres"));
+const AuthPage = lazy(() => import("./pages/auth/AuthPage"));
+const SchoolRegistrationPage = lazy(() => import("./pages/auth/SchoolRegistrationPage"));
+const SchoolSettings = lazy(() => import("./pages/admin/SchoolSettings"));
+const UserMigration = lazy(() => import("./pages/admin/UserMigration"));
+const Utilisateurs = lazy(() => import("./pages/utilisateurs/Utilisateurs"));
+
+// Loading fallback component
+const LoadingFallback = () => (
+  <div className="flex items-center justify-center min-h-screen">
+    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+  </div>
+);
 
 const queryClient = new QueryClient();
 
@@ -64,7 +72,8 @@ function App() {
       <Router>
         <AuthenticatedLayout>
           <StudentRouteHandler>
-            <Routes>
+            <Suspense fallback={<LoadingFallback />}>
+              <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/enseignants" element={<PageListeEnseignants />} />
             <Route path="/enseignants/modifier" element={<ModifierEnseignant />} />
@@ -116,7 +125,8 @@ function App() {
           <Route path="/admin/paytech-config" element={<PayTechConfig />} />
           <Route path="/admin/user-migration" element={<UserMigration />} />
           <Route path="/utilisateurs" element={<Utilisateurs />} />
-            </Routes>
+              </Routes>
+            </Suspense>
           </StudentRouteHandler>
         </AuthenticatedLayout>
       </Router>

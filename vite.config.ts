@@ -55,10 +55,37 @@ export default defineConfig(({ mode }) => ({
     // Code splitting optimization
     rollupOptions: {
       output: {
-        manualChunks: {
-          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-          'ui-vendor': ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-select'],
-          'supabase-vendor': ['@supabase/supabase-js'],
+        manualChunks(id) {
+          // Vendor chunks
+          if (id.includes('node_modules')) {
+            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) {
+              return 'react-vendor';
+            }
+            if (id.includes('@radix-ui')) {
+              return 'ui-vendor';
+            }
+            if (id.includes('@supabase')) {
+              return 'supabase-vendor';
+            }
+            if (id.includes('lucide-react')) {
+              return 'icons-vendor';
+            }
+            // Other node_modules
+            return 'vendor';
+          }
+          
+          // Split pages by domain
+          if (id.includes('/pages/')) {
+            if (id.includes('/enseignants/')) return 'pages-enseignants';
+            if (id.includes('/eleves/')) return 'pages-eleves';
+            if (id.includes('/classes/')) return 'pages-classes';
+            if (id.includes('/examens/')) return 'pages-examens';
+            if (id.includes('/notes/')) return 'pages-notes';
+            if (id.includes('/resultats/')) return 'pages-resultats';
+            if (id.includes('/emplois/')) return 'pages-emplois';
+            if (id.includes('/paiements/')) return 'pages-paiements';
+            if (id.includes('/admin/')) return 'pages-admin';
+          }
         },
       },
     },
