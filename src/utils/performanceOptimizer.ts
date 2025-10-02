@@ -79,28 +79,50 @@ export const measureAsyncPerformance = async (name: string, fn: () => Promise<vo
   console.log(`${name} took ${end - start} milliseconds`);
 };
 
-// Clean up function for abandoned localStorage data
+// Clean up function for old/abandoned localStorage data (conservative)
 export const cleanupAbandonedData = () => {
-  const keysToRemove = [];
-  
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    if (key) {
-      // Remove old schedule data that might be causing issues
-      if (key.startsWith('schedule-') || 
-          key.startsWith('eleves-') || 
-          key.startsWith('classes-') ||
-          key.startsWith('teachers-') ||
-          key.startsWith('emploi-')) {
-        keysToRemove.push(key);
+  try {
+    const keysToCheck = [];
+    const now = Date.now();
+    const maxAge = 7 * 24 * 60 * 60 * 1000; // 7 days
+    
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key) {
+        keysToCheck.push(key);
       }
     }
-  }
-  
-  keysToRemove.forEach(key => localStorage.removeItem(key));
-  
-  if (keysToRemove.length > 0) {
-    console.log(`Cleaned up ${keysToRemove.length} abandoned localStorage keys`);
+    
+    // Only remove truly abandoned data (with timestamps older than 7 days)
+    const keysToRemove = keysToCheck.filter(key => {
+      try {
+        const item = localStorage.getItem(key);
+        if (!item) return false;
+        
+        // Try to parse as JSON to check for timestamp
+        const data = JSON.parse(item);
+        if (data.timestamp && typeof data.timestamp === 'number') {
+          return (now - data.timestamp) > maxAge;
+        }
+        return false;
+      } catch {
+        return false; // Keep items that can't be parsed
+      }
+    });
+    
+    keysToRemove.forEach(key => {
+      try {
+        localStorage.removeItem(key);
+      } catch (error) {
+        console.error(`Failed to remove key ${key}:`, error);
+      }
+    });
+    
+    if (keysToRemove.length > 0) {
+      console.log(`Cleaned up ${keysToRemove.length} abandoned localStorage keys`);
+    }
+  } catch (error) {
+    console.error('Error during cleanup:', error);
   }
 };
 
