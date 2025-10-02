@@ -9,6 +9,10 @@ export default {
     "./src/**/*.{ts,tsx}",
   ],
   prefix: "",
+  // Optimize for production builds
+  future: {
+    hoverOnlyWhenSupported: true,
+  },
   theme: {
     container: {
       center: true,
