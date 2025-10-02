@@ -52,7 +52,7 @@ export default function ListeMatieresCahier() {
         <div className="container mx-auto p-6">
           <div className="text-center">
             <h1 className="text-2xl font-bold text-gray-900 mb-4">Classe non trouvée</h1>
-            <Button onClick={() => navigate('/emplois')}>
+            <Button onClick={() => navigate('/emplois-du-temps')}>
               <ArrowLeft className="h-4 w-4 mr-2" />
               Retour aux emplois du temps
             </Button>
@@ -69,7 +69,7 @@ export default function ListeMatieresCahier() {
           <div className="flex items-center space-x-4">
             <Button
               variant="ghost"
-              onClick={() => navigate('/emplois')}
+              onClick={() => navigate('/emplois-du-temps')}
               className="flex items-center"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />

@@ -66,7 +66,7 @@ export default function EmploiDuTemps() {
   const [hasAccess, setHasAccess] = useState<boolean>(true);
 
   const handleBack = () => {
-    navigate('/emplois');
+    navigate('/emplois-du-temps');
   };
 
   const form = useForm<CourseFormData>({
