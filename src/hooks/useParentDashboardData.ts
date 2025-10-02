@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useOptimizedCache } from './useOptimizedCache';
 
@@ -18,10 +18,16 @@ export const useParentDashboardData = (classId: string | null, schoolId: string 
   });
 
   const cache = useOptimizedCache();
+  const isFetchingRef = useRef(false);
 
   const fetchDashboardData = useCallback(async () => {
+    // Empêcher les requêtes multiples simultanées
+    if (isFetchingRef.current) {
+      return;
+    }
     if (!classId || !schoolId) {
       setData({ todaySchedules: [], announcements: [], loading: false, error: null });
+      isFetchingRef.current = false;
       return;
     }
 
@@ -35,10 +41,12 @@ export const useParentDashboardData = (classId: string | null, schoolId: string 
         loading: false, 
         error: null 
       });
+      isFetchingRef.current = false;
       return;
     }
 
     try {
+      isFetchingRef.current = true;
       setData(prev => ({ ...prev, loading: true, error: null }));
 
       const dayOfWeek = new Date().getDay();
@@ -84,8 +92,10 @@ export const useParentDashboardData = (classId: string | null, schoolId: string 
         loading: false, 
         error: 'Erreur lors du chargement des données' 
       }));
+    } finally {
+      isFetchingRef.current = false;
     }
-  }, [classId, schoolId, cache]);
+  }, [classId, schoolId]);
 
   useEffect(() => {
     fetchDashboardData();
@@ -95,8 +105,9 @@ export const useParentDashboardData = (classId: string | null, schoolId: string 
     if (classId && schoolId) {
       cache.delete(`parent-dashboard-${classId}-${schoolId}`);
     }
+    isFetchingRef.current = false;
     fetchDashboardData();
-  }, [classId, schoolId, cache, fetchDashboardData]);
+  }, [classId, schoolId, cache.delete, fetchDashboardData]);
 
   return { ...data, refetch };
 };
