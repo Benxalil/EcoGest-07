@@ -127,8 +127,8 @@ const handler = async (req: Request): Promise<Response> => {
       command_name: `Abonnement ${plan.name}`,
       env: payTechConfig.environment,
       ipn_url: `${supabaseUrl}/functions/v1/paytech-webhook`,
-      success_url: `${Deno.env.get("SITE_URL") || "https://app.ecogest.com"}/abonnement?success=true`,
-      cancel_url: `${Deno.env.get("SITE_URL") || "https://app.ecogest.com"}/abonnement?cancelled=true`,
+      success_url: `${Deno.env.get("SITE_URL")}/abonnement?success=true`,
+      cancel_url: `${Deno.env.get("SITE_URL")}/abonnement?cancelled=true`,
       custom_field: JSON.stringify({
         subscription_id: subscription.id,
         school_id,
@@ -138,20 +138,45 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("Appel PayTech API avec:", payTechPayload);
 
-    // Simulation de l'appel PayTech (à remplacer par le vrai appel)
-    const payTechResponse = {
-      success: true,
-      redirect_url: `https://paytech.sn/payment/${subscription.id}?amount=${plan.price / 100}&item=${encodeURIComponent(payTechPayload.item_name)}`,
-      token: `paytech_${subscription.id}`,
-      ref_command: subscription.id
+    // Appel réel à l'API PayTech
+    const payTechApiUrl = payTechConfig.environment === 'sandbox'
+      ? 'https://paytech.sn/api/payment/request-payment'
+      : 'https://paytech.sn/api/payment/request-payment';
+
+    const payTechHeaders = {
+      'API_KEY': payTechConfig.encrypted_api_key,
+      'API_SECRET': payTechConfig.encrypted_secret_key,
+      'Accept': 'application/json',
+      'Content-Type': 'application/json'
     };
 
+    console.log("Envoi requête PayTech à:", payTechApiUrl);
+
+    const payTechApiResponse = await fetch(payTechApiUrl, {
+      method: 'POST',
+      headers: payTechHeaders,
+      body: JSON.stringify(payTechPayload)
+    });
+
+    if (!payTechApiResponse.ok) {
+      const errorText = await payTechApiResponse.text();
+      console.error('Erreur PayTech API:', errorText);
+      throw new Error(`PayTech API error: ${payTechApiResponse.status} - ${errorText}`);
+    }
+
+    const payTechResponse = await payTechApiResponse.json();
+    console.log('Réponse PayTech complète:', payTechResponse);
+
+    // Adapter selon la vraie structure de réponse PayTech
+    const redirectUrl = payTechResponse.redirect_url || payTechResponse.url || payTechResponse.payment_url;
+    const transactionToken = payTechResponse.token || payTechResponse.transaction_id;
+
     // 7. Mettre à jour la transaction avec les informations PayTech
-    if (payTechResponse.success && transaction) {
+    if (transaction) {
       await supabase
         .from("payment_transactions")
         .update({
-          paytech_transaction_id: payTechResponse.ref_command,
+          paytech_transaction_id: transactionToken,
           gateway_response: payTechResponse
         })
         .eq("id", transaction.id);
@@ -160,17 +185,21 @@ const handler = async (req: Request): Promise<Response> => {
       await supabase
         .from("subscriptions")
         .update({
-          paytech_transaction_id: payTechResponse.ref_command
+          paytech_transaction_id: transactionToken
         })
         .eq("id", subscription.id);
     }
 
-    console.log("Checkout créé avec succès:", payTechResponse);
+    console.log("Checkout créé avec succès:", {
+      subscription_id: subscription.id,
+      transaction_id: transaction?.id,
+      paytech_url: redirectUrl
+    });
 
     return new Response(
       JSON.stringify({
         success: true,
-        checkout_url: payTechResponse.redirect_url,
+        checkout_url: redirectUrl,
         subscription_id: subscription.id,
         transaction_id: transaction?.id,
         amount: plan.price / 100,

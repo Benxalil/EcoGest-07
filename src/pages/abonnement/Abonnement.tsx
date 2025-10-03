@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Check, X, Rocket, Zap, Trophy, Clock, Shield, Star } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSubscriptionPlan } from "@/hooks/useSubscriptionPlan";
 import { useSubscriptionPlans } from "@/hooks/useSubscriptionPlans";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -19,6 +19,38 @@ const Abonnement = () => {
   const { toast } = useToast();
   const { subscriptionStatus } = useSubscription();
   const [isCreatingCheckout, setIsCreatingCheckout] = useState<string | null>(null);
+
+  // Gérer les retours de PayTech
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const isSuccess = urlParams.get('success');
+    const isCancelled = urlParams.get('cancelled');
+
+    if (isSuccess === 'true') {
+      toast({
+        title: "✅ Paiement réussi !",
+        description: "Votre abonnement a été activé avec succès. Rechargement des données...",
+        duration: 5000
+      });
+      
+      window.history.replaceState({}, '', '/abonnement');
+      
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
+    }
+
+    if (isCancelled === 'true') {
+      toast({
+        title: "❌ Paiement annulé",
+        description: "Vous avez annulé le paiement. Aucun montant n'a été débité.",
+        variant: "destructive",
+        duration: 5000
+      });
+      
+      window.history.replaceState({}, '', '/abonnement');
+    }
+  }, [toast]);
 
   // Fonction pour déterminer si un plan est actif
   const isActivePlan = (planId: string) => {
@@ -48,19 +80,34 @@ const Abonnement = () => {
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erreur lors de la création du checkout:', error);
+        toast({
+          title: "Erreur",
+          description: "Impossible de créer la session de paiement. Veuillez réessayer.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      console.log('Réponse create-checkout:', data);
 
       if (data?.checkout_url) {
-        // Rediriger vers PayTech
-        window.location.href = data.checkout_url; } else {
-        throw new Error('URL de checkout non reçue');
+        console.log('Redirection vers PayTech:', data.checkout_url);
+        window.location.href = data.checkout_url;
+      } else {
+        toast({
+          title: "Erreur",
+          description: "URL de paiement non reçue. Veuillez réessayer.",
+          variant: "destructive",
+        });
       }
-    } catch (error) {
-      console.error('Erreur lors de la création du checkout:', error);
+    } catch (err) {
+      console.error('Erreur inattendue:', err);
       toast({
         title: "Erreur",
-        description: "Impossible de créer la session de paiement. Veuillez réessayer.",
-        variant: "destructive"
+        description: "Une erreur inattendue est survenue. Veuillez réessayer.",
+        variant: "destructive",
       });
     } finally {
       setIsCreatingCheckout(null);

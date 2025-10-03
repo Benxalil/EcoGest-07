@@ -101,7 +101,25 @@ const handler = async (req: Request): Promise<Response> => {
           })
           .eq("id", subscription.id);
 
+        // Désactiver l'essai gratuit et mettre à jour le plan actif
+        const { data: planData } = await supabase
+          .from("subscription_plans")
+          .select("code")
+          .eq("id", subscription.plan_id)
+          .single();
+
+        await supabase
+          .from("schools")
+          .update({
+            subscription_status: "active",
+            subscription_plan: planData?.code || "free",
+            trial_end_date: null, // Désactiver l'essai gratuit
+            updated_at: new Date().toISOString()
+          })
+          .eq("id", subscription.school_id);
+
         console.log(`Souscription ${subscription.id} activée avec succès`);
+        console.log(`École ${subscription.school_id} - Essai gratuit désactivé, plan activé: ${planData?.code}`);
         break;
 
       case "sale_failed":
@@ -141,16 +159,7 @@ const handler = async (req: Request): Promise<Response> => {
         .eq("id", transaction.id);
     }
 
-    // Mettre à jour le statut de l'école dans la table schools si nécessaire
-    if (subscriptionStatus === "active") {
-      await supabase
-        .from("schools")
-        .update({
-          subscription_status: "active",
-          updated_at: new Date().toISOString()
-        })
-        .eq("id", subscription.school_id);
-    }
+    // Note: La mise à jour de l'école est déjà faite dans le case "sale_complete"
 
     console.log("Webhook traité avec succès:", {
       subscription_id: subscription.id,
