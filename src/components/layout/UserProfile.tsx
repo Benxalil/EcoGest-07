@@ -27,7 +27,12 @@ export function UserProfile({
 }: UserProfileProps) {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { userProfile } = useUserRole();
+  const { userProfile, loading } = useUserRole();
+  
+  // Si on est en chargement ET qu'on n'a pas de profil, ne rien afficher
+  if (loading && !userProfile) {
+    return null;
+  }
 
   const handleLogout = async () => {
     try {

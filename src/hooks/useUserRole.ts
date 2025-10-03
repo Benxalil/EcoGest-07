@@ -13,11 +13,54 @@ interface UserProfile {
   schoolId?: string;
 }
 
+const CACHE_KEY = 'user_profile_cache';
+const CACHE_DURATION = 15 * 60 * 1000; // 15 minutes
+
+interface CachedProfile {
+  profile: UserProfile;
+  timestamp: number;
+}
+
+// Charger le profil depuis le cache
+const loadCachedProfile = (): UserProfile | null => {
+  try {
+    const cached = localStorage.getItem(CACHE_KEY);
+    if (!cached) return null;
+    
+    const { profile, timestamp }: CachedProfile = JSON.parse(cached);
+    
+    // Vérifier si le cache est encore valide
+    if (Date.now() - timestamp < CACHE_DURATION) {
+      return profile;
+    }
+    
+    // Cache expiré, le supprimer
+    localStorage.removeItem(CACHE_KEY);
+    return null;
+  } catch {
+    return null;
+  }
+};
+
+// Sauvegarder le profil dans le cache
+const saveCachedProfile = (profile: UserProfile) => {
+  try {
+    const cached: CachedProfile = {
+      profile,
+      timestamp: Date.now()
+    };
+    localStorage.setItem(CACHE_KEY, JSON.stringify(cached));
+  } catch (error) {
+    console.error('Error caching profile:', error);
+  }
+};
+
 export const useUserRole = () => {
+  // Charger immédiatement depuis le cache si disponible
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(() => loadCachedProfile());
+  const [loading, setLoading] = useState(!loadCachedProfile()); // Pas de loading si on a le cache
 
   const fetchUserProfile = async (userId: string) => {
     try {
@@ -28,14 +71,18 @@ export const useUserRole = () => {
         .single();
 
       if (profile) {
-        setUserProfile({
+        const userProfileData: UserProfile = {
           role: profile.role,
           firstName: profile.first_name,
           lastName: profile.last_name,
           id: profile.id,
           email: profile.email,
           schoolId: profile.school_id,
-        });
+        };
+        
+        // Mettre à jour le state et le cache
+        setUserProfile(userProfileData);
+        saveCachedProfile(userProfileData);
       }
     } catch (error) {
       console.error('Error fetching user profile:', error);
@@ -78,6 +125,7 @@ export const useUserRole = () => {
           setTimeout(() => fetchUserProfile(session.user.id), 0);
         } else if (!session) {
           setUserProfile(null);
+          localStorage.removeItem(CACHE_KEY); // Nettoyer le cache
           setLoading(false);
         }
       }
