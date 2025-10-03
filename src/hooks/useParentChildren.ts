@@ -79,7 +79,8 @@ export const useParentChildren = (): UseParentChildrenReturn => {
       const emailMatch = profile.email.match(/Parent(\d+)@/i);
       const parentMatricule = emailMatch ? `PARENT${emailMatch[1].padStart(3, '0')}` : null;
 
-      // Récupérer tous les enfants liés au parent via parent_email ou parent_matricule
+      // Récupérer tous les enfants liés au parent via parent_email ET/OU parent_matricule
+      // Utiliser .eq pour parent_matricule afin de respecter strictement la casse
       const { data: childrenData, error: fetchError } = await supabase
         .from('students')
         .select(`
@@ -94,7 +95,7 @@ export const useParentChildren = (): UseParentChildrenReturn => {
             avatar_url
           )
         `)
-        .or(`parent_email.ilike.${profile.email}${parentMatricule ? `,parent_matricule.ilike.${parentMatricule}` : ''}`)
+        .or(`parent_email.eq.${profile.email}${parentMatricule ? `,parent_matricule.eq.${parentMatricule}` : ''}`)
         .eq('is_active', true)
         .order('first_name', { ascending: true });
 
