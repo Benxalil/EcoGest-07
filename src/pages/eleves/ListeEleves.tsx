@@ -12,8 +12,9 @@ import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserRole } from "@/hooks/useUserRole";
-import { useStudents } from "@/hooks/useStudents";
+import { formatClassName } from "@/utils/classNameFormatter";
 import { useClasses } from "@/hooks/useClasses";
+import { useStudents } from "@/hooks/useStudents";
 
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
@@ -132,12 +133,12 @@ const fetchStudentsByClass = async (userProfile?: any, isTeacher?: boolean): Pro
     const classeMap = new Map<string, Student[]>();
     
     classes.forEach(classe => {
-      const className = `${classe.name} ${classe.level}${classe.section ? ` - ${classe.section}` : ''}`;
+      const className = formatClassName(classe);
       classeMap.set(className, []);
     });
 
     students.forEach(student => {
-      const className = `${student.classes.name} ${student.classes.level}${student.classes.section ? ` - ${student.classes.section}` : ''}`;
+      const className = formatClassName(student.classes);
       if (classeMap.has(className)) {
         classeMap.get(className)!.push({
           id: student.id,

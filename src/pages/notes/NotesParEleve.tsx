@@ -15,6 +15,7 @@ import { useSubjects } from "@/hooks/useSubjects";
 import { useClasses } from "@/hooks/useClasses";
 import { useStudents } from "@/hooks/useStudents";
 import { useNotesSync, UnifiedNote } from "@/hooks/useNotesSync";
+import { formatClassName } from "@/utils/classNameFormatter";
 interface Student {
   id: string;
   nom: string;
@@ -192,7 +193,7 @@ export default function NotesParEleve() {
       return classes.map(classe => ({
         id: classe.id,
         session: classe.academic_year_id || '',
-        libelle: `${classe.name} ${classe.level}${classe.section ? ` - ${classe.section}` : ''}`,
+        libelle: formatClassName(classe),
         effectif: classe.enrollment_count || 0
       }));
     }

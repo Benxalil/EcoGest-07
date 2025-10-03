@@ -4,6 +4,7 @@ import { Users, Calendar, Clock, BookOpen, Megaphone, Award } from "lucide-react
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { useUserRole } from "@/hooks/useUserRole";
+import { formatClassName } from "@/utils/classNameFormatter";
 import { useAnnouncements } from "@/hooks/useAnnouncements";
 import { useClasses } from "@/hooks/useClasses";
 import { useSchoolData } from "@/hooks/useSchoolData";
@@ -67,7 +68,7 @@ export function TeacherDashboard() {
             day.courses.some((course: any) => course.teacherId === teacherId)
           );
           if (hasTeacher) {
-            schedules.push(`${classe.name} ${classe.level}${classe.section ? ` - ${classe.section}` : ''}`);
+            schedules.push(formatClassName(classe));
           }
         }
       }

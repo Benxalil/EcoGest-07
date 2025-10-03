@@ -110,7 +110,7 @@ export default function PaiementsClasse() {
   
   const typePaiementValue = form.watch("typePaiement");
   
-  const nomClasse = classe ? `${classe.name} ${classe.level}${classe.section ? ` - ${classe.section}` : ''}` : "Classe inconnue";
+  const nomClasse = classe ? formatClassName(classe) : "Classe inconnue";
   
   // État de chargement
   if (classesLoading || studentsLoading || paymentsLoading) {

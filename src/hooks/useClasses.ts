@@ -85,19 +85,24 @@ export const useClasses = () => {
 
       if (academicError) throw academicError;
 
-      // Vérifier si une classe avec le même nom existe déjà
+      // Vérifier si une classe avec le même nom ET section existe déjà
       const { data: existingClass } = await supabase
         .from('classes')
-        .select('name')
+        .select('name, section')
         .eq('school_id', userProfile.schoolId)
         .eq('academic_year_id', academicYears.id)
         .eq('name', classData.name)
+        .eq('section', classData.section || null)
         .maybeSingle();
 
       if (existingClass) {
+        // Extraire le libellé (dernière lettre) pour l'affichage
+        const labelMatch = existingClass.section?.match(/[A-Z]$/);
+        const label = labelMatch ? ` ${labelMatch[0]}` : '';
+        
         toast({
           title: 'Classe existante',
-          description: `Une classe nommée "${classData.name}" existe déjà pour cette année académique. Veuillez choisir un nom différent.`,
+          description: `Une classe "${classData.name}${label}" existe déjà pour cette année académique.`,
           variant: 'destructive',
         });
         return false;

@@ -97,7 +97,7 @@ export default function EmploiDuTemps() {
     if (classeId && classes.length > 0) {
       const classe = classes.find(c => c.id === classeId);
       if (classe) {
-        setClassName(`${classe.name} ${classe.level}${classe.section ? ` - ${classe.section}` : ''}`);
+        setClassName(formatClassName(classe));
         setHasAccess(true);
       } else if (isTeacher()) {
         // Si l'enseignant essaie d'accéder à une classe qui n'est pas dans sa liste

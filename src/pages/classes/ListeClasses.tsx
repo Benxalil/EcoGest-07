@@ -21,9 +21,11 @@ import { useNotifications } from "@/hooks/useNotifications";
 import { useClasses, ClassData } from "@/hooks/useClasses";
 import { useTeacherClasses } from "@/hooks/useTeacherClasses";
 import { useUserRole } from "@/hooks/useUserRole";
+import { formatClassName } from "@/utils/classNameFormatter";
 
-// Fonction pour définir l'ordre académique des classes
-const getClassOrder = (level: string, section: string): number => {
+// Helper function to define academic order
+const getClassOrder = (name: string, section: string): number => {
+  // Ordre des niveaux académiques
   const levelOrder: { [key: string]: number } = {
     'CI': 1, 'CP': 2, 'CE1': 3, 'CE2': 4, 'CM1': 5, 'CM2': 6,
     '6ème': 7, 'Sixième': 7,
@@ -35,21 +37,29 @@ const getClassOrder = (level: string, section: string): number => {
     'Terminale': 13, 'Tle': 13
   };
   
-  const sectionOrder: { [key: string]: number } = {
-    'A': 1, 'B': 2, 'C': 3, 'D': 4, 'E': 5, 'F': 6, 'G': 7, 'H': 8, 'I': 9, 'J': 10
+  // Extraire le libellé (dernière lettre de section)
+  const labelMatch = section?.match(/[A-Z]$/);
+  const label = labelMatch ? labelMatch[0] : '';
+  
+  // Ordre des libellés (A=1, B=2, etc.)
+  const labelOrder: { [key: string]: number } = {
+    'A': 1, 'B': 2, 'C': 3, 'D': 4, 'E': 5, 
+    'F': 6, 'G': 7, 'H': 8, 'I': 9, 'J': 10
   };
   
-  const levelNum = levelOrder[level] || 999;
-  const sectionNum = sectionOrder[section] || 999;
+  const levelNum = levelOrder[name] || 999;
+  const labelNum = labelOrder[label] || 0;
   
-  return levelNum * 100 + sectionNum;
+  // Formule : niveau * 100 + libellé
+  // Exemple : CM1 A = 501, CM1 B = 502, CM2 A = 601
+  return levelNum * 100 + labelNum;
 };
 
 // Fonction pour trier les classes dans l'ordre académique
 const sortClassesAcademically = (classes: ClassData[]): ClassData[] => {
   return classes.sort((a, b) => {
-    const orderA = getClassOrder(a.level, a.section || '');
-    const orderB = getClassOrder(b.level, b.section || '');
+    const orderA = getClassOrder(a.name, a.section || '');
+    const orderB = getClassOrder(b.name, b.section || '');
     return orderA - orderB;
   });
 };
@@ -113,10 +123,10 @@ export default function ListeClasses() {
   };
 
   const handleDeleteClass = async (classe: ClassData) => {
-    if (confirm(`Êtes-vous sûr de vouloir supprimer la classe ${classe.name} ${classe.level} ?`)) {
+    if (confirm(`Êtes-vous sûr de vouloir supprimer la classe ${formatClassName(classe)} ?`)) {
       const success = await deleteClass(classe.id);
       if (success) {
-        toast.success(`Classe ${classe.name} ${classe.level} supprimée avec succès`);
+        toast.success(`Classe ${formatClassName(classe)} supprimée avec succès`);
       }
     }
   };
@@ -125,7 +135,7 @@ export default function ListeClasses() {
     const doc = new jsPDF();
     
     doc.setFontSize(20);
-    doc.text(`Liste de la classe ${classe.name} ${classe.level}`, 20, 30);
+    doc.text(`Liste de la classe ${formatClassName(classe)}`, 20, 30);
     doc.setFontSize(12);
     doc.text(`Classe: ${classe.name}`, 20, 50);
     doc.text(`Niveau: ${classe.level}`, 20, 60);
@@ -139,8 +149,8 @@ export default function ListeClasses() {
     doc.setFontSize(10);
     doc.text('(Fonctionnalité d\'élèves à implémenter)', 20, 140);
     
-    doc.save(`liste_classe_${classe.name}_${classe.level}.pdf`);
-    toast.success(`Liste PDF de la classe ${classe.name} ${classe.level} téléchargée`);
+    doc.save(`liste_classe_${formatClassName(classe).replace(/\s+/g, '_')}.pdf`);
+    toast.success(`Liste PDF de la classe ${formatClassName(classe)} téléchargée`);
   };
 
   // Gestion des états de chargement et d'erreur
@@ -332,8 +342,7 @@ export default function ListeClasses() {
               {sortedClasses.map((classe) => (
                 <TableRow key={classe.id}>
                   <TableCell className="font-medium">
-                    {classe.name} {classe.level}
-                    {classe.section && ` - ${classe.section}`}
+                    {formatClassName(classe)}
                   </TableCell>
                   <TableCell>
                     {classe.enrollment_count || 0} élève{(classe.enrollment_count || 0) !== 1 ? "s" : ""}

@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Copy, Users, GraduationCap } from "lucide-react";
 import { useClasses } from "@/hooks/useClasses";
-import { useUserAccounts } from "@/hooks/useUserAccounts";
+import { formatClassName } from "@/utils/classNameFormatter";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useSchoolData } from "@/hooks/useSchoolData";
 
@@ -58,7 +58,7 @@ export default function Utilisateurs() {
                 <SelectItem value="all">Toutes les classes</SelectItem>
                 {classes.map((classe) => (
                   <SelectItem key={classe.id} value={classe.id}>
-                    {classe.name} {classe.level} {classe.section && `- ${classe.section}`}
+                    {formatClassName(classe)}
                   </SelectItem>
                 ))}
               </SelectContent>

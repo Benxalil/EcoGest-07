@@ -202,7 +202,7 @@ export default function ConsulterAbsencesRetards() {
             <h1 className="text-2xl font-bold text-gray-900">
               {isParent() 
                 ? `Absences & Retards de mes enfants` 
-                : `Absences & Retards - ${classe.name} ${classe.level}${classe.section ? ` - ${classe.section}` : ''}`
+                : `Absences & Retards - ${formatClassName(classe)}`
               }
             </h1>
           </div>

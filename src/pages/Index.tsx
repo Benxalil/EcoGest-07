@@ -15,6 +15,7 @@ import { TeacherDashboard } from "@/components/dashboard/OptimizedTeacherDashboa
 import { StudentDashboard } from "@/components/dashboard/StudentDashboard";
 import { ParentDashboard } from "@/components/dashboard/ParentDashboard";
 import { AjoutEleveModal } from "@/components/eleves/AjoutEleveModal";
+import { formatClassName } from "@/utils/classNameFormatter";
 import { AjoutEnseignantModal } from "@/components/enseignants/AjoutEnseignantModal";
 import { AjoutClasseModal } from "@/components/classes/AjoutClasseModal";
 import { AjoutMatiereModal } from "@/components/matieres/AjoutMatiereModal";
@@ -165,7 +166,7 @@ const Index = () => {
   // Optimisation avec useMemo pour les données analytiques
   const analyticsData = useMemo(() => ({
     classDistribution: classes.map((classe: any) => ({
-      name: `${classe.name} ${classe.level}${classe.section ? ` - ${classe.section}` : ''}`,
+      name: formatClassName(classe),
       students: students.filter((s: any) => s.class_id === classe.id).length
     })),
     monthlyEnrollment: generateMonthlyEnrollment(students),

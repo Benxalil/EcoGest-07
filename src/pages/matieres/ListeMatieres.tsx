@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/collapsible";
 import { useClasses } from "@/hooks/useClasses";
 import { useSubjects } from "@/hooks/useSubjects";
-import { useUserRole } from "@/hooks/useUserRole";
+import { formatClassName } from "@/utils/classNameFormatter";
 
 interface Matiere {
   id: number;
@@ -175,7 +175,7 @@ export default function ListeMatieres() {
   };
 
   const getClasseLabel = (classe: any) => {
-    return `${classe.name} ${classe.level}${classe.section ? ` - ${classe.section}` : ''}`;
+    return formatClassName(classe);
   };
 
   if (classesLoading || subjectsLoading || loading) {

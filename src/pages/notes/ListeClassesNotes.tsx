@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { useClasses } from "@/hooks/useClasses";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useTeacherFilter } from "@/hooks/useTeacherFilter";
+import { formatClassName } from "@/utils/classNameFormatter";
 
 interface Classe {
   id: string;
@@ -91,7 +92,7 @@ export default function ListeClassesNotes() {
               <div className="flex items-center gap-4 flex-1">
                 <Users className="h-5 w-5 text-primary" />
                 <div className="flex items-center gap-6 flex-1">
-                  <h3 className="font-semibold text-base min-w-[200px]">{classe.name} {classe.level}{classe.section ? ` - ${classe.section}` : ''}</h3>
+                  <h3 className="font-semibold text-base min-w-[200px]">{formatClassName(classe)}</h3>
                   <span className="text-sm text-muted-foreground">
                     Niveau: {classe.level}
                   </span>

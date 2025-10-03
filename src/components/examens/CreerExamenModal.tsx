@@ -15,6 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { formatClassName } from "@/utils/classNameFormatter";
 
 interface CreerExamenModalProps {
   createExam: (examData: CreateExamData) => Promise<boolean>;
@@ -153,7 +154,7 @@ export const CreerExamenModal: React.FC<CreerExamenModalProps> = ({ createExam, 
       if (duplicates.length > 0) {
         const duplicateClasses = duplicates.map(classId => {
           const classe = classes.find(c => c.id === classId);
-          return classe ? `${classe.name} ${classe.level}${classe.section ? ` - ${classe.section}` : ''}` : '';
+          return classe ? formatClassName(classe) : '';
         }).join(', ');
 
         toast({
@@ -338,7 +339,7 @@ export const CreerExamenModal: React.FC<CreerExamenModalProps> = ({ createExam, 
                         onCheckedChange={() => handleClasseToggle(classe.id)}
                       />
                       <Label htmlFor={classe.id} className="text-sm">
-                        {classe.name} {classe.level}{classe.section ? ` - ${classe.section}` : ''}
+                        {formatClassName(classe)}
                       </Label>
                     </div>
                   ))}

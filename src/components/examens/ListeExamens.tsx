@@ -17,6 +17,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { formatClassName } from "@/utils/classNameFormatter";
 
 interface Examen {
   id: string;
@@ -148,7 +149,7 @@ export const ListeExamens: React.FC<ListeExamensProps> = ({
       if (exam.class_id) {
         const classe = classes.find(c => c.id === exam.class_id);
         if (classe) {
-          const classeName = `${classe.name} ${classe.level}${classe.section ? ` - ${classe.section}` : ''}`;
+          const classeName = formatClassName(classe);
           if (!acc[key].classes.includes(classeName)) {
             acc[key].classes.push(classeName);
           }
@@ -163,7 +164,7 @@ export const ListeExamens: React.FC<ListeExamensProps> = ({
 
   const getClasseNom = (classeId: string) => {
     const classe = classes.find(c => c.id === classeId);
-    return classe ? `${classe.name} ${classe.level}${classe.section ? ` - ${classe.section}` : ''}` : classeId;
+    return classe ? formatClassName(classe) : classeId;
   };
 
   const getClassesNoms = (classesNames: string[]) => {
@@ -639,7 +640,7 @@ export const ListeExamens: React.FC<ListeExamensProps> = ({
                           }}
                         />
                         <Label htmlFor={`edit-classe-${classe.id}`} className="text-sm">
-                          {classe.name} {classe.level}{classe.section ? ` - ${classe.section}` : ''}
+                          {formatClassName(classe)}
                         </Label>
                       </div>
                     ))}

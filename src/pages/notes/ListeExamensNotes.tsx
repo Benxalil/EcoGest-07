@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useClasses } from "@/hooks/useClasses";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useTeacherFilter } from "@/hooks/useTeacherFilter";
+import { formatClassName } from "@/utils/classNameFormatter";
 interface Examen {
   id: string;
   titre: string;
@@ -161,12 +162,12 @@ export default function ListeExamensNotes() {
     if (classesData) {
       const classe = classesData.find(c => c.id === classeId);
       if (classe) {
-        return `${classe.name} ${classe.level}${classe.section ? ` - ${classe.section}` : ''}`;
+        return formatClassName(classe);
       }
     }
     // Fallback sur la recherche dans la liste des classes (ne devrait plus être nécessaire)
     const classe = classes.find(c => c.id === classeId);
-    return classe ? `${classe.name} ${classe.level}${classe.section ? ` - ${classe.section}` : ''}` : classeId;
+    return classe ? formatClassName(classe) : classeId;
   };
   const getClassesNoms = (examen: Examen) => {
     if (examen.classes.length === classes.length) {
@@ -267,7 +268,7 @@ export default function ListeExamensNotes() {
             {classesExamen.map(classe => <div key={classe.id} className="flex items-center justify-between p-4 bg-background rounded-lg border">
                 <div className="flex items-center gap-3">
                   <School className="h-5 w-5 text-primary" />
-                   <span className="font-medium">{classe.name} {classe.level}{classe.section ? ` - ${classe.section}` : ''}</span>
+                   <span className="font-medium">{formatClassName(classe)}</span>
                 </div>
                 <Button onClick={() => handleGererNotesClasse(classe.id)} className="bg-primary text-primary-foreground hover:bg-primary/90" size="sm">
                   Gérer les Notes

@@ -13,6 +13,7 @@ import { useStudents, Student } from "@/hooks/useStudents";
 import { useStudentDocuments } from "@/hooks/useStudentDocuments";
 import { useUserRole } from "@/hooks/useUserRole";
 import { supabase } from "@/integrations/supabase/client";
+import { formatClassName } from "@/utils/classNameFormatter";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -171,7 +172,7 @@ export default function ElevesParClasse() {
   const currentClass = useMemo(() => {
     if (!className || !classesData) return null;
     const decodedClassName = decodeURIComponent(className);
-    const foundClass = classesData.find(classe => `${classe.name} ${classe.level}${classe.section ? ` - ${classe.section}` : ''}` === decodedClassName);
+    const foundClass = classesData.find(classe => formatClassName(classe) === decodedClassName);
     return foundClass;
   }, [className, classesData]);
 

@@ -13,7 +13,7 @@ import { ChevronRight, ArrowLeft, Calendar, Book, Award, Loader2 } from "lucide-
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { useParentChildren } from "@/hooks/useParentChildren";
+import { formatClassName } from "@/utils/classNameFormatter";
 import { ParentChildSelector } from "@/components/parent/ParentChildSelector";
 import { useResults } from "@/hooks/useResults";
 
@@ -213,7 +213,7 @@ export default function ResultatsEnfant() {
                     <div className="flex items-center gap-3">
                       <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
                       <span className="text-lg font-medium text-gray-700">
-                        {classe.name} {classe.level}{classe.section ? ` - ${classe.section}` : ''}
+                        {formatClassName(classe)}
                       </span>
                     </div>
                     <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-blue-500 transition-colors" />
@@ -223,7 +223,7 @@ export default function ResultatsEnfant() {
                 <DialogContent className="sm:max-w-2xl">
                   <DialogHeader>
                     <DialogTitle className="text-center">
-                      Examens disponibles - {classe.name} {classe.level}{classe.section ? ` - ${classe.section}` : ''}
+                      Examens disponibles - {formatClassName(classe)}
                     </DialogTitle>
                   </DialogHeader>
                   <div className="py-4">

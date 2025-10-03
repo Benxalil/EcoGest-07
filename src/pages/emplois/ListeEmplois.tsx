@@ -14,7 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Calendar, FileText, AlertTriangle } from "lucide-react";
 import { useClasses } from "@/hooks/useClasses";
-import { useTeacherClasses } from "@/hooks/useTeacherClasses";
+import { formatClassName } from "@/utils/classNameFormatter";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useParentChildren } from "@/hooks/useParentChildren";
 import { LoadingSkeleton } from "@/components/ui/loading-skeleton";
@@ -157,14 +157,14 @@ export default function ListeEmplois() {
             <TableBody>
               {displayedClasses.map((classe) => (
                 <TableRow key={classe.id} className="hover:bg-gray-50">
-                  <TableCell className="font-medium">{classe.name} {classe.level}{classe.section ? ` - ${classe.section}` : ''}</TableCell>
+                  <TableCell className="font-medium">{formatClassName(classe)}</TableCell>
                   <TableCell className="text-center">
                     <Button
                       variant="secondary"
                       size="sm"
                       className="bg-blue-500 text-white hover:bg-blue-600"
                       onClick={() => { 
-                        localStorage.setItem(`classe-name-${classe.id}`, `${classe.name} ${classe.level}${classe.section ? ` - ${classe.section}` : ''}`);
+                        localStorage.setItem(`classe-name-${classe.id}`, formatClassName(classe));
                         navigate(`/emplois-du-temps/${classe.id}`);
                       }}
                     >

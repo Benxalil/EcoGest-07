@@ -12,12 +12,12 @@ import { useClasses } from "@/hooks/useClasses";
 import { useStudents } from "@/hooks/useStudents";
 import { usePayments } from "@/hooks/usePayments";
 import { Button } from "@/components/ui/button";
-import { Lock, Crown } from "lucide-react";
+import { formatClassName } from "@/utils/classNameFormatter";
 
 // Fonction pour calculer les statistiques de paiement par classe
 const getClassesWithPaymentStats = (classes: any[], students: any[], payments: any[], currentMonth: string) => {
   return classes.map((classe: any) => {
-    const nomCompletClasse = `${classe.name} ${classe.level}${classe.section ? ` - ${classe.section}` : ''}`;
+    const nomCompletClasse = formatClassName(classe);
     // Filtrer les élèves de cette classe
     const elevesClasse = students.filter((student: any) => student.class_id === classe.id);
     
