@@ -119,13 +119,16 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // 6. Appeler l'API PayTech pour créer la session de paiement
+    // PayTech accepte seulement 'prod' ou 'test', pas 'sandbox'
+    const paytechEnv = payTechConfig.environment === 'sandbox' ? 'test' : payTechConfig.environment;
+    
     const payTechPayload = {
       item_name: `Abonnement ${plan.name} - ${school.name}`,
       item_price: plan.price / 100, // Convertir centimes en unité principale
       currency: plan.currency,
       ref_command: subscription.id,
       command_name: `Abonnement ${plan.name}`,
-      env: payTechConfig.environment,
+      env: paytechEnv,
       ipn_url: `${supabaseUrl}/functions/v1/paytech-webhook`,
       success_url: `${Deno.env.get("SITE_URL")}/abonnement?success=true`,
       cancel_url: `${Deno.env.get("SITE_URL")}/abonnement?cancelled=true`,
