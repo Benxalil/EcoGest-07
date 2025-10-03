@@ -200,28 +200,28 @@ export default function ListeClasses() {
               >
                 <ArrowLeft className="h-5 w-5" />
               </Button>
-              <h1 className="text-2xl font-bold">{isTeacher ? "Mes Classes" : "Liste des Classes"}</h1>
+              <h1 className="text-2xl font-bold">{isTeacher() ? "Mes Classes" : "Liste des Classes"}</h1>
             </div>
-            {!isTeacher && (
-              <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button onClick={handleOpenAddDialog}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Ajouter une Classe
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Ajouter une classe</DialogTitle>
-                  </DialogHeader>
-                  <AjoutClasseModal onSuccess={handleAddSuccess} />
-                </DialogContent>
-              </Dialog>
-            )}
+          {!isTeacher() && (
+            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+              <DialogTrigger asChild>
+                <Button onClick={handleOpenAddDialog}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Ajouter une Classe
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Ajouter une classe</DialogTitle>
+                </DialogHeader>
+                <AjoutClasseModal onSuccess={handleAddSuccess} />
+              </DialogContent>
+            </Dialog>
+          )}
           </div>
 
           <div className="text-center py-12">
-            {isTeacher ? (
+            {isTeacher() ? (
               <>
                 <GraduationCap className="h-16 w-16 text-gray-300 mx-auto mb-4" />
                 <p className="text-gray-500 text-lg mb-4">Vous n'êtes encore affecté à aucune classe</p>
@@ -268,9 +268,9 @@ export default function ListeClasses() {
             >
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <h1 className="text-2xl font-bold">{isTeacher ? "Mes Classes" : "Liste des Classes"}</h1>
+            <h1 className="text-2xl font-bold">{isTeacher() ? "Mes Classes" : "Liste des Classes"}</h1>
           </div>
-          {!isTeacher && (
+          {!isTeacher() && (
             <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
               <DialogTrigger asChild>
                 <Button onClick={handleOpenAddDialog}>
@@ -302,7 +302,7 @@ export default function ListeClasses() {
             </CardContent>
           </Card>
 
-          {!isTeacher && (
+          {!isTeacher() && (
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -319,7 +319,7 @@ export default function ListeClasses() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
-                {isTeacher ? "Mes Élèves" : "Total des étudiants"}
+                {isTeacher() ? "Mes Élèves" : "Total des étudiants"}
               </CardTitle>
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
@@ -349,7 +349,7 @@ export default function ListeClasses() {
                   </TableCell>
                   <TableCell className="text-center">
                     <div className="flex items-center justify-center gap-2">
-                      {!isTeacher && (
+                      {!isTeacher() && (
                         <>
                           <Button
                             variant="ghost"
