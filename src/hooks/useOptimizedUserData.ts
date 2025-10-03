@@ -188,7 +188,7 @@ export const useOptimizedUserData = () => {
     return () => {
       subscription.unsubscribe();
     };
-  }, [fetchUserData, cache]);
+  }, [fetchUserData]);
 
   const refetch = useCallback(() => {
     cache.delete('optimized-user-data');
