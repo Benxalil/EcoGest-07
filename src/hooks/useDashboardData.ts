@@ -90,8 +90,16 @@ export const useDashboardData = () => {
         academicYear: academicYears?.[0]?.name || '2024/2025'
       };
 
-      // Cache the results for 5 minutes in session storage
-      multiLevelCache.set(cacheKey, dashboardData, CacheTTL.SCHEDULES, 'session');
+      // 🔒 Cache admin: séparer données sensibles et structures
+      // Classes et structures → sessionStorage
+      multiLevelCache.set(`classes-${profile.schoolId}`, classes || [], CacheTTL.CLASSES, 'session', false);
+      
+      // Élèves et enseignants → memory-only (données personnelles)
+      multiLevelCache.set(`students-${profile.schoolId}`, students || [], CacheTTL.STUDENTS, 'memory', true);
+      multiLevelCache.set(`teachers-${profile.schoolId}`, teachers || [], CacheTTL.TEACHERS, 'memory', true);
+      
+      // Dashboard complet → memory (contient données sensibles)
+      multiLevelCache.set(cacheKey, dashboardData, CacheTTL.SCHEDULES, 'memory', true);
       
       setData({
         ...dashboardData,

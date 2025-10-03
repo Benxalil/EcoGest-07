@@ -210,12 +210,13 @@ export function useUnifiedUserData(): UnifiedUserData & { refetch: () => Promise
           }
         }
 
-        // Sauvegarder le profil dans le cache multi-niveaux
+        // 🔒 Sauvegarder le profil en sessionStorage uniquement (pas localStorage)
         multiLevelCache.set(
           CacheKeys.userProfile(user.id),
           userProfile,
           CacheTTL.USER_PROFILE,
-          'local' // Persistant entre sessions
+          'session', // Session uniquement, pas localStorage
+          false // Profil propre = INTERNAL, pas CONFIDENTIAL
         );
 
         // Sauvegarder aussi avec la clé 'current' pour un accès rapide
@@ -223,7 +224,8 @@ export function useUnifiedUserData(): UnifiedUserData & { refetch: () => Promise
           CacheKeys.userProfile('current'),
           userProfile,
           CacheTTL.USER_PROFILE,
-          'local'
+          'session',
+          false
         );
 
         const newData: UnifiedUserData = {

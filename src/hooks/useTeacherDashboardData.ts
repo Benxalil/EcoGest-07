@@ -110,8 +110,8 @@ export const useTeacherDashboardData = () => {
         setAnnouncements(emptyData.announcements);
         setLoading(false);
         
-        // Sauvegarder dans le cache
-        multiLevelCache.set(cacheKey, emptyData, CacheTTL.SCHEDULES, 'session');
+        // 🔒 Cache en memory-only (même vide, pour cohérence)
+        multiLevelCache.set(cacheKey, emptyData, CacheTTL.SCHEDULES, 'memory', true);
         return;
       }
 
@@ -152,8 +152,8 @@ export const useTeacherDashboardData = () => {
       setTodaySchedules(dashboardData.todaySchedules);
       setAnnouncements(dashboardData.announcements);
 
-      // Sauvegarder dans le cache multi-niveaux (3 minutes pour les données dynamiques)
-      multiLevelCache.set(cacheKey, dashboardData, CacheTTL.SCHEDULES, 'session');
+      // 🔒 SÉCURITÉ: Cache en memory-only (contient liste élèves)
+      multiLevelCache.set(cacheKey, dashboardData, CacheTTL.SCHEDULES, 'memory', true);
 
     } catch (err: any) {
       console.error('Erreur lors de la récupération des données enseignant:', err);

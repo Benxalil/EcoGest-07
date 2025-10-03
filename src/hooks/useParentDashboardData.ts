@@ -81,8 +81,8 @@ export const useParentDashboardData = (classId: string | null, schoolId: string 
         error: null
       };
 
-      // Mettre en cache pour 3 minutes dans la session
-      multiLevelCache.set(cacheKey, dashboardData, CacheTTL.ANNOUNCEMENTS, 'session');
+      // 🔒 Cache enfants en sessionStorage (uniquement SES enfants)
+      multiLevelCache.set(cacheKey, dashboardData, CacheTTL.ANNOUNCEMENTS, 'session', false);
 
       setData(dashboardData);
 

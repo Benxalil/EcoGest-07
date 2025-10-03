@@ -64,13 +64,26 @@ class MultiLevelCache {
 
   /**
    * Stocker une valeur dans le cache avec TTL et niveau
+   * @param sensitive - 🔒 Force memory-only pour données sensibles
    */
   set<T>(
     key: string, 
     data: T, 
     ttl: number = 5 * 60 * 1000, // 5 minutes par défaut
-    level: CacheLevel = 'memory'
+    level: CacheLevel = 'memory',
+    sensitive: boolean = false // 🔒 NEW: Force memory-only si true
   ): void {
+    // 🔒 SÉCURITÉ: Si données sensibles, forcer memory-only
+    const finalLevel = sensitive ? 'memory' : level;
+    
+    // Logger warning en dev si tentative de stocker des données sensibles en persistent
+    if (import.meta.env.DEV && sensitive && level !== 'memory') {
+      console.warn(
+        `[MultiLevelCache] ⚠️ SECURITY: Sensitive data "${key}" forced to memory-only cache. ` +
+        `Original level "${level}" was overridden.`
+      );
+    }
+    
     const entry: CacheEntry<T> = {
       data,
       timestamp: Date.now(),
@@ -80,13 +93,13 @@ class MultiLevelCache {
     // Stocker dans le niveau mémoire
     this.memoryCache.set(key, entry);
 
-    // Stocker dans le niveau demandé
-    if (level === 'session' || level === 'local') {
+    // Stocker dans le niveau demandé (SAUF si sensitive)
+    if (!sensitive && (finalLevel === 'session' || finalLevel === 'local')) {
       try {
-        const storage = level === 'session' ? sessionStorage : localStorage;
+        const storage = finalLevel === 'session' ? sessionStorage : localStorage;
         storage.setItem(key, JSON.stringify(entry));
       } catch (error) {
-        console.warn(`Erreur lors de l'écriture dans ${level}Storage:`, error);
+        console.warn(`Erreur lors de l'écriture dans ${finalLevel}Storage:`, error);
       }
     }
 
@@ -162,6 +175,33 @@ class MultiLevelCache {
     } catch (error) {
       console.warn('Erreur lors du nettoyage du cache:', error);
     }
+  }
+
+  /**
+   * 🔒 NEW: Nettoyer uniquement les données sensibles (memory only)
+   */
+  clearSensitiveData(): void {
+    const sensitiveKeys: string[] = [];
+    
+    this.memoryCache.forEach((_, key) => {
+      if (this.isSensitiveKey(key)) {
+        sensitiveKeys.push(key);
+      }
+    });
+    
+    sensitiveKeys.forEach(key => this.delete(key));
+    console.log(`[MultiLevelCache] Cleared ${sensitiveKeys.length} sensitive keys from memory`);
+  }
+
+  /**
+   * Helper: Détecte si une clé contient des données sensibles
+   */
+  private isSensitiveKey(key: string): boolean {
+    const sensitivePrefixes = [
+      'students:', 'teachers:', 'grades:', 'payments:',
+      'student-details:', 'teacher-details:', 'parent-children:'
+    ];
+    return sensitivePrefixes.some(prefix => key.startsWith(prefix));
   }
 
   /**

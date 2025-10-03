@@ -98,8 +98,8 @@ export const useStudentDashboardData = () => {
         error: null
       };
 
-      // Mettre en cache pour 5 minutes dans la session
-      multiLevelCache.set(cacheKey, result, CacheTTL.SCHEDULES, 'session');
+      // 🔒 Cache mixte: structure en session, pas d'autres données élèves
+      multiLevelCache.set(cacheKey, result, CacheTTL.SCHEDULES, 'session', false);
       
       setData(result);
     } catch (error) {
