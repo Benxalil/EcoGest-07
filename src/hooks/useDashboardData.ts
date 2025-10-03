@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useOptimizedUserData } from './useOptimizedUserData';
 import { supabase } from '@/integrations/supabase/client';
 import { useOptimizedCache } from './useOptimizedCache';
+import { filterAnnouncementsByRole } from '@/utils/announcementFilters';
 
 export interface DashboardData {
   classes: any[];
@@ -74,12 +75,19 @@ export const useDashboardData = () => {
         throw new Error(firstError?.message || 'Error fetching dashboard data');
       }
 
+      // Les admins voient toutes les annonces sans filtrage
+      const filteredAnnouncements = filterAnnouncementsByRole(
+        announcements || [],
+        profile.role,
+        true // Les admins voient tout
+      );
+
       const dashboardData = {
         classes: classes || [],
         students: students || [],
         teachers: teachers || [],
         schoolData: schoolData || {},
-        announcements: announcements || [],
+        announcements: filteredAnnouncements,
         academicYear: academicYears?.[0]?.name || '2024/2025'
       };
 

@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useUserRole } from './useUserRole';
 import { useTeacherId } from './useTeacherId';
 import { supabase } from '@/integrations/supabase/client';
+import { filterAnnouncementsByRole } from '@/utils/announcementFilters';
 
 export const useTeacherDashboardData = () => {
   const [teacherClasses, setTeacherClasses] = useState<any[]>([]);
@@ -86,12 +87,11 @@ export const useTeacherDashboardData = () => {
         setTeacherStudents([]);
         setTodaySchedules(todaySchedulesResult.data || []);
         // Filtrer les annonces même si pas de classes
-        const filteredAnnouncements = (announcementsResult.data || []).filter((ann: any) => {
-          if (!ann.target_audience || ann.target_audience.length === 0) return true;
-          return ann.target_audience.some((audience: string) => 
-            ['teacher', 'enseignant', 'tous', 'all'].includes(audience.toLowerCase())
-          );
-        });
+        const filteredAnnouncements = filterAnnouncementsByRole(
+          announcementsResult.data || [],
+          'teacher',
+          false
+        );
         setAnnouncements(filteredAnnouncements);
         setLoading(false);
         return;
@@ -116,14 +116,11 @@ export const useTeacherDashboardData = () => {
       if (studentsResult.error) throw studentsResult.error;
 
       // Filtrer les annonces qui ciblent les enseignants ou tous
-      const filteredAnnouncements = (announcementsResult.data || []).filter((ann: any) => {
-        if (!ann.target_audience || ann.target_audience.length === 0) {
-          return true;
-        }
-        return ann.target_audience.some((audience: string) => 
-          ['teacher', 'enseignant', 'tous', 'all'].includes(audience.toLowerCase())
-        );
-      });
+      const filteredAnnouncements = filterAnnouncementsByRole(
+        announcementsResult.data || [],
+        'teacher',
+        false
+      );
 
       setTeacherClasses(classesResult.data || []);
       setTeacherStudents(studentsResult.data || []);

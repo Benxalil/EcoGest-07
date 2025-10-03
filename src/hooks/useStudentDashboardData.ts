@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useOptimizedCache } from './useOptimizedCache';
 import { useOptimizedUserData } from './useOptimizedUserData';
+import { filterAnnouncementsByRole } from '@/utils/announcementFilters';
 
 interface StudentDashboardData {
   student: any;
@@ -92,11 +93,18 @@ export const useStudentDashboardData = () => {
           }
         }
 
+        // Filtrer les annonces pour les élèves
+        const filteredAnnouncements = filterAnnouncementsByRole(
+          announcementsResult.data || [],
+          'student',
+          false
+        );
+
         const result: StudentDashboardData = {
           student: studentResult.data,
           classInfo: studentResult.data?.classes || null,
           todaySchedules: schedules,
-          announcements: announcementsResult.data || [],
+          announcements: filteredAnnouncements,
           loading: false,
           error: null
         };

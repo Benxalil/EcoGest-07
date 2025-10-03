@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useOptimizedCache } from './useOptimizedCache';
+import { filterAnnouncementsByRole } from '@/utils/announcementFilters';
 
 interface ParentDashboardData {
   todaySchedules: any[];
@@ -75,9 +76,16 @@ export const useParentDashboardData = (classId: string | null, schoolId: string 
           .limit(3)
       ]);
 
+      // Filtrer les annonces pour les parents
+      const filteredAnnouncements = filterAnnouncementsByRole(
+        announcementsResult.data || [],
+        'parent',
+        false
+      );
+
       const dashboardData = {
         todaySchedules: schedulesResult.data || [],
-        announcements: announcementsResult.data || []
+        announcements: filteredAnnouncements
       };
 
       // Mettre en cache pour 2 minutes

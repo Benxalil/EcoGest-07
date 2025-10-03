@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserRole } from './useUserRole';
 import { useToast } from '@/hooks/use-toast';
+import { filterAnnouncementsByRole } from '@/utils/announcementFilters';
 
 export interface Announcement {
   id: string;
@@ -187,39 +188,11 @@ export const useAnnouncements = () => {
 
   // Filtrer les annonces en fonction du rôle de l'utilisateur
   const announcements = useMemo(() => {
-    // Les admins voient toutes les annonces
-    if (isAdmin()) {
-      return allAnnouncements;
-    }
-
-    // Mapper les audiences sélectionnées aux rôles de la base de données
-    const audienceToRoleMap: { [key: string]: string[] } = {
-      'élèves': ['student'],
-      'eleves': ['student'],
-      'parents': ['parent'],
-      'professeurs': ['teacher'],
-      'enseignants': ['teacher'],
-      'administration': ['school_admin'],
-      'tous': ['student', 'parent', 'teacher', 'school_admin'],
-      'all': ['student', 'parent', 'teacher', 'school_admin']
-    };
-
-    // Filtrer selon le rôle de l'utilisateur
-    return allAnnouncements.filter((announcement) => {
-      // Si pas de target_audience ou vide, afficher pour tous
-      if (!announcement.target_audience || announcement.target_audience.length === 0) {
-        return true;
-      }
-
-      const userRole = userProfile?.role?.toLowerCase() || '';
-      
-      // Vérifier si l'audience cible inclut le rôle de l'utilisateur
-      return announcement.target_audience.some((audience: string) => {
-        const normalizedAudience = audience.toLowerCase().trim();
-        const allowedRoles = audienceToRoleMap[normalizedAudience] || [];
-        return allowedRoles.includes(userRole);
-      });
-    });
+    return filterAnnouncementsByRole(
+      allAnnouncements,
+      userProfile?.role || '',
+      isAdmin()
+    );
   }, [allAnnouncements, isAdmin, userProfile?.role]);
 
   return {
