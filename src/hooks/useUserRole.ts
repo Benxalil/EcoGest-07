@@ -1,6 +1,6 @@
-import { useMemo } from 'react';
-import { useOptimizedUserData } from './useOptimizedUserData';
-import type { User, Session } from '@supabase/supabase-js';
+import { useState, useEffect } from 'react';
+import { User, Session } from '@supabase/supabase-js';
+import { supabase } from '@/integrations/supabase/client';
 
 type UserRole = "school_admin" | "teacher" | "student" | "parent" | "super_admin";
 
@@ -14,52 +14,122 @@ interface UserProfile {
 }
 
 export const useUserRole = () => {
-  // Utiliser useOptimizedUserData qui a un meilleur système de cache
-  const { user, profile, loading } = useOptimizedUserData();
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  // Convertir le profil au format attendu
-  const userProfile = useMemo<UserProfile | null>(() => {
-    if (!profile) return null;
-    
-    return {
-      role: profile.role,
-      firstName: profile.firstName,
-      lastName: profile.lastName,
-      id: profile.id,
-      email: profile.email,
-      schoolId: profile.schoolId,
+  const fetchUserProfile = async (userId: string) => {
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (profile) {
+        setUserProfile({
+          role: profile.role,
+          firstName: profile.first_name,
+          lastName: profile.last_name,
+          id: profile.id,
+          email: profile.email,
+          schoolId: profile.school_id,
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    let isMounted = true;
+
+    // Check for existing session immediately
+    const initSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!isMounted) return;
+      
+      setSession(session);
+      setUser(session?.user ?? null);
+      
+      if (session?.user) {
+        await fetchUserProfile(session.user.id);
+      } else {
+        setLoading(false);
+      }
     };
-  }, [profile]);
 
-  // Session simulée pour compatibilité
-  const session = useMemo<Session | null>(() => {
-    if (!user) return null;
-    
-    return {
-      user,
-      access_token: '',
-      refresh_token: '',
-      expires_in: 3600,
-      expires_at: 0,
-      token_type: 'bearer',
-    } as Session;
-  }, [user]);
+    initSession();
+
+    // Then set up the listener - NO double fetch
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        if (!isMounted) return;
+        
+        setSession(session);
+        setUser(session?.user ?? null);
+
+        // Only refetch on SIGNED_IN event to avoid duplicate calls
+        if (event === 'SIGNED_IN' && session?.user) {
+          setTimeout(() => fetchUserProfile(session.user.id), 0);
+        } else if (!session) {
+          setUserProfile(null);
+          setLoading(false);
+        }
+      }
+    );
+
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
+  }, []);
 
   const isAdmin = () => userProfile?.role === "school_admin";
   const isTeacher = () => userProfile?.role === "teacher";
   const isStudent = () => userProfile?.role === "student";
   const isParent = () => userProfile?.role === "parent";
   
-  // Fonctions de simulation désactivées car non compatibles avec le cache optimisé
-  const simulateRole = (_role: UserRole) => {
-    console.warn('simulateRole is disabled when using optimized user data');
+  const simulateRole = (role: UserRole) => {
+    // Development only - simulate role for testing
+    if (userProfile) {
+      setUserProfile({ ...userProfile, role });
+    }
   };
   
   const resetRoleSimulation = () => {
-    console.warn('resetRoleSimulation is disabled when using optimized user data');
+    // Reset to original role from database
+    if (user) {
+      setTimeout(async () => {
+        try {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', user.id)
+            .single();
+
+          if (profile) {
+            setUserProfile({
+              role: profile.role,
+              firstName: profile.first_name,
+              lastName: profile.last_name,
+              id: profile.id,
+              email: profile.email,
+              schoolId: profile.school_id,
+            });
+          }
+        } catch (error) {
+          console.error('Error resetting role:', error);
+        }
+      }, 0);
+    }
   };
   
-  const isSimulating = () => false;
+  const isSimulating = () => false; // Could be enhanced to track simulation state
 
   return {
     user,
