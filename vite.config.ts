@@ -63,25 +63,14 @@ export default defineConfig(({ mode }) => ({
   build: {
     // Optimize build output
     target: 'esnext',
-    minify: 'esbuild', // Using esbuild (faster and built-in)
-    esbuild: {
-      drop: mode === 'production' ? ['console', 'debugger'] : [],
-    },
-    // Code splitting optimization
+    minify: 'esbuild',
     rollupOptions: {
       output: {
-        manualChunks: {
-          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-          'ui-vendor': ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-select'],
-          'supabase-vendor': ['@supabase/supabase-js'],
-        },
+        manualChunks: undefined, // Let Vite handle chunking automatically
       },
     },
-    // Increase chunk size warning limit
     chunkSizeWarningLimit: 1000,
-    // Enable CSS code splitting
     cssCodeSplit: true,
-    // Source maps for production debugging
     sourcemap: mode === 'production' ? false : true,
   },
   // Optimize dependencies
@@ -91,8 +80,6 @@ export default defineConfig(({ mode }) => ({
       'react-dom',
       'react-router-dom',
       '@supabase/supabase-js',
-      'lucide-react',
     ],
-    exclude: ['@vite/client', '@vite/env'],
   },
 }));

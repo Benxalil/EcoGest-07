@@ -1,4 +1,3 @@
-
 import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -57,7 +56,14 @@ import SchoolSettings from "./pages/admin/SchoolSettings";
 import UserMigration from "./pages/admin/UserMigration";
 import Utilisateurs from "./pages/utilisateurs/Utilisateurs";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5, // 5 minutes
+      gcTime: 1000 * 60 * 10, // 10 minutes (formerly cacheTime)
+    },
+  },
+});
 
 function App() {
   return (
