@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useOptimizedUserData } from './useOptimizedUserData';
 import { supabase } from '@/integrations/supabase/client';
 import { useOptimizedCache } from './useOptimizedCache';
+import { filterAnnouncementsByRole } from '@/utils/announcementFilters';
 
 export interface TeacherDashboardData {
   classes: any[];
@@ -109,16 +110,23 @@ export const useOptimizedTeacherData = () => {
           .limit(5)
       ]);
 
+      // Filtrer les annonces pour les enseignants
+      const filteredAnnouncements = filterAnnouncementsByRole(
+        announcementsResult.data || [],
+        'teacher',
+        false
+      );
+
       const teacherData = {
         classes: uniqueClasses,
         students: studentsResult.data || [],
         todaySchedules: todaySchedules,
-        announcements: announcementsResult.data || [],
+        announcements: filteredAnnouncements,
         stats: {
           totalClasses: uniqueClasses.length,
           totalStudents: (studentsResult.data || []).length,
           todayCourses: todaySchedules.length,
-          totalAnnouncements: (announcementsResult.data || []).length
+          totalAnnouncements: filteredAnnouncements.length
         }
       };
 
@@ -144,25 +152,102 @@ export const useOptimizedTeacherData = () => {
   useEffect(() => {
     fetchTeacherData();
 
-    // Supabase Realtime - Écoute des changements d'emploi du temps
+    // Supabase Realtime - Écoute des changements multiples
     if (!profile?.schoolId || !teacherId || profile.role !== 'teacher') {
       return;
     }
 
-    const channel = supabase
-      .channel('teacher-schedules-changes')
+    const cacheKey = `teacher-dashboard-${teacherId}`;
+    
+    // Canal pour les emplois du temps
+    const schedulesChannel = supabase
+      .channel('teacher-schedules-realtime')
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
           table: 'schedules',
-          filter: `teacher_id=eq.${teacherId}`
+          filter: `school_id=eq.${profile.schoolId}`
         },
         (payload) => {
           console.log('Schedule change detected:', payload);
-          // Invalider le cache et recharger
-          const cacheKey = `teacher-dashboard-${teacherId}`;
+          cache.deleteWithEvent(cacheKey);
+          fetchTeacherData();
+        }
+      )
+      .subscribe();
+
+    // Canal pour les classes
+    const classesChannel = supabase
+      .channel('teacher-classes-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'classes',
+          filter: `school_id=eq.${profile.schoolId}`
+        },
+        (payload) => {
+          console.log('Class change detected:', payload);
+          cache.deleteWithEvent(cacheKey);
+          fetchTeacherData();
+        }
+      )
+      .subscribe();
+
+    // Canal pour les étudiants
+    const studentsChannel = supabase
+      .channel('teacher-students-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'students',
+          filter: `school_id=eq.${profile.schoolId}`
+        },
+        (payload) => {
+          console.log('Student change detected:', payload);
+          cache.deleteWithEvent(cacheKey);
+          fetchTeacherData();
+        }
+      )
+      .subscribe();
+
+    // Canal pour les annonces
+    const announcementsChannel = supabase
+      .channel('teacher-announcements-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'announcements',
+          filter: `school_id=eq.${profile.schoolId}`
+        },
+        (payload) => {
+          console.log('Announcement change detected:', payload);
+          cache.deleteWithEvent(cacheKey);
+          fetchTeacherData();
+        }
+      )
+      .subscribe();
+
+    // Canal pour les examens
+    const examsChannel = supabase
+      .channel('teacher-exams-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'exams',
+          filter: `school_id=eq.${profile.schoolId}`
+        },
+        (payload) => {
+          console.log('Exam change detected:', payload);
           cache.deleteWithEvent(cacheKey);
           fetchTeacherData();
         }
@@ -170,7 +255,11 @@ export const useOptimizedTeacherData = () => {
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(schedulesChannel);
+      supabase.removeChannel(classesChannel);
+      supabase.removeChannel(studentsChannel);
+      supabase.removeChannel(announcementsChannel);
+      supabase.removeChannel(examsChannel);
     };
   }, [fetchTeacherData, profile?.schoolId, teacherId, profile?.role, cache]);
 

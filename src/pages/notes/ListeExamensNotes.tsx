@@ -106,7 +106,8 @@ export default function ListeExamensNotes() {
     classes
   } = useClasses();
   const {
-    isTeacher
+    isTeacher,
+    userProfile
   } = useUserRole();
   const {
     teacherClassIds
@@ -125,7 +126,31 @@ export default function ListeExamensNotes() {
   };
   useEffect(() => {
     loadData();
-  }, []);
+
+    // Synchronisation en temps réel pour les examens
+    if (!userProfile?.schoolId) return;
+
+    const examsChannel = supabase
+      .channel('exams-notes-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'exams',
+          filter: `school_id=eq.${userProfile.schoolId}`
+        },
+        (payload) => {
+          console.log('Exam change detected in notes:', payload);
+          loadData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(examsChannel);
+    };
+  }, [userProfile?.schoolId]);
   const getClasseNom = (classeId: string, classesData?: Array<{
     id: string;
     name: string;
