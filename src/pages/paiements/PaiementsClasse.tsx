@@ -15,6 +15,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
 import jsPDF from "jspdf";
+import { formatClassName } from "@/utils/classNameFormatter";
 import { useClasses } from "@/hooks/useClasses";
 import { useStudents } from "@/hooks/useStudents";
 import { useAcademicYear } from "@/hooks/useAcademicYear";

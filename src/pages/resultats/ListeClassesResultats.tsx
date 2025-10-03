@@ -15,6 +15,7 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { useClasses } from "@/hooks/useClasses";
 import { useSchoolData } from "@/hooks/useSchoolData";
+import { useResults } from "@/hooks/useResults";
 import { formatClassName } from "@/utils/classNameFormatter";
 
 interface Examen {

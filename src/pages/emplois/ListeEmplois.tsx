@@ -14,6 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Calendar, FileText, AlertTriangle } from "lucide-react";
 import { useClasses } from "@/hooks/useClasses";
+import { useTeacherClasses } from "@/hooks/useTeacherClasses";
 import { formatClassName } from "@/utils/classNameFormatter";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useParentChildren } from "@/hooks/useParentChildren";

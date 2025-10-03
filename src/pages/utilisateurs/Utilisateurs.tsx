@@ -9,6 +9,7 @@ import { Copy, Users, GraduationCap } from "lucide-react";
 import { useClasses } from "@/hooks/useClasses";
 import { formatClassName } from "@/utils/classNameFormatter";
 import { useNotifications } from "@/hooks/useNotifications";
+import { useUserAccounts } from "@/hooks/useUserAccounts";
 import { useSchoolData } from "@/hooks/useSchoolData";
 
 export default function Utilisateurs() {

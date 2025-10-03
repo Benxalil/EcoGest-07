@@ -1,5 +1,6 @@
 import { Layout } from "@/components/layout/Layout";
 import { useParams, useNavigate } from "react-router-dom";
+import { formatClassName } from "@/utils/classNameFormatter";
 import { useState, useEffect } from "react";
 import {
   Table,

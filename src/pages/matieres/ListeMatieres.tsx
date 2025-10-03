@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/collapsible";
 import { useClasses } from "@/hooks/useClasses";
 import { useSubjects } from "@/hooks/useSubjects";
+import { useUserRole } from "@/hooks/useUserRole";
 import { formatClassName } from "@/utils/classNameFormatter";
 
 interface Matiere {

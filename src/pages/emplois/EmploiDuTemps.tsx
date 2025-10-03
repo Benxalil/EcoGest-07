@@ -11,6 +11,7 @@ import { useState, useEffect } from "react";
 import { BookOpen, UserCheck, Pencil, ArrowLeft, Trash2, AlertTriangle } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useClasses } from "@/hooks/useClasses";
+import { formatClassName } from "@/utils/classNameFormatter";
 import { useTeacherClasses } from "@/hooks/useTeacherClasses";
 import { useSchedules, Course, DaySchedule } from "@/hooks/useSchedules";
 import { useTeachers } from "@/hooks/useTeachers";
