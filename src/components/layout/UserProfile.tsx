@@ -22,17 +22,12 @@ interface UserProfileProps {
 
 export function UserProfile({
   userPhoto,
-  userName = "Utilisateur",
+  userName,
   className = ""
 }: UserProfileProps) {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { userProfile, loading } = useUserRole();
-  
-  // Si on est en chargement ET qu'on n'a pas de profil, ne rien afficher
-  if (loading && !userProfile) {
-    return null;
-  }
 
   const handleLogout = async () => {
     try {
@@ -63,16 +58,14 @@ export function UserProfile({
     }
   };
 
+  // Attendre que les données soient chargées avant d'afficher
   const displayName = userProfile?.firstName && userProfile?.lastName 
     ? `${userProfile.firstName} ${userProfile.lastName}`
-    : userName;
+    : (userName || "Utilisateur");
 
-  const initials = displayName
-    .split(' ')
-    .map(name => name.charAt(0))
-    .join('')
-    .toUpperCase()
-    .slice(0, 2);
+  const initials = userProfile?.firstName && userProfile?.lastName
+    ? `${userProfile.firstName.charAt(0)}${userProfile.lastName.charAt(0)}`.toUpperCase()
+    : displayName.split(' ').map(name => name.charAt(0)).join('').toUpperCase().slice(0, 2);
 
   const getRoleLabel = (role: string) => {
     switch (role) {
@@ -83,6 +76,15 @@ export function UserProfile({
       default: return role;
     }
   };
+
+  // Afficher un skeleton pendant le chargement
+  if (loading || !userProfile) {
+    return (
+      <div className={`flex items-center ${className}`}>
+        <div className="relative h-10 w-10 rounded-full bg-muted animate-pulse" />
+      </div>
+    );
+  }
 
   return (
     <div className={`flex items-center ${className}`}>
@@ -101,11 +103,9 @@ export function UserProfile({
           <DropdownMenuLabel className="font-normal">
             <div className="flex flex-col space-y-1">
               <p className="text-sm font-medium leading-none">{displayName}</p>
-              {userProfile?.role && (
-                <p className="text-xs leading-none text-muted-foreground">
-                  {getRoleLabel(userProfile.role)}
-                </p>
-              )}
+              <p className="text-xs leading-none text-muted-foreground">
+                {getRoleLabel(userProfile.role)}
+              </p>
             </div>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
