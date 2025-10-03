@@ -1,4 +1,4 @@
-import { useRef, useCallback, useMemo } from 'react';
+import { useRef, useCallback } from 'react';
 
 interface CacheEntry<T> {
   data: T;
@@ -165,7 +165,7 @@ export const useOptimizedCache = () => {
   const invalidateByPrefixWithEvent = useCallback((prefix: string): void => 
     cacheRef.current.invalidateByPrefixWithEvent(prefix), []);
 
-  return useMemo(() => ({
+  return {
     get,
     set,
     has,
@@ -177,5 +177,5 @@ export const useOptimizedCache = () => {
     off,
     deleteWithEvent,
     invalidateByPrefixWithEvent
-  }), [get, set, has, clear, deleteKey, getStats, invalidateByPrefix, on, off, deleteWithEvent, invalidateByPrefixWithEvent]);
+  };
 };
