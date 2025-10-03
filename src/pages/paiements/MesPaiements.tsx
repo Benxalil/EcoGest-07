@@ -1,72 +1,188 @@
-import { useState, useEffect } from "react";
-import { Layout } from "@/components/layout/Layout";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CreditCard, CheckCircle, Clock, XCircle, Calendar, Lock, Crown } from "lucide-react";
-import { useUserRole } from "@/hooks/useUserRole";
+import { Layout } from "@/components/layout/Layout";
+import { supabase } from "@/integrations/supabase/client";
 import { useSubscriptionPlan } from "@/hooks/useSubscriptionPlan";
+import { CreditCard, CheckCircle, Clock, XCircle, Lock, Crown } from "lucide-react";
+import { Database } from "@/integrations/supabase/types";
 import { useNavigate } from "react-router-dom";
-import { useStudents } from "@/hooks/useStudents";
-import { usePayments } from "@/hooks/usePayments";
+import { useOptimizedUserData } from "@/hooks/useOptimizedUserData";
 
-interface Payment {
+type Payment = Database['public']['Tables']['payments']['Row'];
+
+interface PaymentMonth {
   id: string;
   month: string;
   amount: number;
   status: 'paid' | 'pending' | 'overdue';
   paidDate?: string;
   dueDate: string;
+  payment?: Payment;
 }
 
 export default function MesPaiements() {
-  const { userProfile } = useUserRole();
   const { hasFeature, currentPlan } = useSubscriptionPlan();
   const navigate = useNavigate();
-  const [payments, setPayments] = useState<Payment[]>([]);
+  const { profile } = useOptimizedUserData();
+  const [paymentMonths, setPaymentMonths] = useState<PaymentMonth[]>([]);
   const [loading, setLoading] = useState(true);
+  const [studentId, setStudentId] = useState<string | null>(null);
+
+  // Générer tous les mois de l'année scolaire
+  const generateAcademicYearMonths = () => {
+    const months = [
+      { name: 'Septembre', dueDay: 30 },
+      { name: 'Octobre', dueDay: 31 },
+      { name: 'Novembre', dueDay: 30 },
+      { name: 'Décembre', dueDay: 31 },
+      { name: 'Janvier', dueDay: 31 },
+      { name: 'Février', dueDay: 28 },
+      { name: 'Mars', dueDay: 31 },
+      { name: 'Avril', dueDay: 30 },
+      { name: 'Mai', dueDay: 31 },
+      { name: 'Juin', dueDay: 30 },
+      { name: 'Juillet', dueDay: 31 }
+    ];
+
+    const currentYear = new Date().getFullYear();
+    const currentMonth = new Date().getMonth();
+    
+    // Si on est entre janvier et août, l'année scolaire a commencé l'année précédente
+    const startYear = currentMonth >= 0 && currentMonth < 8 ? currentYear - 1 : currentYear;
+    
+    return months.map((month, index) => {
+      const monthIndex = index + 8; // Septembre = 8
+      const year = monthIndex > 11 ? startYear + 1 : startYear;
+      const actualMonthIndex = monthIndex > 11 ? monthIndex - 12 : monthIndex;
+      
+      return {
+        name: month.name,
+        dueDate: new Date(year, actualMonthIndex, month.dueDay).toISOString()
+      };
+    });
+  };
+
+  // Récupérer l'ID de l'élève à partir du profil utilisateur
+  useEffect(() => {
+    const fetchStudentId = async () => {
+      if (!profile?.id || !profile?.schoolId) return;
+
+      try {
+        const { data: studentData, error } = await supabase
+          .from('students')
+          .select('id')
+          .eq('user_id', profile.id)
+          .eq('school_id', profile.schoolId)
+          .maybeSingle();
+
+        if (error) {
+          console.error('Erreur lors de la récupération de l\'élève:', error);
+          return;
+        }
+
+        if (studentData) {
+          setStudentId(studentData.id);
+        }
+      } catch (error) {
+        console.error('Erreur:', error);
+      }
+    };
+
+    fetchStudentId();
+  }, [profile]);
 
   useEffect(() => {
-    loadStudentPayments();
-  }, [userProfile]);
-
-  const { students } = useStudents();
-  const { payments: allPayments } = usePayments();
-
-  const loadStudentPayments = async () => {
-    try {
-      setLoading(true);
-      
-      if (students.length > 0 && userProfile) {
-        // Trouver l'élève correspondant à l'utilisateur connecté
-        const student = students.find((s) => 
-          s.parent_email === userProfile.email || 
-          `${s.first_name} ${s.last_name}`.toLowerCase() === `${userProfile.firstName} ${userProfile.lastName}`.toLowerCase()
-        );
-        
-        if (student && allPayments.length > 0) {
-          // Filtrer les paiements pour cet élève
-          const studentPayments = allPayments.filter((p) => p.student_id === student.id);
-          
-          // Transformer les paiements réels de la base de données
-          const paymentsWithStatus: Payment[] = studentPayments.map((payment) => ({
-            id: payment.id,
-            month: payment.payment_month || 'Non défini',
-            amount: Number(payment.amount),
-            status: (payment.payment_method === 'paid' || payment.payment_type === 'scolarite' ? 'paid' : 'pending') as 'paid' | 'pending' | 'overdue',
-            paidDate: payment.payment_date,
-            dueDate: payment.payment_date
-          }));
-          
-          setPayments(paymentsWithStatus);
-        }
+    const fetchStudentPayments = async () => {
+      if (!studentId) {
+        setLoading(false);
+        return;
       }
-    } catch (error) {
-      console.error("Erreur lors du chargement des paiements:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+
+      try {
+        setLoading(true);
+
+        // Récupérer tous les paiements de l'élève
+        const { data: paymentsData, error } = await supabase
+          .from('payments')
+          .select('*')
+          .eq('student_id', studentId);
+
+        if (error) {
+          console.error('Erreur lors de la récupération des paiements:', error);
+        }
+
+        // Générer tous les mois de l'année scolaire
+        const academicMonths = generateAcademicYearMonths();
+        
+        // Créer un map des paiements existants par mois
+        const paymentsMap = new Map<string, Payment>();
+        (paymentsData || []).forEach(payment => {
+          if (payment.payment_month) {
+            paymentsMap.set(payment.payment_month.toLowerCase(), payment);
+          }
+        });
+
+        // Construire la liste complète avec statuts
+        const now = new Date();
+        const monthsWithStatus: PaymentMonth[] = academicMonths.map(month => {
+          const payment = paymentsMap.get(month.name.toLowerCase());
+          const dueDate = new Date(month.dueDate);
+          
+          let status: 'paid' | 'pending' | 'overdue' = 'pending';
+          
+          if (payment) {
+            // Si un paiement existe, le statut est "paid"
+            status = 'paid';
+          } else if (now > dueDate) {
+            // Si la date d'échéance est dépassée et pas de paiement, c'est "overdue"
+            status = 'overdue';
+          }
+
+          return {
+            id: payment?.id || `${month.name}-${studentId}`,
+            month: month.name,
+            amount: payment ? Number(payment.amount) : 0,
+            status,
+            paidDate: payment?.payment_date,
+            dueDate: month.dueDate,
+            payment
+          };
+        });
+
+        setPaymentMonths(monthsWithStatus);
+      } catch (error) {
+        console.error('Erreur:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStudentPayments();
+
+    // Écouter les changements en temps réel sur la table payments
+    const channel = supabase
+      .channel('student-payments-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'payments',
+          filter: `student_id=eq.${studentId}`
+        },
+        () => {
+          // Recharger les paiements quand il y a un changement
+          fetchStudentPayments();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [studentId]);
 
   // Vérifier si l'utilisateur a accès à la gestion des paiements
   if (!hasFeature('hasPaymentManagement')) {
@@ -113,17 +229,6 @@ export default function MesPaiements() {
     );
   }
 
-  const getPaymentStatus = (payment: any): 'paid' | 'pending' | 'overdue' => {
-    if (payment?.payment_method === 'paid' || payment?.payment_type === 'scolarite') return 'paid';
-    
-    const now = new Date();
-    const paymentDate = payment?.payment_date ? new Date(payment.payment_date) : new Date();
-    
-    if (now > paymentDate && payment?.payment_method !== 'paid') return 'overdue';
-    
-    return 'pending';
-  };
-
   const getStatusIcon = (status: 'paid' | 'pending' | 'overdue') => {
     switch (status) {
       case 'paid':
@@ -160,7 +265,7 @@ export default function MesPaiements() {
         <div className="container mx-auto py-8">
           <div className="animate-pulse space-y-4">
             <div className="h-8 bg-gray-200 rounded w-64"></div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {[1, 2, 3, 4, 5, 6].map(i => (
                 <div key={i} className="h-32 bg-gray-200 rounded"></div>
               ))}
@@ -171,8 +276,8 @@ export default function MesPaiements() {
     );
   }
 
-  const paidCount = payments.filter(p => p.status === 'paid').length;
-  const overdueCount = payments.filter(p => p.status === 'overdue').length;
+  const paidCount = paymentMonths.filter(p => p.status === 'paid').length;
+  const overdueCount = paymentMonths.filter(p => p.status === 'overdue').length;
 
   return (
     <Layout>
@@ -211,35 +316,44 @@ export default function MesPaiements() {
 
         {/* Liste des paiements par mois */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {payments.map((payment) => (
-            <Card key={payment.id} className="hover:shadow-md transition-shadow">
+          {paymentMonths.map((paymentMonth) => (
+            <Card key={paymentMonth.id} className="hover:shadow-md transition-shadow">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg">{payment.month}</CardTitle>
-                  {getStatusIcon(payment.status)}
+                  <CardTitle className="text-lg">{paymentMonth.month}</CardTitle>
+                  {getStatusIcon(paymentMonth.status)}
                 </div>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-500">Montant:</span>
-                    <span className="font-semibold">{formatAmount(payment.amount)}</span>
-                  </div>
+                  {paymentMonth.payment && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-500">Montant:</span>
+                      <span className="font-semibold">{formatAmount(paymentMonth.amount)}</span>
+                    </div>
+                  )}
                   
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-500">Échéance:</span>
-                    <span className="text-sm">{new Date(payment.dueDate).toLocaleDateString('fr-FR')}</span>
+                    <span className="text-sm">{new Date(paymentMonth.dueDate).toLocaleDateString('fr-FR')}</span>
                   </div>
                   
-                  {payment.paidDate && (
+                  {paymentMonth.paidDate && (
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-gray-500">Payé le:</span>
-                      <span className="text-sm text-green-600">{new Date(payment.paidDate).toLocaleDateString('fr-FR')}</span>
+                      <span className="text-sm text-green-600">{new Date(paymentMonth.paidDate).toLocaleDateString('fr-FR')}</span>
+                    </div>
+                  )}
+                  
+                  {paymentMonth.payment?.payment_method && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-500">Méthode:</span>
+                      <span className="text-sm">{paymentMonth.payment.payment_method}</span>
                     </div>
                   )}
                   
                   <div className="pt-2">
-                    {getStatusBadge(payment.status)}
+                    {getStatusBadge(paymentMonth.status)}
                   </div>
                 </div>
               </CardContent>

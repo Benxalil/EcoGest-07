@@ -82,7 +82,7 @@ export const useStudentDashboardData = () => {
           const today = new Date().getDay();
           const { data: schedulesData, error: schedulesError } = await supabase
             .from('schedules')
-            .select('id, start_time, end_time, room, subject_id, subjects(name)')
+            .select('id, start_time, end_time, room, subject_id, activity_name, subjects(name)')
             .eq('class_id', studentResult.data.class_id)
             .eq('day_of_week', today)
             .order('start_time');
