@@ -83,20 +83,23 @@ const StudentDashboard = memo(() => {
           ) : (
             <div className="space-y-3">
               {todaySchedules.map((schedule: any) => (
-                <div key={schedule.id} className="border rounded-lg p-3 bg-primary/5">
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="font-medium text-primary">
-                      {schedule.subjects?.name || schedule.subject_id}
-                    </h4>
-                    <span className="text-xs text-primary font-medium">
-                      {schedule.start_time} - {schedule.end_time}
+                <div key={schedule.id} className="border rounded-lg p-3 bg-primary/5 hover:bg-primary/10 transition-colors">
+                  <div className="flex items-start justify-between gap-3 mb-2">
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-semibold text-foreground text-base mb-1">
+                        {schedule.subjects?.name || schedule.activity_name || 'Activité'}
+                      </h4>
+                      {schedule.room && (
+                        <p className="text-sm text-muted-foreground flex items-center gap-1">
+                          <span className="font-medium">Salle:</span>
+                          <span>{schedule.room}</span>
+                        </p>
+                      )}
+                    </div>
+                    <span className="text-sm text-primary font-semibold whitespace-nowrap">
+                      {schedule.start_time?.substring(0, 5)} - {schedule.end_time?.substring(0, 5)}
                     </span>
                   </div>
-                  {schedule.room && (
-                    <p className="text-sm text-muted-foreground">
-                      Salle {schedule.room}
-                    </p>
-                  )}
                 </div>
               ))}
             </div>
