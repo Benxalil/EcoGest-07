@@ -1,7 +1,8 @@
 import { useState, useMemo } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Users, School, BookOpen, Settings, Menu, X, ChevronDown, ChevronRight, Calendar, CreditCard, LayoutDashboard, GraduationCap, Bookmark, Building2, BarChart, ChevronUp, ClipboardList, Megaphone, UserCheck } from "lucide-react";
+import { Users, School, BookOpen, Settings, Menu, X, ChevronDown, ChevronRight, Calendar, CreditCard, LayoutDashboard, GraduationCap, Bookmark, Building2, BarChart, ChevronUp, ClipboardList, Megaphone, UserCheck, LogOut } from "lucide-react";
+import { clearAllCacheOnLogout } from "@/utils/securityCleanup";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { SidebarToggle } from "./SidebarToggle";
@@ -281,6 +282,30 @@ export function Sidebar({
               ))}
             </div>
           </ScrollArea>
+        </div>
+
+        {/* Section de déconnexion en bas */}
+        <div className="flex-shrink-0 border-t border-border p-4">
+          <Button
+            variant="ghost"
+            onClick={async () => {
+              await clearAllCacheOnLogout();
+              navigate("/auth");
+            }}
+            className={cn(
+              "w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10 transition-colors",
+              {
+                "justify-center px-2": isCollapsed && !isMobile
+              }
+            )}
+          >
+            <LogOut className="h-5 w-5" />
+            <span className={cn("ml-2", {
+              "hidden": isCollapsed && !isMobile
+            })}>
+              Déconnexion
+            </span>
+          </Button>
         </div>
       </div>
     </>;
