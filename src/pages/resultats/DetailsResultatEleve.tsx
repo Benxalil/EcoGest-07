@@ -3,10 +3,9 @@ import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowLeft, Loader2, FileText, Calculator, Eye, AlertCircle, Printer } from "lucide-react";
+import { ArrowLeft, Loader2, Eye, AlertCircle } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { useUserRole } from "@/hooks/useUserRole";
 
 interface ExamDetails {
   id: string;
@@ -44,7 +43,6 @@ export default function DetailsResultatEleve() {
   const [showCalculatedRank] = useState(false);
   const navigate = useNavigate();
   const { studentId, examId } = useParams();
-  const { isAdmin } = useUserRole();
 
   useEffect(() => {
     if (studentId && examId) {
@@ -296,11 +294,6 @@ export default function DetailsResultatEleve() {
               <h1 className="text-2xl font-bold">
                 {examDetails.class_level} {examDetails.class_section}
               </h1>
-              {isAdmin() && (
-                <p className="text-gray-600">
-                  Liste des élèves pour cette classe (Nombre d'élèves : 1)
-                </p>
-              )}
               {examDetails && (
                 <p className="text-sm text-gray-500">
                   Date: {new Date(examDetails.exam_date).toLocaleDateString()}
@@ -308,30 +301,6 @@ export default function DetailsResultatEleve() {
               )}
             </div>
           </div>
-          
-          {/* Action Buttons - Only visible for admins */}
-          {isAdmin() && (
-            <div className="flex space-x-2">
-              <Button
-                variant="outline"
-                onClick={handleGeneratePDF}
-                disabled
-                className="flex items-center bg-orange-500 hover:bg-orange-600 text-white opacity-50 cursor-not-allowed"
-              >
-                <FileText className="h-4 w-4 mr-2" />
-                Bulletin du Classe
-              </Button>
-              
-              <Button
-                variant="outline"
-                disabled
-                className="flex items-center bg-blue-500 hover:bg-blue-600 text-white opacity-50 cursor-not-allowed"
-              >
-                <Calculator className="h-4 w-4 mr-2" />
-                Calcul du Rang
-              </Button>
-            </div>
-          )}
         </div>
 
         {/* Results Table with Exact Admin Format */}
@@ -364,7 +333,6 @@ export default function DetailsResultatEleve() {
                   </>
                 )}
                 <TableHead className="w-20 text-center">Action</TableHead>
-                <TableHead className="w-40 text-center">Bulletins de notes</TableHead>
               </TableRow>
               {isComposition && (
                 <TableRow className="bg-gray-50">
@@ -383,7 +351,6 @@ export default function DetailsResultatEleve() {
                       <span className="font-medium">Moyenne</span>
                     </div>
                   </TableHead>
-                  <TableHead></TableHead>
                   <TableHead></TableHead>
                 </TableRow>
               )}
@@ -447,32 +414,15 @@ export default function DetailsResultatEleve() {
                   </>
                 )}
                 
-                {/* Action Column - Eye icon disabled */}
+                {/* Action Column - Eye icon */}
                 <TableCell className="text-center">
                   <Button
                     variant="ghost"
                     size="sm"
-                    disabled
-                    className="opacity-50 cursor-not-allowed"
+                    className="text-primary hover:text-primary/80"
                   >
                     <Eye className="h-4 w-4" />
                   </Button>
-                </TableCell>
-                
-                {/* Bulletin Button - Only visible for admins */}
-                <TableCell className="text-center">
-                  {isAdmin() && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleGeneratePDF}
-                      disabled
-                      className="bg-green-500 hover:bg-green-600 text-white opacity-50 cursor-not-allowed"
-                    >
-                      <Printer className="h-4 w-4 mr-2" />
-                      Bulletin de notes
-                    </Button>
-                  )}
                 </TableCell>
               </TableRow>
             </TableBody>
