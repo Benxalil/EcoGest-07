@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useOptimizedCache } from './useOptimizedCache';
-import { useOptimizedUserData } from './useOptimizedUserData';
+import { useUnifiedUserData } from './useUnifiedUserData';
+import { multiLevelCache, CacheTTL, CacheKeys } from '@/utils/multiLevelCache';
 import { filterAnnouncementsByRole } from '@/utils/announcementFilters';
 
 interface StudentDashboardData {
@@ -13,19 +13,15 @@ interface StudentDashboardData {
   error: string | null;
 }
 
-// Cache global pour éviter les requêtes multiples
-let globalFetchPromise: Promise<StudentDashboardData> | null = null;
-
 export const useStudentDashboardData = () => {
-  const { profile, loading: userLoading } = useOptimizedUserData();
-  const cache = useOptimizedCache();
+  const { profile } = useUnifiedUserData();
   
   const [data, setData] = useState<StudentDashboardData>({
     student: null,
     classInfo: null,
     todaySchedules: [],
     announcements: [],
-    loading: true,
+    loading: false,
     error: null
   });
 
@@ -35,119 +31,105 @@ export const useStudentDashboardData = () => {
       return;
     }
 
-    // Si une requête est déjà en cours, l'attendre
-    if (globalFetchPromise) {
-      const result = await globalFetchPromise;
-      setData(result);
-      return;
-    }
-
-    // Vérifier le cache (5 minutes pour le dashboard étudiant)
-    const cacheKey = `student-dashboard-${profile.id}`;
-    const cached = cache.get<StudentDashboardData>(cacheKey);
+    // Vérifier le cache multi-niveaux (stale-while-revalidate)
+    const cacheKey = CacheKeys.dashboard(profile.id, 'student');
+    const cached = multiLevelCache.get<StudentDashboardData>(cacheKey, 'memory-first');
     
     if (cached && cached.student) {
       setData({ ...cached, loading: false });
-      return;
+      // Continuer en arrière-plan pour rafraîchir si nécessaire
+    } else {
+      setData(prev => ({ ...prev, loading: true }));
     }
 
-    // Créer la promesse globale pour éviter les requêtes dupliquées
-    globalFetchPromise = (async () => {
-      try {
-        // Faire toutes les requêtes en parallèle
-        const [studentResult, announcementsResult] = await Promise.all([
-          // Récupérer l'élève avec sa classe
-          supabase
-            .from('students')
-            .select('*, classes(id, name, level, section)')
-            .eq('user_id', profile.id)
-            .eq('school_id', profile.schoolId)
-            .maybeSingle(),
-          
-          // Récupérer les 3 dernières annonces
-          supabase
-            .from('announcements')
-            .select('id, title, content, created_at, priority, is_urgent')
-            .eq('school_id', profile.schoolId)
-            .eq('is_published', true)
-            .order('created_at', { ascending: false })
-            .limit(3)
-        ]);
-
-        if (studentResult.error) throw studentResult.error;
-
-        let schedules: any[] = [];
+    try {
+      // Faire toutes les requêtes en parallèle
+      const [studentResult, announcementsResult] = await Promise.all([
+        // Récupérer l'élève avec sa classe
+        supabase
+          .from('students')
+          .select('id, first_name, last_name, student_number, class_id, classes(id, name, level, section)')
+          .eq('user_id', profile.id)
+          .eq('school_id', profile.schoolId)
+          .maybeSingle(),
         
-        // Si l'élève a une classe, récupérer l'emploi du temps du jour
-        if (studentResult.data?.class_id) {
-          const today = new Date().getDay();
-          const { data: schedulesData, error: schedulesError } = await supabase
-            .from('schedules')
-            .select('id, start_time, end_time, room, subject_id, activity_name, subjects(name)')
-            .eq('class_id', studentResult.data.class_id)
-            .eq('day_of_week', today)
-            .order('start_time');
+        // Récupérer les annonces
+        supabase
+          .from('announcements')
+          .select('id, title, content, created_at, priority, is_urgent, target_audience')
+          .eq('school_id', profile.schoolId)
+          .eq('is_published', true)
+          .order('created_at', { ascending: false })
+          .limit(5)
+      ]);
 
-          if (!schedulesError && schedulesData) {
-            schedules = schedulesData;
-          }
+      if (studentResult.error) throw studentResult.error;
+
+      let schedules: any[] = [];
+      
+      // Si l'élève a une classe, récupérer l'emploi du temps du jour
+      if (studentResult.data?.class_id) {
+        const today = new Date().getDay();
+        const { data: schedulesData, error: schedulesError } = await supabase
+          .from('schedules')
+          .select('id, start_time, end_time, room, subject_id, activity_name, subject, subjects(name, color)')
+          .eq('class_id', studentResult.data.class_id)
+          .eq('day_of_week', today)
+          .order('start_time');
+
+        if (!schedulesError && schedulesData) {
+          schedules = schedulesData;
         }
-
-        // Filtrer les annonces pour les élèves
-        const filteredAnnouncements = filterAnnouncementsByRole(
-          announcementsResult.data || [],
-          'student',
-          false
-        );
-
-        const result: StudentDashboardData = {
-          student: studentResult.data,
-          classInfo: studentResult.data?.classes || null,
-          todaySchedules: schedules,
-          announcements: filteredAnnouncements,
-          loading: false,
-          error: null
-        };
-
-        // Mettre en cache pour 5 minutes
-        cache.set(cacheKey, result, 5 * 60 * 1000);
-        
-        return result;
-      } catch (error) {
-        const errorResult: StudentDashboardData = {
-          student: null,
-          classInfo: null,
-          todaySchedules: [],
-          announcements: [],
-          loading: false,
-          error: error instanceof Error ? error.message : 'Unknown error'
-        };
-        return errorResult;
-      } finally {
-        globalFetchPromise = null;
       }
-    })();
 
-    const result = await globalFetchPromise;
-    setData(result);
-  }, [profile, cache]);
+      // Filtrer les annonces pour les élèves
+      const filteredAnnouncements = filterAnnouncementsByRole(
+        announcementsResult.data || [],
+        'student',
+        false
+      );
+
+      const result: StudentDashboardData = {
+        student: studentResult.data,
+        classInfo: studentResult.data?.classes || null,
+        todaySchedules: schedules,
+        announcements: filteredAnnouncements,
+        loading: false,
+        error: null
+      };
+
+      // Mettre en cache pour 5 minutes dans la session
+      multiLevelCache.set(cacheKey, result, CacheTTL.SCHEDULES, 'session');
+      
+      setData(result);
+    } catch (error) {
+      const errorResult: StudentDashboardData = {
+        student: null,
+        classInfo: null,
+        todaySchedules: [],
+        announcements: [],
+        loading: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+      setData(errorResult);
+    }
+  }, [profile]);
 
   useEffect(() => {
-    if (!userLoading && profile) {
+    if (profile) {
       fetchDashboardData();
     }
-  }, [userLoading, profile, fetchDashboardData]);
+  }, [profile, fetchDashboardData]);
 
   const refetch = useCallback(() => {
     if (profile?.id) {
-      cache.delete(`student-dashboard-${profile.id}`);
+      multiLevelCache.delete(CacheKeys.dashboard(profile.id, 'student'));
       return fetchDashboardData();
     }
-  }, [profile, cache, fetchDashboardData]);
+  }, [profile, fetchDashboardData]);
 
   return {
     ...data,
-    loading: userLoading || data.loading,
     refetch
   };
 };

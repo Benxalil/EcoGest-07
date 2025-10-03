@@ -12,7 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
-import { useUserRole } from "@/hooks/useUserRole";
+import { useUnifiedUserData } from "@/hooks/useUnifiedUserData";
 
 interface UserProfileProps {
   userPhoto?: string;
@@ -27,12 +27,10 @@ export function UserProfile({
 }: UserProfileProps) {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { userProfile, loading } = useUserRole();
+  const { profile, loading } = useUnifiedUserData();
   
-  // Si on est en chargement ET qu'on n'a pas de profil, ne rien afficher
-  if (loading && !userProfile) {
-    return null;
-  }
+  // Afficher directement les données du cache - pas d'écran vide
+  const userProfile = profile;
 
   const handleLogout = async () => {
     try {

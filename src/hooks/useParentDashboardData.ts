@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useOptimizedCache } from './useOptimizedCache';
+import { useUnifiedUserData } from './useUnifiedUserData';
+import { multiLevelCache, CacheTTL } from '@/utils/multiLevelCache';
 import { filterAnnouncementsByRole } from '@/utils/announcementFilters';
 
 interface ParentDashboardData {
@@ -11,14 +12,14 @@ interface ParentDashboardData {
 }
 
 export const useParentDashboardData = (classId: string | null, schoolId: string | null) => {
+  const { profile } = useUnifiedUserData();
   const [data, setData] = useState<ParentDashboardData>({
     todaySchedules: [],
     announcements: [],
-    loading: true,
+    loading: false,
     error: null
   });
 
-  const cache = useOptimizedCache();
   const isFetchingRef = useRef(false);
 
   const fetchDashboardData = useCallback(async () => {
@@ -32,23 +33,19 @@ export const useParentDashboardData = (classId: string | null, schoolId: string 
       return;
     }
 
-    const cacheKey = `parent-dashboard-${classId}-${schoolId}`;
-    const cached = cache.get(cacheKey) as { todaySchedules: any[], announcements: any[] } | null;
+    const cacheKey = `parent-dashboard:${profile?.id}:${classId}:${schoolId}`;
     
+    // Vérifier le cache multi-niveaux (stale-while-revalidate)
+    const cached = multiLevelCache.get<ParentDashboardData>(cacheKey, 'memory-first');
     if (cached) {
-      setData({ 
-        todaySchedules: cached.todaySchedules,
-        announcements: cached.announcements,
-        loading: false, 
-        error: null 
-      });
-      isFetchingRef.current = false;
-      return;
+      setData({ ...cached, loading: false });
+      // Continuer en arrière-plan pour rafraîchir si nécessaire
+    } else {
+      setData(prev => ({ ...prev, loading: true, error: null }));
     }
 
     try {
       isFetchingRef.current = true;
-      setData(prev => ({ ...prev, loading: true, error: null }));
 
       const dayOfWeek = new Date().getDay();
 
@@ -56,24 +53,18 @@ export const useParentDashboardData = (classId: string | null, schoolId: string 
       const [schedulesResult, announcementsResult] = await Promise.all([
         supabase
           .from('schedules')
-          .select(`
-            *,
-            subjects (
-              name,
-              color
-            )
-          `)
+          .select('id, start_time, end_time, room, subject, activity_name, day, subjects(name, color)')
           .eq('class_id', classId)
           .eq('day_of_week', dayOfWeek)
           .order('start_time', { ascending: true }),
         
         supabase
           .from('announcements')
-          .select('*')
+          .select('id, title, content, created_at, priority, is_urgent, target_audience')
           .eq('school_id', schoolId)
           .eq('is_published', true)
           .order('created_at', { ascending: false })
-          .limit(3)
+          .limit(5)
       ]);
 
       // Filtrer les annonces pour les parents
@@ -83,15 +74,17 @@ export const useParentDashboardData = (classId: string | null, schoolId: string 
         false
       );
 
-      const dashboardData = {
+      const dashboardData: ParentDashboardData = {
         todaySchedules: schedulesResult.data || [],
-        announcements: filteredAnnouncements
+        announcements: filteredAnnouncements,
+        loading: false,
+        error: null
       };
 
-      // Mettre en cache pour 2 minutes
-      cache.set(cacheKey, dashboardData, 2 * 60 * 1000);
+      // Mettre en cache pour 3 minutes dans la session
+      multiLevelCache.set(cacheKey, dashboardData, CacheTTL.ANNOUNCEMENTS, 'session');
 
-      setData({ ...dashboardData, loading: false, error: null });
+      setData(dashboardData);
 
     } catch (error) {
       console.error('Erreur lors du chargement du tableau de bord:', error);
@@ -103,19 +96,19 @@ export const useParentDashboardData = (classId: string | null, schoolId: string 
     } finally {
       isFetchingRef.current = false;
     }
-  }, [classId, schoolId]);
+  }, [classId, schoolId, profile?.id]);
 
   useEffect(() => {
     fetchDashboardData();
   }, [fetchDashboardData]);
 
   const refetch = useCallback(() => {
-    if (classId && schoolId) {
-      cache.delete(`parent-dashboard-${classId}-${schoolId}`);
+    if (classId && schoolId && profile?.id) {
+      multiLevelCache.delete(`parent-dashboard:${profile.id}:${classId}:${schoolId}`);
     }
     isFetchingRef.current = false;
     fetchDashboardData();
-  }, [classId, schoolId, cache.delete, fetchDashboardData]);
+  }, [classId, schoolId, profile?.id, fetchDashboardData]);
 
   return { ...data, refetch };
 };

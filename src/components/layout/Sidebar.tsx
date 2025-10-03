@@ -8,7 +8,7 @@ import { SidebarToggle } from "./SidebarToggle";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { EcoGestLogo, EcoGestFullLogo } from "@/assets/EcoGestLogo";
 import { useSubscription } from "@/hooks/useSubscription";
-import { useUserRole } from "@/hooks/useUserRole";
+import { useUnifiedUserData } from "@/hooks/useUnifiedUserData";
 interface MenuItem {
   title: string;
   icon: any;
@@ -122,13 +122,20 @@ export function Sidebar({
   const location = useLocation();
   const navigate = useNavigate();
   const { subscriptionStatus } = useSubscription();
-  const { isAdmin, isTeacher, isStudent, isParent, loading } = useUserRole();
+  const { profile, isAdmin, isTeacher, isStudent, isParent } = useUnifiedUserData();
 
-  // Filtrer les éléments du menu selon le rôle - Ne rien afficher pendant le chargement
+  // Filtrer les éléments du menu selon le rôle - Afficher immédiatement depuis le cache
   const menuItems = useMemo(() => {
-    // Pendant le chargement, retourner un tableau vide pour éviter d'afficher le menu admin
-    if (loading) {
-      return [];
+    // Si pas de profil, afficher le menu de base (dashboard uniquement)
+    if (!profile) {
+      return [{
+        title: "Tableau de Bord",
+        icon: LayoutDashboard,
+        path: "/",
+        teacherAccess: true,
+        studentAccess: true,
+        parentAccess: true
+      }];
     }
     
     if (isAdmin()) {
@@ -136,20 +143,19 @@ export function Sidebar({
     }
     
     if (isTeacher()) {
-      return allMenuItems.filter(item => item.teacherAccess || false); // Les enseignants voient seulement les sections autorisées
+      return allMenuItems.filter(item => item.teacherAccess || false);
     }
     
     if (isStudent()) {
-      return allMenuItems.filter(item => item.studentAccess || false); // Les élèves voient seulement les sections autorisées
+      return allMenuItems.filter(item => item.studentAccess || false);
     }
     
     if (isParent()) {
-      return allMenuItems.filter(item => item.parentAccess || false); // Les parents voient seulement les sections autorisées
+      return allMenuItems.filter(item => item.parentAccess || false);
     }
     
-    // Fallback: si aucun rôle détecté, retourner un tableau vide
     return [];
-  }, [loading, isAdmin, isTeacher, isStudent, isParent]);
+  }, [profile, isAdmin, isTeacher, isStudent, isParent]);
   const toggleCollapse = () => {
     const newCollapsed = !isCollapsed;
     setIsCollapsed(newCollapsed);

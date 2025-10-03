@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useOptimizedUserData } from './useOptimizedUserData';
+import { useUnifiedUserData } from './useUnifiedUserData';
 import { supabase } from '@/integrations/supabase/client';
-import { useOptimizedCache } from './useOptimizedCache';
+import { multiLevelCache, CacheTTL, CacheKeys } from '@/utils/multiLevelCache';
 import { filterAnnouncementsByRole } from '@/utils/announcementFilters';
 
 export interface DashboardData {
@@ -16,8 +16,7 @@ export interface DashboardData {
 }
 
 export const useDashboardData = () => {
-  const { profile, loading: userLoading } = useOptimizedUserData();
-  const cache = useOptimizedCache();
+  const { profile, isAdmin } = useUnifiedUserData();
   
   const [data, setData] = useState<DashboardData>({
     classes: [],
@@ -26,32 +25,32 @@ export const useDashboardData = () => {
     schoolData: {},
     announcements: [],
     academicYear: '2024/2025',
-    loading: true,
+    loading: false,
     error: null
   });
 
   // Optimized single data fetch function
   const fetchAllDashboardData = useCallback(async () => {
-    if (!profile?.schoolId || userLoading) return;
+    if (!profile?.schoolId) return;
     
     // Ne charger les données que pour les administrateurs
-    if (profile.role === 'student' || profile.role === 'teacher' || profile.role === 'parent') {
+    if (profile.role !== 'school_admin') {
       setData(prev => ({ ...prev, loading: false }));
       return;
     }
 
-    const cacheKey = `dashboard-${profile.schoolId}-${profile.role}`;
+    const cacheKey = CacheKeys.dashboard(profile.id, profile.role);
     
-    // Check cache first (5 minutes pour données dashboard)
-    const cached = cache.get<Omit<DashboardData, 'loading' | 'error'>>(cacheKey);
+    // Check cache first (stale-while-revalidate)
+    const cached = multiLevelCache.get<Omit<DashboardData, 'loading' | 'error'>>(cacheKey, 'memory-first');
     if (cached) {
       setData(prev => ({ ...cached, loading: false, error: null }));
-      return;
+      // Continuer en arrière-plan pour rafraîchir si nécessaire
+    } else {
+      setData(prev => ({ ...prev, loading: true, error: null }));
     }
 
     try {
-      setData(prev => ({ ...prev, loading: true, error: null }));
-
       // Single optimized query - sélection minimale des colonnes nécessaires
       const [
         { data: classes, error: classesError },
@@ -62,10 +61,10 @@ export const useDashboardData = () => {
         { data: academicYears, error: academicError }
       ] = await Promise.all([
         supabase.from('classes').select('id, name, level, section, effectif').eq('school_id', profile.schoolId).order('name'),
-        supabase.from('students').select('id, first_name, last_name, class_id').eq('school_id', profile.schoolId).eq('is_active', true),
-        supabase.from('teachers').select('id, first_name, last_name').eq('school_id', profile.schoolId).eq('is_active', true),
+        supabase.from('students').select('id, first_name, last_name, class_id, is_active').eq('school_id', profile.schoolId).eq('is_active', true),
+        supabase.from('teachers').select('id, first_name, last_name, is_active').eq('school_id', profile.schoolId).eq('is_active', true),
         supabase.from('schools').select('id, name, logo_url, slogan').eq('id', profile.schoolId).single(),
-        supabase.from('announcements').select('id, title, content, created_at, priority').eq('school_id', profile.schoolId).eq('is_published', true).order('created_at', { ascending: false }).limit(10),
+        supabase.from('announcements').select('id, title, content, created_at, priority, is_urgent, target_audience').eq('school_id', profile.schoolId).eq('is_published', true).order('created_at', { ascending: false }).limit(10),
         supabase.from('academic_years').select('name').eq('school_id', profile.schoolId).eq('is_current', true).limit(1)
       ]);
 
@@ -75,7 +74,7 @@ export const useDashboardData = () => {
         throw new Error(firstError?.message || 'Error fetching dashboard data');
       }
 
-      // Les admins voient toutes les annonces sans filtrage
+      // Les admins voient toutes les annonces
       const filteredAnnouncements = filterAnnouncementsByRole(
         announcements || [],
         profile.role,
@@ -91,8 +90,8 @@ export const useDashboardData = () => {
         academicYear: academicYears?.[0]?.name || '2024/2025'
       };
 
-      // Cache the results for 5 minutes (données dashboard)
-      cache.set(cacheKey, dashboardData, 5 * 60 * 1000);
+      // Cache the results for 5 minutes in session storage
+      multiLevelCache.set(cacheKey, dashboardData, CacheTTL.SCHEDULES, 'session');
       
       setData({
         ...dashboardData,
@@ -108,16 +107,25 @@ export const useDashboardData = () => {
         error: error instanceof Error ? error.message : 'Error loading dashboard data'
       }));
     }
-  }, [profile?.schoolId, profile?.role, userLoading, cache]);
+  }, [profile?.schoolId, profile?.role, profile?.id]);
 
   // Fetch data when user profile is ready
   useEffect(() => {
-    fetchAllDashboardData();
-  }, [fetchAllDashboardData]);
+    if (profile) {
+      fetchAllDashboardData();
+    }
+  }, [fetchAllDashboardData, profile]);
+
+  const refetch = useCallback(() => {
+    if (profile?.id) {
+      multiLevelCache.delete(CacheKeys.dashboard(profile.id, profile.role));
+      fetchAllDashboardData();
+    }
+  }, [fetchAllDashboardData, profile?.id, profile?.role]);
 
   // Memoized return to prevent unnecessary re-renders
   return useMemo(() => ({
     ...data,
-    refetch: fetchAllDashboardData
-  }), [data, fetchAllDashboardData]);
+    refetch
+  }), [data, refetch]);
 };
