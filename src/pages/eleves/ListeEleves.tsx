@@ -4,9 +4,9 @@ import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AjoutEleveForm } from "@/components/eleves/AjoutEleveForm";
-import { Eye, Edit, Trash2, UserPlus, Search, Users, UserCheck, Clock, Download, FileText } from "lucide-react";
+import { Eye, Edit, Trash2, Search, Users, UserCheck, Clock, Download, FileText } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -369,15 +369,9 @@ export default function ListeEleves() {
   const { classes, loading: classesLoading, error: classesError } = useClasses();
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [studentToEdit, setStudentToEdit] = useState<Student | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-
-  const handleAddSuccess = () => {
-    setIsAddDialogOpen(false);
-    refreshStudents();
-  };
 
   const handleEditSuccess = () => {
     setIsEditDialogOpen(false);
@@ -538,26 +532,10 @@ export default function ListeEleves() {
     return (
       <Layout>
         <div className="container mx-auto py-8">
-          <div className="flex justify-between items-center mb-8">
+          <div className="mb-8">
             <h1 className="text-3xl font-bold">
               {isTeacher() ? "Mes élèves par classe" : "Liste des élèves par classe"}
             </h1>
-            {isAdmin() && (
-              <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button className="flex items-center gap-2">
-                    <UserPlus className="h-4 w-4" />
-                    Ajouter un élève
-                  </Button>
-                </DialogTrigger>
-              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>Ajouter un élève</DialogTitle>
-                </DialogHeader>
-                <AjoutEleveForm onSuccess={handleAddSuccess} />
-              </DialogContent>
-            </Dialog>
-            )}
           </div>
           
           <div className="text-center py-12">
@@ -574,26 +552,10 @@ export default function ListeEleves() {
   return (
     <Layout>
       <div className="container mx-auto py-8">
-        <div className="flex justify-between items-center mb-8">
+        <div className="mb-8">
           <h1 className="text-3xl font-bold">
             {isTeacher() ? "Mes élèves par classe" : "Liste des élèves par classe"}
           </h1>
-          {isAdmin() && (
-            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-              <DialogTrigger asChild>
-                <Button className="flex items-center gap-2">
-                  <UserPlus className="h-4 w-4" />
-                  Ajouter un élève
-                </Button>
-              </DialogTrigger>
-            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Ajouter un élève</DialogTitle>
-              </DialogHeader>
-              <AjoutEleveForm onSuccess={handleAddSuccess} />
-            </DialogContent>
-          </Dialog>
-          )}
         </div>
 
         {/* Cartes de statistiques */}
