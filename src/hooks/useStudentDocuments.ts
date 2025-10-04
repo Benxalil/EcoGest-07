@@ -207,20 +207,23 @@ export function useStudentDocuments(studentId?: string) {
     }
   };
 
-  const getDocumentUrl = (filePath: string): string => {
-    // Essayer d'abord avec le bucket student-files
-    let { data } = supabase.storage
-      .from('student-files')
-      .getPublicUrl(filePath);
-    
-    // Si l'URL ne fonctionne pas, essayer avec le bucket par défaut
-    if (!data || !data.publicUrl) {
-      data = supabase.storage
-        .from('default')
-        .getPublicUrl(filePath).data;
+  const getDocumentUrl = async (filePath: string): Promise<string> => {
+    try {
+      // Utiliser createSignedUrl pour les buckets privés
+      const { data, error } = await supabase.storage
+        .from('student-files')
+        .createSignedUrl(filePath, 3600); // URL valide pendant 1 heure
+      
+      if (error) {
+        console.error('Erreur lors de la génération de l\'URL signée:', error);
+        return '';
+      }
+      
+      return data?.signedUrl || '';
+    } catch (err) {
+      console.error('Erreur lors de la récupération de l\'URL:', err);
+      return '';
     }
-    
-    return data?.publicUrl || '';
   };
 
   const downloadDocument = async (filePath: string, fileName: string): Promise<void> => {

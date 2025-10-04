@@ -106,9 +106,11 @@ function DocumentsSection({
   const handleDownloadDocument = async (document: any) => {
     await downloadDocument(document.file_path, document.file_name);
   };
-  const handlePreviewDocument = (document: any) => {
-    const url = getDocumentUrl(document.file_path);
-    window.open(url, '_blank');
+  const handlePreviewDocument = async (document: any) => {
+    const url = await getDocumentUrl(document.file_path);
+    if (url) {
+      window.open(url, '_blank');
+    }
   };
   return <div>
       <h3 className="text-lg font-semibold mb-3 text-orange-600">Documents de l'élève</h3>
@@ -225,10 +227,18 @@ export default function ElevesParClasse() {
           return;
         }
         if (documents && documents.length > 0) {
-          const {
-            data
-          } = supabase.storage.from('student-files').getPublicUrl(documents[0].file_path);
-          setStudentPhoto(data.publicUrl);
+          // Utiliser createSignedUrl pour les buckets privés
+          const { data, error: urlError } = await supabase.storage
+            .from('student-files')
+            .createSignedUrl(documents[0].file_path, 3600); // URL valide pendant 1 heure
+          
+          if (urlError) {
+            console.error('Erreur lors de la génération de l\'URL signée:', urlError);
+            setStudentPhoto(null);
+            return;
+          }
+          
+          setStudentPhoto(data.signedUrl);
         } else {
           setStudentPhoto(null);
         }
