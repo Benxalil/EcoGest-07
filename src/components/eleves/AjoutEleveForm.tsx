@@ -313,6 +313,14 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
   const [fatherMatricule, setFatherMatricule] = useState("");
   const [motherMatricule, setMotherMatricule] = useState("");
   
+  // États pour suivre les champs modifiés manuellement
+  const [manuallyEditedFields, setManuallyEditedFields] = useState<Set<string>>(new Set());
+  
+  // Fonction pour marquer un champ comme modifié manuellement
+  const markFieldAsManuallyEdited = (fieldName: string) => {
+    setManuallyEditedFields(prev => new Set(prev).add(fieldName));
+  };
+  
   // Fonction pour ajouter un nouveau document
   const addDocument = () => {
     setDocuments([...documents, { name: "", file: null }]);
@@ -466,38 +474,53 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
   const watchNom = form.watch("nom");
   const watchPrenom = form.watch("prenom");
   
-  // Auto-remplir l'adresse avec le lieu de naissance
+  // Auto-remplir le lieu de naissance → adresse élève
   useEffect(() => {
-    if (watchLieuNaissance && !watchAdresse) {
-      form.setValue("adresse", watchLieuNaissance);
+    if (isEditing) return; // Ne pas auto-fill en mode édition
+    
+    if (watchLieuNaissance && !manuallyEditedFields.has("adresse")) {
+      const currentAdresse = form.getValues("adresse");
+      if (!currentAdresse || currentAdresse === "") {
+        form.setValue("adresse", watchLieuNaissance);
+      }
     }
-  }, [watchLieuNaissance, watchAdresse, form]);
+  }, [watchLieuNaissance, form, manuallyEditedFields, isEditing]);
   
+  // Auto-remplir le lieu de naissance → adresse père
   useEffect(() => {
-    if (watchAdresse) {
-      // Propager l'adresse vers le père seulement si son champ est vide
+    if (isEditing) return;
+    
+    if (watchLieuNaissance && !manuallyEditedFields.has("pereAdresse")) {
       const currentPereAdresse = form.getValues("pereAdresse");
-      if (!currentPereAdresse) {
-        form.setValue("pereAdresse", watchAdresse);
-      }
-      
-      // Propager l'adresse vers la mère seulement si son champ est vide
-      const currentMereAdresse = form.getValues("mereAdresse");
-      if (!currentMereAdresse) {
-        form.setValue("mereAdresse", watchAdresse);
+      if (!currentPereAdresse || currentPereAdresse === "") {
+        form.setValue("pereAdresse", watchLieuNaissance);
       }
     }
-  }, [watchAdresse, form]);
-
+  }, [watchLieuNaissance, form, manuallyEditedFields, isEditing]);
+  
+  // Auto-remplir nom élève → nom père
   useEffect(() => {
-    if (watchNom) {
-      // Propager le nom vers le père seulement si son champ est vide
+    if (isEditing || useFatherExisting) return;
+    
+    if (watchNom && !manuallyEditedFields.has("pereNom")) {
       const currentPereNom = form.getValues("pereNom");
-      if (!currentPereNom) {
+      if (!currentPereNom || currentPereNom === "") {
         form.setValue("pereNom", watchNom);
       }
     }
-  }, [watchNom, form]);
+  }, [watchNom, form, manuallyEditedFields, isEditing, useFatherExisting]);
+  
+  // Auto-remplir prénom élève → prénom père
+  useEffect(() => {
+    if (isEditing || useFatherExisting) return;
+    
+    if (watchPrenom && !manuallyEditedFields.has("perePrenom")) {
+      const currentPerePrenom = form.getValues("perePrenom");
+      if (!currentPerePrenom || currentPerePrenom === "") {
+        form.setValue("perePrenom", watchPrenom);
+      }
+    }
+  }, [watchPrenom, form, manuallyEditedFields, isEditing, useFatherExisting]);
 
   // Surveiller les changements de relation d'urgence pour auto-remplir
   const watchContactRelation = form.watch("contactUrgenceRelation");
@@ -739,21 +762,35 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
       let result;
       if (isEditing && initialData) {
         // Mise à jour d'un élève existant
-        result = await updateStudent(initialData.id, studentData); } else {
+        result = await updateStudent(initialData.id, studentData);
+      } else {
         // Ajout d'un nouvel élève
         result = await addStudent(studentData);
       }
       
+      // Vérifier que l'élève a bien été créé/modifié
+      if (!result || !result.id) {
+        throw new Error("Erreur lors de la création/modification de l'élève");
+      }
+      
       // Uploader la photo si elle existe
-      if (photoFile) {
-        const photoResult = await uploadDocument(result.id, photoFile, 'photo');
-        if (!photoResult.success) {
-          console.error('Erreur lors de l\'upload de la photo:', photoResult.error);
-          showError({
-            title: "Erreur d'upload",
-            description: `Erreur lors de l'upload de la photo: ${photoResult.error}`,
-          }); } else {
+      if (photoFile && result.id) {
+        try {
+          const photoResult = await uploadDocument(result.id, photoFile, 'photo');
+          if (!photoResult.success) {
+            console.error('Erreur lors de l\'upload de la photo:', photoResult.error);
+            showError({
+              title: "Avertissement",
+              description: `L'élève a été ${isEditing ? 'modifié' : 'créé'} mais l'upload de la photo a échoué: ${photoResult.error}`,
+            });
           }
+        } catch (photoError) {
+          console.error('Erreur lors de l\'upload de la photo:', photoError);
+          showError({
+            title: "Avertissement", 
+            description: `L'élève a été ${isEditing ? 'modifié' : 'créé'} mais l'upload de la photo a échoué`,
+          });
+        }
       }
 
       // Uploader les documents si il y en a
@@ -1037,8 +1074,21 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
         }) => <FormItem>
                 <FormLabel>Adresse</FormLabel>
                 <FormControl>
-                  <Textarea {...field} />
+                  <Textarea 
+                    {...field} 
+                    onChange={(e) => {
+                      field.onChange(e);
+                      if (e.target.value) {
+                        markFieldAsManuallyEdited("adresse");
+                      }
+                    }}
+                  />
                 </FormControl>
+                {!manuallyEditedFields.has("adresse") && watchLieuNaissance && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    💡 Valeur copiée automatiquement du lieu de naissance — modifiable
+                  </p>
+                )}
                 <FormMessage />
               </FormItem>} />
 
@@ -1096,8 +1146,21 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
               }) => <FormItem>
                       <FormLabel>Prénom</FormLabel>
                       <FormControl>
-                        <Input {...field} />
+                        <Input 
+                          {...field}
+                          onChange={(e) => {
+                            field.onChange(e);
+                            if (e.target.value) {
+                              markFieldAsManuallyEdited("perePrenom");
+                            }
+                          }}
+                        />
                       </FormControl>
+                      {!manuallyEditedFields.has("perePrenom") && watchPrenom && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          💡 Valeur copiée automatiquement — modifiable
+                        </p>
+                      )}
                       <FormMessage />
                     </FormItem>} />
 
@@ -1108,8 +1171,21 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
               }) => <FormItem>
                       <FormLabel>Nom</FormLabel>
                       <FormControl>
-                        <Input {...field} />
+                        <Input 
+                          {...field}
+                          onChange={(e) => {
+                            field.onChange(e);
+                            if (e.target.value) {
+                              markFieldAsManuallyEdited("pereNom");
+                            }
+                          }}
+                        />
                       </FormControl>
+                      {!manuallyEditedFields.has("pereNom") && watchNom && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          💡 Valeur copiée automatiquement — modifiable
+                        </p>
+                      )}
                       <FormMessage />
                     </FormItem>} />
               </div>
@@ -1122,8 +1198,21 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
               }) => <FormItem>
                       <FormLabel>Adresse</FormLabel>
                       <FormControl>
-                        <Input {...field} />
+                        <Input 
+                          {...field}
+                          onChange={(e) => {
+                            field.onChange(e);
+                            if (e.target.value) {
+                              markFieldAsManuallyEdited("pereAdresse");
+                            }
+                          }}
+                        />
                       </FormControl>
+                      {!manuallyEditedFields.has("pereAdresse") && watchLieuNaissance && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          💡 Valeur copiée automatiquement — modifiable
+                        </p>
+                      )}
                       <FormMessage />
                     </FormItem>} />
 
