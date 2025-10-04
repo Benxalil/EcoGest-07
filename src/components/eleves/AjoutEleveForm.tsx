@@ -478,49 +478,42 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
   useEffect(() => {
     if (isEditing) return; // Ne pas auto-fill en mode édition
     
-    if (watchLieuNaissance && !manuallyEditedFields.has("adresse")) {
+    if (watchLieuNaissance) {
       const currentAdresse = form.getValues("adresse");
-      if (!currentAdresse || currentAdresse === "") {
+      // Copier seulement si le champ est vide
+      if (!currentAdresse || currentAdresse.trim() === "") {
         form.setValue("adresse", watchLieuNaissance);
       }
     }
-  }, [watchLieuNaissance, form, manuallyEditedFields, isEditing]);
+  }, [watchLieuNaissance, form, isEditing]);
   
   // Auto-remplir le lieu de naissance → adresse père
   useEffect(() => {
-    if (isEditing) return;
+    if (isEditing || useFatherExisting) return;
     
-    if (watchLieuNaissance && !manuallyEditedFields.has("pereAdresse")) {
+    if (watchLieuNaissance) {
       const currentPereAdresse = form.getValues("pereAdresse");
-      if (!currentPereAdresse || currentPereAdresse === "") {
+      // Copier seulement si le champ est vide
+      if (!currentPereAdresse || currentPereAdresse.trim() === "") {
         form.setValue("pereAdresse", watchLieuNaissance);
       }
     }
-  }, [watchLieuNaissance, form, manuallyEditedFields, isEditing]);
+  }, [watchLieuNaissance, form, isEditing, useFatherExisting]);
   
   // Auto-remplir nom élève → nom père
   useEffect(() => {
     if (isEditing || useFatherExisting) return;
     
-    if (watchNom && !manuallyEditedFields.has("pereNom")) {
+    if (watchNom) {
       const currentPereNom = form.getValues("pereNom");
-      if (!currentPereNom || currentPereNom === "") {
+      // Copier seulement si le champ est vide
+      if (!currentPereNom || currentPereNom.trim() === "") {
         form.setValue("pereNom", watchNom);
       }
     }
-  }, [watchNom, form, manuallyEditedFields, isEditing, useFatherExisting]);
+  }, [watchNom, form, isEditing, useFatherExisting]);
   
-  // Auto-remplir prénom élève → prénom père
-  useEffect(() => {
-    if (isEditing || useFatherExisting) return;
-    
-    if (watchPrenom && !manuallyEditedFields.has("perePrenom")) {
-      const currentPerePrenom = form.getValues("perePrenom");
-      if (!currentPerePrenom || currentPerePrenom === "") {
-        form.setValue("perePrenom", watchPrenom);
-      }
-    }
-  }, [watchPrenom, form, manuallyEditedFields, isEditing, useFatherExisting]);
+  // ❌ Ne plus copier automatiquement le prénom de l'élève vers le prénom du père
 
   // Surveiller les changements de relation d'urgence pour auto-remplir
   const watchContactRelation = form.watch("contactUrgenceRelation");
@@ -1074,17 +1067,9 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
         }) => <FormItem>
                 <FormLabel>Adresse</FormLabel>
                 <FormControl>
-                  <Textarea 
-                    {...field} 
-                    onChange={(e) => {
-                      field.onChange(e);
-                      if (e.target.value) {
-                        markFieldAsManuallyEdited("adresse");
-                      }
-                    }}
-                  />
+                  <Textarea {...field} />
                 </FormControl>
-                {!manuallyEditedFields.has("adresse") && watchLieuNaissance && (
+                {watchLieuNaissance && field.value === watchLieuNaissance && (
                   <p className="text-xs text-muted-foreground mt-1">
                     💡 Valeur copiée automatiquement du lieu de naissance — modifiable
                   </p>
@@ -1146,21 +1131,8 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
               }) => <FormItem>
                       <FormLabel>Prénom</FormLabel>
                       <FormControl>
-                        <Input 
-                          {...field}
-                          onChange={(e) => {
-                            field.onChange(e);
-                            if (e.target.value) {
-                              markFieldAsManuallyEdited("perePrenom");
-                            }
-                          }}
-                        />
+                        <Input {...field} />
                       </FormControl>
-                      {!manuallyEditedFields.has("perePrenom") && watchPrenom && (
-                        <p className="text-xs text-muted-foreground mt-1">
-                          💡 Valeur copiée automatiquement — modifiable
-                        </p>
-                      )}
                       <FormMessage />
                     </FormItem>} />
 
@@ -1171,17 +1143,9 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
               }) => <FormItem>
                       <FormLabel>Nom</FormLabel>
                       <FormControl>
-                        <Input 
-                          {...field}
-                          onChange={(e) => {
-                            field.onChange(e);
-                            if (e.target.value) {
-                              markFieldAsManuallyEdited("pereNom");
-                            }
-                          }}
-                        />
+                        <Input {...field} />
                       </FormControl>
-                      {!manuallyEditedFields.has("pereNom") && watchNom && (
+                      {watchNom && field.value === watchNom && (
                         <p className="text-xs text-muted-foreground mt-1">
                           💡 Valeur copiée automatiquement — modifiable
                         </p>
@@ -1198,19 +1162,11 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
               }) => <FormItem>
                       <FormLabel>Adresse</FormLabel>
                       <FormControl>
-                        <Input 
-                          {...field}
-                          onChange={(e) => {
-                            field.onChange(e);
-                            if (e.target.value) {
-                              markFieldAsManuallyEdited("pereAdresse");
-                            }
-                          }}
-                        />
+                        <Input {...field} />
                       </FormControl>
-                      {!manuallyEditedFields.has("pereAdresse") && watchLieuNaissance && (
+                      {watchLieuNaissance && field.value === watchLieuNaissance && (
                         <p className="text-xs text-muted-foreground mt-1">
-                          💡 Valeur copiée automatiquement — modifiable
+                          💡 Valeur copiée automatiquement du lieu de naissance — modifiable
                         </p>
                       )}
                       <FormMessage />
