@@ -87,42 +87,49 @@ const getStudentSettingsFromStorage = () => {
 // Fonction pour générer le prochain numéro automatiquement
 const getNextStudentNumber = async (schoolId: string): Promise<string> => {
   try {
-    // Récupérer les élèves existants depuis Supabase
+    // Récupérer les paramètres actuels
+    const studentSettings = getStudentSettingsFromStorage();
+    const prefix = studentSettings.matriculeFormat || 'ELEVE';
+    
+    // Récupérer tous les élèves existants avec le même préfixe
     const { data: existingStudents, error } = await supabase
       .from('students')
       .select('student_number')
       .eq('school_id', schoolId)
       .eq('is_active', true)
-      .order('student_number', { ascending: true });
+      .order('student_number', { ascending: false })
+      .limit(1000);
 
     if (error) {
       console.error("Erreur lors de la récupération des élèves:", error);
-      return "ELEVE001";
+      return `${prefix}001`;
     }
 
-    // Trouver le prochain numéro disponible
-    const studentNumbers = existingStudents?.map(s => s.student_number) || [];
+    // Filtrer les matricules correspondant au format actuel et extraire les numéros
+    const studentNumbers = existingStudents
+      ?.filter(s => s.student_number.startsWith(prefix))
+      .map(s => {
+        const numberPart = s.student_number.replace(prefix, '');
+        return parseInt(numberPart) || 0;
+      })
+      .filter(num => !isNaN(num)) || [];
+
+    // Trouver le numéro le plus élevé et incrémenter
     let nextNumber = 1;
-    
-    while (true) {
-    const formattedNumber = nextNumber.toString().padStart(3, '0');
-      const candidateNumber = `ELEVE${formattedNumber}`;
-      
-      if (!studentNumbers.includes(candidateNumber)) {
-        return candidateNumber;
-      }
-      nextNumber++;
-      
-      // Protection contre les boucles infinies
-      if (nextNumber > 9999) {
-        const randomSuffix = Math.floor(Math.random() * 999999).toString().padStart(6, '0');
-        return `ELEVE${randomSuffix}`;
-      }
+    if (studentNumbers.length > 0) {
+      const maxNumber = Math.max(...studentNumbers);
+      nextNumber = maxNumber + 1;
     }
+    
+    // Formater avec 3 chiffres minimum (ex: 001, 002, 015)
+    const formattedNumber = nextNumber.toString().padStart(3, '0');
+    return `${prefix}${formattedNumber}`;
+    
   } catch (error) {
     console.error("Erreur lors de la génération du numéro:", error);
-    const randomSuffix = Math.floor(Math.random() * 999999).toString().padStart(6, '0');
-    return `ELEVE${randomSuffix}`;
+    const studentSettings = getStudentSettingsFromStorage();
+    const prefix = studentSettings.matriculeFormat || 'ELEVE';
+    return `${prefix}001`;
   }
 };
 
@@ -434,35 +441,87 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
     if (isEditing || initialData || !userProfile?.schoolId) return;
     
     const generateStudentNumber = async () => {
-    const studentSettings = getStudentSettingsFromStorage();
-    
-    // Générer le matricule seulement si la génération automatique est activée
-    if (studentSettings.autoGenerateMatricule) {
-        const nextNumber = await getNextStudentNumber(userProfile.schoolId);
-      form.setValue("numeroPerso", nextNumber);
+      const studentSettings = getStudentSettingsFromStorage();
       
-      // Générer les noms d'utilisateur des parents selon les paramètres
-      const parentSettings = getParentSettingsFromStorage();
-      if (parentSettings.autoGenerateMatricule) {
-        const parentNumber = getNextParentNumber(nextNumber, 'PERE');
-        const mereNumber = getNextParentNumber(nextNumber, 'MERE');
+      // Générer le matricule seulement si la génération automatique est activée
+      if (studentSettings.autoGenerateMatricule) {
+        const nextNumber = await getNextStudentNumber(userProfile.schoolId);
+        form.setValue("numeroPerso", nextNumber);
         
-        form.setValue("pereNomUtilisateur", parentNumber);
-        form.setValue("mereNomUtilisateur", mereNumber);
+        // Générer les noms d'utilisateur des parents selon les paramètres
+        const parentSettings = getParentSettingsFromStorage();
+        if (parentSettings.autoGenerateMatricule) {
+          const parentNumber = getNextParentNumber(nextNumber, 'PERE');
+          const mereNumber = getNextParentNumber(nextNumber, 'MERE');
+          
+          form.setValue("pereNomUtilisateur", parentNumber);
+          form.setValue("mereNomUtilisateur", mereNumber);
+        }
       }
-    }
     };
 
     generateStudentNumber();
     
-    // Appliquer les mots de passe par défaut
+    // Appliquer les mots de passe par défaut depuis les paramètres
     const studentSettings = getStudentSettingsFromStorage();
-    form.setValue("motDePasse", studentSettings.defaultStudentPassword);
+    form.setValue("motDePasse", studentSettings.defaultStudentPassword || 'student123');
     
     const parentSettings = getParentSettingsFromStorage();
-    form.setValue("pereMotDePasse", parentSettings.defaultParentPassword);
-    form.setValue("mereMotDePasse", parentSettings.defaultParentPassword);
+    form.setValue("pereMotDePasse", parentSettings.defaultParentPassword || 'parent123');
+    form.setValue("mereMotDePasse", parentSettings.defaultParentPassword || 'parent123');
   }, [form, isEditing, initialData, userProfile?.schoolId]);
+
+  // Écouter les changements de paramètres et régénérer automatiquement
+  useEffect(() => {
+    if (isEditing || initialData) return;
+
+    const handleSettingsUpdate = async () => {
+      if (!userProfile?.schoolId) return;
+      
+      const studentSettings = getStudentSettingsFromStorage();
+      
+      // Régénérer le matricule uniquement si l'utilisateur ne l'a pas modifié manuellement
+      if (studentSettings.autoGenerateMatricule && !manuallyEditedFields.has('numeroPerso')) {
+        const nextNumber = await getNextStudentNumber(userProfile.schoolId);
+        form.setValue("numeroPerso", nextNumber);
+        
+        // Mettre à jour les matricules parents si nécessaire
+        const parentSettings = getParentSettingsFromStorage();
+        if (parentSettings.autoGenerateMatricule) {
+          const parentNumber = getNextParentNumber(nextNumber, 'PERE');
+          if (!manuallyEditedFields.has('pereNomUtilisateur')) {
+            form.setValue("pereNomUtilisateur", parentNumber);
+          }
+          if (!manuallyEditedFields.has('mereNomUtilisateur')) {
+            const motherNumber = getNextParentNumber(nextNumber, 'MERE');
+            form.setValue("mereNomUtilisateur", motherNumber);
+          }
+        }
+      }
+      
+      // Mettre à jour le mot de passe par défaut uniquement si l'utilisateur ne l'a pas modifié
+      if (!manuallyEditedFields.has('motDePasse')) {
+        form.setValue("motDePasse", studentSettings.defaultStudentPassword || 'student123');
+      }
+      
+      // Mettre à jour les mots de passe des parents
+      const parentSettings = getParentSettingsFromStorage();
+      if (!manuallyEditedFields.has('pereMotDePasse')) {
+        form.setValue("pereMotDePasse", parentSettings.defaultParentPassword || 'parent123');
+      }
+      if (!manuallyEditedFields.has('mereMotDePasse')) {
+        form.setValue("mereMotDePasse", parentSettings.defaultParentPassword || 'parent123');
+      }
+    };
+
+    // Écouter l'événement de mise à jour des paramètres
+    window.addEventListener('schoolSettingsUpdated', handleSettingsUpdate);
+    
+    return () => {
+      window.removeEventListener('schoolSettingsUpdated', handleSettingsUpdate);
+    };
+  }, [isEditing, initialData, userProfile?.schoolId, form, manuallyEditedFields]);
+  
   // Si on a un classId, on utilise la classe spécifiée, sinon on utilise la première classe disponible
   const selectedClass = classId ? 
     classes?.find(c => c.id === classId) : 
