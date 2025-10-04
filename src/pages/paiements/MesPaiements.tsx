@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,8 @@ import { CreditCard, CheckCircle, Clock, XCircle, Lock, Crown } from "lucide-rea
 import { Database } from "@/integrations/supabase/types";
 import { useNavigate } from "react-router-dom";
 import { useOptimizedUserData } from "@/hooks/useOptimizedUserData";
+import { useAcademicYear } from "@/hooks/useAcademicYear";
+import { getAcademicMonths } from "@/utils/academicCalendar";
 
 type Payment = Database['public']['Tables']['payments']['Row'];
 
@@ -26,43 +28,15 @@ export default function MesPaiements() {
   const { hasFeature, currentPlan } = useSubscriptionPlan();
   const navigate = useNavigate();
   const { profile } = useOptimizedUserData();
+  const { academicYear } = useAcademicYear();
   const [paymentMonths, setPaymentMonths] = useState<PaymentMonth[]>([]);
   const [loading, setLoading] = useState(true);
   const [studentId, setStudentId] = useState<string | null>(null);
 
-  // Générer tous les mois de l'année scolaire
-  const generateAcademicYearMonths = () => {
-    const months = [
-      { name: 'Septembre', dueDay: 30 },
-      { name: 'Octobre', dueDay: 31 },
-      { name: 'Novembre', dueDay: 30 },
-      { name: 'Décembre', dueDay: 31 },
-      { name: 'Janvier', dueDay: 31 },
-      { name: 'Février', dueDay: 28 },
-      { name: 'Mars', dueDay: 31 },
-      { name: 'Avril', dueDay: 30 },
-      { name: 'Mai', dueDay: 31 },
-      { name: 'Juin', dueDay: 30 },
-      { name: 'Juillet', dueDay: 31 }
-    ];
-
-    const currentYear = new Date().getFullYear();
-    const currentMonth = new Date().getMonth();
-    
-    // Si on est entre janvier et août, l'année scolaire a commencé l'année précédente
-    const startYear = currentMonth >= 0 && currentMonth < 8 ? currentYear - 1 : currentYear;
-    
-    return months.map((month, index) => {
-      const monthIndex = index + 8; // Septembre = 8
-      const year = monthIndex > 11 ? startYear + 1 : startYear;
-      const actualMonthIndex = monthIndex > 11 ? monthIndex - 12 : monthIndex;
-      
-      return {
-        name: month.name,
-        dueDate: new Date(year, actualMonthIndex, month.dueDay).toISOString()
-      };
-    });
-  };
+  // Récupérer les mois académiques depuis les paramètres système
+  const academicMonths = useMemo(() => {
+    return getAcademicMonths(academicYear);
+  }, [academicYear]);
 
   // Récupérer l'ID de l'élève à partir du profil utilisateur
   useEffect(() => {
@@ -112,9 +86,6 @@ export default function MesPaiements() {
         if (error) {
           console.error('Erreur lors de la récupération des paiements:', error);
         }
-
-        // Générer tous les mois de l'année scolaire
-        const academicMonths = generateAcademicYearMonths();
         
         // Créer un map des paiements existants par mois
         const paymentsMap = new Map<string, Payment>();
@@ -128,7 +99,8 @@ export default function MesPaiements() {
         const now = new Date();
         const monthsWithStatus: PaymentMonth[] = academicMonths.map(month => {
           const payment = paymentsMap.get(month.name.toLowerCase());
-          const dueDate = new Date(month.dueDate);
+          // Calculer la date d'échéance: dernier jour du mois
+          const dueDate = new Date(month.year, month.monthIndex + 1, 0);
           
           let status: 'paid' | 'pending' | 'overdue' = 'pending';
           
@@ -141,12 +113,12 @@ export default function MesPaiements() {
           }
 
           return {
-            id: payment?.id || `${month.name}-${studentId}`,
-            month: month.name,
+            id: payment?.id || `${month.name}-${month.year}-${studentId}`,
+            month: `${month.name} ${month.year}`,
             amount: payment ? Number(payment.amount) : 0,
             status,
             paidDate: payment?.payment_date,
-            dueDate: month.dueDate,
+            dueDate: dueDate.toISOString(),
             payment
           };
         });
