@@ -10,6 +10,42 @@ import { useUserRole } from "@/hooks/useUserRole";
 import { useTeacherFilter } from "@/hooks/useTeacherFilter";
 import { formatClassName } from "@/utils/classNameFormatter";
 
+// Helper function to define academic order
+const getClassOrder = (name: string, section: string): number => {
+  const levelOrder: { [key: string]: number } = {
+    'CI': 1, 'CP': 2, 'CE1': 3, 'CE2': 4, 'CM1': 5, 'CM2': 6,
+    '6ème': 7, 'Sixième': 7,
+    '5ème': 8, 'Cinquième': 8,
+    '4ème': 9, 'Quatrième': 9,
+    '3ème': 10, 'Troisième': 10,
+    '2nde': 11, 'Seconde': 11,
+    '1ère': 12, 'Première': 12,
+    'Terminale': 13, 'Tle': 13
+  };
+  
+  const labelMatch = section?.match(/[A-Z]$/);
+  const label = labelMatch ? labelMatch[0] : '';
+  
+  const labelOrder: { [key: string]: number } = {
+    'A': 1, 'B': 2, 'C': 3, 'D': 4, 'E': 5, 
+    'F': 6, 'G': 7, 'H': 8, 'I': 9, 'J': 10
+  };
+  
+  const levelNum = levelOrder[name] || 999;
+  const labelNum = labelOrder[label] || 0;
+  
+  return levelNum * 100 + labelNum;
+};
+
+// Fonction pour trier les classes dans l'ordre académique
+const sortClassesAcademically = (classes: any[]): any[] => {
+  return classes.sort((a, b) => {
+    const orderA = getClassOrder(a.name, a.section || '');
+    const orderB = getClassOrder(b.name, b.section || '');
+    return orderA - orderB;
+  });
+};
+
 interface Classe {
   id: string;
   session: string;
@@ -37,6 +73,9 @@ export default function ListeClassesNotes() {
     classe.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     classe.level.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  // Trier les classes dans l'ordre académique
+  const sortedClasses = sortClassesAcademically(classesFiltered);
 
   if (loading || filterLoading) {
     return (
@@ -87,7 +126,7 @@ export default function ListeClassesNotes() {
         </div>
 
         <div className="space-y-2">
-          {classesFiltered.map((classe) => (
+          {sortedClasses.map((classe) => (
             <div key={classe.id} className="flex items-center justify-between p-4 bg-card rounded-lg border hover:bg-muted/50 transition-colors">
               <div className="flex items-center gap-4 flex-1">
                 <Users className="h-5 w-5 text-primary" />
@@ -112,7 +151,7 @@ export default function ListeClassesNotes() {
           ))}
         </div>
 
-        {classesFiltered.length === 0 && (
+        {sortedClasses.length === 0 && (
           <div className="text-center py-12">
             <p className="text-gray-500">
               {searchTerm ? "Aucune classe trouvée pour cette recherche." : "Aucune classe disponible."}
