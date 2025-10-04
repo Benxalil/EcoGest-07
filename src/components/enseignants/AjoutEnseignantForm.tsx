@@ -108,46 +108,32 @@ export function AjoutEnseignantForm({ onSuccess }: AjoutEnseignantFormProps) {
     };
   };
 
-  // Générer le prochain numéro de matricule (logique similaire aux élèves)
+  // Générer le prochain numéro de matricule basé sur le nombre total d'enseignants
   const getNextTeacherNumber = async (schoolId: string): Promise<string> => {
     try {
       const teacherSettings = getTeacherSettingsFromStorage();
       const prefix = teacherSettings.teacherPrefix || 'Prof';
       
-      // Récupérer les enseignants existants depuis Supabase
-      const { data: existingTeachers, error } = await supabase
+      // Compter le nombre total d'enseignants actifs dans l'école
+      const { count, error } = await supabase
         .from('teachers')
-        .select('employee_number')
+        .select('*', { count: 'exact', head: true })
         .eq('school_id', schoolId)
-        .eq('is_active', true)
-        .order('employee_number', { ascending: true });
+        .eq('is_active', true);
 
       if (error) {
-        console.error("Erreur lors de la récupération des enseignants:", error);
+        console.error("Erreur lors du comptage des enseignants:", error);
         return `${prefix}01`;
       }
 
-      // Trouver le prochain numéro disponible
-      const teacherNumbers = existingTeachers?.map(t => t.employee_number) || [];
-      let nextNumber = 1;
+      // Le prochain numéro est simplement le nombre total + 1
+      const nextNumber = (count || 0) + 1;
+      const formattedNumber = nextNumber.toString().padStart(3, '0');
       
-      while (true) {
-        const formattedNumber = nextNumber.toString().padStart(2, '0');
-        const candidateNumber = `${prefix}${formattedNumber}`;
-        
-        if (!teacherNumbers.includes(candidateNumber)) {
-          return candidateNumber;
-        }
-        nextNumber++;
-        
-        // Protection contre les boucles infinies
-        if (nextNumber > 999) {
-          return `${prefix}${Date.now().toString().slice(-3)}`;
-        }
-      }
+      return `${prefix}${formattedNumber}`;
     } catch (error) {
       console.error("Erreur lors de la génération du numéro:", error);
-      return `Prof${Date.now().toString().slice(-3)}`;
+      return `Prof001`;
     }
   };
 
@@ -192,6 +178,37 @@ export function AjoutEnseignantForm({ onSuccess }: AjoutEnseignantFormProps) {
     };
     
     initializeForm();
+  }, [form, userProfile?.schoolId]);
+
+  // Écouter les changements des paramètres depuis les Paramètres
+  useEffect(() => {
+    if (!userProfile?.schoolId) return;
+
+    const handleSettingsUpdate = async () => {
+      const teacherSettings = getTeacherSettingsFromStorage();
+      
+      // Ne régénérer que si le champ n'a pas été modifié manuellement
+      const currentMatricule = form.getValues('matricule');
+      const currentPassword = form.getValues('motDePasse');
+      
+      // Régénérer le matricule si la génération automatique est activée
+      if (teacherSettings.autoGenerateUsername && !currentMatricule) {
+        const nextNumber = await getNextTeacherNumber(userProfile.schoolId);
+        form.setValue("matricule", nextNumber);
+      }
+      
+      // Mettre à jour le mot de passe par défaut
+      if (currentPassword !== teacherSettings.defaultTeacherPassword) {
+        form.setValue("motDePasse", teacherSettings.defaultTeacherPassword);
+      }
+    };
+
+    // Écouter l'événement personnalisé de mise à jour des paramètres
+    window.addEventListener('schoolSettingsUpdated', handleSettingsUpdate);
+    
+    return () => {
+      window.removeEventListener('schoolSettingsUpdated', handleSettingsUpdate);
+    };
   }, [form, userProfile?.schoolId]);
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
