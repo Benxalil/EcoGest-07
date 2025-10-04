@@ -91,35 +91,20 @@ const getNextStudentNumber = async (schoolId: string): Promise<string> => {
     const studentSettings = getStudentSettingsFromStorage();
     const prefix = studentSettings.matriculeFormat || 'ELEVE';
     
-    // Récupérer tous les élèves existants avec le même préfixe
-    const { data: existingStudents, error } = await supabase
+    // Compter le nombre total d'élèves dans l'école (peu importe le format du matricule)
+    const { count, error } = await supabase
       .from('students')
-      .select('student_number')
+      .select('*', { count: 'exact', head: true })
       .eq('school_id', schoolId)
-      .eq('is_active', true)
-      .order('student_number', { ascending: false })
-      .limit(1000);
+      .eq('is_active', true);
 
     if (error) {
-      console.error("Erreur lors de la récupération des élèves:", error);
+      console.error("Erreur lors du comptage des élèves:", error);
       return `${prefix}001`;
     }
 
-    // Filtrer les matricules correspondant au format actuel et extraire les numéros
-    const studentNumbers = existingStudents
-      ?.filter(s => s.student_number.startsWith(prefix))
-      .map(s => {
-        const numberPart = s.student_number.replace(prefix, '');
-        return parseInt(numberPart) || 0;
-      })
-      .filter(num => !isNaN(num)) || [];
-
-    // Trouver le numéro le plus élevé et incrémenter
-    let nextNumber = 1;
-    if (studentNumbers.length > 0) {
-      const maxNumber = Math.max(...studentNumbers);
-      nextNumber = maxNumber + 1;
-    }
+    // Le prochain numéro est le nombre total d'élèves + 1
+    const nextNumber = (count || 0) + 1;
     
     // Formater avec 3 chiffres minimum (ex: 001, 002, 015)
     const formattedNumber = nextNumber.toString().padStart(3, '0');
