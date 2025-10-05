@@ -152,6 +152,43 @@ export default function Parametres() {
     }));
   }, [academicYear]);
 
+  // Charger les dates de l'année académique depuis la base de données
+  useEffect(() => {
+    const loadAcademicYearDates = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('school_id')
+            .eq('id', user.id)
+            .single();
+          
+          if (profile?.school_id) {
+            const { data: academicYear } = await supabase
+              .from('academic_years')
+              .select('start_date, end_date')
+              .eq('school_id', profile.school_id)
+              .eq('is_current', true)
+              .single();
+            
+            if (academicYear) {
+              setGeneralSettings(prev => ({
+                ...prev,
+                dateDebutAnnee: academicYear.start_date,
+                dateFinAnnee: academicYear.end_date
+              }));
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Erreur lors du chargement des dates académiques:', error);
+      }
+    };
+    
+    loadAcademicYearDates();
+  }, []);
+
   // Charger l'aperçu du logo existant
   useEffect(() => {
     if (schoolSettings.logo) {
@@ -251,6 +288,31 @@ export default function Parametres() {
       const success = await updateAcademicYear(generalSettings.anneeScolaire);
       if (!success) {
         throw new Error("Échec de la mise à jour de l'année académique");
+      }
+
+      // Mettre à jour les dates de l'année académique dans la base de données
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('school_id')
+          .eq('id', user.id)
+          .single();
+        
+        if (profile?.school_id) {
+          const { error: updateError } = await supabase
+            .from('academic_years')
+            .update({
+              start_date: generalSettings.dateDebutAnnee,
+              end_date: generalSettings.dateFinAnnee
+            })
+            .eq('school_id', profile.school_id)
+            .eq('is_current', true);
+
+          if (updateError) {
+            console.error('Erreur lors de la mise à jour des dates académiques:', updateError);
+          }
+        }
       }
 
       // Sauvegarder tous les paramètres
