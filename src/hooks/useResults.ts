@@ -156,7 +156,7 @@ export const useResults = () => {
             
             // Récupérer les élèves avec leurs vraies notes pour cet examen
             students: classStudents.map(student => {
-              // Matcher les notes par exam_id OU par critères alternatifs pour les notes sans exam_id
+              // LOGIQUE SIMPLIFIÉE : Matcher uniquement par exam_id
               const studentGrades = gradesData?.filter(grade => {
                 // Vérifier que c'est bien l'élève
                 if (grade.student_id !== student.id) return false;
@@ -165,27 +165,8 @@ export const useResults = () => {
                 const gradeSubject = classSubjects.find(s => s.id === grade.subject_id);
                 if (!gradeSubject) return false;
                 
-                // Si la note a un exam_id, matcher par exam_id
-                if (grade.exam_id) {
-                  return grade.exam_id === exam.id;
-                }
-                
-                // Sinon, matcher par exam_type et date approximative
-                // Pour les examens sans exam_id défini, on les associe selon le type
-                const isCompositionExam = exam.title.toLowerCase().includes('composition');
-                const gradeIsComposition = grade.exam_type === 'composition';
-                
-                // Matcher les notes de composition avec les examens de composition
-                if (isCompositionExam && gradeIsComposition) {
-                  return true;
-                }
-                
-                // Pour les autres types d'examens, inclure les notes de type "devoir" ou autres
-                if (!isCompositionExam && grade.exam_type !== 'composition') {
-                  return true;
-                }
-                
-                return false;
+                // Matcher UNIQUEMENT par exam_id (simple et efficace)
+                return grade.exam_id === exam.id;
               }) || [];
 
               return {
@@ -298,7 +279,7 @@ export const useResults = () => {
     // Détecter si c'est un examen de type "Composition"
     const isCompositionExam = examData.exam_title.toLowerCase().includes('composition');
 
-    // Calculer les statistiques à partir des vraies notes récupérées de la base
+    // LOGIQUE UNIFIÉE : Calculer les statistiques à partir des vraies notes
     let totalNotes = 0;
     let totalCoefficient = 0;
     let totalNotesDevoir = 0;
@@ -310,13 +291,13 @@ export const useResults = () => {
       coefficient: number, 
       subject: string,
       devoirNote?: number,
-      compositionNote?: number
+      compositionNote?: number,
+      examType?: string
     }> = [];
 
     console.log('useResults: Notes de cet élève depuis la base:', studentData.grades);
-    console.log('useResults: Est un examen Composition?', isCompositionExam);
 
-    // Grouper les notes par matière
+    // Grouper les notes par matière pour gérer devoir/composition
     const notesBySubject = new Map();
     
     studentData.grades.forEach(grade => {
@@ -330,75 +311,50 @@ export const useResults = () => {
           subject,
           coefficient: coeff,
           devoirNote: null,
-          compositionNote: null,
-          allNotes: [] // Pour stocker toutes les notes pour les examens composition
+          compositionNote: null
         });
       }
       
       const subjectData = notesBySubject.get(subject);
       
       if (note && note > 0) {
-        // Si c'est un examen "Composition", inclure TOUTES les notes
-        if (isCompositionExam) {
-          subjectData.allNotes.push({ note, examType });
-          // Pour les compositions, on utilise toutes les notes disponibles
-          totalNotes += note * coeff;
-          totalCoefficient += coeff;
-        } else {
-          // Logique normale pour les autres types d'examens
-          if (examType === 'devoir') {
-            subjectData.devoirNote = note;
-            totalNotesDevoir += note * coeff;
-            coeffDevoir += coeff;
-          } else if (examType === 'composition') {
-            subjectData.compositionNote = note;
-            totalNotesComposition += note * coeff;
-            coeffComposition += coeff;
-          }
+        // Séparer devoir et composition pour l'affichage
+        if (examType === 'devoir') {
+          subjectData.devoirNote = note;
+          totalNotesDevoir += note * coeff;
+          coeffDevoir += coeff;
+        } else if (examType === 'composition') {
+          subjectData.compositionNote = note;
+          totalNotesComposition += note * coeff;
+          coeffComposition += coeff;
         }
       }
     });
 
     // Construire le notesList et calculer la moyenne générale
     notesBySubject.forEach((subjectData) => {
+      // Utiliser la meilleure note entre devoir et composition
       let finalNote = 0;
       
-      if (isCompositionExam) {
-        // Pour les examens "Composition", utiliser la moyenne de toutes les notes de la matière
-        if (subjectData.allNotes.length > 0) {
-          const sum = subjectData.allNotes.reduce((acc, n) => acc + n.note, 0);
-          finalNote = sum / subjectData.allNotes.length;
-          
-          notesList.push({
-            note: finalNote,
-            coefficient: subjectData.coefficient,
-            subject: subjectData.subject,
-            devoirNote: subjectData.devoirNote,
-            compositionNote: subjectData.compositionNote
-          });
-        }
-      } else {
-        // Logique normale pour les autres examens
-        if (subjectData.devoirNote && subjectData.compositionNote) {
-          finalNote = Math.max(subjectData.devoirNote, subjectData.compositionNote);
-        } else if (subjectData.devoirNote) {
-          finalNote = subjectData.devoirNote;
-        } else if (subjectData.compositionNote) {
-          finalNote = subjectData.compositionNote;
-        }
+      if (subjectData.devoirNote && subjectData.compositionNote) {
+        finalNote = Math.max(subjectData.devoirNote, subjectData.compositionNote);
+      } else if (subjectData.devoirNote) {
+        finalNote = subjectData.devoirNote;
+      } else if (subjectData.compositionNote) {
+        finalNote = subjectData.compositionNote;
+      }
+      
+      if (finalNote > 0) {
+        totalNotes += finalNote * subjectData.coefficient;
+        totalCoefficient += subjectData.coefficient;
         
-        if (finalNote > 0) {
-          totalNotes += finalNote * subjectData.coefficient;
-          totalCoefficient += subjectData.coefficient;
-          
-          notesList.push({
-            note: finalNote,
-            coefficient: subjectData.coefficient,
-            subject: subjectData.subject,
-            devoirNote: subjectData.devoirNote,
-            compositionNote: subjectData.compositionNote
-          });
-        }
+        notesList.push({
+          note: finalNote,
+          coefficient: subjectData.coefficient,
+          subject: subjectData.subject,
+          devoirNote: subjectData.devoirNote,
+          compositionNote: subjectData.compositionNote
+        });
       }
     });
 
@@ -406,11 +362,13 @@ export const useResults = () => {
     const moyenneDevoir = coeffDevoir > 0 ? totalNotesDevoir / coeffDevoir : 0;
     const moyenneComposition = coeffComposition > 0 ? totalNotesComposition / coeffComposition : 0;
 
-    console.log('useResults: Statistiques calculées depuis la vraie base:', {
+    console.log('useResults: Statistiques calculées:', {
       studentId,
       totalNotes,
       totalCoefficient,
       moyenneGenerale,
+      moyenneDevoir,
+      moyenneComposition,
       notesList: notesList.length
     });
 
@@ -423,7 +381,7 @@ export const useResults = () => {
       moyenneDevoir,
       totalNotesComposition,
       moyenneComposition,
-      isComposition: examData.exam_title.toLowerCase().includes('composition')
+      isComposition: isCompositionExam
     };
   }, [results]);
 
