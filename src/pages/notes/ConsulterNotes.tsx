@@ -326,8 +326,19 @@ export default function ConsulterNotes() {
             <CardTitle className="flex items-center gap-2">
               <BookOpen className="h-5 w-5 text-primary" />
               {matiere.nom}
-              {isComposition && <span className="text-sm text-muted-foreground">(Composition)</span>}
-              {!isComposition && <span className="text-sm text-muted-foreground">(Examen)</span>}
+              {isComposition && currentExam?.semester && (
+                <span className="text-sm text-muted-foreground">
+                  (Composition - {currentExam.semester})
+                </span>
+              )}
+              {isComposition && !currentExam?.semester && (
+                <span className="text-sm text-muted-foreground">(Composition)</span>
+              )}
+              {!isComposition && (
+                <span className="text-sm text-muted-foreground">
+                  ({currentExam?.title || 'Examen'})
+                </span>
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent>

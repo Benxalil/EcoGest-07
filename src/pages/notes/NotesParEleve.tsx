@@ -412,7 +412,7 @@ export default function NotesParEleve() {
                         {eleve.prenom} {eleve.nom}
                       </div>
                       <div className="text-xs text-muted-foreground">
-                        ID: {(index + 1).toString().padStart(2, '0')}
+                        Matricule: {students.find(s => s.id === eleve.id)?.student_number || '-'}
                       </div>
                     </div>
                     {selectedEleve?.id === eleve.id && <div className="w-2 h-2 bg-primary rounded-full"></div>}
