@@ -430,14 +430,13 @@ export default function NotesParEleve() {
         {selectedEleve ? <Card>
             <CardHeader>
               <CardTitle>
-                Notes de {selectedEleve.prenom} {selectedEleve.nom}
+                Notes de : {students.find(s => s.id === selectedEleve.id)?.student_number || '-'} - {selectedEleve.prenom} {selectedEleve.nom}
               </CardTitle>
             </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-32">Matricule</TableHead>
                     <TableHead>Matière</TableHead>
                     {/* LOGIQUE CONDITIONNELLE UNIFIÉE SELON LE TYPE D'EXAMEN */}
                     {examInfo?.type === 'Composition' ? <>
@@ -450,9 +449,7 @@ export default function NotesParEleve() {
                   {matieres.map((matiere, index) => {
                 const noteData = getNote(selectedEleve.id, matiere.id.toString());
                 const maxScore = parseMaxScoreFromMoyenne(matiere.moyenne);
-                const studentMatricule = students.find(s => s.id === selectedEleve.id)?.student_number || '-';
                 return <TableRow key={matiere.id}>
-                        <TableCell className="font-mono text-sm">{studentMatricule}</TableCell>
                         <TableCell className="font-medium">
                           {matiere.nom}
                         </TableCell>

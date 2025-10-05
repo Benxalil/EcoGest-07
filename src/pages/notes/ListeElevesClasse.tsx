@@ -131,28 +131,31 @@ export default function ListeElevesClasse() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-20">#ID</TableHead>
+                  <TableHead className="w-32">Matricule</TableHead>
                   <TableHead>Prénom & Nom</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {elevesFiltered.map((eleve, index) => (
-                  <TableRow key={eleve.id}>
-                    <TableCell className="font-medium">
-                      {String(index + 1).padStart(2, '0')}
-                    </TableCell>
-                    <TableCell>{eleve.prenom} {eleve.nom}</TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        onClick={() => handleConsulterEleve(eleve.id)}
-                        size="sm"
-                      >
-                        Consulter
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {elevesFiltered.map((eleve) => {
+                  const studentData = students.find(s => s.id === eleve.id);
+                  return (
+                    <TableRow key={eleve.id}>
+                      <TableCell className="font-medium font-mono">
+                        {studentData?.student_number || '-'}
+                      </TableCell>
+                      <TableCell>{eleve.prenom} {eleve.nom}</TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          onClick={() => handleConsulterEleve(eleve.id)}
+                          size="sm"
+                        >
+                          Consulter
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </CardContent>
