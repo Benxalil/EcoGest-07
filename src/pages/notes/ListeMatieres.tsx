@@ -9,6 +9,7 @@ import { useClasses } from "@/hooks/useClasses";
 import { useSubjects } from "@/hooks/useSubjects";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useTeacherFilter } from "@/hooks/useTeacherFilter";
+import { formatClassName } from "@/utils/classNameFormatter";
 
 interface Classe {
   id: string;
@@ -46,7 +47,7 @@ export default function ListeMatieres() {
         setClasse({
           id: classeFound.id,
           session: classeFound.academic_year_id || '',
-          libelle: `${classeFound.name} ${classeFound.level}${classeFound.section ? ` - ${classeFound.section}` : ''}`,
+          libelle: formatClassName(classeFound),
           effectif: classeFound.enrollment_count || 0
         });
       }
@@ -145,7 +146,7 @@ export default function ListeMatieres() {
                   <div className="flex items-center gap-4 text-sm text-muted-foreground">
                     <span>Classe: {classe?.libelle}</span>
                     <span>Coeff: {matiere.coefficient}</span>
-                    <span>Barème: /{matiere.maxScore}</span>
+                    <span>Moyenne: /{matiere.maxScore}</span>
                   </div>
                 </div>
               </div>

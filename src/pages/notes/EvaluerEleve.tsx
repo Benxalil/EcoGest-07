@@ -12,6 +12,7 @@ import { useGrades } from "@/hooks/useGrades";
 import { useExams } from "@/hooks/useExams";
 import { useSubjects } from "@/hooks/useSubjects";
 import { useClasses } from "@/hooks/useClasses";
+import { formatClassName } from "@/utils/classNameFormatter";
 import { 
   MatiereWithCoefficient, 
   parseMaxScoreFromMoyenne, 
@@ -117,7 +118,7 @@ export default function EvaluerEleve() {
         setClasse({
           id: classeFound.id,
           session: classeFound.level,
-          libelle: classeFound.name,
+          libelle: formatClassName(classeFound),
           effectif: classeFound.capacity || 0
         });
       }
@@ -306,7 +307,7 @@ export default function EvaluerEleve() {
                 Évaluer - {eleve?.prenom} {eleve?.nom}
               </h1>
               <p className="text-gray-600">
-                Matière: {matiere?.nom} | Classe: {classe?.session} {classe?.libelle}
+                Matière: {matiere?.nom} | Classe: {classe?.libelle}
               </p>
             </div>
           </div>

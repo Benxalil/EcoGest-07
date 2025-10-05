@@ -12,6 +12,7 @@ import { useStudents } from "@/hooks/useStudents";
 import { useSubjects } from "@/hooks/useSubjects";
 import { useExams } from "@/hooks/useExams";
 import { useNotesSync, UnifiedNote } from "@/hooks/useNotesSync";
+import { formatClassName } from "@/utils/classNameFormatter";
 interface Student {
   id: string;
   nom: string;
@@ -105,7 +106,7 @@ export default function ConsulterNotes() {
         setClasse({
           id: classeFound.id,
           session: classeFound.academic_year_id || '',
-          libelle: `${classeFound.name} ${classeFound.level}${classeFound.section ? ` - ${classeFound.section}` : ''}`,
+          libelle: formatClassName(classeFound),
           effectif: classeFound.enrollment_count || 0
         });
       }

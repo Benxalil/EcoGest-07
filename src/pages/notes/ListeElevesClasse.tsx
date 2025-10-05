@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useClasses } from "@/hooks/useClasses";
 import { useStudents } from "@/hooks/useStudents";
+import { formatClassName } from "@/utils/classNameFormatter";
 
 interface Classe {
   id: string;
@@ -43,7 +44,7 @@ export default function ListeElevesClasse() {
         setClasse({
           id: classeFound.id,
           session: classeFound.academic_year_id || '',
-          libelle: `${classeFound.name} ${classeFound.level}${classeFound.section ? ` - ${classeFound.section}` : ''}`,
+          libelle: formatClassName(classeFound),
           effectif: classeFound.enrollment_count || 0
         });
       }
@@ -104,7 +105,7 @@ export default function ListeElevesClasse() {
             <div>
               <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
                 <Users className="h-6 w-6 text-primary" />
-                Notes par Élève de la classe : {classe?.session} {classe?.libelle}
+                Notes par Élève de la classe : {classe?.libelle}
               </h1>
               <p className="text-muted-foreground">
                 Consultez et modifiez les notes de chaque élève individuellement

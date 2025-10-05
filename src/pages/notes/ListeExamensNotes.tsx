@@ -236,6 +236,29 @@ export default function ListeExamensNotes() {
     if (isTeacher()) {
       classesExamen = classesExamen.filter(classe => teacherClassIds.includes(classe.id));
     }
+
+    // Tri académique des classes (CI → Terminale)
+    const getClassOrder = (name: string, section: string = ''): number => {
+      const academicOrder: { [key: string]: number } = {
+        'CI': 1, 'CP': 2, 'CE1': 3, 'CE2': 4, 'CM1': 5, 'CM2': 6,
+        'Sixième': 7, '6ème': 7, '6e': 7,
+        'Cinquième': 8, '5ème': 8, '5e': 8,
+        'Quatrième': 9, '4ème': 9, '4e': 9,
+        'Troisième': 10, '3ème': 10, '3e': 10,
+        'Seconde': 11, '2nde': 11,
+        'Première': 12, '1ère': 12,
+        'Terminale': 13, 'Tle': 13
+      };
+      const order = academicOrder[name] || 999;
+      const sectionOrder = section ? section.charCodeAt(0) : 0;
+      return order * 100 + sectionOrder;
+    };
+
+    classesExamen = classesExamen.sort((a, b) => {
+      const orderA = getClassOrder(a.name, a.section || '');
+      const orderB = getClassOrder(b.name, b.section || '');
+      return orderA - orderB;
+    });
     return <Layout>
         <div className="container mx-auto p-6">
           <div className="flex items-center justify-between mb-6">
