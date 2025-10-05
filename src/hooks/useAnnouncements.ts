@@ -117,6 +117,7 @@ export const useAnnouncements = () => {
       if (announcementData.is_published !== undefined) updateData.is_published = announcementData.is_published;
       if (announcementData.priority) updateData.priority = announcementData.priority;
       if (announcementData.target_audience) updateData.target_audience = announcementData.target_audience;
+      if (announcementData.expires_at) updateData.expires_at = announcementData.expires_at.toISOString();
 
       const { error } = await supabase
         .from('announcements')

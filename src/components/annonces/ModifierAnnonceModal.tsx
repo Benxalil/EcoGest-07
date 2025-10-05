@@ -120,7 +120,8 @@ export function ModifierAnnonceModal({ open, onOpenChange, annonce, onAnnounceme
         title: titre,
         content: contenu,
         priority: priorite,
-        target_audience: destinataires
+        target_audience: destinataires,
+        expires_at: dateExpiration
       });
 
       if (success) {

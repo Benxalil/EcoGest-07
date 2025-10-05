@@ -92,16 +92,22 @@ export default function ListeAnnonces() {
   now.setHours(0, 0, 0, 0);
 
   const separateAnnouncements = (annonces: AnnonceData[]) => {
-    const aVenir = annonces.filter(annonce => {
-      const expirationDate = new Date(annonce.dateExpiration);
-      expirationDate.setHours(0, 0, 0, 0);
-      return expirationDate >= now;
-    });
-    const passees = annonces.filter(annonce => {
-      const expirationDate = new Date(annonce.dateExpiration);
-      expirationDate.setHours(0, 0, 0, 0);
-      return expirationDate < now;
-    });
+    const aVenir = annonces
+      .filter(annonce => {
+        const expirationDate = new Date(annonce.dateExpiration);
+        expirationDate.setHours(0, 0, 0, 0);
+        return expirationDate >= now;
+      })
+      .sort((a, b) => a.dateExpiration.getTime() - b.dateExpiration.getTime()); // Tri: date la plus proche en premier
+    
+    const passees = annonces
+      .filter(annonce => {
+        const expirationDate = new Date(annonce.dateExpiration);
+        expirationDate.setHours(0, 0, 0, 0);
+        return expirationDate < now;
+      })
+      .sort((a, b) => b.dateExpiration.getTime() - a.dateExpiration.getTime()); // Tri: date la plus récente en premier
+    
     return { aVenir, passees };
   };
 
