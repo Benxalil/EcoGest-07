@@ -12,6 +12,7 @@ import { Database } from "@/integrations/supabase/types";
 import { useNavigate } from "react-router-dom";
 import { useAcademicYear } from "@/hooks/useAcademicYear";
 import { getAcademicMonths } from "@/utils/academicCalendar";
+import { useAcademicYearDates } from "@/hooks/useAcademicYearDates";
 
 type Payment = Database['public']['Tables']['payments']['Row'];
 
@@ -29,14 +30,16 @@ export default function PaiementsEnfant() {
   const { hasFeature, currentPlan } = useSubscriptionPlan();
   const navigate = useNavigate();
   const { academicYear } = useAcademicYear();
+  const { dates: academicYearDates } = useAcademicYearDates();
   const [paymentMonths, setPaymentMonths] = useState<PaymentMonth[]>([]);
   const [loading, setLoading] = useState(true);
   const { children, selectedChild, setSelectedChildId, loading: childrenLoading } = useParentChildren();
 
-  // Récupérer les mois académiques depuis les paramètres système
+  // Récupérer les mois académiques depuis les vraies dates des paramètres système
   const academicMonths = useMemo(() => {
-    return getAcademicMonths(academicYear);
-  }, [academicYear]);
+    if (!academicYearDates) return [];
+    return getAcademicMonths(academicYearDates.startDate, academicYearDates.endDate);
+  }, [academicYearDates]);
 
   useEffect(() => {
     const fetchChildPayments = async () => {

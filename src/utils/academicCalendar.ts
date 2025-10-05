@@ -1,53 +1,12 @@
 // Utilitaire pour gérer le calendrier académique
-export interface AcademicCalendarSettings {
-  dateDebutAnnee: string;
-  dateFinAnnee: string;
-}
-
-export const getAcademicCalendarSettings = (currentAcademicYear?: string): AcademicCalendarSettings => {
-  try {
-    // TODO: Remplacer par un vrai hook Supabase pour récupérer les paramètres de l'école
-    // const settings = useSchoolData hook
-    const settings = null; // Temporaire jusqu'à implémentation du hook
-    if (settings) {
-      const parsedSettings = JSON.parse(settings);
-      if (parsedSettings.dateDebutAnnee && parsedSettings.dateFinAnnee) {
-        return {
-          dateDebutAnnee: parsedSettings.dateDebutAnnee,
-          dateFinAnnee: parsedSettings.dateFinAnnee
-        };
-      }
-    }
-  } catch (error) {
-    console.error('Erreur lors de la récupération des paramètres du calendrier académique:', error);
+export const getAcademicMonths = (startDate?: string, endDate?: string): { name: string; year: number; monthIndex: number }[] => {
+  // Si pas de dates fournies, retourner un tableau vide
+  if (!startDate || !endDate) {
+    return [];
   }
   
-  // Générer des valeurs par défaut basées sur l'année scolaire courante
-  const generateDefaultDates = (academicYear?: string): AcademicCalendarSettings => {
-    if (academicYear) {
-      // Format: "2025/2026"
-      const [startYear, endYear] = academicYear.split('/').map(y => parseInt(y));
-      return {
-        dateDebutAnnee: `${startYear}-09-01`,
-        dateFinAnnee: `${endYear}-07-31`
-      };
-    }
-    
-    // Valeurs par défaut absolues si aucune année n'est fournie
-    return {
-      dateDebutAnnee: '2024-09-01',
-      dateFinAnnee: '2025-07-31'
-    };
-  };
-  
-  return generateDefaultDates(currentAcademicYear);
-};
-
-export const getAcademicMonths = (currentAcademicYear?: string): { name: string; year: number; monthIndex: number }[] => {
-  const { dateDebutAnnee, dateFinAnnee } = getAcademicCalendarSettings(currentAcademicYear);
-  
-  const startDate = new Date(dateDebutAnnee);
-  const endDate = new Date(dateFinAnnee);
+  const start = new Date(startDate);
+  const end = new Date(endDate);
   
   const months: { name: string; year: number; monthIndex: number }[] = [];
   const monthNames = [
@@ -55,8 +14,8 @@ export const getAcademicMonths = (currentAcademicYear?: string): { name: string;
     "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"
   ];
   
-  let currentDate = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
-  const finalDate = new Date(endDate.getFullYear(), endDate.getMonth(), 1);
+  let currentDate = new Date(start.getFullYear(), start.getMonth(), 1);
+  const finalDate = new Date(end.getFullYear(), end.getMonth(), 1);
   
   while (currentDate <= finalDate) {
     months.push({

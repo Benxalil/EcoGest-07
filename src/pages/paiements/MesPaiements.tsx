@@ -11,6 +11,7 @@ import { useNavigate } from "react-router-dom";
 import { useOptimizedUserData } from "@/hooks/useOptimizedUserData";
 import { useAcademicYear } from "@/hooks/useAcademicYear";
 import { getAcademicMonths } from "@/utils/academicCalendar";
+import { useAcademicYearDates } from "@/hooks/useAcademicYearDates";
 
 type Payment = Database['public']['Tables']['payments']['Row'];
 
@@ -29,14 +30,16 @@ export default function MesPaiements() {
   const navigate = useNavigate();
   const { profile } = useOptimizedUserData();
   const { academicYear } = useAcademicYear();
+  const { dates: academicYearDates } = useAcademicYearDates();
   const [paymentMonths, setPaymentMonths] = useState<PaymentMonth[]>([]);
   const [loading, setLoading] = useState(true);
   const [studentId, setStudentId] = useState<string | null>(null);
 
-  // Récupérer les mois académiques depuis les paramètres système
+  // Récupérer les mois académiques depuis les vraies dates des paramètres système
   const academicMonths = useMemo(() => {
-    return getAcademicMonths(academicYear);
-  }, [academicYear]);
+    if (!academicYearDates) return [];
+    return getAcademicMonths(academicYearDates.startDate, academicYearDates.endDate);
+  }, [academicYearDates]);
 
   // Récupérer l'ID de l'élève à partir du profil utilisateur
   useEffect(() => {

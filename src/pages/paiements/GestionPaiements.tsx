@@ -7,6 +7,7 @@ import { useNavigate } from "react-router-dom";
 import { useState, useEffect, useMemo } from "react";
 import { useAcademicYear } from "@/hooks/useAcademicYear";
 import { getAcademicMonths } from "@/utils/academicCalendar";
+import { useAcademicYearDates } from "@/hooks/useAcademicYearDates";
 import { useSubscriptionPlan } from "@/hooks/useSubscriptionPlan";
 import { useClasses } from "@/hooks/useClasses";
 import { useStudents } from "@/hooks/useStudents";
@@ -84,6 +85,7 @@ const getClassesWithPaymentStats = (classes: any[], students: any[], payments: a
 export default function GestionPaiements() {
   const navigate = useNavigate();
   const { academicYear } = useAcademicYear();
+  const { dates: academicYearDates, loading: datesLoading } = useAcademicYearDates();
   const { hasFeature, currentPlan } = useSubscriptionPlan();
   const { classes, loading: classesLoading } = useClasses();
   const { students, loading: studentsLoading } = useStudents();
@@ -134,10 +136,11 @@ export default function GestionPaiements() {
   //     );
   // }
 
-  // Utiliser useMemo pour les mois académiques
+  // Utiliser useMemo pour les mois académiques depuis les vraies dates
   const academicMonths = useMemo(() => {
-    return getAcademicMonths(academicYear);
-  }, [academicYear]);
+    if (!academicYearDates) return [];
+    return getAcademicMonths(academicYearDates.startDate, academicYearDates.endDate);
+  }, [academicYearDates]);
 
   // Utiliser useMemo pour éviter les recalculs inutiles
   const classesWithStats = useMemo(() => {
@@ -155,7 +158,7 @@ export default function GestionPaiements() {
   }, [classes, students, payments, academicMonths]);
 
   // Ajouter un état de chargement
-  if (classesLoading || studentsLoading || paymentsLoading) {
+  if (classesLoading || studentsLoading || paymentsLoading || datesLoading) {
     return (
       <Layout>
         <div className="container mx-auto py-8">
