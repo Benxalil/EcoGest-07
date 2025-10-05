@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
 import { useAcademicYear } from "@/hooks/useAcademicYear";
 import { useClasses } from "@/hooks/useClasses";
@@ -16,6 +16,29 @@ import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { formatClassName } from "@/utils/classNameFormatter";
+
+// Fonction pour trier les classes par ordre académique
+const getClassOrder = (name: string, section: string = ''): number => {
+  const levelOrder: { [key: string]: number } = {
+    'CI': 1, 'CP': 2, 'CE1': 3, 'CE2': 4, 'CM1': 5, 'CM2': 6,
+    '6ème': 7, 'Sixième': 7,
+    '5ème': 8, 'Cinquième': 8,
+    '4ème': 9, 'Quatrième': 9,
+    '3ème': 10, 'Troisième': 10,
+    '2nde': 11, 'Seconde': 11,
+    '1ère': 12, 'Première': 12,
+    'Terminale': 13, 'Tle': 13
+  };
+
+  const sectionOrder: { [key: string]: number } = {
+    'A': 1, 'B': 2, 'C': 3, 'D': 4, 'E': 5, 'F': 6
+  };
+
+  const levelValue = levelOrder[name] || 999;
+  const sectionValue = section ? sectionOrder[section.charAt(section.length - 1)] || 0 : 0;
+
+  return levelValue * 10 + sectionValue;
+};
 
 interface CreerExamenModalProps {
   createExam: (examData: CreateExamData) => Promise<boolean>;
@@ -64,6 +87,15 @@ export const CreerExamenModal: React.FC<CreerExamenModalProps> = ({ createExam, 
     ? ["1er trimestre", "2e trimestre", "3e trimestre"]
     : ["1er semestre", "2e semestre"];
 
+  // Trier les classes par ordre académique
+  const sortedClasses = useMemo(() => {
+    return [...classes].sort((a, b) => {
+      const orderA = getClassOrder(a.name, a.section || '');
+      const orderB = getClassOrder(b.name, b.section || '');
+      return orderA - orderB;
+    });
+  }, [classes]);
+
   const handleClasseToggle = (classeId: string) => {
     setClassesSelectionnees(prev => 
       prev.includes(classeId)
@@ -74,10 +106,10 @@ export const CreerExamenModal: React.FC<CreerExamenModalProps> = ({ createExam, 
 
   // S'assurer que toutes les classes sont sélectionnées quand "Toutes les classes" est coché
   useEffect(() => {
-    if (toutesClasses && classes.length > 0) {
-      setClassesSelectionnees(classes.map(c => c.id));
+    if (toutesClasses && sortedClasses.length > 0) {
+      setClassesSelectionnees(sortedClasses.map(c => c.id));
     }
-  }, [toutesClasses, classes]);
+  }, [toutesClasses, sortedClasses]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -140,7 +172,7 @@ export const CreerExamenModal: React.FC<CreerExamenModalProps> = ({ createExam, 
       let successCount = 0;
       
       // Déterminer les classes à utiliser
-      const classesToUse = toutesClasses ? classes.map(c => c.id) : classesSelectionnees;
+      const classesToUse = toutesClasses ? sortedClasses.map(c => c.id) : classesSelectionnees;
       
       // Vérifier s'il existe déjà un examen avec ce titre dans ces classes
       const examTitle = typeExamen === "Autre" ? titrePersonnalise : typeExamen;
@@ -153,7 +185,7 @@ export const CreerExamenModal: React.FC<CreerExamenModalProps> = ({ createExam, 
 
       if (duplicates.length > 0) {
         const duplicateClasses = duplicates.map(classId => {
-          const classe = classes.find(c => c.id === classId);
+          const classe = sortedClasses.find(c => c.id === classId);
           return classe ? formatClassName(classe) : '';
         }).join(', ');
 
@@ -318,19 +350,19 @@ export const CreerExamenModal: React.FC<CreerExamenModalProps> = ({ createExam, 
                     setToutesClasses(checked as boolean);
                     if (checked) {
                       setClassesSelectionnees([]);
-                    } else {
-                      // Si on décoche "Toutes les classes", sélectionner toutes les classes par défaut
-                      setClassesSelectionnees(classes.map(c => c.id));
-                    }
-                  }}
-                />
-                <Label htmlFor="toutesClasses">Toutes les classes</Label>
-              </div>
+                     } else {
+                       // Si on décoche "Toutes les classes", sélectionner toutes les classes par défaut
+                       setClassesSelectionnees(sortedClasses.map(c => c.id));
+                     }
+                   }}
+                 />
+                 <Label htmlFor="toutesClasses">Toutes les classes</Label>
+               </div>
 
-              <div className="space-y-2">
-                <Label>Classes sélectionnées {toutesClasses ? "(Toutes)" : `(${classesSelectionnees.length} sélectionnée${classesSelectionnees.length > 1 ? 's' : ''})`}</Label>
-                <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto border rounded-md p-2">
-                  {classes.map((classe) => (
+               <div className="space-y-2">
+                 <Label>Classes sélectionnées {toutesClasses ? "(Toutes)" : `(${classesSelectionnees.length} sélectionnée${classesSelectionnees.length > 1 ? 's' : ''})`}</Label>
+                 <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto border rounded-md p-2">
+                   {sortedClasses.map((classe) => (
                     <div key={classe.id} className="flex items-center space-x-2">
                       <Checkbox
                         id={classe.id}
