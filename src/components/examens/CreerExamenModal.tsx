@@ -204,7 +204,8 @@ export const CreerExamenModal: React.FC<CreerExamenModalProps> = ({ createExam, 
           title: examTitle,
           exam_date: dateExamen.toISOString().split('T')[0],
           total_marks: 20,
-          is_published: false
+          is_published: false,
+          semester: typeExamen === "Composition" ? semestre : undefined
         })
       );
       const results = await Promise.all(createPromises);

@@ -351,6 +351,7 @@ export type Database = {
           id: string
           is_published: boolean
           school_id: string
+          semester: string | null
           start_time: string | null
           subject_id: string | null
           teacher_id: string | null
@@ -367,6 +368,7 @@ export type Database = {
           id?: string
           is_published?: boolean
           school_id: string
+          semester?: string | null
           start_time?: string | null
           subject_id?: string | null
           teacher_id?: string | null
@@ -383,6 +385,7 @@ export type Database = {
           id?: string
           is_published?: boolean
           school_id?: string
+          semester?: string | null
           start_time?: string | null
           subject_id?: string | null
           teacher_id?: string | null

@@ -305,6 +305,7 @@ export default function ConsulterNotes() {
               <p className="text-gray-600">
                 {classe.libelle} - {matiere.nom}
                 {currentExam && ` - ${currentExam.title}`}
+                {currentExam?.semester && ` - ${currentExam.semester}`}
               </p>
             </div>
           </div>
@@ -359,7 +360,7 @@ export default function ConsulterNotes() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-12">ID#</TableHead>
+                  <TableHead className="w-32">Matricule</TableHead>
                   <TableHead>Prénom & Nom</TableHead>
                   {isComposition ? <>
                       <TableHead className="text-center">Devoir /{matiere.maxScore}</TableHead>
@@ -370,9 +371,10 @@ export default function ConsulterNotes() {
               <TableBody>
                 {elevesFiltered.map((eleve, index) => {
                 const noteData = getNote(eleve.id, matiere.id);
+                const studentDetails = students.find(s => s.id === eleve.id);
                 console.log('ConsulterNotes: Rendu note pour', eleve.prenom, eleve.nom, ':', noteData);
                 return <TableRow key={eleve.id}>
-                      <TableCell className="font-mono text-sm">{(index + 1).toString().padStart(2, '0')}</TableCell>
+                      <TableCell className="font-mono text-sm">{studentDetails?.student_number || '-'}</TableCell>
                       <TableCell className="font-medium">{eleve.prenom} {eleve.nom}</TableCell>
                       {isComposition ? <>
                           <TableCell className="text-center">

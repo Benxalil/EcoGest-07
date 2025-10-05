@@ -15,6 +15,7 @@ export interface Exam {
   end_time?: string;
   total_marks?: number;
   is_published: boolean;
+  semester?: string;
   created_at: string;
   updated_at: string;
   classes?: {
@@ -34,6 +35,7 @@ export interface CreateExamData {
   end_time?: string;
   total_marks?: number;
   is_published?: boolean;
+  semester?: string;
 }
 
 export const useExams = (classId?: string) => {
@@ -118,6 +120,7 @@ export const useExams = (classId?: string) => {
           duration_minutes: examData.total_marks ? examData.total_marks * 6 : 120,
           total_points: examData.total_marks,
           is_published: examData.is_published ?? false,
+          semester: examData.semester,
           school_id: userProfile.schoolId
         })
         .select(`
