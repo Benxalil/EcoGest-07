@@ -298,23 +298,32 @@ export default function Parametres() {
         .from('student-documents')
         .getPublicUrl(filePath);
 
-      // Mettre à jour l'aperçu et les settings
+      // Sauvegarder immédiatement en base de données
+      const updateSuccess = await updateSchoolData({
+        logo_url: publicUrl
+      });
+
+      if (!updateSuccess) {
+        throw new Error("Échec de la sauvegarde du logo");
+      }
+
+      // Mettre à jour l'aperçu local
       setLogoPreview(publicUrl);
       setSchoolSettings(prev => ({
         ...prev,
         logo: publicUrl
       }));
-      setHasUnsavedChanges(true);
 
       toast({
-        title: "Logo uploadé",
-        description: "N'oubliez pas de sauvegarder les paramètres",
+        title: "✅ Logo sauvegardé",
+        description: "Le logo a été téléversé et sauvegardé avec succès",
+        className: "animate-fade-in bg-green-50 border-green-200 text-green-800",
       });
     } catch (error) {
       console.error('Erreur upload logo:', error);
       toast({
         title: "Erreur",
-        description: "Impossible d'uploader le logo",
+        description: error instanceof Error ? error.message : "Impossible d'uploader le logo",
         variant: "destructive"
       });
     }
