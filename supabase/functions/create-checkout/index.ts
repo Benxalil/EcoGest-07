@@ -119,8 +119,9 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // 6. Appeler l'API PayTech pour créer la session de paiement
-    // PayTech accepte seulement 'prod' ou 'test', pas 'sandbox'
-    const paytechEnv = payTechConfig.environment === 'sandbox' ? 'test' : payTechConfig.environment;
+    // IMPORTANT: En mode 'test', PayTech facture toujours 100F peu importe le montant
+    // Pour les vrais montants, il faut utiliser 'prod' avec les clés de production
+    const paytechEnv = payTechConfig.environment === 'production' ? 'prod' : 'test';
     
     const payTechPayload = {
       item_name: `Abonnement ${plan.name} - ${school.name}`,
