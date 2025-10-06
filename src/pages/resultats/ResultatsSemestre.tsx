@@ -361,9 +361,9 @@ export default function ResultatsSemestre() {
 
         {/* Tableau des résultats avec format original */}
         <div className="bg-white rounded-lg shadow">
-          {/* Barre bleue avec titre EXAMEN */}
+          {/* Barre bleue avec titre du semestre/examen */}
           <div className="bg-blue-600 text-white text-center py-3 rounded-t-lg">
-            <h2 className="text-lg font-semibold">{getSemestreLabel()}</h2>
+            <h2 className="text-lg font-semibold uppercase">{getSemestreLabel()}</h2>
           </div>
           
           {/* Barre noire avec "Tous les bulletins" */}
@@ -373,43 +373,49 @@ export default function ResultatsSemestre() {
           
           <Table>
             <TableHeader>
-              <TableRow>
-                <TableHead className="w-12">N°</TableHead>
-                {showCalculatedRank && <TableHead className="w-16 text-center">Rang</TableHead>}
-                <TableHead>Nom et Prénom</TableHead>
+              {/* Première ligne d'en-tête */}
+              <TableRow className="bg-gray-100">
+                <TableHead className="w-12 text-center font-bold">N°</TableHead>
+                {showCalculatedRank && <TableHead className="w-16 text-center font-bold">Rang</TableHead>}
+                <TableHead className="font-bold">Nom et Prénom</TableHead>
+                
                 {(activeExamData?.exam_title?.toLowerCase().includes('composition')) ? (
                   <>
-                    <TableHead className="w-40 text-center bg-blue-50 border-r">Devoir</TableHead>
-                    <TableHead className="w-40 text-center bg-green-50">Composition</TableHead>
+                    <TableHead className="text-center font-bold bg-blue-50 border-r-2 border-gray-300">Devoir</TableHead>
+                    <TableHead className="text-center font-bold bg-green-50">Composition</TableHead>
                   </>
                 ) : (
                   <>
-                    <TableHead className="w-32 text-center">Note</TableHead>
-                    <TableHead className="w-32 text-center">Moyenne</TableHead>
+                    <TableHead className="text-center font-bold">
+                      {activeExamData?.exam_title || 'Note'}
+                    </TableHead>
                   </>
                 )}
-                <TableHead className="w-20 text-center">Action</TableHead>
-                <TableHead className="w-40 text-center">Bulletins de notes</TableHead>
+                
+                <TableHead className="w-20 text-center font-bold">Action</TableHead>
+                <TableHead className="w-48 text-center font-bold">Bulletins de notes</TableHead>
               </TableRow>
+              
+              {/* Deuxième ligne d'en-tête pour les examens de composition */}
               {(activeExamData?.exam_title?.toLowerCase().includes('composition')) && (
                 <TableRow className="bg-gray-50">
-                  <TableHead></TableHead>
-                  {showCalculatedRank && <TableHead></TableHead>}
-                  <TableHead></TableHead>
-                  <TableHead className="text-center text-sm bg-blue-50 border-r">
-                    <div className="grid grid-cols-2 gap-2 text-xs">
-                      <span className="font-medium">Notes</span>
-                      <span className="font-medium">Moyenne</span>
+                  <TableHead className="border-b"></TableHead>
+                  {showCalculatedRank && <TableHead className="border-b"></TableHead>}
+                  <TableHead className="border-b"></TableHead>
+                  <TableHead className="text-center bg-blue-50 border-r-2 border-b border-gray-300">
+                    <div className="grid grid-cols-2 gap-2 text-xs font-semibold">
+                      <span>Notes</span>
+                      <span>Moyenne</span>
                     </div>
                   </TableHead>
-                  <TableHead className="text-center text-sm bg-green-50">
-                    <div className="grid grid-cols-2 gap-2 text-xs">
-                      <span className="font-medium">Notes</span>
-                      <span className="font-medium">Moyenne</span>
+                  <TableHead className="text-center bg-green-50 border-b">
+                    <div className="grid grid-cols-2 gap-2 text-xs font-semibold">
+                      <span>Notes</span>
+                      <span>Moyenne</span>
                     </div>
                   </TableHead>
-                  <TableHead></TableHead>
-                  <TableHead></TableHead>
+                  <TableHead className="border-b"></TableHead>
+                  <TableHead className="border-b"></TableHead>
                 </TableRow>
               )}
             </TableHeader>
@@ -418,9 +424,17 @@ export default function ResultatsSemestre() {
                 const stats = getEleveStatistics(eleve.id);
                 const hasNotes = stats.notesList.length > 0;
                 
+                console.log(`📊 Affichage élève ${eleve.prenom} ${eleve.nom}:`, {
+                  moyenneDevoir: stats.moyenneDevoir,
+                  moyenneComposition: stats.moyenneComposition,
+                  moyenneGenerale: stats.moyenneGenerale,
+                  isComposition: stats.isComposition,
+                  notesCount: stats.notesList.length
+                });
+                
                 return (
-                  <TableRow key={eleve.id}>
-                    <TableCell className="font-medium">{eleve.numero || index + 1}</TableCell>
+                  <TableRow key={eleve.id} className="hover:bg-gray-50">
+                    <TableCell className="text-center font-medium">{eleve.numero || index + 1}</TableCell>
                     {showCalculatedRank && (
                       <TableCell className="text-center font-bold text-blue-600">
                         {eleve.rang}
@@ -430,21 +444,22 @@ export default function ResultatsSemestre() {
                     
                     {(activeExamData?.exam_title?.toLowerCase().includes('composition')) ? (
                       <>
-                        {/* Colonne Devoir avec séparateur */}
-                        <TableCell className="text-center bg-blue-50 border-r">
+                        {/* Colonne Devoir */}
+                        <TableCell className="text-center bg-blue-50 border-r-2 border-gray-300">
                           <div className="grid grid-cols-2 gap-2">
-                            <div className="text-sm font-medium text-gray-700">
-                              {/* Calculer et afficher le total des notes devoir */}
+                            {/* Total des notes devoir */}
+                            <div className="text-sm font-semibold text-gray-700">
                               {(() => {
-                                const devoirNotes = stats.notesList
+                                const devoirNotesSum = stats.notesList
                                   .filter(note => note.devoirNote && note.devoirNote > 0)
-                                  .map(note => note.devoirNote);
-                                const totalDevoir = devoirNotes.reduce((sum, note) => sum + note, 0);
-                                return devoirNotes.length > 0 ? totalDevoir.toFixed(1) : "-";
+                                  .reduce((sum, note) => sum + (note.devoirNote || 0), 0);
+                                const maxTotal = 20 * stats.notesList.filter(n => n.devoirNote).length;
+                                return devoirNotesSum > 0 ? `${devoirNotesSum.toFixed(1)} / ${maxTotal}` : "-";
                               })()}
                             </div>
+                            {/* Moyenne devoir */}
                             <div className={`text-sm font-bold ${stats.moyenneDevoir > 0 ? getGradeColor(stats.moyenneDevoir) : "text-gray-400"}`}>
-                              {stats.moyenneDevoir > 0 ? stats.moyenneDevoir.toFixed(2) : "-"}
+                              {stats.moyenneDevoir > 0 ? `${stats.moyenneDevoir.toFixed(2)} / 20` : "-"}
                             </div>
                           </div>
                         </TableCell>
@@ -452,38 +467,38 @@ export default function ResultatsSemestre() {
                         {/* Colonne Composition */}
                         <TableCell className="text-center bg-green-50">
                           <div className="grid grid-cols-2 gap-2">
-                            <div className="text-sm font-medium text-gray-700">
-                              {/* Calculer et afficher le total des notes composition */}
+                            {/* Total des notes composition */}
+                            <div className="text-sm font-semibold text-gray-700">
                               {(() => {
-                                const compositionNotes = stats.notesList
+                                const compositionNotesSum = stats.notesList
                                   .filter(note => note.compositionNote && note.compositionNote > 0)
-                                  .map(note => note.compositionNote);
-                                const totalComposition = compositionNotes.reduce((sum, note) => sum + note, 0);
-                                return compositionNotes.length > 0 ? totalComposition.toFixed(1) : "-";
+                                  .reduce((sum, note) => sum + (note.compositionNote || 0), 0);
+                                const maxTotal = 20 * stats.notesList.filter(n => n.compositionNote).length;
+                                return compositionNotesSum > 0 ? `${compositionNotesSum.toFixed(1)} / ${maxTotal}` : "-";
                               })()}
                             </div>
+                            {/* Moyenne composition */}
                             <div className={`text-sm font-bold ${stats.moyenneComposition > 0 ? getGradeColor(stats.moyenneComposition) : "text-gray-400"}`}>
-                              {stats.moyenneComposition > 0 ? stats.moyenneComposition.toFixed(2) : "-"}
+                              {stats.moyenneComposition > 0 ? `${stats.moyenneComposition.toFixed(2)} / 20` : "-"}
                             </div>
                           </div>
                         </TableCell>
                       </>
                     ) : (
                       <>
+                        {/* Pour les examens non-composition : afficher seulement la moyenne générale */}
                         <TableCell className="text-center">
                           {hasNotes ? (
-                            <span className="text-gray-700">{stats.moyenneGenerale.toFixed(2)}</span>
+                            <div className="flex flex-col items-center py-2">
+                              <span className={`text-lg font-bold ${getGradeColor(stats.moyenneGenerale)}`}>
+                                {stats.moyenneGenerale.toFixed(2)} / 20
+                              </span>
+                              <span className="text-xs text-gray-500 mt-1">
+                                ({stats.notesList.length} matière{stats.notesList.length > 1 ? 's' : ''})
+                              </span>
+                            </div>
                           ) : (
-                            <span className="text-gray-400 italic">-</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {hasNotes ? (
-                            <span className={getGradeColor(stats.moyenneGenerale)}>
-                              {stats.moyenneGenerale.toFixed(2)}
-                            </span>
-                          ) : (
-                            <span className="text-gray-400">-</span>
+                            <span className="text-gray-400 italic">Aucune note</span>
                           )}
                         </TableCell>
                       </>
