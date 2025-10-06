@@ -11,14 +11,17 @@ const cacheHeadersPlugin = (): Plugin => ({
     server.middlewares.use((req, res, next) => {
       const url = req.url || '';
       
+      // Security headers
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      
       // Set correct MIME types for JavaScript modules
       if (url.match(/\.(js|mjs|jsx|ts|tsx)$/)) {
-        res.setHeader('Content-Type', 'text/javascript');
+        res.setHeader('Content-Type', 'text/javascript; charset=utf-8');
         res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
       }
       // CSS files
       else if (url.endsWith('.css')) {
-        res.setHeader('Content-Type', 'text/css');
+        res.setHeader('Content-Type', 'text/css; charset=utf-8');
         res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
       }
       // Fonts
@@ -31,12 +34,12 @@ const cacheHeadersPlugin = (): Plugin => ({
       }
       // Short cache for HTML
       else if (url.endsWith('.html') || url === '/') {
-        res.setHeader('Content-Type', 'text/html');
-        res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
+        res.setHeader('Content-Type', 'text/html; charset=utf-8');
+        res.setHeader('Cache-Control', 'no-cache');
       }
       // API routes - no cache
       else if (url.startsWith('/api/') || url.includes('supabase')) {
-        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+        res.setHeader('Cache-Control', 'no-store, private');
       }
       
       next();
