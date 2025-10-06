@@ -521,19 +521,6 @@ export default function Parametres() {
             <p className="text-gray-600">Configurez tous les paramètres de votre établissement scolaire</p>
           </div>
           <div className="flex items-center space-x-2">
-            <Button onClick={exportSettings} variant="outline" size="sm">
-              <Download className="w-4 h-4 mr-2" />
-              Exporter
-            </Button>
-            <label className="cursor-pointer">
-              <Button variant="outline" size="sm" asChild>
-                <span>
-                <Upload className="w-4 h-4 mr-2" />
-                  Importer
-                </span>
-              </Button>
-              <input type="file" accept=".json" onChange={importSettings} className="hidden" />
-            </label>
             <Button onClick={resetToDefaults} variant="destructive" size="sm">
               <Trash2 className="w-4 h-4 mr-2" />
               Réinitialiser
@@ -1326,24 +1313,6 @@ export default function Parametres() {
 
                 <Separator />
 
-                <div className="space-y-4">
-                  <div>
-                    <Label>Migration des comptes utilisateurs</Label>
-                    <p className="text-sm text-gray-500 mb-3">
-                      Créez automatiquement des comptes de connexion pour tous les utilisateurs existants
-                    </p>
-                    <Button 
-                      onClick={() => window.location.href = '/admin/user-migration'} 
-                      variant="outline"
-                      className="w-full"
-                    >
-                      <Users className="w-4 h-4 mr-2" />
-                      Gérer la migration des comptes
-                    </Button>
-                  </div>
-                </div>
-
-                <Separator />
 
                 <div className="space-y-2">
                   <Label>Statut des services</Label>
