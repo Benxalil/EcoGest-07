@@ -22,15 +22,15 @@ export function SchoolInfo({
         <h2 className="text-sm font-semibold text-gray-900">{displayName}</h2>
         <p className="text-xs text-gray-500">{displaySlogan}</p>
       </div>
-      <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center flex-shrink-0">
+      <div className="w-12 h-12 bg-white border-2 border-gray-200 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
         {displayLogo ? (
           <img 
             src={displayLogo} 
             alt={`Logo ${displayName}`} 
-            className="w-8 h-8 object-contain rounded-md"
+            className="w-full h-full object-contain p-1"
           />
         ) : (
-          <School className="w-6 h-6 text-white" />
+          <School className="w-6 h-6 text-primary" />
         )}
       </div>
     </div>

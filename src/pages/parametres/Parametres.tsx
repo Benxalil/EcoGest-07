@@ -633,8 +633,16 @@ export default function Parametres() {
                   <Label>Logo de l'École</Label>
                   <div className="space-y-4">
                     <div className="flex items-center space-x-4">
-                      <div className="w-20 h-20 bg-gray-100 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-300">
-                        {logoPreview || schoolSettings.logo ? <img src={logoPreview || schoolSettings.logo} alt="Logo preview" className="w-full h-full object-contain rounded-lg" /> : <School className="w-8 h-8 text-gray-400" />}
+                      <div className="w-32 h-32 bg-gray-50 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-300 overflow-hidden">
+                        {logoPreview || schoolSettings.logo ? (
+                          <img 
+                            src={logoPreview || schoolSettings.logo} 
+                            alt="Logo preview" 
+                            className="w-full h-full object-contain p-2" 
+                          />
+                        ) : (
+                          <School className="w-12 h-12 text-gray-400" />
+                        )}
                       </div>
                       <div className="flex-1">
                         <label className="cursor-pointer">
