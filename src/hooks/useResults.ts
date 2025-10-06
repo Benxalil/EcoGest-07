@@ -187,21 +187,18 @@ export const useResults = (options?: { contextSemester?: string }) => {
                   // Déduire le semestre cible depuis plusieurs sources
                   let targetSemester = exam.semester; // Priorité 1: semester de l'examen
                   
-                  // Priorité 2: contextSemester depuis l'URL
+                  // Priorité 2: contextSemester depuis l'URL (déjà normalisé par ResultatsSemestre)
                   if (!targetSemester && contextSemester) {
-                    targetSemester = contextSemester === '1' || contextSemester === 'semestre1' 
-                      ? 'semestre1' 
-                      : contextSemester === '2' || contextSemester === 'semestre2' 
-                      ? 'semestre2' 
-                      : null;
+                    // Le contextSemester est déjà normalisé vers '1er_semestre' ou '2eme_semestre'
+                    targetSemester = contextSemester;
                   }
                   
                   // Priorité 3: déduire du titre de l'examen
                   if (!targetSemester) {
                     if (exam.title?.match(/1er|premier|first/i)) {
-                      targetSemester = 'semestre1';
+                      targetSemester = '1er_semestre';
                     } else if (exam.title?.match(/2[eè]me|deuxi[eè]me|second/i)) {
-                      targetSemester = 'semestre2';
+                      targetSemester = '2eme_semestre';
                     }
                   }
                   
