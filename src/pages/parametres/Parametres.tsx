@@ -189,17 +189,26 @@ export default function Parametres() {
     loadAcademicYearDates();
   }, []);
 
-  // Charger l'aperçu du logo existant
+  // Synchroniser schoolSettings avec schoolData (base de données)
   useEffect(() => {
-    if (schoolSettings.logo) {
-      setLogoPreview(schoolSettings.logo);
+    if (schoolData) {
+      setSchoolSettings({
+        nom: schoolData.name || '',
+        adresse: schoolData.address || '',
+        telephone: schoolData.phone || '',
+        slogan: schoolData.slogan || 'Excellence et Innovation',
+        logo: schoolData.logo_url || ''
+      });
+      
+      if (schoolData.logo_url) {
+        setLogoPreview(schoolData.logo_url);
+      }
     }
-  }, [schoolSettings.logo]);
+  }, [schoolData]);
   const loadAllSettings = () => {
     try {
-      // Paramètres de l'école
-      const school = getSchoolSettings();
-      setSchoolSettings(school);
+      // Paramètres de l'école - chargés via useEffect depuis schoolData
+      // (ne plus utiliser getSchoolSettings déprécié)
 
       // Paramètres généraux
       const general = localStorage.getItem('settings');
@@ -255,42 +264,83 @@ export default function Parametres() {
       });
     }
   };
-  const handleLogoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) {
-      // Vérifier la taille du fichier (max 2MB)
-      if (file.size > 2 * 1024 * 1024) {
-        toast({
-          title: "Fichier trop volumineux",
-          description: "La taille du fichier ne doit pas dépasser 2MB",
-          variant: "destructive"
-        });
-        return;
-      }
+    if (!file) return;
 
-      // Créer un aperçu de l'image
-      const reader = new FileReader();
-      reader.onload = e => {
-        const result = e.target?.result as string;
-        setLogoPreview(result);
-        setSchoolSettings(prev => ({
-          ...prev,
-          logo: result
-        }));
-      };
-      reader.readAsDataURL(file);
-      setLogoFile(file);
+    // Vérifier la taille du fichier (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      toast({
+        title: "Fichier trop volumineux",
+        description: "La taille du fichier ne doit pas dépasser 2MB",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      // Upload vers Supabase Storage
+      const fileExt = file.name.split('.').pop();
+      const fileName = `logo-${Date.now()}.${fileExt}`;
+      const filePath = `school-logos/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('student-documents')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (uploadError) throw uploadError;
+
+      // Obtenir l'URL publique
+      const { data: { publicUrl } } = supabase.storage
+        .from('student-documents')
+        .getPublicUrl(filePath);
+
+      // Mettre à jour l'aperçu et les settings
+      setLogoPreview(publicUrl);
+      setSchoolSettings(prev => ({
+        ...prev,
+        logo: publicUrl
+      }));
+      setHasUnsavedChanges(true);
+
+      toast({
+        title: "Logo uploadé",
+        description: "N'oubliez pas de sauvegarder les paramètres",
+      });
+    } catch (error) {
+      console.error('Erreur upload logo:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible d'uploader le logo",
+        variant: "destructive"
+      });
     }
   };
   const saveAllSettings = async () => {
     try {
-      // Sauvegarder l'année académique en base de données
+      // 1. Sauvegarder les informations de l'école en base de données
+      const schoolUpdateSuccess = await updateSchoolData({
+        name: schoolSettings.nom,
+        address: schoolSettings.adresse,
+        phone: schoolSettings.telephone,
+        slogan: schoolSettings.slogan,
+        logo_url: schoolSettings.logo
+      });
+
+      if (!schoolUpdateSuccess) {
+        throw new Error("Échec de la mise à jour des informations de l'école");
+      }
+
+      // 2. Sauvegarder l'année académique en base de données
       const success = await updateAcademicYear(generalSettings.anneeScolaire);
       if (!success) {
         throw new Error("Échec de la mise à jour de l'année académique");
       }
 
-      // Mettre à jour les dates de l'année académique dans la base de données
+      // 3. Mettre à jour les dates de l'année académique dans la base de données
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         const { data: profile } = await supabase
@@ -315,8 +365,7 @@ export default function Parametres() {
         }
       }
 
-      // Sauvegarder tous les paramètres
-      saveSchoolSettings(schoolSettings);
+      // 4. Sauvegarder les autres paramètres dans localStorage
       localStorage.setItem('settings', JSON.stringify(generalSettings));
       localStorage.setItem('teacherSettings', JSON.stringify(teacherSettings));
       localStorage.setItem('studentSettings', JSON.stringify(studentSettings));
@@ -325,14 +374,14 @@ export default function Parametres() {
       localStorage.setItem('securitySettings', JSON.stringify(securitySettings));
       localStorage.setItem('backupSettings', JSON.stringify(backupSettings));
 
-      // Déclencher un événement pour notifier les autres composants
+      // 5. Déclencher un événement pour notifier les autres composants (Header, Dashboard)
       window.dispatchEvent(new Event('schoolSettingsUpdated'));
       
       setHasUnsavedChanges(false);
       
       toast({
         title: "✅ Paramètres sauvegardés avec succès !",
-        description: `Toutes les modifications ont été enregistrées. Année académique: ${generalSettings.anneeScolaire}`,
+        description: `Toutes les modifications ont été enregistrées en base de données.`,
         className: "animate-fade-in bg-green-50 border-green-200 text-green-800",
         duration: 4000,
       });
@@ -340,7 +389,7 @@ export default function Parametres() {
       console.error('Erreur lors de la sauvegarde:', error);
       toast({
         title: "Erreur",
-        description: "Impossible de sauvegarder les paramètres. Veuillez réessayer.",
+        description: error instanceof Error ? error.message : "Impossible de sauvegarder les paramètres.",
         variant: "destructive"
       });
     }
