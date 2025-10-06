@@ -124,7 +124,7 @@ const handler = async (req: Request): Promise<Response> => {
     
     const payTechPayload = {
       item_name: `Abonnement ${plan.name} - ${school.name}`,
-      item_price: plan.price / 100, // Convertir centimes en unité principale
+      item_price: plan.price, // Prix en centimes (ex: 4000000 = 40000 XOF)
       currency: plan.currency,
       ref_command: subscription.id,
       command_name: `Abonnement ${plan.name}`,
