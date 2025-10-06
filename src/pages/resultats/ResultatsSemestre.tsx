@@ -50,12 +50,14 @@ export default function ResultatsSemestre() {
   const activeExamData = isExamView 
     ? examData
     : semestre && classData?.exams 
-      ? classData.exams.find(exam => 
-          exam.exam_title?.toLowerCase().includes('composition') && 
-          exam.semester === semestre
-        ) || classData.exams.find(exam => 
-          exam.exam_title?.toLowerCase().includes('composition')
-        ) || (classData.exams.length > 0 ? classData.exams[0] : null)
+      ? classData.exams.find(exam => {
+          const isComposition = exam.exam_title?.toLowerCase().includes('composition');
+          // Matcher par semester si disponible, sinon accepter toute Composition
+          const matchesSemester = exam.semester 
+            ? exam.semester === semestre 
+            : isComposition; // Si semester est NULL, accepter si c'est une Composition
+          return isComposition && matchesSemester;
+        }) || null
       : (classData?.exams && classData.exams.length > 0 ? classData.exams[0] : null);
 
   // Détecter si c'est une vue Composition (basé sur le paramètre semestre de l'URL)

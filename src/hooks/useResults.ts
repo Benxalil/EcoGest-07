@@ -170,7 +170,7 @@ export const useResults = () => {
             
             // Récupérer les élèves avec leurs vraies notes pour cet examen
             students: classStudents.map(student => {
-              // LOGIQUE SIMPLIFIÉE : Matcher uniquement par exam_id
+              // Filtrage adapté pour les examens de Composition
               const studentGrades = gradesData?.filter(grade => {
                 // Vérifier que c'est bien l'élève
                 if (grade.student_id !== student.id) return false;
@@ -179,7 +179,19 @@ export const useResults = () => {
                 const gradeSubject = classSubjects.find(s => s.id === grade.subject_id);
                 if (!gradeSubject) return false;
                 
-                // Matcher UNIQUEMENT par exam_id (simple et efficace)
+                // Pour les examens de Composition : matcher par exam_id OU par semester
+                const isCompositionExam = exam.title?.toLowerCase().includes('composition');
+                
+                if (isCompositionExam) {
+                  // Si l'examen a un semester défini, matcher exactement
+                  if (exam.semester) {
+                    return grade.exam_id === exam.id && grade.semester === exam.semester;
+                  }
+                  // Sinon, accepter toutes les notes de cet exam_id
+                  return grade.exam_id === exam.id;
+                }
+                
+                // Pour les autres types d'examens : matcher uniquement par exam_id
                 return grade.exam_id === exam.id;
               }) || [];
 
