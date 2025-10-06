@@ -13,44 +13,63 @@ import { supabase } from "@/integrations/supabase/client";
 
 const Abonnement = () => {
   const [isAnnual, setIsAnnual] = useState(false);
-  const { currentPlan, starterCompatible } = useSubscriptionPlan();
+  const { currentPlan, starterCompatible, getActiveSubscription } = useSubscriptionPlan();
   const { plans, loading: plansLoading, formatPrice } = useSubscriptionPlans();
   const { userProfile } = useUserRole();
   const { toast } = useToast();
   const { subscriptionStatus } = useSubscription();
   const [isCreatingCheckout, setIsCreatingCheckout] = useState<string | null>(null);
+  const [activeSubscription, setActiveSubscription] = useState<any>(null);
+
+  // Charger l'abonnement actif au montage
+  useEffect(() => {
+    const loadActiveSubscription = async () => {
+      const activeSub = await getActiveSubscription();
+      setActiveSubscription(activeSub);
+    };
+    loadActiveSubscription();
+  }, []);
 
   // Gérer les retours de PayTech
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const isSuccess = urlParams.get('success');
     const isCancelled = urlParams.get('cancelled');
+    const failureReason = urlParams.get('reason');
 
     if (isSuccess === 'true') {
       toast({
-        title: "✅ Paiement réussi !",
-        description: "Votre abonnement a été activé avec succès. Rechargement des données...",
-        duration: 5000
+        title: "✅ Votre abonnement a été activé avec succès !",
+        description: "Redirection vers votre tableau de bord...",
+        duration: 3000
       });
       
       window.history.replaceState({}, '', '/abonnement');
       
       setTimeout(() => {
-        window.location.reload();
+        window.location.href = '/';
       }, 2000);
     }
 
     if (isCancelled === 'true') {
+      const message = failureReason === 'payment_failed' 
+        ? "❌ Échec du paiement. Veuillez vérifier vos informations et réessayer."
+        : "❌ Paiement annulé";
+      
+      const description = failureReason === 'payment_failed'
+        ? "Une erreur s'est produite lors du traitement de votre paiement. Contactez le support si le problème persiste."
+        : "Vous avez annulé le paiement. Aucun montant n'a été débité.";
+      
       toast({
-        title: "❌ Paiement annulé",
-        description: "Vous avez annulé le paiement. Aucun montant n'a été débité.",
+        title: message,
+        description,
         variant: "destructive",
         duration: 5000
       });
       
       window.history.replaceState({}, '', '/abonnement');
     }
-  }, [toast]);
+  }, [toast, getActiveSubscription]);
 
   // Fonction pour déterminer si un plan est actif
   const isActivePlan = (planId: string) => {
@@ -218,8 +237,27 @@ const Abonnement = () => {
             Sélectionnez le plan qui convient le mieux à votre école et profitez de toutes nos fonctionnalités
           </p>
 
-          {/* Section d'information sur l'essai gratuit */}
-          {subscriptionStatus.isTrialActive && (
+          {/* Affichage du statut actuel */}
+          {activeSubscription ? (
+            <div className="bg-green-50 border border-green-200 rounded-xl p-6 mb-8 max-w-4xl mx-auto">
+              <div className="flex items-center justify-center gap-3 mb-4">
+                <div className="bg-green-100 rounded-full p-2">
+                  <Star className="h-6 w-6 text-green-600" />
+                </div>
+                <h3 className="text-xl font-semibold text-green-900">
+                  Abonnement actif
+                </h3>
+              </div>
+              <div className="space-y-3">
+                <p className="text-green-800 text-lg text-center">
+                  <strong>Vous êtes actuellement abonné au plan {activeSubscription.plan?.name || 'Pro'}</strong>
+                </p>
+                <p className="text-green-700 text-center">
+                  Votre abonnement expire le : <strong>{activeSubscription.endDate.toLocaleDateString('fr-FR')}</strong> ({activeSubscription.daysRemaining} jour{activeSubscription.daysRemaining > 1 ? 's' : ''} restant{activeSubscription.daysRemaining > 1 ? 's' : ''})
+                </p>
+              </div>
+            </div>
+          ) : subscriptionStatus.isTrialActive ? (
             <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 mb-8 max-w-4xl mx-auto">
               <div className="flex items-center justify-center gap-3 mb-4">
                 <div className="bg-blue-100 rounded-full p-2">
@@ -256,7 +294,7 @@ const Abonnement = () => {
                 )}
               </div>
             </div>
-          )}
+          ) : null}
           
           {/* Toggle Switch */}
           <div className="flex items-center justify-center mb-8">
@@ -376,14 +414,22 @@ const Abonnement = () => {
 
                   <Button 
                     onClick={() => handleChoosePlan(plan.id)}
-                    disabled={isCreatingCheckout === plan.id || isPlanDisabled}
+                    disabled={
+                      isCreatingCheckout === plan.id || 
+                      isPlanDisabled || 
+                      !!activeSubscription
+                    }
                     className={`w-full font-semibold py-3 rounded-lg ${
-                      isPlanDisabled 
+                      activeSubscription
+                        ? 'bg-gray-300 text-gray-600 cursor-not-allowed opacity-60' 
+                        : isPlanDisabled 
                         ? 'bg-gray-400 text-gray-600 cursor-not-allowed' 
                         : 'bg-blue-600 hover:bg-blue-700 text-white'
                     }`}
                   >
-                    {isPlanDisabled 
+                    {activeSubscription
+                      ? "ABONNEMENT EN COURS"
+                      : isPlanDisabled 
                       ? "NON DISPONIBLE"
                       : isCreatingCheckout === plan.id 
                       ? "Redirection en cours..." 

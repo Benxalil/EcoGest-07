@@ -130,8 +130,8 @@ const handler = async (req: Request): Promise<Response> => {
       command_name: `Abonnement ${plan.name}`,
       env: paytechEnv,
       ipn_url: `${supabaseUrl}/functions/v1/paytech-webhook`,
-      success_url: `${Deno.env.get("SITE_URL")}/abonnement?success=true`,
-      cancel_url: `${Deno.env.get("SITE_URL")}/abonnement?cancelled=true`,
+      success_url: `${Deno.env.get("SITE_URL")}/abonnement?success=true&plan=${plan.code}`,
+      cancel_url: `${Deno.env.get("SITE_URL")}/abonnement?cancelled=true&reason=user_cancel`,
       custom_field: JSON.stringify({
         subscription_id: subscription.id,
         school_id,

@@ -55,40 +55,73 @@ export const useSubscription = () => {
 
       if (!school) return;
 
-      const trialEndDate = new Date(school.trial_end_date);
-      const now = new Date();
-      const daysRemaining = Math.ceil((trialEndDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+      // Vérifier s'il y a un abonnement actif payant
+      const { data: activeSubscription } = await supabase
+        .from('subscriptions')
+        .select('*')
+        .eq('school_id', profile.school_id)
+        .eq('status', 'active')
+        .gte('end_date', new Date().toISOString())
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
 
-      if (school.subscription_status === 'active') {
+      // Si un abonnement payant est actif
+      if (activeSubscription && school.subscription_status === 'active') {
+        const endDate = new Date(activeSubscription.end_date);
+        const now = new Date();
+        const daysRemaining = Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+
         setSubscriptionStatus({
-          isTrialActive: true,
+          isTrialActive: false, // Plus en période d'essai
           trialStartDate: null,
-          trialEndDate,
+          trialEndDate: endDate,
           daysRemaining: Math.max(daysRemaining, 0),
-          showWarning: false,
-          isExpired: false,
+          showWarning: daysRemaining <= 5 && daysRemaining > 0,
+          isExpired: daysRemaining <= 0,
         });
-      } else if (school.subscription_status === 'cancelled' || school.subscription_status === 'suspended') {
+        return;
+      }
+
+      // Sinon, gérer le trial si trial_end_date existe
+      if (school.trial_end_date) {
+        const trialEndDate = new Date(school.trial_end_date);
+        const now = new Date();
+        const daysRemaining = Math.ceil((trialEndDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+
+        if (school.subscription_status === 'cancelled' || school.subscription_status === 'suspended') {
+          setSubscriptionStatus({
+            isTrialActive: false,
+            trialStartDate: null,
+            trialEndDate,
+            daysRemaining: 0,
+            showWarning: false,
+            isExpired: true,
+          });
+        } else {
+          // Trial status
+          const isTrialActive = daysRemaining > 0;
+          const showWarning = daysRemaining <= 5 && daysRemaining > 0;
+          const isExpired = daysRemaining <= 0;
+
+          setSubscriptionStatus({
+            isTrialActive,
+            trialStartDate: null,
+            trialEndDate,
+            daysRemaining: Math.max(0, daysRemaining),
+            showWarning,
+            isExpired,
+          });
+        }
+      } else {
+        // Pas de trial_end_date, donc pas d'essai actif
         setSubscriptionStatus({
           isTrialActive: false,
           trialStartDate: null,
-          trialEndDate,
+          trialEndDate: null,
           daysRemaining: 0,
           showWarning: false,
-          isExpired: true,
-        }); } else {
-        // Trial status
-        const isTrialActive = daysRemaining > 0;
-        const showWarning = daysRemaining <= 5 && daysRemaining > 0;
-        const isExpired = daysRemaining <= 0;
-
-        setSubscriptionStatus({
-          isTrialActive,
-          trialStartDate: null,
-          trialEndDate,
-          daysRemaining: Math.max(0, daysRemaining),
-          showWarning,
-          isExpired,
+          isExpired: false,
         });
       }
     } catch (error) {

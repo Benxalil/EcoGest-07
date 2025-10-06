@@ -75,7 +75,7 @@ const handler = async (req: Request): Promise<Response> => {
         
         // Calculer les dates de début et fin
         const startDate = new Date();
-        const endDate = new Date(startDate);
+        let endDate = new Date(startDate);
         
         // Récupérer le plan pour connaître la période
         const { data: plan } = await supabase
@@ -84,9 +84,26 @@ const handler = async (req: Request): Promise<Response> => {
           .eq("id", subscription.plan_id)
           .single();
 
+        // Calculer la date de fin selon le type de plan
         if (plan?.period === "annual") {
-          endDate.setFullYear(endDate.getFullYear() + 1);
+          // Pour le plan annuel, utiliser l'année académique si disponible
+          const { data: academicYear } = await supabase
+            .from('academic_years')
+            .select('end_date')
+            .eq('school_id', subscription.school_id)
+            .eq('is_current', true)
+            .single();
+
+          if (academicYear?.end_date) {
+            endDate = new Date(academicYear.end_date);
+            console.log(`Plan annuel basé sur l'année académique: ${endDate.toISOString()}`);
+          } else {
+            // Fallback : 12 mois
+            endDate.setFullYear(endDate.getFullYear() + 1);
+            console.log(`Plan annuel fallback: ${endDate.toISOString()}`);
+          }
         } else {
+          // Plan mensuel : +1 mois
           endDate.setMonth(endDate.getMonth() + 1);
         }
 

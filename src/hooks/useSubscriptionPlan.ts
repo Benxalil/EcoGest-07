@@ -287,6 +287,45 @@ export const useSubscriptionPlan = () => {
     };
   };
 
+  /**
+   * Récupère l'abonnement actif depuis la table subscriptions
+   */
+  const getActiveSubscription = async () => {
+    if (!userProfile.schoolId) return null;
+
+    try {
+      const { data, error } = await supabase
+        .from('subscriptions')
+        .select(`
+          *,
+          subscription_plans (*)
+        `)
+        .eq('school_id', userProfile.schoolId)
+        .eq('status', 'active')
+        .gte('end_date', new Date().toISOString())
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (error || !data) return null;
+
+      const endDate = new Date(data.end_date);
+      const now = new Date();
+      const daysRemaining = Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+
+      return {
+        subscription: data,
+        plan: data.subscription_plans,
+        startDate: new Date(data.start_date),
+        endDate,
+        daysRemaining: Math.max(0, daysRemaining)
+      };
+    } catch (error) {
+      console.error('Erreur lors de la récupération de l\'abonnement actif:', error);
+      return null;
+    }
+  };
+
   return {
     currentPlan,
     loading,
@@ -299,5 +338,6 @@ export const useSubscriptionPlan = () => {
     markAsNotStarterCompatible,
     checkStarterLimits,
     refreshPlan: fetchSubscriptionPlan,
+    getActiveSubscription
   };
 };
