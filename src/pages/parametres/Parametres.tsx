@@ -638,11 +638,17 @@ export default function Parametres() {
                           <img 
                             src={logoPreview || schoolSettings.logo} 
                             alt="Logo preview" 
-                            className="w-full h-full object-contain p-2" 
+                            className="w-full h-full object-contain p-2"
+                            onError={(e) => {
+                              console.error('Erreur chargement logo:', schoolSettings.logo);
+                              e.currentTarget.style.display = 'none';
+                              e.currentTarget.parentElement?.classList.add('logo-error');
+                            }}
                           />
-                        ) : (
-                          <School className="w-12 h-12 text-gray-400" />
-                        )}
+                        ) : null}
+                        {(!logoPreview && !schoolSettings.logo) || (logoPreview || schoolSettings.logo) ? (
+                          <School className="w-12 h-12 text-gray-400 [.logo-error_&]:block [.logo-error_&]:opacity-100" style={{ display: logoPreview || schoolSettings.logo ? 'none' : 'block' }} />
+                        ) : null}
                       </div>
                       <div className="flex-1">
                         <label className="cursor-pointer">
