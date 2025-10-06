@@ -279,13 +279,13 @@ export default function Parametres() {
     }
 
     try {
-      // Upload vers Supabase Storage
+      // Upload vers le bucket public school-logos
       const fileExt = file.name.split('.').pop();
-      const fileName = `logo-${Date.now()}.${fileExt}`;
-      const filePath = `school-logos/${fileName}`;
+      const fileName = `${Date.now()}.${fileExt}`;
+      const filePath = fileName; // Pas besoin de sous-dossier dans un bucket dédié
 
       const { error: uploadError } = await supabase.storage
-        .from('student-documents')
+        .from('school-logos')
         .upload(filePath, file, {
           cacheControl: '3600',
           upsert: false
@@ -295,7 +295,7 @@ export default function Parametres() {
 
       // Obtenir l'URL publique
       const { data: { publicUrl } } = supabase.storage
-        .from('student-documents')
+        .from('school-logos')
         .getPublicUrl(filePath);
 
       // Sauvegarder immédiatement en base de données
