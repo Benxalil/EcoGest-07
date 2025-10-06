@@ -28,6 +28,7 @@ interface UseNotesSyncProps {
 
 export const useNotesSync = ({ classeId, matiereId, examId, studentId, isComposition }: UseNotesSyncProps) => {
   const [localNotes, setLocalNotes] = useState<UnifiedNote[]>([]);
+  const [initialNotes, setInitialNotes] = useState<UnifiedNote[]>([]); // Track initial state for deletion
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const { grades, upsertGrade, refetch: refetchGrades } = useGrades(studentId, matiereId, examId);
   const { toast } = useToast();
@@ -120,6 +121,7 @@ export const useNotesSync = ({ classeId, matiereId, examId, studentId, isComposi
     const notes = Object.values(notesByStudentAndSubject);
     console.log('useNotesSync: Notes finales chargées:', notes);
     setLocalNotes(notes);
+    setInitialNotes(notes); // Save initial state to detect deletions
     setHasUnsavedChanges(false);
   }, [grades, classeId, matiereId, examId, studentId, isComposition]);
 
@@ -209,22 +211,104 @@ export const useNotesSync = ({ classeId, matiereId, examId, studentId, isComposi
     setHasUnsavedChanges(true);
   }, []);
 
-  // Sauvegarder toutes les notes en base de données - LOGIQUE UNIFIÉE
-  const saveAllNotes = useCallback(async () => {
-    if (!localNotes.length) {
-      console.log('useNotesSync: Aucune note à sauvegarder');
-      return;
-    }
+  // Identifier les notes à supprimer (notes vidées qui existaient avant)
+  const getNotesToDelete = useCallback(() => {
+    const toDelete: Array<{ studentId: string; subjectId: string; examType: string }> = [];
+    
+    initialNotes.forEach(initialNote => {
+      const currentNote = localNotes.find(n => 
+        n.eleveId === initialNote.eleveId && 
+        n.matiereId === initialNote.matiereId
+      );
+      
+      if (isComposition) {
+        // Vérifier si devoir a été vidé
+        if (initialNote.devoir && initialNote.devoir.trim() !== '' && 
+            (!currentNote?.devoir || currentNote.devoir.trim() === '')) {
+          toDelete.push({
+            studentId: initialNote.eleveId,
+            subjectId: initialNote.matiereId,
+            examType: 'devoir'
+          });
+        }
+        
+        // Vérifier si composition a été vidée
+        if (initialNote.composition && initialNote.composition.trim() !== '' && 
+            (!currentNote?.composition || currentNote.composition.trim() === '')) {
+          toDelete.push({
+            studentId: initialNote.eleveId,
+            subjectId: initialNote.matiereId,
+            examType: 'composition'
+          });
+        }
+      } else {
+        // Vérifier si note a été vidée
+        if (initialNote.note && initialNote.note.trim() !== '' && 
+            (!currentNote?.note || currentNote.note.trim() === '')) {
+          toDelete.push({
+            studentId: initialNote.eleveId,
+            subjectId: initialNote.matiereId,
+            examType: 'examen'
+          });
+        }
+      }
+    });
+    
+    return toDelete;
+  }, [localNotes, initialNotes, isComposition]);
 
-    // VALIDATION CRITIQUE : examId doit être défini pour éviter les fuites entre examens
+  // Sauvegarder toutes les notes en base de données avec gestion de la suppression
+  const saveAllNotes = useCallback(async (skipConfirmation = false) => {
+    // VALIDATION CRITIQUE : examId doit être défini
     if (!examId) {
       console.error('useNotesSync: examId manquant, impossible de sauvegarder');
       throw new Error('examId est requis pour sauvegarder les notes');
     }
 
+    // Détecter les notes à supprimer
+    const notesToDelete = getNotesToDelete();
+    
+    // Si des notes doivent être supprimées et qu'on n'a pas skip la confirmation
+    if (notesToDelete.length > 0 && !skipConfirmation) {
+      console.log('useNotesSync: Notes à supprimer détectées:', notesToDelete);
+      // Retourner un objet spécial pour signaler qu'une confirmation est nécessaire
+      return {
+        needsConfirmation: true,
+        notesToDelete,
+        deleteCount: notesToDelete.length
+      };
+    }
+
     try {
-      console.log('useNotesSync: Début sauvegarde', localNotes.length, 'notes pour examId:', examId);
+      console.log('useNotesSync: Début sauvegarde pour examId:', examId);
       
+      // 1. Supprimer les notes vidées
+      if (notesToDelete.length > 0) {
+        console.log('useNotesSync: Suppression de', notesToDelete.length, 'notes vidées');
+        
+        const deletePromises = notesToDelete.map(async (item) => {
+          const { data: gradeToDelete } = await supabase
+            .from('grades')
+            .select('id')
+            .eq('student_id', item.studentId)
+            .eq('subject_id', item.subjectId)
+            .eq('exam_id', examId)
+            .eq('exam_type', item.examType)
+            .maybeSingle();
+          
+          if (gradeToDelete) {
+            await supabase
+              .from('grades')
+              .delete()
+              .eq('id', gradeToDelete.id);
+            console.log('useNotesSync: Note supprimée:', gradeToDelete.id);
+          }
+        });
+        
+        await Promise.all(deletePromises);
+      }
+      
+      // 2. Sauvegarder/mettre à jour les notes avec valeur
       const savePromises = localNotes.flatMap((note) => {
         const promises = [];
         
@@ -277,23 +361,21 @@ export const useNotesSync = ({ classeId, matiereId, examId, studentId, isComposi
       
       console.log('useNotesSync: Sauvegarde terminée avec succès');
       
-      // SYNCHRONISATION AMÉLIORÉE : Attendre que les grades soient rechargés
-      console.log('useNotesSync: Rechargement des grades depuis la base...');
+      // 3. Recharger les données
       await refetchGrades();
-      
-      // Attendre un court délai pour permettre au state de se mettre à jour
       await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Recharger les notes après le délai
-      console.log('useNotesSync: Rechargement des notes locales...');
       loadNotesFromDatabase();
       
       setHasUnsavedChanges(false);
       
       toast({
         title: "Notes sauvegardées",
-        description: "Toutes les notes ont été sauvegardées avec succès.",
+        description: notesToDelete.length > 0 
+          ? `Notes sauvegardées avec succès. ${notesToDelete.length} note(s) supprimée(s).`
+          : "Toutes les notes ont été sauvegardées avec succès.",
       });
+      
+      return { success: true };
       
     } catch (error) {
       console.error('useNotesSync: Erreur lors de la sauvegarde:', error);
@@ -302,8 +384,9 @@ export const useNotesSync = ({ classeId, matiereId, examId, studentId, isComposi
         description: "Une erreur est survenue lors de la sauvegarde des notes.",
         variant: "destructive",
       });
+      throw error;
     }
-  }, [localNotes, examId, isComposition, upsertGrade, refetchGrades, toast, loadNotesFromDatabase]);
+  }, [localNotes, initialNotes, examId, isComposition, upsertGrade, refetchGrades, toast, loadNotesFromDatabase, getNotesToDelete]);
 
   // Forcer le rechargement des notes
   const refreshNotes = useCallback(async () => {
@@ -320,6 +403,7 @@ export const useNotesSync = ({ classeId, matiereId, examId, studentId, isComposi
     updateNote,
     saveAllNotes,
     refreshNotes,
-    loadNotesFromDatabase
+    loadNotesFromDatabase,
+    getNotesToDelete
   };
 };

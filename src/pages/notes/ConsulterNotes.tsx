@@ -13,6 +13,7 @@ import { useSubjects } from "@/hooks/useSubjects";
 import { useExams } from "@/hooks/useExams";
 import { useNotesSync, UnifiedNote } from "@/hooks/useNotesSync";
 import { formatClassName } from "@/utils/classNameFormatter";
+import { ConfirmDeleteNotesDialog } from "@/components/notes/ConfirmDeleteNotesDialog";
 interface Student {
   id: string;
   nom: string;
@@ -42,6 +43,8 @@ export default function ConsulterNotes() {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentExam, setCurrentExam] = useState<any>(null);
   const [isComposition, setIsComposition] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [pendingDeletion, setPendingDeletion] = useState<{ deleteCount: number } | null>(null);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const {
@@ -198,11 +201,41 @@ export default function ConsulterNotes() {
     console.log('ConsulterNotes: Début de la sauvegarde des notes');
     
     try {
-      await saveAllNotes();
-      console.log('ConsulterNotes: Notes sauvegardées avec succès');
-      setIsEditMode(false);
+      const result = await saveAllNotes();
+      
+      // Si la sauvegarde nécessite une confirmation de suppression
+      if (result && 'needsConfirmation' in result && result.needsConfirmation) {
+        setPendingDeletion({ deleteCount: result.deleteCount });
+        setShowDeleteConfirm(true);
+        return;
+      }
+      
+      // Si sauvegarde réussie
+      if (result && 'success' in result) {
+        console.log('ConsulterNotes: Notes sauvegardées avec succès');
+        setIsEditMode(false);
+      }
     } catch (error) {
       console.error('ConsulterNotes: Erreur lors de la sauvegarde des notes:', error);
+      toast({
+        title: "Erreur de sauvegarde",
+        description: "Une erreur est survenue lors de la sauvegarde des notes.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    setShowDeleteConfirm(false);
+    
+    try {
+      // Sauvegarder en skippant la confirmation
+      await saveAllNotes(true);
+      console.log('ConsulterNotes: Notes sauvegardées avec suppressions confirmées');
+      setIsEditMode(false);
+      setPendingDeletion(null);
+    } catch (error) {
+      console.error('ConsulterNotes: Erreur lors de la sauvegarde avec suppression:', error);
       toast({
         title: "Erreur de sauvegarde",
         description: "Une erreur est survenue lors de la sauvegarde des notes.",
@@ -292,6 +325,14 @@ export default function ConsulterNotes() {
   }
   return <Layout>
       <div className="container mx-auto p-6">
+        {/* Dialog de confirmation de suppression */}
+        <ConfirmDeleteNotesDialog
+          open={showDeleteConfirm}
+          onOpenChange={setShowDeleteConfirm}
+          onConfirm={handleConfirmDelete}
+          deleteCount={pendingDeletion?.deleteCount || 0}
+        />
+
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-4">
             <Button variant="outline" size="sm" onClick={() => navigate(-1)}>

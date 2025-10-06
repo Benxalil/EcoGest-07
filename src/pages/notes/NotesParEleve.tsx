@@ -22,6 +22,8 @@ interface Student {
   prenom: string;
   classe: string;
 }
+import { ConfirmDeleteNotesDialog } from "@/components/notes/ConfirmDeleteNotesDialog";
+
 interface Classe {
   id: string;
   session: string;
@@ -36,6 +38,8 @@ export default function NotesParEleve() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedSemestre, setSelectedSemestre] = useState<"semestre1" | "semestre2">("semestre1");
   const [semesterAverage, setSemesterAverage] = useState<number>(0);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [pendingDeletion, setPendingDeletion] = useState<{ deleteCount: number } | null>(null);
   const [examInfo, setExamInfo] = useState<{
     type: string;
     titre: string;
@@ -313,18 +317,51 @@ export default function NotesParEleve() {
       return;
     }
     try {
-      await saveAllNotes();
+      const result = await saveAllNotes();
       
-      // Forcer un re-render pour afficher immédiatement les notes sauvegardées
-      // On recalcule la moyenne pour s'assurer que tout est à jour
+      // Si la sauvegarde nécessite une confirmation de suppression
+      if (result && 'needsConfirmation' in result && result.needsConfirmation) {
+        setPendingDeletion({ deleteCount: result.deleteCount });
+        setShowDeleteConfirm(true);
+        return;
+      }
+      
+      // Si sauvegarde réussie
+      if (result && 'success' in result) {
+        // Forcer un re-render pour afficher immédiatement les notes sauvegardées
+        calculateAndUpdateAverage();
+        
+        toast({
+          title: "Succès",
+          description: "Toutes les notes ont été sauvegardées avec succès."
+        });
+      }
+    } catch (error) {
+      console.error('Erreur lors de la sauvegarde:', error);
+      toast({
+        title: "Erreur",
+        description: "Erreur lors de la sauvegarde des notes.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    setShowDeleteConfirm(false);
+    
+    try {
+      // Sauvegarder en skippant la confirmation
+      await saveAllNotes(true);
       calculateAndUpdateAverage();
       
       toast({
         title: "Succès",
-        description: "Toutes les notes ont été sauvegardées avec succès."
+        description: "Notes sauvegardées et suppressions effectuées avec succès."
       });
+      
+      setPendingDeletion(null);
     } catch (error) {
-      console.error('Erreur lors de la sauvegarde:', error);
+      console.error('Erreur lors de la sauvegarde avec suppression:', error);
       toast({
         title: "Erreur",
         description: "Erreur lors de la sauvegarde des notes.",
@@ -361,6 +398,14 @@ export default function NotesParEleve() {
   };
   return <Layout>
       <div className="container mx-auto p-6">
+        {/* Dialog de confirmation de suppression */}
+        <ConfirmDeleteNotesDialog
+          open={showDeleteConfirm}
+          onOpenChange={setShowDeleteConfirm}
+          onConfirm={handleConfirmDelete}
+          deleteCount={pendingDeletion?.deleteCount || 0}
+        />
+
         {/* HEADER AVEC INFORMATIONS DE L'EXAMEN */}
         <Card className="mb-6">
           <CardContent className="p-6">
