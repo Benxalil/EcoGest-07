@@ -129,7 +129,7 @@ export default function ListeClassesResultats() {
         examDate: examen.dateExamen,
         semestre: semestre || null,
         classeId: selectedClasse.id,
-        classeName: `${selectedClasse.session} ${selectedClasse.libelle}`
+        classeName: formatClassName(selectedClasse)
       };
 
       // Sauvegarder dans sessionStorage

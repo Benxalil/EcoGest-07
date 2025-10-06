@@ -9,6 +9,7 @@ import { generateBulletinPDF } from "@/utils/pdfGenerator";
 import { BulletinClasse } from "@/components/resultats/BulletinClasse";
 import { useResults } from "@/hooks/useResults";
 import { useUserRole } from "@/hooks/useUserRole";
+import { formatClassName } from "@/utils/classNameFormatter";
 
 interface Student {
   id: string;
@@ -16,6 +17,7 @@ interface Student {
   prenom: string;
   classe: string;
   numero?: number;
+  matricule?: string;
 }
 
 interface StudentWithStats extends Student {
@@ -60,7 +62,8 @@ export default function ResultatsSemestre() {
     nom: student.last_name,
     prenom: student.first_name,
     classe: `${student.class_level} ${student.class_section}`,
-    numero: typeof student.numero === 'number' ? student.numero : 0
+    numero: typeof student.numero === 'number' ? student.numero : 0,
+    matricule: student.student_number || 'N/A'
   })) : [];
   
   const matieresClasse = activeExamData ? activeExamData.subjects.map(subject => ({
@@ -311,7 +314,7 @@ export default function ResultatsSemestre() {
               Retour
             </Button>
             <div>
-              <h1 className="text-2xl font-bold">{classe.session} {classe.libelle}</h1>
+              <h1 className="text-2xl font-bold">{formatClassName({ name: classe.session, section: classe.libelle })}</h1>
               <p className="text-gray-600">
                 Liste des élèves pour cette classe (Nombre d'élèves : {eleves.length})
               </p>
@@ -528,7 +531,7 @@ export default function ResultatsSemestre() {
                   <div>
                     <h3 className="font-semibold mb-2">Informations</h3>
                     <p><strong>Classe:</strong> {selectedEleve.classe}</p>
-                    <p><strong>Matricule:</strong> {selectedEleve.numero || 'N/A'}</p>
+                    <p><strong>Matricule:</strong> {selectedEleve.matricule || 'N/A'}</p>
                   </div>
                   <div>
                     <h3 className="font-semibold mb-2">Statistiques</h3>
