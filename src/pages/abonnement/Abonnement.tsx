@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Check, X, Rocket, Zap, Trophy, Clock, Shield, Star } from "lucide-react";
+import { Check, X, Rocket, Zap, Trophy, Clock, Shield, Star, Settings } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
 import { useState, useEffect } from "react";
 import { useSubscriptionPlan } from "@/hooks/useSubscriptionPlan";
@@ -10,6 +10,7 @@ import { useUserRole } from "@/hooks/useUserRole";
 import { useToast } from "@/hooks/use-toast";
 import { useSubscription } from "@/hooks/useSubscription";
 import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
 
 const Abonnement = () => {
   const [isAnnual, setIsAnnual] = useState(false);
@@ -20,6 +21,7 @@ const Abonnement = () => {
   const { subscriptionStatus } = useSubscription();
   const [isCreatingCheckout, setIsCreatingCheckout] = useState<string | null>(null);
   const [activeSubscription, setActiveSubscription] = useState<any>(null);
+  const navigate = useNavigate();
 
   // Charger l'abonnement actif au montage
   useEffect(() => {
@@ -487,6 +489,46 @@ const Abonnement = () => {
             </div>
           </div>
         </div>
+
+        {/* Configuration PayTech - Visible uniquement pour les admins */}
+        {userProfile?.role === 'school_admin' && (
+          <div className="max-w-4xl mx-auto mt-12">
+            <Card className="border-2 border-orange-200 bg-gradient-to-br from-orange-50 to-yellow-50">
+              <CardHeader>
+                <div className="flex items-center gap-3 justify-center">
+                  <div className="bg-orange-100 rounded-full p-3">
+                    <Settings className="h-6 w-6 text-orange-600" />
+                  </div>
+                  <CardTitle className="text-2xl font-bold text-orange-900">
+                    Configuration PayTech
+                  </CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent className="text-center space-y-4">
+                <p className="text-muted-foreground">
+                  Configurez vos clés API PayTech pour activer les paiements en production avec les vrais montants.
+                </p>
+                <div className="bg-white border border-orange-200 rounded-lg p-4 space-y-2">
+                  <p className="text-sm text-orange-800">
+                    <strong>⚠️ Mode Test vs Production</strong>
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    • <strong>Mode Test (Sandbox)</strong> : Tous les paiements sont facturés à 100 FCFA peu importe le montant<br />
+                    • <strong>Mode Production</strong> : Les vrais montants sont facturés (Ex: 40 000 FCFA pour le plan Pro)
+                  </p>
+                </div>
+                <Button 
+                  onClick={() => navigate('/admin/paytech-config')}
+                  className="bg-orange-600 hover:bg-orange-700 text-white font-semibold px-8 py-3"
+                  size="lg"
+                >
+                  <Settings className="mr-2 h-5 w-5" />
+                  Accéder à la configuration PayTech
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </div>
     </Layout>
   );
