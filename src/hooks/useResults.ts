@@ -303,14 +303,17 @@ export const useResults = () => {
     let totalCoefficient = 0;
     let totalNotesDevoir = 0;
     let totalNotesComposition = 0;
+    let totalNotesExamen = 0;
     let coeffDevoir = 0;
     let coeffComposition = 0;
+    let coeffExamen = 0;
     const notesList: Array<{
       note: number, 
       coefficient: number, 
       subject: string,
       devoirNote?: number,
       compositionNote?: number,
+      examenNote?: number,
       examType?: string
     }> = [];
 
@@ -320,6 +323,7 @@ export const useResults = () => {
       coefficient: number;
       devoirNote: number | null;
       compositionNote: number | null;
+      examenNote: number | null;
     }> = {};
     
     let notesProcessed = 0;
@@ -341,14 +345,15 @@ export const useResults = () => {
           subject,
           coefficient: coeff,
           devoirNote: null,
-          compositionNote: null
+          compositionNote: null,
+          examenNote: null
         };
       }
       
       const subjectData = notesBySubject[subject];
       
       if (note && note > 0) {
-        // Séparer devoir et composition pour l'affichage
+        // Traiter TOUS les types d'examens : devoir, composition, ET examen
         if (examType === 'devoir') {
           subjectData.devoirNote = note;
           totalNotesDevoir += note * coeff;
@@ -359,6 +364,17 @@ export const useResults = () => {
           totalNotesComposition += note * coeff;
           coeffComposition += coeff;
           console.log(`  ➡️ Composition enregistrée: ${note}/${coeff}`);
+        } else if (examType === 'examen') {
+          subjectData.examenNote = note;
+          totalNotesExamen += note * coeff;
+          coeffExamen += coeff;
+          console.log(`  ➡️ Examen enregistré: ${note}/${coeff}`);
+        } else {
+          // Pour tout autre type non reconnu, on l'enregistre quand même
+          console.warn(`  ⚠️ Type d'examen non reconnu: ${examType}, note: ${note}/${coeff}`);
+          subjectData.examenNote = note;
+          totalNotesExamen += note * coeff;
+          coeffExamen += coeff;
         }
       }
     });
@@ -367,18 +383,30 @@ export const useResults = () => {
 
     // Construire le notesList et calculer la moyenne générale
     Object.values(notesBySubject).forEach((subjectData) => {
-      // Utiliser la meilleure note entre devoir et composition
+      // Utiliser la meilleure note entre devoir, composition ET examen
       let finalNote = 0;
       
-      if (subjectData.devoirNote && subjectData.compositionNote) {
+      if (subjectData.devoirNote && subjectData.compositionNote && subjectData.examenNote) {
+        finalNote = Math.max(subjectData.devoirNote, subjectData.compositionNote, subjectData.examenNote);
+        console.log(`  🔄 Meilleure note pour ${subjectData.subject}: ${finalNote} (devoir: ${subjectData.devoirNote}, compo: ${subjectData.compositionNote}, examen: ${subjectData.examenNote})`);
+      } else if (subjectData.devoirNote && subjectData.compositionNote) {
         finalNote = Math.max(subjectData.devoirNote, subjectData.compositionNote);
         console.log(`  🔄 Meilleure note pour ${subjectData.subject}: ${finalNote} (devoir: ${subjectData.devoirNote}, compo: ${subjectData.compositionNote})`);
+      } else if (subjectData.devoirNote && subjectData.examenNote) {
+        finalNote = Math.max(subjectData.devoirNote, subjectData.examenNote);
+        console.log(`  🔄 Meilleure note pour ${subjectData.subject}: ${finalNote} (devoir: ${subjectData.devoirNote}, examen: ${subjectData.examenNote})`);
+      } else if (subjectData.compositionNote && subjectData.examenNote) {
+        finalNote = Math.max(subjectData.compositionNote, subjectData.examenNote);
+        console.log(`  🔄 Meilleure note pour ${subjectData.subject}: ${finalNote} (compo: ${subjectData.compositionNote}, examen: ${subjectData.examenNote})`);
       } else if (subjectData.devoirNote) {
         finalNote = subjectData.devoirNote;
         console.log(`  📌 Note devoir uniquement pour ${subjectData.subject}: ${finalNote}`);
       } else if (subjectData.compositionNote) {
         finalNote = subjectData.compositionNote;
         console.log(`  📌 Note composition uniquement pour ${subjectData.subject}: ${finalNote}`);
+      } else if (subjectData.examenNote) {
+        finalNote = subjectData.examenNote;
+        console.log(`  📌 Note examen uniquement pour ${subjectData.subject}: ${finalNote}`);
       }
       
       if (finalNote > 0) {
@@ -390,7 +418,8 @@ export const useResults = () => {
           coefficient: subjectData.coefficient,
           subject: subjectData.subject,
           devoirNote: subjectData.devoirNote || undefined,
-          compositionNote: subjectData.compositionNote || undefined
+          compositionNote: subjectData.compositionNote || undefined,
+          examenNote: subjectData.examenNote || undefined
         });
       }
     });
@@ -398,6 +427,7 @@ export const useResults = () => {
     const moyenneGenerale = totalCoefficient > 0 ? totalNotes / totalCoefficient : 0;
     const moyenneDevoir = coeffDevoir > 0 ? totalNotesDevoir / coeffDevoir : 0;
     const moyenneComposition = coeffComposition > 0 ? totalNotesComposition / coeffComposition : 0;
+    const moyenneExamen = coeffExamen > 0 ? totalNotesExamen / coeffExamen : 0;
 
     console.log(`📈 [${debugTimestamp}] STATISTIQUES FINALES:`, {
       studentId,
@@ -407,6 +437,7 @@ export const useResults = () => {
       moyenneGenerale: moyenneGenerale.toFixed(2),
       moyenneDevoir: moyenneDevoir.toFixed(2),
       moyenneComposition: moyenneComposition.toFixed(2),
+      moyenneExamen: moyenneExamen.toFixed(2),
       nombreMatieresAvecNotes: notesList.length
     });
 
@@ -419,6 +450,7 @@ export const useResults = () => {
       moyenneDevoir,
       totalNotesComposition,
       moyenneComposition,
+      moyenneExamen,
       isComposition: isCompositionExam
     };
   }, [results]);
