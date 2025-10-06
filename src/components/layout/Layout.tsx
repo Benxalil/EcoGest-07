@@ -5,10 +5,11 @@ import { HeaderLanguageSelector } from "./HeaderLanguageSelector";
 import { HeaderNotifications } from "./HeaderNotifications";
 import { HeaderDarkMode } from "./HeaderDarkMode";
 import { SchoolInfo } from "./SchoolInfo";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useSubscription } from "@/hooks/useSubscription";
 import { SubscriptionBlocker } from "@/components/subscription/SubscriptionBlocker";
+import { useSchoolData } from "@/hooks/useSchoolData";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -22,10 +23,24 @@ export function Layout({ children }: LayoutProps) {
   });
   const isMobile = useIsMobile();
   const { subscriptionStatus } = useSubscription();
+  const { schoolData, refreshSchoolData } = useSchoolData();
 
   const handleSidebarToggle = (collapsed: boolean) => {
     setIsSidebarCollapsed(collapsed);
   };
+
+  // Écouter les mises à jour des paramètres de l'école pour rafraîchir en temps réel
+  useEffect(() => {
+    const handleSchoolUpdate = () => {
+      refreshSchoolData();
+    };
+    
+    window.addEventListener('schoolSettingsUpdated', handleSchoolUpdate);
+    
+    return () => {
+      window.removeEventListener('schoolSettingsUpdated', handleSchoolUpdate);
+    };
+  }, [refreshSchoolData]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -55,7 +70,11 @@ export function Layout({ children }: LayoutProps) {
             <UserProfile />
             
             {/* Informations de l'école */}
-            <SchoolInfo />
+            <SchoolInfo 
+              schoolName={schoolData?.name}
+              schoolSlogan={schoolData?.slogan}
+              schoolLogo={schoolData?.logo_url}
+            />
           </div>
         </div>
       </header>

@@ -1,4 +1,4 @@
-import React, { memo, useMemo, useState } from "react";
+import React, { memo, useMemo, useState, useEffect } from "react";
 import { Sidebar } from "./Sidebar";
 import { HeaderDarkMode } from "./HeaderDarkMode";
 import { HeaderNotifications } from "./HeaderNotifications";
@@ -8,6 +8,7 @@ import { SchoolInfo } from "./SchoolInfo";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useSubscription } from "@/hooks/useSubscription";
 import { SubscriptionBlocker } from "@/components/subscription/SubscriptionBlocker";
+import { useSchoolData } from "@/hooks/useSchoolData";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -22,6 +23,7 @@ const Layout = memo(({ children }: LayoutProps) => {
   
   const isMobile = useIsMobile();
   const { subscriptionStatus } = useSubscription();
+  const { schoolData, refreshSchoolData } = useSchoolData();
   
   // Optimized subscription status check
   const isExpired = useMemo(() => {
@@ -33,6 +35,19 @@ const Layout = memo(({ children }: LayoutProps) => {
     setIsSidebarCollapsed(collapsed);
   };
 
+  // Écouter les mises à jour des paramètres de l'école pour rafraîchir en temps réel
+  useEffect(() => {
+    const handleSchoolUpdate = () => {
+      refreshSchoolData();
+    };
+    
+    window.addEventListener('schoolSettingsUpdated', handleSchoolUpdate);
+    
+    return () => {
+      window.removeEventListener('schoolSettingsUpdated', handleSchoolUpdate);
+    };
+  }, [refreshSchoolData]);
+
   // Memoized header components to prevent unnecessary re-renders
   const headerContent = useMemo(() => (
     <>
@@ -40,9 +55,13 @@ const Layout = memo(({ children }: LayoutProps) => {
       <HeaderNotifications />
       <HeaderLanguageSelector />
       <UserProfile />
-      <SchoolInfo />
+      <SchoolInfo 
+        schoolName={schoolData?.name}
+        schoolSlogan={schoolData?.slogan}
+        schoolLogo={schoolData?.logo_url}
+      />
     </>
-  ), []);
+  ), [schoolData]);
 
   return (
     <div className="min-h-screen bg-background">
