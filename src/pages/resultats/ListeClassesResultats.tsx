@@ -60,9 +60,15 @@ export default function ListeClassesResultats() {
 
   // Fonction pour trier les classes dans l'ordre académique
   const sortClassesAcademically = (classes: any[]): any[] => {
-    return classes.sort((a, b) => {
+    return [...classes].sort((a, b) => {
+      console.log('Tri des classes - Classe A:', { level: a.level, section: a.section, name: a.name });
+      console.log('Tri des classes - Classe B:', { level: b.level, section: b.section, name: b.name });
+      
       const orderA = getClassOrder(a.level, a.section);
       const orderB = getClassOrder(b.level, b.section);
+      
+      console.log('Ordre A:', orderA, 'Ordre B:', orderB);
+      
       return orderA - orderB;
     });
   };
