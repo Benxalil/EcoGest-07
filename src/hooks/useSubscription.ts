@@ -64,7 +64,7 @@ export const useSubscription = () => {
         .gte('end_date', new Date().toISOString())
         .order('created_at', { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle();
 
       // Si un abonnement payant est actif
       if (activeSubscription && school.subscription_status === 'active') {
