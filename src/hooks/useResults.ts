@@ -52,7 +52,8 @@ export interface ClassResults {
   exams: ExamResult[];
 }
 
-export const useResults = () => {
+export const useResults = (options?: { contextSemester?: string }) => {
+  const contextSemester = options?.contextSemester;
   const [results, setResults] = useState<ClassResults[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -170,7 +171,7 @@ export const useResults = () => {
             
             // Récupérer les élèves avec leurs vraies notes pour cet examen
             students: classStudents.map(student => {
-              // Filtrage adapté pour les examens de Composition
+              // Filtrage adapté pour les examens de Composition avec contexte semestre
               const studentGrades = gradesData?.filter(grade => {
                 // Vérifier que c'est bien l'élève
                 if (grade.student_id !== student.id) return false;
@@ -179,15 +180,42 @@ export const useResults = () => {
                 const gradeSubject = classSubjects.find(s => s.id === grade.subject_id);
                 if (!gradeSubject) return false;
                 
-                // Pour les examens de Composition : matcher par exam_id OU par semester
+                // Pour les examens de Composition : filtrer par semester depuis grades
                 const isCompositionExam = exam.title?.toLowerCase().includes('composition');
                 
                 if (isCompositionExam) {
-                  // Si l'examen a un semester défini, matcher exactement
-                  if (exam.semester) {
-                    return grade.exam_id === exam.id && grade.semester === exam.semester;
+                  // Déduire le semestre cible depuis plusieurs sources
+                  let targetSemester = exam.semester; // Priorité 1: semester de l'examen
+                  
+                  // Priorité 2: contextSemester depuis l'URL
+                  if (!targetSemester && contextSemester) {
+                    targetSemester = contextSemester === '1' || contextSemester === 'semestre1' 
+                      ? 'semestre1' 
+                      : contextSemester === '2' || contextSemester === 'semestre2' 
+                      ? 'semestre2' 
+                      : null;
                   }
-                  // Sinon, accepter toutes les notes de cet exam_id
+                  
+                  // Priorité 3: déduire du titre de l'examen
+                  if (!targetSemester) {
+                    if (exam.title?.match(/1er|premier|first/i)) {
+                      targetSemester = 'semestre1';
+                    } else if (exam.title?.match(/2[eè]me|deuxi[eè]me|second/i)) {
+                      targetSemester = 'semestre2';
+                    }
+                  }
+                  
+                  // Filtrer par exam_id ET semester
+                  if (targetSemester) {
+                    const matches = grade.exam_id === exam.id && grade.semester === targetSemester;
+                    if (matches) {
+                      console.log(`✅ Note Composition filtrée: ${grade.id} pour semester=${targetSemester}`);
+                    }
+                    return matches;
+                  }
+                  
+                  // Fallback : accepter toutes les notes de cet exam_id (compatibilité anciennes données)
+                  console.warn(`⚠️ Composition sans semester détecté, fallback sur exam_id uniquement`);
                   return grade.exam_id === exam.id;
                 }
                 
@@ -260,26 +288,64 @@ export const useResults = () => {
     
     // Écouter les changements dans la section Matières pour synchroniser
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'matieresUpdated' || e.key === 'coefficientsUpdated') {
-        console.log('useResults: Détection de changements dans les matières, rechargement...');
+      if (e.key === 'matieresUpdated' || e.key === 'coefficientsUpdated' || e.key === 'notesUpdated') {
+        console.log('useResults: Détection de changements, rechargement...');
         fetchResults();
       }
     };
     
     // Écouter les événements personnalisés pour la synchronisation
-    const handleMatieresUpdate = () => {
-      console.log('useResults: Matières mises à jour, rechargement des résultats...');
+    const handleDataUpdate = () => {
+      console.log('useResults: Données mises à jour, rechargement des résultats...');
       fetchResults();
     };
     
     window.addEventListener('storage', handleStorageChange);
-    window.addEventListener('matieresUpdated', handleMatieresUpdate);
+    window.addEventListener('matieresUpdated', handleDataUpdate);
+    window.addEventListener('notesUpdated', handleDataUpdate);
+    
+    // 🔄 SYNCHRONISATION EN TEMPS RÉEL via Supabase Realtime
+    // Écouter les changements dans la table grades
+    let gradesChannel: ReturnType<typeof supabase.channel> | null = null;
+    
+    if (userProfile?.schoolId) {
+      gradesChannel = supabase
+        .channel('grades-realtime-changes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*', // INSERT, UPDATE, DELETE
+            schema: 'public',
+            table: 'grades',
+            filter: `school_id=eq.${userProfile.schoolId}`
+          },
+          (payload) => {
+            console.log('🔄 Changement détecté dans la table grades:', payload);
+            console.log('   - Type:', payload.eventType);
+            console.log('   - Données:', payload.new || payload.old);
+            // Recharger automatiquement les résultats
+            fetchResults();
+          }
+        )
+        .subscribe((status) => {
+          if (status === 'SUBSCRIBED') {
+            console.log('✅ Abonné aux changements de la table grades en temps réel');
+          }
+        });
+    }
     
     return () => {
       window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('matieresUpdated', handleMatieresUpdate);
+      window.removeEventListener('matieresUpdated', handleDataUpdate);
+      window.removeEventListener('notesUpdated', handleDataUpdate);
+      
+      // Nettoyer l'abonnement Realtime
+      if (gradesChannel) {
+        supabase.removeChannel(gradesChannel);
+        console.log('🔌 Désinscrit des changements de la table grades');
+      }
     };
-  }, [fetchResults]);
+  }, [fetchResults, userProfile?.schoolId]);
 
   // Fonction pour calculer les statistiques d'un élève pour un examen spécifique DEPUIS LES VRAIES NOTES
   const getStudentExamStats = useCallback((classId: string, examId: string, studentId: string) => {

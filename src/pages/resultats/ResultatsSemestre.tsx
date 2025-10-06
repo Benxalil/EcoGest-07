@@ -38,8 +38,10 @@ export default function ResultatsSemestre() {
   // Determine if this is an exam or semester view
   const isExamView = !!examId;
   
-  // Utiliser le nouveau hook useResults avec fonction refetch
-  const { results, loading, error, getStudentExamStats, getClassResults, getExamResults, refetch } = useResults();
+  // Utiliser le nouveau hook useResults avec fonction refetch et contexte semestre
+  const { results, loading, error, getStudentExamStats, getClassResults, getExamResults, refetch } = useResults({
+    contextSemester: semestre // Passer le semestre depuis l'URL pour filtrer les notes de Composition
+  });
   const { userProfile } = useUserRole();
   
   // Récupérer les données de la classe et de l'examen
