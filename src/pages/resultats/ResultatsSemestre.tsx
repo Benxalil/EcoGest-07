@@ -38,9 +38,22 @@ export default function ResultatsSemestre() {
   // Determine if this is an exam or semester view
   const isExamView = !!examId;
   
-  // Utiliser le nouveau hook useResults avec fonction refetch et contexte semestre
+  // Fonction utilitaire pour normaliser le semestre de l'URL au format DB
+  const normalizeSemester = (sem: string | undefined): string | undefined => {
+    if (!sem) return undefined;
+    if (sem === '1' || sem === 'semestre1') return 'semestre1';
+    if (sem === '2' || sem === 'semestre2') return 'semestre2';
+    return sem;
+  };
+
+  // Normaliser le semestre depuis l'URL
+  const normalizedSemestre = normalizeSemester(semestre);
+  
+  console.log(`🔄 Normalisation semestre: URL="${semestre}" → DB="${normalizedSemestre}"`);
+  
+  // Utiliser le nouveau hook useResults avec fonction refetch et contexte semestre normalisé
   const { results, loading, error, getStudentExamStats, getClassResults, getExamResults, refetch } = useResults({
-    contextSemester: semestre // Passer le semestre depuis l'URL pour filtrer les notes de Composition
+    contextSemester: normalizedSemestre // Passer le semestre NORMALISÉ pour filtrer les notes de Composition
   });
   const { userProfile } = useUserRole();
   
@@ -48,22 +61,32 @@ export default function ResultatsSemestre() {
   const classData = getClassResults(classeId || '');
   const examData = isExamView ? getExamResults(classeId || '', examId || '') : null;
   
-  // Logique de sélection d'examen améliorée
+  // Logique de sélection d'examen améliorée avec semestre normalisé
   const activeExamData = isExamView 
     ? examData
-    : semestre && classData?.exams 
+    : normalizedSemestre && classData?.exams 
       ? classData.exams.find(exam => {
           const isComposition = exam.exam_title?.toLowerCase().includes('composition');
           // Matcher par semester si disponible, sinon accepter toute Composition
           const matchesSemester = exam.semester 
-            ? exam.semester === semestre 
+            ? exam.semester === normalizedSemestre  // ✅ Comparaison avec semestre normalisé
             : isComposition; // Si semester est NULL, accepter si c'est une Composition
+          
+          console.log(`🔍 Vérification examen "${exam.exam_title}":`, {
+            examSemester: exam.semester,
+            normalizedSemestre,
+            isComposition,
+            matchesSemester
+          });
+          
           return isComposition && matchesSemester;
         }) || null
       : (classData?.exams && classData.exams.length > 0 ? classData.exams[0] : null);
 
-  // Détecter si c'est une vue Composition (basé sur le paramètre semestre de l'URL)
-  const isCompositionView = !isExamView && !!semestre;
+  console.log(`📚 Examen sélectionné:`, activeExamData);
+
+  // Détecter si c'est une vue Composition (basé sur le paramètre semestre normalisé)
+  const isCompositionView = !isExamView && !!normalizedSemestre;
   
   // Adapter les données pour la compatibilité avec l'interface existante
   const classe = classData ? {
