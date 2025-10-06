@@ -37,6 +37,7 @@ export interface ExamResult {
   exam_date: string;
   exam_description?: string;
   is_published: boolean;
+  semester?: string;
   students: StudentResult[];
   subjects: SubjectResult[];
 }
@@ -89,7 +90,7 @@ export const useResults = () => {
       // 2. Récupérer les examens avec ordre pour éviter cache
       const { data: examsData, error: examsError } = await supabase
         .from('exams')
-        .select('id, title, description, exam_date, class_id, is_published')
+        .select('id, title, description, exam_date, class_id, is_published, semester')
         .eq('school_id', userProfile.schoolId)
         .order('exam_date', { ascending: false });
 
@@ -165,6 +166,7 @@ export const useResults = () => {
             exam_date: exam.exam_date,
             exam_description: exam.description || '',
             is_published: exam.is_published,
+            semester: exam.semester || undefined,
             
             // Récupérer les élèves avec leurs vraies notes pour cet examen
             students: classStudents.map(student => {

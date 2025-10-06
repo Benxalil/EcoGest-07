@@ -46,8 +46,20 @@ export default function ResultatsSemestre() {
   const classData = getClassResults(classeId || '');
   const examData = isExamView ? getExamResults(classeId || '', examId || '') : null;
   
-  // Pour la vue semestre, prendre le premier examen disponible ou créer des données par défaut
-  const activeExamData = examData || (classData?.exams && classData.exams.length > 0 ? classData.exams[0] : null);
+  // Logique de sélection d'examen améliorée
+  const activeExamData = isExamView 
+    ? examData
+    : semestre && classData?.exams 
+      ? classData.exams.find(exam => 
+          exam.exam_title?.toLowerCase().includes('composition') && 
+          exam.semester === semestre
+        ) || classData.exams.find(exam => 
+          exam.exam_title?.toLowerCase().includes('composition')
+        ) || (classData.exams.length > 0 ? classData.exams[0] : null)
+      : (classData?.exams && classData.exams.length > 0 ? classData.exams[0] : null);
+
+  // Détecter si c'est une vue Composition (basé sur le paramètre semestre de l'URL)
+  const isCompositionView = !isExamView && !!semestre;
   
   // Adapter les données pour la compatibilité avec l'interface existante
   const classe = classData ? {
@@ -96,43 +108,30 @@ export default function ResultatsSemestre() {
 
   const getSemestreLabel = () => {
     if (isExamView) {
-      // Pour les examens de composition, afficher le semestre
-      if (activeExamData?.exam_title?.toLowerCase().includes('composition')) {
-        if (schoolSystem === 'trimestre') {
-          switch(semestre) {
-            case "1": return "PREMIER TRIMESTRE";
-            case "2": return "DEUXIEME TRIMESTRE";  
-            case "3": return "TROISIEME TRIMESTRE";
-            default: return "PREMIER TRIMESTRE";
-          }
-        } else {
-          switch(semestre) {
-            case "1": return "PREMIER SEMESTRE";
-            case "2": return "DEUXIEME SEMESTRE";
-            default: return "PREMIER SEMESTRE";
-          }
+      // Pour les examens, afficher le nom exact de l'examen
+      return activeExamData?.exam_title || examInfo?.title || examInfo?.examTitle || "EXAMEN";
+    }
+    
+    // Pour les vues Composition, afficher "Composition - Xème Semestre"
+    if (isCompositionView) {
+      if (schoolSystem === 'trimestre') {
+        switch(semestre) {
+          case "1": return "COMPOSITION - PREMIER TRIMESTRE";
+          case "2": return "COMPOSITION - DEUXIEME TRIMESTRE";  
+          case "3": return "COMPOSITION - TROISIEME TRIMESTRE";
+          default: return "COMPOSITION - PREMIER TRIMESTRE";
         }
       } else {
-        // Pour les autres examens, afficher le nom exact de l'examen
-        return activeExamData?.exam_title || examInfo?.title || examInfo?.examTitle || "EXAMEN";
+        switch(semestre) {
+          case "1": return "COMPOSITION - PREMIER SEMESTRE";
+          case "2": return "COMPOSITION - DEUXIEME SEMESTRE";
+          default: return "COMPOSITION - PREMIER SEMESTRE";
+        }
       }
     }
     
-    // Pour les vues semestre classiques
-    if (schoolSystem === 'trimestre') {
-      switch(semestre) {
-        case "1": return "PREMIER TRIMESTRE";
-        case "2": return "DEUXIEME TRIMESTRE";  
-        case "3": return "TROISIEME TRIMESTRE";
-        default: return "PREMIER TRIMESTRE";
-      }
-    } else {
-      switch(semestre) {
-        case "1": return "PREMIER SEMESTRE";
-        case "2": return "DEUXIEME SEMESTRE";
-        default: return "PREMIER SEMESTRE";
-      }
-    }
+    // Pour les autres vues (normalement ne devrait pas arriver)
+    return "RESULTATS";
   };
 
   // Fonction pour calculer les statistiques d'un élève (utilise le nouveau hook)
@@ -379,7 +378,7 @@ export default function ResultatsSemestre() {
                 {showCalculatedRank && <TableHead className="w-16 text-center font-bold">Rang</TableHead>}
                 <TableHead className="font-bold">Nom et Prénom</TableHead>
                 
-                {(activeExamData?.exam_title?.toLowerCase().includes('composition')) ? (
+                {isCompositionView ? (
                   <>
                     <TableHead className="text-center font-bold bg-blue-50 border-r-2 border-gray-300">Devoir</TableHead>
                     <TableHead className="text-center font-bold bg-green-50">Composition</TableHead>
@@ -397,7 +396,7 @@ export default function ResultatsSemestre() {
               </TableRow>
               
               {/* Deuxième ligne d'en-tête pour les examens de composition */}
-              {(activeExamData?.exam_title?.toLowerCase().includes('composition')) && (
+              {isCompositionView && (
                 <TableRow className="bg-gray-50">
                   <TableHead className="border-b"></TableHead>
                   {showCalculatedRank && <TableHead className="border-b"></TableHead>}
@@ -442,7 +441,7 @@ export default function ResultatsSemestre() {
                     )}
                     <TableCell className="font-medium">{eleve.prenom} {eleve.nom}</TableCell>
                     
-                    {(activeExamData?.exam_title?.toLowerCase().includes('composition')) ? (
+                    {isCompositionView ? (
                       <>
                         {/* Colonne Devoir */}
                         <TableCell className="text-center bg-blue-50 border-r-2 border-gray-300">
