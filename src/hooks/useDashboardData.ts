@@ -34,7 +34,7 @@ export const useDashboardData = () => {
     if (!profile?.schoolId) return;
     
     // Ne charger les données que pour les administrateurs
-    if (profile.role !== 'school_admin') {
+    if (!isAdmin) {
       setData(prev => ({ ...prev, loading: false }));
       return;
     }
@@ -74,7 +74,7 @@ export const useDashboardData = () => {
         throw new Error(firstError?.message || 'Error fetching dashboard data');
       }
 
-      // Les admins voient toutes les annonces
+      // Les admins et super-admins voient toutes les annonces
       const filteredAnnouncements = filterAnnouncementsByRole(
         announcements || [],
         profile.role,
