@@ -70,45 +70,52 @@ export const useResults = () => {
       setLoading(true);
       setError(null);
       
-      // Forcer une nouvelle récupération des données en invalidant le cache
-      console.log('useResults: Récupération des données fraîches...');
-      setError(null);
-      
-      console.log('useResults: Récupération des VRAIES données depuis la base pour schoolId:', userProfile.schoolId);
+      // 🔄 CACHE-BUSTING: Ajouter un timestamp unique pour forcer Supabase à ignorer le cache
+      const timestamp = Date.now();
+      console.log(`🔄 [${timestamp}] FORÇAGE du rafraîchissement - Récupération des données fraîches depuis la base...`);
+      console.log(`📊 [${timestamp}] SchoolId:`, userProfile.schoolId);
 
-      // 1. Récupérer les classes
+      // 1. Récupérer les classes avec ordre pour éviter cache
       const { data: classesData, error: classesError } = await supabase
         .from('classes')
         .select('id, name, level, section, academic_year_id')
-        .eq('school_id', userProfile.schoolId);
+        .eq('school_id', userProfile.schoolId)
+        .order('created_at', { ascending: false });
 
       if (classesError) throw classesError;
+      console.log(`✅ [${timestamp}] Classes récupérées:`, classesData?.length || 0);
 
-      // 2. Récupérer les examens  
+      // 2. Récupérer les examens avec ordre pour éviter cache
       const { data: examsData, error: examsError } = await supabase
         .from('exams')
         .select('id, title, description, exam_date, class_id, is_published')
-        .eq('school_id', userProfile.schoolId);
+        .eq('school_id', userProfile.schoolId)
+        .order('exam_date', { ascending: false });
 
       if (examsError) throw examsError;
+      console.log(`✅ [${timestamp}] Examens récupérés:`, examsData?.length || 0);
 
-      // 3. Récupérer les matières
+      // 3. Récupérer les matières avec ordre pour éviter cache
       const { data: subjectsData, error: subjectsError } = await supabase
         .from('subjects')
         .select('id, name, abbreviation, coefficient, class_id, max_score')
-        .eq('school_id', userProfile.schoolId);
+        .eq('school_id', userProfile.schoolId)
+        .order('name', { ascending: true });
 
       if (subjectsError) throw subjectsError;
+      console.log(`✅ [${timestamp}] Matières récupérées:`, subjectsData?.length || 0);
 
-      // 4. Récupérer les élèves
+      // 4. Récupérer les élèves avec ordre pour éviter cache
       const { data: studentsData, error: studentsError } = await supabase
         .from('students')
         .select('id, first_name, last_name, student_number, class_id')
-        .eq('school_id', userProfile.schoolId);
+        .eq('school_id', userProfile.schoolId)
+        .order('last_name', { ascending: true });
 
       if (studentsError) throw studentsError;
+      console.log(`✅ [${timestamp}] Élèves récupérés:`, studentsData?.length || 0);
 
-      // 5. Récupérer TOUTES les vraies notes depuis la table grades
+      // 5. Récupérer TOUTES les notes FRAÎCHES depuis la table grades
       const { data: gradesData, error: gradesError } = await supabase
         .from('grades')
         .select(`
@@ -121,13 +128,17 @@ export const useResults = () => {
           coefficient,
           semester,
           exam_type,
-          school_id
+          school_id,
+          created_at
         `)
-        .eq('school_id', userProfile.schoolId);
+        .eq('school_id', userProfile.schoolId)
+        .order('created_at', { ascending: false });
 
       if (gradesError) throw gradesError;
+      console.log(`✅ [${timestamp}] Notes récupérées:`, gradesData?.length || 0);
+      console.log(`📝 [${timestamp}] Échantillon de notes:`, gradesData?.slice(0, 3));
 
-      console.log('useResults: Données récupérées depuis la base:', {
+      console.log(`📊 [${timestamp}] RÉSUMÉ des données récupérées:`, {
         classes: classesData?.length || 0,
         exams: examsData?.length || 0,
         subjects: subjectsData?.length || 0,
@@ -256,30 +267,38 @@ export const useResults = () => {
 
   // Fonction pour calculer les statistiques d'un élève pour un examen spécifique DEPUIS LES VRAIES NOTES
   const getStudentExamStats = useCallback((classId: string, examId: string, studentId: string) => {
-    console.log('useResults: getStudentExamStats pour:', { classId, examId, studentId });
+    const debugTimestamp = Date.now();
+    console.log(`🔍 [${debugTimestamp}] DEBUG getStudentExamStats appelé:`, { classId, examId, studentId });
     
     const classData = results.find(c => c.class_id === classId);
     if (!classData) {
-      console.log('useResults: Classe non trouvée');
+      console.warn(`❌ [${debugTimestamp}] Classe non trouvée pour classId:`, classId);
       return null;
     }
+    console.log(`✅ [${debugTimestamp}] Classe trouvée:`, classData.class_name);
 
     const examData = classData.exams.find(e => e.exam_id === examId);
     if (!examData) {
-      console.log('useResults: Examen non trouvé');
+      console.warn(`❌ [${debugTimestamp}] Examen non trouvé pour examId:`, examId);
+      console.log(`📋 [${debugTimestamp}] Examens disponibles:`, classData.exams.map(e => ({ id: e.exam_id, title: e.exam_title })));
       return null;
     }
+    console.log(`✅ [${debugTimestamp}] Examen trouvé:`, examData.exam_title);
 
     const studentData = examData.students.find(s => s.student_id === studentId);
     if (!studentData) {
-      console.log('useResults: Élève non trouvé');
+      console.warn(`❌ [${debugTimestamp}] Élève non trouvé pour studentId:`, studentId);
       return null;
     }
+    console.log(`✅ [${debugTimestamp}] Élève trouvé:`, `${studentData.first_name} ${studentData.last_name}`);
+    console.log(`📝 [${debugTimestamp}] Nombre de notes brutes pour cet élève:`, studentData.grades?.length || 0);
+    console.log(`📝 [${debugTimestamp}] Notes brutes détaillées:`, studentData.grades);
 
     // Détecter si c'est un examen de type "Composition"
     const isCompositionExam = examData.exam_title.toLowerCase().includes('composition');
+    console.log(`🎯 [${debugTimestamp}] Type d'examen - Composition:`, isCompositionExam);
 
-    // LOGIQUE UNIFIÉE : Calculer les statistiques à partir des vraies notes
+    // LOGIQUE SIMPLIFIÉE : Utiliser un objet simple au lieu de Map
     let totalNotes = 0;
     let totalCoefficient = 0;
     let totalNotesDevoir = 0;
@@ -295,27 +314,38 @@ export const useResults = () => {
       examType?: string
     }> = [];
 
-    console.log('useResults: Notes de cet élève depuis la base:', studentData.grades);
-
-    // Grouper les notes par matière pour gérer devoir/composition
-    const notesBySubject = new Map();
+    // Grouper les notes par matière - OBJET SIMPLE au lieu de Map
+    const notesBySubject: Record<string, {
+      subject: string;
+      coefficient: number;
+      devoirNote: number | null;
+      compositionNote: number | null;
+    }> = {};
     
+    let notesProcessed = 0;
     studentData.grades.forEach(grade => {
       const note = grade.grade_value;
       const coeff = grade.coefficient;
       const subject = grade.subject_name;
       const examType = grade.exam_type;
       
-      if (!notesBySubject.has(subject)) {
-        notesBySubject.set(subject, {
+      console.log(`📊 [${debugTimestamp}] Traitement note #${++notesProcessed}:`, {
+        subject,
+        examType,
+        note,
+        coeff
+      });
+      
+      if (!notesBySubject[subject]) {
+        notesBySubject[subject] = {
           subject,
           coefficient: coeff,
           devoirNote: null,
           compositionNote: null
-        });
+        };
       }
       
-      const subjectData = notesBySubject.get(subject);
+      const subjectData = notesBySubject[subject];
       
       if (note && note > 0) {
         // Séparer devoir et composition pour l'affichage
@@ -323,25 +353,32 @@ export const useResults = () => {
           subjectData.devoirNote = note;
           totalNotesDevoir += note * coeff;
           coeffDevoir += coeff;
+          console.log(`  ➡️ Devoir enregistré: ${note}/${coeff}`);
         } else if (examType === 'composition') {
           subjectData.compositionNote = note;
           totalNotesComposition += note * coeff;
           coeffComposition += coeff;
+          console.log(`  ➡️ Composition enregistrée: ${note}/${coeff}`);
         }
       }
     });
 
+    console.log(`📚 [${debugTimestamp}] Notes groupées par matière:`, notesBySubject);
+
     // Construire le notesList et calculer la moyenne générale
-    notesBySubject.forEach((subjectData) => {
+    Object.values(notesBySubject).forEach((subjectData) => {
       // Utiliser la meilleure note entre devoir et composition
       let finalNote = 0;
       
       if (subjectData.devoirNote && subjectData.compositionNote) {
         finalNote = Math.max(subjectData.devoirNote, subjectData.compositionNote);
+        console.log(`  🔄 Meilleure note pour ${subjectData.subject}: ${finalNote} (devoir: ${subjectData.devoirNote}, compo: ${subjectData.compositionNote})`);
       } else if (subjectData.devoirNote) {
         finalNote = subjectData.devoirNote;
+        console.log(`  📌 Note devoir uniquement pour ${subjectData.subject}: ${finalNote}`);
       } else if (subjectData.compositionNote) {
         finalNote = subjectData.compositionNote;
+        console.log(`  📌 Note composition uniquement pour ${subjectData.subject}: ${finalNote}`);
       }
       
       if (finalNote > 0) {
@@ -352,8 +389,8 @@ export const useResults = () => {
           note: finalNote,
           coefficient: subjectData.coefficient,
           subject: subjectData.subject,
-          devoirNote: subjectData.devoirNote,
-          compositionNote: subjectData.compositionNote
+          devoirNote: subjectData.devoirNote || undefined,
+          compositionNote: subjectData.compositionNote || undefined
         });
       }
     });
@@ -362,14 +399,15 @@ export const useResults = () => {
     const moyenneDevoir = coeffDevoir > 0 ? totalNotesDevoir / coeffDevoir : 0;
     const moyenneComposition = coeffComposition > 0 ? totalNotesComposition / coeffComposition : 0;
 
-    console.log('useResults: Statistiques calculées:', {
+    console.log(`📈 [${debugTimestamp}] STATISTIQUES FINALES:`, {
       studentId,
+      studentName: `${studentData.first_name} ${studentData.last_name}`,
       totalNotes,
       totalCoefficient,
-      moyenneGenerale,
-      moyenneDevoir,
-      moyenneComposition,
-      notesList: notesList.length
+      moyenneGenerale: moyenneGenerale.toFixed(2),
+      moyenneDevoir: moyenneDevoir.toFixed(2),
+      moyenneComposition: moyenneComposition.toFixed(2),
+      nombreMatieresAvecNotes: notesList.length
     });
 
     return {

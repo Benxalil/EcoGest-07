@@ -3,7 +3,7 @@ import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { ArrowLeft, FileText, Printer, Calculator, Eye, Loader2 } from "lucide-react";
+import { ArrowLeft, FileText, Printer, Calculator, Eye, Loader2, RefreshCw } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { generateBulletinPDF } from "@/utils/pdfGenerator";
 import { BulletinClasse } from "@/components/resultats/BulletinClasse";
@@ -36,8 +36,8 @@ export default function ResultatsSemestre() {
   // Determine if this is an exam or semester view
   const isExamView = !!examId;
   
-  // Utiliser le nouveau hook useResults
-  const { results, loading, error, getStudentExamStats, getClassResults, getExamResults } = useResults();
+  // Utiliser le nouveau hook useResults avec fonction refetch
+  const { results, loading, error, getStudentExamStats, getClassResults, getExamResults, refetch } = useResults();
   const { userProfile } = useUserRole();
   
   // Récupérer les données de la classe et de l'examen
@@ -324,6 +324,18 @@ export default function ResultatsSemestre() {
           </div>
           
           <div className="flex space-x-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                console.log('🔄 Rafraîchissement manuel déclenché par l\'utilisateur');
+                refetch();
+              }}
+              className="flex items-center bg-green-500 hover:bg-green-600 text-white"
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Actualiser
+            </Button>
+            
             <Button
               variant="outline"
               onClick={handleBulletinClasse}
