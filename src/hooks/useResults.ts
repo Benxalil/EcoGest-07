@@ -386,32 +386,21 @@ export const useResults = () => {
       // Utiliser la meilleure note entre devoir, composition ET examen
       let finalNote = 0;
       
-      if (subjectData.devoirNote && subjectData.compositionNote && subjectData.examenNote) {
-        finalNote = Math.max(subjectData.devoirNote, subjectData.compositionNote, subjectData.examenNote);
-        console.log(`  🔄 Meilleure note pour ${subjectData.subject}: ${finalNote} (devoir: ${subjectData.devoirNote}, compo: ${subjectData.compositionNote}, examen: ${subjectData.examenNote})`);
-      } else if (subjectData.devoirNote && subjectData.compositionNote) {
-        finalNote = Math.max(subjectData.devoirNote, subjectData.compositionNote);
-        console.log(`  🔄 Meilleure note pour ${subjectData.subject}: ${finalNote} (devoir: ${subjectData.devoirNote}, compo: ${subjectData.compositionNote})`);
-      } else if (subjectData.devoirNote && subjectData.examenNote) {
-        finalNote = Math.max(subjectData.devoirNote, subjectData.examenNote);
-        console.log(`  🔄 Meilleure note pour ${subjectData.subject}: ${finalNote} (devoir: ${subjectData.devoirNote}, examen: ${subjectData.examenNote})`);
-      } else if (subjectData.compositionNote && subjectData.examenNote) {
-        finalNote = Math.max(subjectData.compositionNote, subjectData.examenNote);
-        console.log(`  🔄 Meilleure note pour ${subjectData.subject}: ${finalNote} (compo: ${subjectData.compositionNote}, examen: ${subjectData.examenNote})`);
-      } else if (subjectData.devoirNote) {
-        finalNote = subjectData.devoirNote;
-        console.log(`  📌 Note devoir uniquement pour ${subjectData.subject}: ${finalNote}`);
-      } else if (subjectData.compositionNote) {
-        finalNote = subjectData.compositionNote;
-        console.log(`  📌 Note composition uniquement pour ${subjectData.subject}: ${finalNote}`);
-      } else if (subjectData.examenNote) {
-        finalNote = subjectData.examenNote;
-        console.log(`  📌 Note examen uniquement pour ${subjectData.subject}: ${finalNote}`);
-      }
+      // Vérifier chaque type de note et prendre le maximum
+      const notes = [
+        subjectData.devoirNote,
+        subjectData.compositionNote,
+        subjectData.examenNote
+      ].filter(n => n && n > 0);
       
-      if (finalNote > 0) {
+      if (notes.length > 0) {
+        finalNote = Math.max(...notes);
+        console.log(`  ✅ Note retenue pour ${subjectData.subject}: ${finalNote} (devoir: ${subjectData.devoirNote}, compo: ${subjectData.compositionNote}, examen: ${subjectData.examenNote})`);
+        
+        // Ajouter aux totaux
         totalNotes += finalNote * subjectData.coefficient;
         totalCoefficient += subjectData.coefficient;
+        console.log(`  ➕ Ajouté aux totaux: ${finalNote} × ${subjectData.coefficient} = ${finalNote * subjectData.coefficient}`);
         
         notesList.push({
           note: finalNote,
@@ -421,6 +410,8 @@ export const useResults = () => {
           compositionNote: subjectData.compositionNote || undefined,
           examenNote: subjectData.examenNote || undefined
         });
+      } else {
+        console.log(`  ⚠️ Aucune note valide pour ${subjectData.subject}`);
       }
     });
 
