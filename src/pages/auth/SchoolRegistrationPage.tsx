@@ -7,12 +7,14 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { EyeIcon, EyeOffIcon, Building2, User, MapPin, Shield } from "lucide-react";
-import { EcoGestLogo } from "@/assets/EcoGestLogo";
+import { EyeIcon, EyeOffIcon, Building2, User, MapPin, Shield, Moon, Sun } from "lucide-react";
+import { EcoGestFullLogo } from "@/assets/EcoGestLogo";
+import { useTheme } from "@/components/theme-provider";
 type SchoolType = "public" | "private" | "semi_private" | "international";
 type Currency = "FCFA" | "EUR" | "USD" | "MAD" | "GNF";
 type AcademicYear = "2024/2025" | "2025/2026" | "2026/2027" | "2027/2028" | "2028/2029" | "2029/2030";
 const SchoolRegistrationPage = () => {
+  const { theme, setTheme } = useTheme();
   const [currentStep, setCurrentStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -603,16 +605,26 @@ Veuillez cliquer sur le lien dans l'email pour activer votre compte, puis vous p
         return null;
     }
   };
-  return <div className="min-h-screen bg-gradient-to-br from-background to-muted flex items-center justify-center p-4">
-      <Card className="w-full max-w-2xl">
+  return <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 flex items-center justify-center p-4 sm:p-6 md:p-8 relative">
+      {/* Toggle mode sombre */}
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+        className="absolute top-4 right-4 rounded-full"
+      >
+        {theme === "dark" ? (
+          <Sun className="h-5 w-5 text-yellow-500" />
+        ) : (
+          <Moon className="h-5 w-5 text-slate-700" />
+        )}
+      </Button>
+
+      <Card className="w-full max-w-2xl shadow-xl border-0 bg-card/95 backdrop-blur-sm">
         <CardHeader className="text-center">
-          <div className="mx-auto mb-4">
-            <EcoGestLogo size={48} />
+          <div className="pt-4 pb-2 flex justify-center">
+            <EcoGestFullLogo height={35} />
           </div>
-          <CardTitle className="text-2xl font-bold">EcoGest</CardTitle>
-          <CardDescription>
-            Créer un compte école
-          </CardDescription>
         </CardHeader>
         
         <CardContent>
