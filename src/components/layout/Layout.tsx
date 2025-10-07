@@ -47,8 +47,8 @@ export function Layout({ children }: LayoutProps) {
       <Sidebar onToggle={handleSidebarToggle} />
       
       {/* Header avec les informations de l'école connectée */}
-      <header className={`fixed top-0 right-0 z-30 bg-white shadow-sm border-b transition-all duration-200 ${
-        isMobile 
+      <header className={`fixed top-0 right-0 z-30 bg-background shadow-sm border-b border-border transition-all duration-200 ${
+        isMobile
           ? 'left-0 p-2 pl-12' 
           : isSidebarCollapsed 
             ? 'left-20 p-4' 
