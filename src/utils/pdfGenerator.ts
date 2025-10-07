@@ -719,7 +719,7 @@ export const generateBulletinPDF = async (
 
   // Generate and download PDF
   const pdfBytes = await pdfDoc.save();
-  const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+  const blob = new Blob([new Uint8Array(pdfBytes)], { type: 'application/pdf' });
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
   const fileName = `bulletin_${eleveInfo.prenom}_${eleveInfo.nom}_${semestreLabel.replace(/\s/g, '_')}.pdf`;

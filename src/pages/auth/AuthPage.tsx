@@ -10,9 +10,12 @@ import { EcoGestFullLogo } from "@/assets/EcoGestLogo";
 import { useToast } from "@/hooks/use-toast";
 import { parseUserIdentifier, buildAuthEmail } from "@/config/schoolConfig";
 import { cn } from "@/lib/utils";
+import { useTheme } from "@/components/theme-provider";
+import { Moon, Sun } from "lucide-react";
 
 const AuthPage = () => {
   const { toast } = useToast();
+  const { theme, setTheme } = useTheme();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [loginType, setLoginType] = useState<'admin' | 'user'>('user');
@@ -97,11 +100,25 @@ const AuthPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 flex items-center justify-center p-4 sm:p-6 md:p-8">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 flex items-center justify-center p-4 sm:p-6 md:p-8 relative">
+      {/* Toggle mode sombre */}
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+        className="absolute top-4 right-4 rounded-full"
+      >
+        {theme === "dark" ? (
+          <Sun className="h-5 w-5 text-yellow-500" />
+        ) : (
+          <Moon className="h-5 w-5 text-slate-700" />
+        )}
+      </Button>
+
       <Card className="w-full max-w-md shadow-xl border-0 bg-card/95 backdrop-blur-sm">
         {/* Logo complet centré */}
         <div className="pt-8 pb-6 flex justify-center">
-          <EcoGestFullLogo height={60} />
+          <EcoGestFullLogo height={45} />
         </div>
         
         <CardContent className="px-6 pb-8">
