@@ -581,6 +581,56 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          created_at: string | null
+          icon: string | null
+          id: string
+          is_read: boolean | null
+          link: string | null
+          message: string
+          school_id: string
+          title: string
+          type: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          icon?: string | null
+          id?: string
+          is_read?: boolean | null
+          link?: string | null
+          message: string
+          school_id: string
+          title: string
+          type: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          icon?: string | null
+          id?: string
+          is_read?: boolean | null
+          link?: string | null
+          message?: string
+          school_id?: string
+          title?: string
+          type?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payment_categories: {
         Row: {
           amount: number
@@ -1588,6 +1638,10 @@ export type Database = {
       calculate_student_average: {
         Args: { class_id: string; semester: number; student_id: string }
         Returns: number
+      }
+      check_subscription_expiration: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
       }
       generate_school_suffix: {
         Args: { school_name: string }
