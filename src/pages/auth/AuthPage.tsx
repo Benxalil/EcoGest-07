@@ -3,13 +3,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent } from "@/components/ui/card";
 import { Link } from "react-router-dom";
-import { EyeIcon, EyeOffIcon, Mail, Lock, User } from "lucide-react";
-import { EcoGestLogo } from "@/assets/EcoGestLogo";
+import { EyeIcon, EyeOffIcon, Mail, Lock, User, UserCircle, Building2, Info } from "lucide-react";
+import { EcoGestFullLogo } from "@/assets/EcoGestLogo";
 import { useToast } from "@/hooks/use-toast";
 import { parseUserIdentifier, buildAuthEmail } from "@/config/schoolConfig";
+import { cn } from "@/lib/utils";
 
 const AuthPage = () => {
   const { toast } = useToast();
@@ -97,28 +97,58 @@ const AuthPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-muted flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="mx-auto mb-4">
-            <EcoGestLogo size={48} />
-          </div>
-          <CardTitle className="text-2xl font-bold">EcoGest</CardTitle>
-          <CardDescription>
-            Système de gestion scolaire
-          </CardDescription>
-        </CardHeader>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 flex items-center justify-center p-4 sm:p-6 md:p-8">
+      <Card className="w-full max-w-md shadow-xl border-0 bg-card/95 backdrop-blur-sm">
+        {/* Logo complet centré */}
+        <div className="pt-8 pb-6 flex justify-center">
+          <EcoGestFullLogo height={60} />
+        </div>
         
-        <CardContent>
-          <Tabs value={loginType} onValueChange={(value) => setLoginType(value as 'admin' | 'user')} className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-6">
-              <TabsTrigger value="user">Utilisateur</TabsTrigger>
-              <TabsTrigger value="admin">Administrateur</TabsTrigger>
-            </TabsList>
+        <CardContent className="px-6 pb-8">
+          {/* Sélecteur moderne avec icônes */}
+          <div className="mb-6">
+            <div className="grid grid-cols-2 gap-3 p-1 bg-muted/50 rounded-lg">
+              <button
+                type="button"
+                onClick={() => setLoginType('user')}
+                className={cn(
+                  "flex flex-col items-center justify-center py-4 px-3 rounded-md transition-all duration-300",
+                  loginType === 'user'
+                    ? "bg-primary text-primary-foreground shadow-md scale-105"
+                    : "bg-transparent text-muted-foreground hover:bg-muted/50"
+                )}
+              >
+                <UserCircle className={cn(
+                  "h-8 w-8 mb-2 transition-transform duration-300",
+                  loginType === 'user' && "scale-110"
+                )} />
+                <span className="text-sm font-medium">Utilisateur</span>
+              </button>
+              
+              <button
+                type="button"
+                onClick={() => setLoginType('admin')}
+                className={cn(
+                  "flex flex-col items-center justify-center py-4 px-3 rounded-md transition-all duration-300",
+                  loginType === 'admin'
+                    ? "bg-primary text-primary-foreground shadow-md scale-105"
+                    : "bg-transparent text-muted-foreground hover:bg-muted/50"
+                )}
+              >
+                <Building2 className={cn(
+                  "h-8 w-8 mb-2 transition-transform duration-300",
+                  loginType === 'admin' && "scale-110"
+                )} />
+                <span className="text-sm font-medium">Administrateur</span>
+              </button>
+            </div>
+          </div>
 
-            <form onSubmit={handleLogin} className="space-y-4">
-              <TabsContent value="user" className="mt-0">
-                <div className="space-y-2">
+          <form onSubmit={handleLogin} className="space-y-4">
+            {/* Champ identifiant selon le type */}
+            <div className="space-y-2 animate-fade-in">
+              {loginType === 'user' ? (
+                <>
                   <Label htmlFor="login-identifier">Identifiant</Label>
                   <div className="relative">
                     <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
@@ -135,11 +165,9 @@ const AuthPage = () => {
                   <p className="text-xs text-muted-foreground">
                     Format: matricule@suffixe_école (ex: Prof04@ecole-best, Eleve001@mon-lycee)
                   </p>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="admin" className="mt-0">
-                <div className="space-y-2">
+                </>
+              ) : (
+                <>
                   <Label htmlFor="login-email">Email</Label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
@@ -153,50 +181,77 @@ const AuthPage = () => {
                       required
                     />
                   </div>
-                </div>
-              </TabsContent>
-              
-              <div className="space-y-2">
-                <Label htmlFor="login-password">Mot de passe</Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="login-password"
-                    type={showPassword ? "text" : "password"}
-                    placeholder={loginType === 'admin' ? "••••••••" : "Mot de passe par défaut"}
-                    value={loginData.password}
-                    onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
-                    className="pl-10 pr-10"
-                    required
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                    onClick={() => setShowPassword(!showPassword)}
-                  >
-                    {showPassword ? (
-                      <EyeOffIcon className="h-4 w-4 text-muted-foreground" />
-                    ) : (
-                      <EyeIcon className="h-4 w-4 text-muted-foreground" />
-                    )}
-                  </Button>
-                </div>
-                {loginType === 'user' && (
-                  <p className="text-xs text-muted-foreground">
-                    Utilisez le mot de passe fourni lors de la création de votre compte
-                  </p>
+                </>
+              )}
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="login-password">Mot de passe</Label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="login-password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder={loginType === 'admin' ? "••••••••" : "Mot de passe par défaut"}
+                  value={loginData.password}
+                  onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
+                  className="pl-10 pr-10"
+                  required
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? (
+                    <EyeOffIcon className="h-4 w-4 text-muted-foreground" />
+                  ) : (
+                    <EyeIcon className="h-4 w-4 text-muted-foreground" />
+                  )}
+                </Button>
+              </div>
+              {loginType === 'user' && (
+                <p className="text-xs text-muted-foreground">
+                  Utilisez le mot de passe fourni lors de la création de votre compte
+                </p>
+              )}
+            </div>
+            
+            <Button 
+              type="submit" 
+              className="w-full h-11 text-base font-medium" 
+              disabled={isLoading}
+            >
+              {isLoading ? "Connexion..." : "Se connecter"}
+            </Button>
+          </form>
+
+          {/* Message contextuel avec animation */}
+          <div 
+            key={loginType} 
+            className="mt-6 p-4 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800 animate-fade-in"
+          >
+            <div className="flex gap-3">
+              <Info className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+              <div className="space-y-2 text-sm text-blue-900 dark:text-blue-100">
+                {loginType === 'user' ? (
+                  <>
+                    <p className="font-medium">🔹 Cet espace est réservé uniquement aux élèves, parents et enseignants.</p>
+                    <p>🔹 Si vous êtes nouveau ici, veuillez contacter votre administrateur pour obtenir vos identifiants de connexion.</p>
+                  </>
+                ) : (
+                  <>
+                    <p className="font-medium">🔹 Cet espace est réservé uniquement aux administrateurs d'école.</p>
+                    <p>🔹 Vous pouvez vous connecter avec vos identifiants de direction ou d'administration.</p>
+                  </>
                 )}
               </div>
-              
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? "Connexion..." : "Se connecter"}
-              </Button>
-            </form>
-          </Tabs>
+            </div>
+          </div>
           
-          <div className="mt-6 text-center space-y-3">
+          <div className="mt-6 text-center">
             <p className="text-sm text-muted-foreground">
               Pas encore de compte ?{" "}
               <Link 
