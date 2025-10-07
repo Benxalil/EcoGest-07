@@ -1,26 +1,28 @@
-import { useState } from "react";
 import { Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useTheme } from "@/components/theme-provider";
 
 export function HeaderDarkMode() {
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  const { theme, setTheme } = useTheme();
 
   const toggleDarkMode = () => {
-    setIsDarkMode(!isDarkMode);
-    document.documentElement.classList.toggle('dark');
+    setTheme(theme === "dark" ? "light" : "dark");
   };
+
+  const isDark = theme === "dark";
 
   return (
     <Button
       variant="ghost"
       size="icon"
       onClick={toggleDarkMode}
-      className="h-8 w-8"
+      className="h-8 w-8 transition-transform hover:scale-110"
+      title={isDark ? "Mode clair" : "Mode sombre"}
     >
-      {isDarkMode ? (
-        <Sun className="h-4 w-4" />
+      {isDark ? (
+        <Sun className="h-4 w-4 transition-all" />
       ) : (
-        <Moon className="h-4 w-4" />
+        <Moon className="h-4 w-4 transition-all" />
       )}
     </Button>
   );

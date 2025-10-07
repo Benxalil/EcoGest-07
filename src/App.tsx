@@ -2,6 +2,7 @@ import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
+import { ThemeProvider } from "@/components/theme-provider";
 import { StudentRouteHandler } from "@/components/navigation/StudentRouteHandler";
 import { ParentRouteHandler } from "@/components/navigation/ParentRouteHandler";
 import AuthenticatedLayout from "@/components/layout/AuthenticatedLayout";
@@ -67,8 +68,9 @@ const queryClient = new QueryClient({
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <Router>
+    <ThemeProvider defaultTheme="system" storageKey="ecogest-ui-theme">
+      <QueryClientProvider client={queryClient}>
+        <Router>
         <AuthenticatedLayout>
           <StudentRouteHandler>
             <ParentRouteHandler>
@@ -129,9 +131,10 @@ function App() {
             </ParentRouteHandler>
           </StudentRouteHandler>
         </AuthenticatedLayout>
-      </Router>
-      <Toaster />
-    </QueryClientProvider>
+        </Router>
+        <Toaster />
+      </QueryClientProvider>
+    </ThemeProvider>
   );
 }
 
