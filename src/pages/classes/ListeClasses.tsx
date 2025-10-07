@@ -161,7 +161,7 @@ export default function ListeClasses() {
           <div className="flex items-center justify-center py-12">
             <div className="text-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-              <p className="text-gray-500">Chargement des classes...</p>
+              <p className="text-muted-foreground">Chargement des classes...</p>
             </div>
           </div>
         </div>
@@ -174,8 +174,8 @@ export default function ListeClasses() {
       <Layout>
         <div className="container mx-auto p-6">
           <div className="text-center py-12">
-            <p className="text-red-500 text-lg mb-4">Erreur lors du chargement</p>
-            <p className="text-gray-400 mb-6">{error}</p>
+            <p className="text-destructive text-lg mb-4">Erreur lors du chargement</p>
+            <p className="text-muted-foreground/80 mb-6">{error}</p>
             <Button onClick={refreshClasses}>
               Réessayer
             </Button>
@@ -192,14 +192,14 @@ export default function ListeClasses() {
         <div className="container mx-auto p-6">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-4">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => navigate(-1)}
-                className="hover:bg-gray-100"
-              >
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate(-1)}
+              className="hover:bg-accent"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
               <h1 className="text-2xl font-bold">{isTeacher() ? "Mes Classes" : "Liste des Classes"}</h1>
             </div>
           {!isTeacher() && (
@@ -223,16 +223,16 @@ export default function ListeClasses() {
           <div className="text-center py-12">
             {isTeacher() ? (
               <>
-                <GraduationCap className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                <p className="text-gray-500 text-lg mb-4">Vous n'êtes encore affecté à aucune classe</p>
-                <p className="text-gray-400 mb-6">
+                <GraduationCap className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground text-lg mb-4">Vous n'êtes encore affecté à aucune classe</p>
+                <p className="text-muted-foreground/80 mb-6">
                   Veuillez contacter l'administrateur de l'établissement pour qu'il vous assigne des classes dans l'emploi du temps.
                 </p>
               </>
             ) : (
               <>
-                <p className="text-gray-500 text-lg mb-4">Aucune classe n'a été créée</p>
-                <p className="text-gray-400 mb-6">Commencez par créer votre première classe</p>
+                <p className="text-muted-foreground text-lg mb-4">Aucune classe n'a été créée</p>
+                <p className="text-muted-foreground/80 mb-6">Commencez par créer votre première classe</p>
                 <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
                   <DialogTrigger asChild>
                     <Button onClick={handleOpenAddDialog}>
@@ -264,7 +264,7 @@ export default function ListeClasses() {
               variant="ghost"
               size="icon"
               onClick={() => navigate(-1)}
-              className="hover:bg-gray-100"
+              className="hover:bg-accent"
             >
               <ArrowLeft className="h-5 w-5" />
             </Button>
