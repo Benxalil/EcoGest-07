@@ -18,7 +18,7 @@ const AuthPage = () => {
   const { theme, setTheme } = useTheme();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [loginType, setLoginType] = useState<'admin' | 'user'>('user');
+  const [loginType, setLoginType] = useState<"admin" | "user">("user");
 
   const [loginData, setLoginData] = useState({
     identifier: "",
@@ -31,18 +31,18 @@ const AuthPage = () => {
 
     try {
       let email = loginData.identifier;
-      
+
       // Système d'authentification multi-écoles
-      if (loginType === 'admin') {
+      if (loginType === "admin") {
         // Admin: email classique
         email = loginData.identifier.trim();
       } else {
         // Utilisateur: format matricule@suffixe_école (ex: Prof04@ecole-best)
         const identifier = loginData.identifier.trim();
-        
+
         // Parser l'identifiant
         const parsed = parseUserIdentifier(identifier);
-        
+
         if (!parsed) {
           toast({
             title: "Format invalide",
@@ -52,7 +52,7 @@ const AuthPage = () => {
           setIsLoading(false);
           return;
         }
-        
+
         // Construire l'email technique pour Supabase Auth
         // Ex: Prof04@ecole-best -> Prof04@ecole-best.ecogest.app
         email = buildAuthEmail(parsed.matricule, parsed.schoolSuffix);
@@ -64,17 +64,18 @@ const AuthPage = () => {
       });
 
       if (error) {
-        console.error('Login error:', error);
-        
+        console.error("Login error:", error);
+
         let errorMessage = error.message;
-        if (error.message.includes('Email not confirmed')) {
+        if (error.message.includes("Email not confirmed")) {
           errorMessage = "Veuillez confirmer votre email avant de vous connecter.";
-        } else if (error.message.includes('Invalid login credentials')) {
-          errorMessage = loginType === 'admin' 
-            ? 'Email ou mot de passe incorrect.' 
-            : 'Matricule, école ou mot de passe incorrect. Vérifiez votre identifiant au format: matricule@suffixe_école';
+        } else if (error.message.includes("Invalid login credentials")) {
+          errorMessage =
+            loginType === "admin"
+              ? "Email ou mot de passe incorrect."
+              : "Matricule, école ou mot de passe incorrect. Vérifiez votre identifiant au format: matricule@suffixe_école";
         }
-        
+
         toast({
           title: "Erreur de connexion",
           description: errorMessage,
@@ -85,10 +86,10 @@ const AuthPage = () => {
           title: "Connexion réussie",
           description: "Bienvenue !",
         });
-        window.location.href = '/';
+        window.location.href = "/";
       }
     } catch (error) {
-      console.error('Login error:', error);
+      console.error("Login error:", error);
       toast({
         title: "Erreur",
         description: "Une erreur est survenue lors de la connexion.",
@@ -108,57 +109,57 @@ const AuthPage = () => {
         onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
         className="absolute top-4 right-4 rounded-full"
       >
-        {theme === "dark" ? (
-          <Sun className="h-5 w-5 text-yellow-500" />
-        ) : (
-          <Moon className="h-5 w-5 text-slate-700" />
-        )}
+        {theme === "dark" ? <Sun className="h-5 w-5 text-yellow-500" /> : <Moon className="h-5 w-5 text-slate-700" />}
       </Button>
 
       <Card className="w-full max-w-md shadow-xl border-0 bg-card/95 backdrop-blur-sm">
         {/* Logo complet centré */}
         <div className="pt-8 pb-6 flex justify-center">
-          <EcoGestFullLogo height={35} />
+          <EcoGestFullLogo height={25} />
         </div>
-        
+
         <CardContent className="px-6 pb-8">
           {/* Sélecteur simplifié */}
           <div className="mb-6">
             <div className="flex justify-center gap-8">
               <button
                 type="button"
-                onClick={() => setLoginType('user')}
+                onClick={() => setLoginType("user")}
                 className="flex flex-col items-center justify-center transition-colors duration-300"
               >
-                <UserCircle 
+                <UserCircle
                   className={cn(
                     "h-10 w-10 mb-2 transition-colors duration-300",
-                    loginType === 'user' ? "text-primary" : "text-muted-foreground"
-                  )} 
+                    loginType === "user" ? "text-primary" : "text-muted-foreground",
+                  )}
                 />
-                <span className={cn(
-                  "text-sm",
-                  loginType === 'user' ? "text-foreground font-medium" : "text-muted-foreground"
-                )}>
+                <span
+                  className={cn(
+                    "text-sm",
+                    loginType === "user" ? "text-foreground font-medium" : "text-muted-foreground",
+                  )}
+                >
                   Utilisateur
                 </span>
               </button>
-              
+
               <button
                 type="button"
-                onClick={() => setLoginType('admin')}
+                onClick={() => setLoginType("admin")}
                 className="flex flex-col items-center justify-center transition-colors duration-300"
               >
-                <Building2 
+                <Building2
                   className={cn(
                     "h-10 w-10 mb-2 transition-colors duration-300",
-                    loginType === 'admin' ? "text-primary" : "text-muted-foreground"
-                  )} 
+                    loginType === "admin" ? "text-primary" : "text-muted-foreground",
+                  )}
                 />
-                <span className={cn(
-                  "text-sm",
-                  loginType === 'admin' ? "text-foreground font-medium" : "text-muted-foreground"
-                )}>
+                <span
+                  className={cn(
+                    "text-sm",
+                    loginType === "admin" ? "text-foreground font-medium" : "text-muted-foreground",
+                  )}
+                >
                   Administrateur
                 </span>
               </button>
@@ -168,7 +169,7 @@ const AuthPage = () => {
           <form onSubmit={handleLogin} className="space-y-4">
             {/* Champ identifiant selon le type */}
             <div className="space-y-2 animate-fade-in">
-              {loginType === 'user' ? (
+              {loginType === "user" ? (
                 <>
                   <Label htmlFor="login-identifier">Identifiant</Label>
                   <div className="relative">
@@ -205,7 +206,7 @@ const AuthPage = () => {
                 </>
               )}
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="login-password">Mot de passe</Label>
               <div className="relative">
@@ -213,7 +214,7 @@ const AuthPage = () => {
                 <Input
                   id="login-password"
                   type={showPassword ? "text" : "password"}
-                  placeholder={loginType === 'admin' ? "••••••••" : "Mot de passe par défaut"}
+                  placeholder={loginType === "admin" ? "••••••••" : "Mot de passe par défaut"}
                   value={loginData.password}
                   onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
                   className="pl-10 pr-10"
@@ -233,34 +234,35 @@ const AuthPage = () => {
                   )}
                 </Button>
               </div>
-              {loginType === 'user' && (
+              {loginType === "user" && (
                 <p className="text-xs text-muted-foreground">
                   Utilisez le mot de passe fourni lors de la création de votre compte
                 </p>
               )}
             </div>
-            
-            <Button 
-              type="submit" 
-              className="w-full h-11 text-base font-medium" 
-              disabled={isLoading}
-            >
+
+            <Button type="submit" className="w-full h-11 text-base font-medium" disabled={isLoading}>
               {isLoading ? "Connexion..." : "Se connecter"}
             </Button>
           </form>
 
           {/* Message contextuel avec animation */}
-          <div 
-            key={loginType} 
+          <div
+            key={loginType}
             className="mt-6 p-4 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800 animate-fade-in"
           >
             <div className="flex gap-3">
               <Info className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
               <div className="space-y-2 text-sm text-blue-900 dark:text-blue-100">
-                {loginType === 'user' ? (
+                {loginType === "user" ? (
                   <>
-                    <p className="font-medium">🔹 Cet espace est réservé uniquement aux élèves, parents et enseignants.</p>
-                    <p>🔹 Si vous êtes nouveau ici, veuillez contacter votre administrateur pour obtenir vos identifiants de connexion.</p>
+                    <p className="font-medium">
+                      🔹 Cet espace est réservé uniquement aux élèves, parents et enseignants.
+                    </p>
+                    <p>
+                      🔹 Si vous êtes nouveau ici, veuillez contacter votre administrateur pour obtenir vos identifiants
+                      de connexion.
+                    </p>
                   </>
                 ) : (
                   <>
@@ -271,14 +273,11 @@ const AuthPage = () => {
               </div>
             </div>
           </div>
-          
+
           <div className="mt-6 text-center">
             <p className="text-sm text-muted-foreground">
               Pas encore de compte ?{" "}
-              <Link 
-                to="/inscription" 
-                className="font-medium text-primary hover:underline"
-              >
+              <Link to="/inscription" className="font-medium text-primary hover:underline">
                 Créez votre école ici
               </Link>
             </p>
