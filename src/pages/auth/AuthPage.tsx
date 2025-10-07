@@ -105,41 +105,45 @@ const AuthPage = () => {
         </div>
         
         <CardContent className="px-6 pb-8">
-          {/* Sélecteur moderne avec icônes */}
+          {/* Sélecteur simplifié */}
           <div className="mb-6">
-            <div className="grid grid-cols-2 gap-3 p-1 bg-muted/50 rounded-lg">
+            <div className="flex justify-center gap-8">
               <button
                 type="button"
                 onClick={() => setLoginType('user')}
-                className={cn(
-                  "flex flex-col items-center justify-center py-4 px-3 rounded-md transition-all duration-300",
-                  loginType === 'user'
-                    ? "bg-primary text-primary-foreground shadow-md scale-105"
-                    : "bg-transparent text-muted-foreground hover:bg-muted/50"
-                )}
+                className="flex flex-col items-center justify-center transition-colors duration-300"
               >
-                <UserCircle className={cn(
-                  "h-8 w-8 mb-2 transition-transform duration-300",
-                  loginType === 'user' && "scale-110"
-                )} />
-                <span className="text-sm font-medium">Utilisateur</span>
+                <UserCircle 
+                  className={cn(
+                    "h-10 w-10 mb-2 transition-colors duration-300",
+                    loginType === 'user' ? "text-primary" : "text-muted-foreground"
+                  )} 
+                />
+                <span className={cn(
+                  "text-sm",
+                  loginType === 'user' ? "text-foreground font-medium" : "text-muted-foreground"
+                )}>
+                  Utilisateur
+                </span>
               </button>
               
               <button
                 type="button"
                 onClick={() => setLoginType('admin')}
-                className={cn(
-                  "flex flex-col items-center justify-center py-4 px-3 rounded-md transition-all duration-300",
-                  loginType === 'admin'
-                    ? "bg-primary text-primary-foreground shadow-md scale-105"
-                    : "bg-transparent text-muted-foreground hover:bg-muted/50"
-                )}
+                className="flex flex-col items-center justify-center transition-colors duration-300"
               >
-                <Building2 className={cn(
-                  "h-8 w-8 mb-2 transition-transform duration-300",
-                  loginType === 'admin' && "scale-110"
-                )} />
-                <span className="text-sm font-medium">Administrateur</span>
+                <Building2 
+                  className={cn(
+                    "h-10 w-10 mb-2 transition-colors duration-300",
+                    loginType === 'admin' ? "text-primary" : "text-muted-foreground"
+                  )} 
+                />
+                <span className={cn(
+                  "text-sm",
+                  loginType === 'admin' ? "text-foreground font-medium" : "text-muted-foreground"
+                )}>
+                  Administrateur
+                </span>
               </button>
             </div>
           </div>
