@@ -46,7 +46,7 @@ export const useOptimizedTeacherData = () => {
 
     const cacheKey = `teacher-dashboard-${teacherId}`;
     
-    // Vérifier le cache (30 secondes pour emplois du temps - données dynamiques)
+    // Vérifier le cache (2 minutes pour réduire les requêtes)
     const cached = cache.get<Omit<TeacherDashboardData, 'loading' | 'error'>>(cacheKey);
     if (cached) {
       setData({ ...cached, loading: false, error: null });
@@ -59,18 +59,10 @@ export const useOptimizedTeacherData = () => {
       const today = new Date();
       const dayOfWeek = today.getDay();
 
-      // Une seule requête optimisée pour récupérer classes + emplois du temps
+      // Requête optimisée - seulement les schedules du professeur
       const { data: schedulesData, error: schedulesError } = await supabase
         .from('schedules')
-        .select(`
-          id,
-          subject,
-          start_time,
-          end_time,
-          day_of_week,
-          class_id,
-          classes(id, name, effectif)
-        `)
+        .select('id, subject, start_time, end_time, day_of_week, class_id')
         .eq('teacher_id', teacherId)
         .eq('school_id', profile.schoolId);
 
@@ -78,21 +70,20 @@ export const useOptimizedTeacherData = () => {
         throw new Error(schedulesError.message);
       }
 
-      // Extraire les classes uniques depuis les schedules
-      const uniqueClassesMap = new Map();
-      (schedulesData || []).forEach(schedule => {
-        if (schedule.classes && !uniqueClassesMap.has(schedule.classes.id)) {
-          uniqueClassesMap.set(schedule.classes.id, schedule.classes);
-        }
-      });
-      const uniqueClasses = Array.from(uniqueClassesMap.values());
-
+      // Extraire les class_ids uniques
+      const classIds = [...new Set((schedulesData || []).map(s => s.class_id))];
+      
       // Filtrer les emplois du temps d'aujourd'hui
       const todaySchedules = (schedulesData || []).filter(s => s.day_of_week === dayOfWeek);
 
-      // Récupérer les étudiants et annonces en parallèle
-      const classIds = uniqueClasses.map(c => c.id);
-      const [studentsResult, announcementsResult] = await Promise.all([
+      // Récupérer classes, étudiants et annonces en parallèle
+      const [classesResult, studentsResult, announcementsResult] = await Promise.all([
+        classIds.length > 0
+          ? supabase
+              .from('classes')
+              .select('id, name, effectif')
+              .in('id', classIds)
+          : Promise.resolve({ data: [] }),
         classIds.length > 0
           ? supabase
               .from('students')
@@ -118,20 +109,20 @@ export const useOptimizedTeacherData = () => {
       );
 
       const teacherData = {
-        classes: uniqueClasses,
+        classes: classesResult.data || [],
         students: studentsResult.data || [],
         todaySchedules: todaySchedules,
         announcements: filteredAnnouncements,
         stats: {
-          totalClasses: uniqueClasses.length,
+          totalClasses: (classesResult.data || []).length,
           totalStudents: (studentsResult.data || []).length,
           todayCourses: todaySchedules.length,
           totalAnnouncements: filteredAnnouncements.length
         }
       };
 
-      // Cache pour 30 secondes (données d'emploi du temps dynamiques)
-      cache.set(cacheKey, teacherData, 30 * 1000);
+      // Cache pour 2 minutes (réduire la charge serveur)
+      cache.set(cacheKey, teacherData, 120 * 1000);
       
       setData({
         ...teacherData,
@@ -152,114 +143,51 @@ export const useOptimizedTeacherData = () => {
   useEffect(() => {
     fetchTeacherData();
 
-    // Supabase Realtime - Écoute des changements multiples
+    // Supabase Realtime - Seulement 2 canaux essentiels pour éviter surcharge
     if (!profile?.schoolId || !teacherId || profile.role !== 'teacher') {
       return;
     }
 
     const cacheKey = `teacher-dashboard-${teacherId}`;
+    let debounceTimer: NodeJS.Timeout;
     
-    // Canal pour les emplois du temps
-    const schedulesChannel = supabase
-      .channel('teacher-schedules-realtime')
+    // Fonction debounced pour éviter trop de requêtes simultanées
+    const debouncedFetch = () => {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        cache.deleteWithEvent(cacheKey);
+        fetchTeacherData();
+      }, 500);
+    };
+    
+    // Canal unique pour toutes les tables importantes
+    const realtimeChannel = supabase
+      .channel('teacher-dashboard-updates')
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
           table: 'schedules',
-          filter: `school_id=eq.${profile.schoolId}`
+          filter: `teacher_id=eq.${teacherId}`
         },
-        (payload) => {
-          console.log('Schedule change detected:', payload);
-          cache.deleteWithEvent(cacheKey);
-          fetchTeacherData();
-        }
+        () => debouncedFetch()
       )
-      .subscribe();
-
-    // Canal pour les classes
-    const classesChannel = supabase
-      .channel('teacher-classes-realtime')
       .on(
         'postgres_changes',
         {
-          event: '*',
-          schema: 'public',
-          table: 'classes',
-          filter: `school_id=eq.${profile.schoolId}`
-        },
-        (payload) => {
-          console.log('Class change detected:', payload);
-          cache.deleteWithEvent(cacheKey);
-          fetchTeacherData();
-        }
-      )
-      .subscribe();
-
-    // Canal pour les étudiants
-    const studentsChannel = supabase
-      .channel('teacher-students-realtime')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'students',
-          filter: `school_id=eq.${profile.schoolId}`
-        },
-        (payload) => {
-          console.log('Student change detected:', payload);
-          cache.deleteWithEvent(cacheKey);
-          fetchTeacherData();
-        }
-      )
-      .subscribe();
-
-    // Canal pour les annonces
-    const announcementsChannel = supabase
-      .channel('teacher-announcements-realtime')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
+          event: 'INSERT',
           schema: 'public',
           table: 'announcements',
           filter: `school_id=eq.${profile.schoolId}`
         },
-        (payload) => {
-          console.log('Announcement change detected:', payload);
-          cache.deleteWithEvent(cacheKey);
-          fetchTeacherData();
-        }
-      )
-      .subscribe();
-
-    // Canal pour les examens
-    const examsChannel = supabase
-      .channel('teacher-exams-realtime')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'exams',
-          filter: `school_id=eq.${profile.schoolId}`
-        },
-        (payload) => {
-          console.log('Exam change detected:', payload);
-          cache.deleteWithEvent(cacheKey);
-          fetchTeacherData();
-        }
+        () => debouncedFetch()
       )
       .subscribe();
 
     return () => {
-      supabase.removeChannel(schedulesChannel);
-      supabase.removeChannel(classesChannel);
-      supabase.removeChannel(studentsChannel);
-      supabase.removeChannel(announcementsChannel);
-      supabase.removeChannel(examsChannel);
+      clearTimeout(debounceTimer);
+      supabase.removeChannel(realtimeChannel);
     };
   }, [fetchTeacherData, profile?.schoolId, teacherId, profile?.role, cache]);
 
