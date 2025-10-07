@@ -43,7 +43,16 @@ interface CahierFormData {
 
 export default function EmploiDuTemps() {
   const navigate = useNavigate();
-  const { isAdmin, isTeacher, isParent, isStudent } = useUserRole();
+  const { isAdmin, isTeacher, isParent, isStudent, userProfile } = useUserRole();
+  
+  // Debug temporaire pour vérifier le rôle
+  useEffect(() => {
+    console.log('=== DEBUG EmploiDuTemps ===');
+    console.log('userProfile:', userProfile);
+    console.log('isAdmin():', isAdmin());
+    console.log('isTeacher():', isTeacher());
+    console.log('Role:', userProfile?.role);
+  }, [userProfile, isAdmin, isTeacher]);
   
   // Utiliser le hook approprié selon le rôle
   const adminData = useClasses();
