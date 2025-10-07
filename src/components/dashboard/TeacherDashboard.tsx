@@ -22,6 +22,7 @@ export function TeacherDashboard() {
   const { announcements } = useAnnouncements();
   const { classes, loading: classesLoading } = useClasses();
   const { schoolData } = useSchoolData();
+  const [isLoadingData, setIsLoadingData] = useState(true);
   const [stats, setStats] = useState<TeacherStats>({
     totalClasses: 0,
     totalStudents: 0,
@@ -37,6 +38,7 @@ export function TeacherDashboard() {
     if (!userProfile) return;
 
     try {
+      setIsLoadingData(true);
       // Récupérer les classes assignées à l'enseignant depuis l'emploi du temps
       const teacherClasses = getTeacherClasses(userProfile.id);
       const todaySchedules = getTodayTeacherSchedule(userProfile.id);
@@ -51,6 +53,8 @@ export function TeacherDashboard() {
       });
     } catch (error) {
       console.error("Erreur lors du chargement des données enseignant:", error);
+    } finally {
+      setIsLoadingData(false);
     }
   };
 
@@ -150,11 +154,38 @@ export function TeacherDashboard() {
     return currentHour < 12 ? "Bonjour" : "Bonsoir";
   };
 
-  if (classesLoading) {
+  if (classesLoading || isLoadingData) {
     return (
       <div className="space-y-6">
-        <div className="text-center py-12">
-          <p className="text-gray-500 text-lg">Chargement des données...</p>
+        {/* Header skeleton */}
+        <div className="bg-gray-100 rounded-lg p-6 animate-pulse">
+          <div className="h-8 w-64 bg-gray-200 rounded mb-2"></div>
+          <div className="h-4 w-96 bg-gray-200 rounded"></div>
+        </div>
+        
+        {/* Stats skeleton */}
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+          {[1, 2, 3, 4].map((i) => (
+            <Card key={i} className="p-4 sm:p-6">
+              <div className="animate-pulse">
+                <div className="h-4 w-24 bg-gray-200 rounded mb-2"></div>
+                <div className="h-8 w-12 bg-gray-200 rounded"></div>
+              </div>
+            </Card>
+          ))}
+        </div>
+        
+        {/* Content skeleton */}
+        <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
+          {[1, 2].map((i) => (
+            <Card key={i} className="p-6">
+              <div className="animate-pulse space-y-3">
+                <div className="h-5 w-40 bg-gray-200 rounded"></div>
+                <div className="h-4 w-full bg-gray-200 rounded"></div>
+                <div className="h-4 w-3/4 bg-gray-200 rounded"></div>
+              </div>
+            </Card>
+          ))}
         </div>
       </div>
     );
