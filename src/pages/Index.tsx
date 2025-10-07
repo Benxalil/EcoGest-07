@@ -25,6 +25,7 @@ import { Session } from "@supabase/supabase-js";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import { LoadingSkeleton } from "@/components/ui/loading-skeleton";
 import { useOptimizedUserData } from "@/hooks/useOptimizedUserData";
+import { useTodaySchedules } from "@/hooks/useTodaySchedules";
 
 const stats = [
   {
@@ -76,6 +77,9 @@ const Index = () => {
     error: dataError,
     refetch
   } = useDashboardData();
+  
+  // Hook pour récupérer les emplois du temps du jour
+  const { schedules: todaySchedules, loading: schedulesLoading, currentDay } = useTodaySchedules();
   
   // État de chargement global
   const isLoading = dataLoading || userLoading;
@@ -175,15 +179,14 @@ const Index = () => {
   }), [classes, students, generateMonthlyEnrollment]);
 
   
-  // Optimisation : utiliser directement les données du hook
-  const todaySchedules = useMemo(() => [], []);  // TODO: Intégrer avec useSchedules
   const upcomingAnnouncements = useMemo(() => recentAnnouncements, [recentAnnouncements]);
 
   // Supprimer les useEffect multiples - les données sont maintenant gérées par useDashboardData
 
   const getGreeting = () => {
     const currentHour = new Date().getHours();
-    return currentHour < 12 ? "Bonjour" : "Bonsoir";
+    // Bonjour de 00h00 à 14h59, Bonsoir de 15h00 à 23h59
+    return currentHour < 15 ? "Bonjour" : "Bonsoir";
   };
 
   const fabActions = [
@@ -367,33 +370,46 @@ const Index = () => {
               <Card className="p-4 sm:p-6">
                 <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
                   <Clock className="h-4 w-4 sm:h-5 sm:w-5" />
-                  <h3 className="font-semibold text-sm sm:text-base">Emploi du temps</h3>
+                  <h3 className="font-semibold text-sm sm:text-base">Emploi du temps - {currentDay}</h3>
                 </div>
                 <p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4">
-                  Classes prévues pour aujourd'hui
+                  Classes prévues aujourd'hui
                 </p>
-                {displayedSchedules.length === 0 ? (
+                {schedulesLoading ? (
+                  <div className="flex items-center justify-center py-6">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+                  </div>
+                ) : displayedSchedules.length === 0 ? (
                   <p className="text-center text-muted-foreground py-6 sm:py-8 text-sm">
-                    {new Date().getDay() === 0 ? "Aucun cours prévu le dimanche" : "Aucun cours prévu aujourd'hui"}
+                    {currentDay === 'Dimanche' ? "Aucun cours prévu le dimanche" : "Aucun cours prévu aujourd'hui"}
                   </p>
                 ) : (
                   <div className="space-y-2 sm:space-y-3">
                     {displayedSchedules.map((schedule, index) => (
-                      <div key={index} className="border rounded-lg p-2 sm:p-3">
+                      <div key={schedule.id || index} className="border rounded-lg p-2 sm:p-3 hover:bg-accent/50 transition-colors">
                         <div className="flex items-center justify-between mb-1 sm:mb-2">
                           <h4 className="font-medium text-xs sm:text-sm truncate pr-2">{schedule.className}</h4>
                           <span className="text-xs text-muted-foreground flex-shrink-0">{schedule.courses.length} cours</span>
                         </div>
-                        <div className="text-xs text-muted-foreground">
-                          {schedule.courses.slice(0, 2).map((course: any, courseIndex: number) => (
-                            <div key={courseIndex} className="flex items-center justify-between">
-                              <span className="truncate pr-2">{course.subject}</span>
-                              <span className="flex-shrink-0">{course.startTime} - {course.endTime}</span>
+                        <div className="text-xs space-y-1">
+                          {schedule.courses.slice(0, 2).map((course, courseIndex) => (
+                            <div key={course.id || courseIndex} className="flex items-center justify-between py-1">
+                              <div className="flex-1 min-w-0 pr-2">
+                                <span className="font-medium text-foreground">{course.subject}</span>
+                                {course.teacher && (
+                                  <span className="text-muted-foreground ml-1">• {course.teacher}</span>
+                                )}
+                              </div>
+                              <span className="flex-shrink-0 text-muted-foreground font-medium">
+                                {course.startTime} - {course.endTime}
+                              </span>
                             </div>
                           ))}
                           {schedule.courses.length > 2 && (
-                            <div className="text-center mt-1">
-                              <span className="text-xs">et {schedule.courses.length - 2} autres...</span>
+                            <div className="text-center mt-1 pt-1 border-t">
+                              <span className="text-xs text-muted-foreground">
+                                et {schedule.courses.length - 2} autre{schedule.courses.length - 2 > 1 ? 's' : ''} cours...
+                              </span>
                             </div>
                           )}
                         </div>
