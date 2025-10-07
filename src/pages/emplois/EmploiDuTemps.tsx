@@ -704,7 +704,7 @@ export default function EmploiDuTemps() {
                                     onClick={() => handleOpenCahierModal(dayIndex, originalCourseIndex, course)}
                                   />
                                   <UserCheck 
-                                    className="h-3 w-3 cursor-pointer text-green-600 hover:text-green-800" 
+                                    className="h-3 w-3 cursor-pointer text-green-500 hover:text-green-700" 
                                     onClick={() => handleAbsenceRetardForCourse(dayIndex, course)}
                                   />
                                 </>
@@ -756,7 +756,7 @@ export default function EmploiDuTemps() {
                                     onClick={() => handleOpenCahierModal(dayIndex, originalCourseIndex, course)}
                                   />
                                   <UserCheck 
-                                    className="h-3 w-3 cursor-pointer text-green-600 hover:text-green-800" 
+                                    className="h-3 w-3 cursor-pointer text-green-500 hover:text-green-700" 
                                     onClick={() => handleAbsenceRetardForCourse(dayIndex, course)}
                                   />
                                 </>

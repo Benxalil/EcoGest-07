@@ -267,7 +267,7 @@ export function Sidebar({
                   <div
                     onClick={(e) => handleLinkClick(e, item.path)}
                     className={cn("flex items-center space-x-2 rounded-md p-2 transition-colors cursor-pointer", {
-                      "bg-sidebar-accent text-sidebar-accent-foreground font-medium": isActiveRoute(item.path),
+                      "bg-blue-50 dark:bg-blue-950/30 text-primary font-medium": isActiveRoute(item.path),
                       "text-sidebar-foreground hover:bg-sidebar-accent/50": !isActiveRoute(item.path)
                     })}
                   >
