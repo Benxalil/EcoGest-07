@@ -623,7 +623,7 @@ Veuillez cliquer sur le lien dans l'email pour activer votre compte, puis vous p
       <Card className="w-full max-w-2xl shadow-xl border-0 bg-card/95 backdrop-blur-sm">
         <CardHeader className="text-center">
           <div className="pt-4 pb-2 flex justify-center">
-            <EcoGestFullLogo height={35} />
+            <EcoGestFullLogo height={30} />
           </div>
         </CardHeader>
         

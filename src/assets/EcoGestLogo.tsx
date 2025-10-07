@@ -20,11 +20,12 @@ export const EcoGestLogo = ({ size = 60 }: { size?: number }) => (
   />
 );
 
-export const EcoGestFullLogo = ({ height = 50 }: { height?: number }) => (
+export const EcoGestFullLogo = ({ height = 30 }: { height?: number }) => (
   <img 
     src={logoComplete} 
     alt="EcoGest Logo" 
     height={height}
+    width="auto"
     className="object-contain"
     style={{
       imageRendering: 'crisp-edges',

@@ -26,9 +26,14 @@ export function ThemeProvider({
   storageKey = "vite-ui-theme",
   ...props
 }: ThemeProviderProps) {
-  const [theme, setTheme] = useState<Theme>(
-    () => (localStorage.getItem(storageKey) as Theme) || defaultTheme
-  )
+  const [theme, setTheme] = useState<Theme>(() => {
+    // Force light mode on auth pages
+    const isAuthPage = window.location.pathname === '/auth' || window.location.pathname === '/inscription';
+    if (isAuthPage) {
+      return "light";
+    }
+    return (localStorage.getItem(storageKey) as Theme) || defaultTheme;
+  })
 
   useEffect(() => {
     const root = window.document.documentElement
@@ -51,8 +56,12 @@ export function ThemeProvider({
   const value = {
     theme,
     setTheme: (theme: Theme) => {
-      localStorage.setItem(storageKey, theme)
-      setTheme(theme)
+      // Only save to localStorage if not on auth pages
+      const isAuthPage = window.location.pathname === '/auth' || window.location.pathname === '/inscription';
+      if (!isAuthPage) {
+        localStorage.setItem(storageKey, theme);
+      }
+      setTheme(theme);
     },
   }
 
