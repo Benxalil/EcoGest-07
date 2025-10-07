@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { multiLevelCache, CacheTTL, CacheKeys } from '@/utils/multiLevelCache';
 
-export type UserRole = 'school_admin' | 'teacher' | 'student' | 'parent';
+export type UserRole = 'super_admin' | 'school_admin' | 'teacher' | 'student' | 'parent';
 
 export interface UserProfile {
   id: string;
@@ -60,7 +60,7 @@ export function useUnifiedUserData(): UnifiedUserData & { refetch: () => Promise
           teacherId: cachedTeacherId,
           loading: false,
           error: null,
-          isAdmin: () => cachedProfile.role === 'school_admin',
+          isAdmin: () => cachedProfile.role === 'school_admin' || cachedProfile.role === 'super_admin',
           isTeacher: () => cachedProfile.role === 'teacher',
           isStudent: () => cachedProfile.role === 'student',
           isParent: () => cachedProfile.role === 'parent',
@@ -131,7 +131,7 @@ export function useUnifiedUserData(): UnifiedUserData & { refetch: () => Promise
               teacherId: cachedTeacherId,
               loading: false,
               error: null,
-              isAdmin: () => cachedProfile.role === 'school_admin',
+              isAdmin: () => cachedProfile.role === 'school_admin' || cachedProfile.role === 'super_admin',
               isTeacher: () => cachedProfile.role === 'teacher',
               isStudent: () => cachedProfile.role === 'student',
               isParent: () => cachedProfile.role === 'parent',
@@ -234,7 +234,7 @@ export function useUnifiedUserData(): UnifiedUserData & { refetch: () => Promise
           teacherId,
           loading: false,
           error: null,
-          isAdmin: () => userProfile.role === 'school_admin',
+          isAdmin: () => userProfile.role === 'school_admin' || userProfile.role === 'super_admin',
           isTeacher: () => userProfile.role === 'teacher',
           isStudent: () => userProfile.role === 'student',
           isParent: () => userProfile.role === 'parent',
