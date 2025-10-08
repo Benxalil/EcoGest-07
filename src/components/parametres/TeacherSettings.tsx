@@ -6,9 +6,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { User, Save, LogOut, Phone, Mail, MapPin } from "lucide-react";
+import { User, LogOut, Phone, MapPin, Lock } from "lucide-react";
 import { useUserRole } from "@/hooks/useUserRole";
 import { supabase } from "@/integrations/supabase/client";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface TeacherProfile {
   firstName: string;
@@ -32,7 +33,6 @@ export function TeacherSettings() {
     specialization: '',
     employeeNumber: ''
   });
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   useEffect(() => {
     loadTeacherProfile();
@@ -80,62 +80,6 @@ export function TeacherSettings() {
     }
   };
 
-  const handleInputChange = (field: keyof TeacherProfile, value: string) => {
-    setProfile(prev => ({ ...prev, [field]: value }));
-    setHasUnsavedChanges(true);
-  };
-
-  const saveProfile = async () => {
-    if (!userProfile) return;
-
-    try {
-      // Mettre à jour le profil utilisateur
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({
-          first_name: profile.firstName,
-          last_name: profile.lastName
-        })
-        .eq('id', userProfile.id);
-
-      if (profileError) throw profileError;
-
-      // Mettre à jour ou créer les données enseignant
-      const { error: teacherError } = await supabase
-        .from('teachers')
-        .upsert({
-          user_id: userProfile.id,
-          first_name: profile.firstName,
-          last_name: profile.lastName,
-          phone: profile.phone,
-          address: profile.address,
-          specialization: profile.specialization,
-          employee_number: profile.employeeNumber || `PROF${Date.now()}`,
-          school_id: userProfile.schoolId!
-        });
-
-      if (teacherError) throw teacherError;
-
-      setHasUnsavedChanges(false);
-      
-      toast({
-        title: "✅ Profil mis à jour !",
-        description: "Vos informations personnelles ont été sauvegardées avec succès",
-        className: "animate-fade-in bg-green-50 border-green-200 text-green-800",
-        duration: 4000,
-      });
-
-      // Recharger les données
-      loadTeacherProfile();
-    } catch (error) {
-      console.error('Erreur lors de la sauvegarde:', error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de sauvegarder vos informations. Veuillez réessayer.",
-        variant: "destructive"
-      });
-    }
-  };
 
   const handleLogout = async () => {
     try {
@@ -160,26 +104,24 @@ export function TeacherSettings() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Mes Paramètres</h1>
-          <p className="text-gray-600">Gérez vos informations personnelles</p>
+          <p className="text-gray-600">Consultez vos informations personnelles</p>
         </div>
-        <div className="flex items-center space-x-2">
-          <Button 
-            onClick={saveProfile} 
-            disabled={!hasUnsavedChanges}
-            className={!hasUnsavedChanges ? "opacity-50 cursor-not-allowed" : ""}
-          >
-            <Save className="w-4 h-4 mr-2" />
-            Sauvegarder
-          </Button>
-          <Button 
-            onClick={handleLogout} 
-            variant="destructive"
-          >
-            <LogOut className="w-4 h-4 mr-2" />
-            Se déconnecter
-          </Button>
-        </div>
+        <Button 
+          onClick={handleLogout} 
+          variant="destructive"
+        >
+          <LogOut className="w-4 h-4 mr-2" />
+          Se déconnecter
+        </Button>
       </div>
+
+      {/* Alert d'information */}
+      <Alert className="bg-blue-50 border-blue-200">
+        <Lock className="h-4 w-4 text-blue-600" />
+        <AlertDescription className="text-blue-800">
+          Vos informations personnelles sont en lecture seule. Seul l'administrateur peut les modifier.
+        </AlertDescription>
+      </Alert>
 
       {/* Informations personnelles */}
       <Card>
@@ -196,7 +138,8 @@ export function TeacherSettings() {
               <Input 
                 id="firstName" 
                 value={profile.firstName} 
-                onChange={e => handleInputChange('firstName', e.target.value)}
+                disabled
+                className="bg-muted cursor-not-allowed"
                 placeholder="Votre prénom" 
               />
             </div>
@@ -205,7 +148,8 @@ export function TeacherSettings() {
               <Input 
                 id="lastName" 
                 value={profile.lastName} 
-                onChange={e => handleInputChange('lastName', e.target.value)}
+                disabled
+                className="bg-muted cursor-not-allowed"
                 placeholder="Votre nom de famille" 
               />
             </div>
@@ -218,25 +162,22 @@ export function TeacherSettings() {
               type="email"
               value={profile.email} 
               disabled
-              className="bg-gray-50"
+              className="bg-muted cursor-not-allowed"
               placeholder="votre.email@ecole.com" 
             />
-            <p className="text-xs text-gray-500 mt-1">
-              L'email ne peut pas être modifié depuis cette interface
-            </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="phone">Téléphone</Label>
               <div className="relative">
-                <Phone className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input 
                   id="phone" 
                   value={profile.phone || ''} 
-                  onChange={e => handleInputChange('phone', e.target.value)}
+                  disabled
                   placeholder="+221 XX XXX XX XX"
-                  className="pl-10"
+                  className="pl-10 bg-muted cursor-not-allowed"
                 />
               </div>
             </div>
@@ -246,7 +187,7 @@ export function TeacherSettings() {
                 id="employeeNumber" 
                 value={profile.employeeNumber || ''} 
                 disabled
-                className="bg-gray-50"
+                className="bg-muted cursor-not-allowed"
                 placeholder="Matricule généré automatiquement" 
               />
             </div>
@@ -257,7 +198,8 @@ export function TeacherSettings() {
             <Input 
               id="specialization" 
               value={profile.specialization || ''} 
-              onChange={e => handleInputChange('specialization', e.target.value)}
+              disabled
+              className="bg-muted cursor-not-allowed"
               placeholder="Ex: Mathématiques, Français, Sciences..." 
             />
           </div>
@@ -265,13 +207,13 @@ export function TeacherSettings() {
           <div>
             <Label htmlFor="address">Adresse</Label>
             <div className="relative">
-              <MapPin className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+              <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Textarea 
                 id="address" 
                 value={profile.address || ''} 
-                onChange={e => handleInputChange('address', e.target.value)}
+                disabled
                 placeholder="Votre adresse complète"
-                className="pl-10"
+                className="pl-10 bg-muted cursor-not-allowed"
                 rows={3}
               />
             </div>

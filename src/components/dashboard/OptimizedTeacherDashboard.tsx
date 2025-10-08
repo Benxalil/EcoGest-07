@@ -5,7 +5,6 @@ import { Users, Calendar, Clock, BookOpen, Megaphone, Award } from "lucide-react
 import { useNavigate } from "react-router-dom";
 import { useOptimizedUserData } from "@/hooks/useOptimizedUserData";
 import { useOptimizedTeacherData } from "@/hooks/useOptimizedTeacherData";
-import { LoadingSkeleton } from "@/components/ui/loading-skeleton";
 
 const TeacherDashboard = memo(() => {
   const navigate = useNavigate();
@@ -33,12 +32,7 @@ const TeacherDashboard = memo(() => {
   const navigateToAnnouncements = useCallback(() => navigate("/annonces"), [navigate]);
 
   if (loading) {
-    return (
-      <div className="p-8 space-y-6">
-        <LoadingSkeleton type="stats" count={4} />
-        <LoadingSkeleton type="card" count={2} />
-      </div>
-    );
+    return null; // Pas d'affichage pendant le chargement pour éviter le flash
   }
 
   if (error) {
