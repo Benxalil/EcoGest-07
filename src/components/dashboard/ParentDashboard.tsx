@@ -1,26 +1,26 @@
-import { memo, useMemo, useCallback } from "react";
+import { memo, useMemo, useCallback, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Calendar, Megaphone } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useOptimizedUserData } from "@/hooks/useOptimizedUserData";
-import { useParentChildren } from "@/hooks/useParentChildren";
-import { useParentInfo } from "@/hooks/useParentInfo";
 import { ParentChildSelector } from "@/components/parent/ParentChildSelector";
 import { LoadingSkeleton } from "@/components/ui/loading-skeleton";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useParentDashboardData } from "@/hooks/useParentDashboardData";
+import { useParentData } from "@/hooks/useParentData";
 
 const ParentDashboard = memo(() => {
   const navigate = useNavigate();
-  const { profile } = useOptimizedUserData();
-  const { parentInfo } = useParentInfo();
-  const { children, selectedChild, setSelectedChildId, loading: childrenLoading } = useParentChildren();
+  const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
   
-  const { todaySchedules, announcements, loading } = useParentDashboardData(
-    selectedChild?.class_id || null,
-    profile?.schoolId || null
-  );
+  // ✅ Hook unifié qui récupère tout en parallèle
+  const {
+    children,
+    selectedChild,
+    parentInfo,
+    todaySchedules,
+    announcements,
+    loading
+  } = useParentData(selectedChildId);
 
   const greeting = useMemo(() => {
     const currentHour = new Date().getHours();
@@ -30,7 +30,7 @@ const ParentDashboard = memo(() => {
   const navigateToSchedules = useCallback(() => navigate("/emplois-du-temps"), [navigate]);
   const navigateToAnnouncements = useCallback(() => navigate("/annonces"), [navigate]);
 
-  if (childrenLoading) {
+  if (loading) {
     return (
       <div className="p-8 space-y-6">
         <LoadingSkeleton type="card" count={2} />
@@ -53,10 +53,10 @@ const ParentDashboard = memo(() => {
 
   return (
     <div className="space-y-6">
-      {/* Header de bienvenue - GARDER LA COULEUR BLEUE D'ORIGINE */}
+      {/* Header de bienvenue */}
       <div className="bg-blue-600 rounded-lg p-6 text-white">
         <h1 className="text-2xl font-bold mb-2">
-          {greeting}, {parentInfo?.firstName || profile?.firstName} {parentInfo?.lastName || profile?.lastName} !
+          {greeting}, {parentInfo?.firstName} {parentInfo?.lastName} !
         </h1>
         <p className="text-blue-100">
           Bienvenue sur votre espace parent.
@@ -74,7 +74,7 @@ const ParentDashboard = memo(() => {
       {/* Sélecteur d'enfant */}
       <ParentChildSelector 
         children={children}
-        selectedChildId={selectedChild?.id || null}
+        selectedChildId={selectedChildId || selectedChild?.id || null}
         onChildSelect={setSelectedChildId}
       />
 
@@ -85,13 +85,7 @@ const ParentDashboard = memo(() => {
             <Calendar className="h-5 w-5 text-primary" />
             <h3 className="font-semibold">Emploi du Temps Aujourd'hui</h3>
           </div>
-          {loading ? (
-            <div className="space-y-3">
-              <Skeleton className="h-20 w-full" />
-              <Skeleton className="h-20 w-full" />
-              <Skeleton className="h-20 w-full" />
-            </div>
-          ) : (todaySchedules || []).length === 0 ? (
+          {(todaySchedules || []).length === 0 ? (
             <p className="text-center text-muted-foreground py-8">
               {new Date().getDay() === 0 
                 ? "Aucun cours prévu le dimanche" 
@@ -136,13 +130,7 @@ const ParentDashboard = memo(() => {
             <Megaphone className="h-5 w-5 text-orange-600" />
             <h3 className="font-semibold">Annonces Récentes</h3>
           </div>
-          {loading ? (
-            <div className="space-y-3">
-              <Skeleton className="h-20 w-full" />
-              <Skeleton className="h-20 w-full" />
-              <Skeleton className="h-20 w-full" />
-            </div>
-          ) : (announcements || []).length === 0 ? (
+          {(announcements || []).length === 0 ? (
             <p className="text-center text-muted-foreground py-8">
               Aucune annonce récente
             </p>

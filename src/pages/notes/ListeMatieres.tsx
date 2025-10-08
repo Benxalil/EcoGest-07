@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { useClasses } from "@/hooks/useClasses";
 import { useSubjects } from "@/hooks/useSubjects";
 import { useUserRole } from "@/hooks/useUserRole";
-import { useTeacherFilter } from "@/hooks/useTeacherFilter";
+import { useTeacherData } from "@/hooks/useTeacherData";
 import { formatClassName } from "@/utils/classNameFormatter";
 
 interface Classe {
@@ -37,7 +37,21 @@ export default function ListeMatieres() {
   const { classes } = useClasses();
   const { subjects } = useSubjects(classeId);
   const { isTeacher } = useUserRole();
-  const { teacherSubjectIds } = useTeacherFilter();
+  
+  // ✅ Utiliser useTeacherData pour obtenir les classes et matières de l'enseignant
+  const { classes: teacherClasses } = useTeacherData();
+  
+  // Extraire les IDs des matières que l'enseignant enseigne via schedules
+  const [teacherSubjectIds, setTeacherSubjectIds] = useState<string[]>([]);
+  
+  useEffect(() => {
+    if (isTeacher() && teacherClasses.length > 0 && subjects) {
+      // Les enseignants n'ont accès qu'aux matières des classes qu'ils enseignent
+      const classIds = teacherClasses.map(c => c.id);
+      const teacherSubjects = subjects.filter((s: any) => classIds.includes(s.class_id));
+      setTeacherSubjectIds(teacherSubjects.map((s: any) => s.id));
+    }
+  }, [isTeacher, teacherClasses, subjects]);
 
   useEffect(() => {
     // Récupérer les informations de la classe
