@@ -118,21 +118,45 @@ const SchoolRegistrationPage = () => {
   const prevStep = () => {
     setCurrentStep(prev => Math.max(prev - 1, 1));
   };
-  // Helper function to wait for profile creation by trigger
-  const checkProfile = async (userId: string, maxAttempts = 15): Promise<boolean> => {
-    console.log('🔍 Vérification du profil pour:', userId);
+  // Helper function to wait for session and profile creation
+  const waitForSessionAndProfile = async (userId: string): Promise<boolean> => {
+    console.log('🔍 Attente de la session et du profil pour:', userId);
     
-    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-      console.log(`Tentative ${attempt}/${maxAttempts} de vérification du profil...`);
+    // Step 1: Wait for session to be established (max 10 attempts = 10 seconds)
+    for (let attempt = 1; attempt <= 10; attempt++) {
+      console.log(`🔐 Vérification de la session... (tentative ${attempt}/10)`);
       
-      const { data: profile, error } = await supabase
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError) {
+        console.error('❌ Erreur session:', sessionError);
+      }
+      
+      if (session?.user?.id === userId) {
+        console.log('✅ Session établie pour:', session.user.email);
+        break;
+      }
+      
+      if (attempt === 10) {
+        console.error('❌ Session non établie après 10 secondes');
+        return false;
+      }
+      
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+    
+    // Step 2: Now check for profile (max 15 attempts = 15 seconds)
+    for (let attempt = 1; attempt <= 15; attempt++) {
+      console.log(`👤 Vérification du profil... (tentative ${attempt}/15)`);
+      
+      const { data: profile, error: profileError } = await supabase
         .from('profiles')
-        .select('id, email, role')
+        .select('id, email, role, school_id')
         .eq('id', userId)
         .maybeSingle();
       
-      if (error) {
-        console.error('❌ Erreur lors de la vérification du profil:', error);
+      if (profileError) {
+        console.error('❌ Erreur profil:', profileError);
       }
       
       if (profile) {
@@ -140,12 +164,11 @@ const SchoolRegistrationPage = () => {
         return true;
       }
       
-      console.log(`⏳ Profil non trouvé, attente de 2 secondes... (tentative ${attempt}/${maxAttempts})`);
-      // Wait 2 seconds before next attempt (increased from 1 second)
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      console.log(`⏳ Profil non trouvé, attente de 1 seconde...`);
+      await new Promise(resolve => setTimeout(resolve, 1000));
     }
     
-    console.error('❌ Profil non créé après', maxAttempts, 'tentatives (30 secondes)');
+    console.error('❌ Profil non trouvé après 15 tentatives (15 secondes)');
     return false;
   };
 
@@ -180,10 +203,10 @@ const SchoolRegistrationPage = () => {
         throw new Error('Erreur lors de la création du compte utilisateur');
       }
 
-      // 2. Wait for profile to be created by the trigger
-      const profileCreated = await checkProfile(authData.user.id);
-      if (!profileCreated) {
-        throw new Error('Le profil utilisateur n\'a pas pu être créé automatiquement. Veuillez réessayer.');
+      // 2. Wait for session and profile to be created by the trigger
+      const sessionAndProfileReady = await waitForSessionAndProfile(authData.user.id);
+      if (!sessionAndProfileReady) {
+        throw new Error('La session ou le profil n\'a pas pu être établi. Veuillez réessayer.');
       }
       // 3. Upload logo if provided
       let logoUrl = null;
