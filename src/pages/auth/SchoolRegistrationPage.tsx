@@ -225,13 +225,15 @@ const SchoolRegistrationPage = () => {
       if (formData.logoFile) {
         const fileName = `${Date.now()}-${formData.logoFile.name}`;
         const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('student-documents')
-          .upload(`school-logos/${fileName}`, formData.logoFile);
+          .from('school-logos')
+          .upload(fileName, formData.logoFile);
 
         if (uploadError) {
-          } else {
+          console.error('Logo upload error:', uploadError);
+          // Continue without logo if upload fails
+        } else {
           logoUrl = supabase.storage
-            .from('student-documents')
+            .from('school-logos')
             .getPublicUrl(uploadData.path).data.publicUrl;
         }
       }
