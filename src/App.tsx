@@ -53,6 +53,7 @@ import PayTechConfig from "@/pages/admin/PayTechConfig";
 import Parametres from "./pages/parametres/Parametres";
 import AuthPage from "./pages/auth/AuthPage";
 import SchoolRegistrationPage from "./pages/auth/SchoolRegistrationPage";
+import CompleteRegistration from "./pages/auth/CompleteRegistration";
 import SchoolSettings from "./pages/admin/SchoolSettings";
 import UserMigration from "./pages/admin/UserMigration";
 import Utilisateurs from "./pages/utilisateurs/Utilisateurs";
@@ -123,6 +124,7 @@ function App() {
             <Route path="/parametres/ecole" element={<SchoolSettings />} />
           <Route path="/auth" element={<AuthPage />} />
           <Route path="/inscription" element={<SchoolRegistrationPage />} />
+          <Route path="/complete-registration" element={<CompleteRegistration />} />
           <Route path="/abonnement" element={<Abonnement />} />
           <Route path="/admin/paytech-config" element={<PayTechConfig />} />
           <Route path="/admin/user-migration" element={<UserMigration />} />

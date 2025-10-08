@@ -118,75 +118,22 @@ const SchoolRegistrationPage = () => {
   const prevStep = () => {
     setCurrentStep(prev => Math.max(prev - 1, 1));
   };
-  // Helper function to wait for session and profile creation
-  const waitForSessionAndProfile = async (userId: string): Promise<boolean> => {
-    console.log('🔍 Attente de la session et du profil pour:', userId);
-    
-    // Step 1: Wait for session to be established (max 10 attempts = 10 seconds)
-    for (let attempt = 1; attempt <= 10; attempt++) {
-      console.log(`🔐 Vérification de la session... (tentative ${attempt}/10)`);
-      
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      
-      if (sessionError) {
-        console.error('❌ Erreur session:', sessionError);
-      }
-      
-      if (session?.user?.id === userId) {
-        console.log('✅ Session établie pour:', session.user.email);
-        break;
-      }
-      
-      if (attempt === 10) {
-        console.error('❌ Session non établie après 10 secondes');
-        return false;
-      }
-      
-      await new Promise(resolve => setTimeout(resolve, 1000));
-    }
-    
-    // Step 2: Now check for profile (max 15 attempts = 15 seconds)
-    for (let attempt = 1; attempt <= 15; attempt++) {
-      console.log(`👤 Vérification du profil... (tentative ${attempt}/15)`);
-      
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('id, email, role, school_id')
-        .eq('id', userId)
-        .maybeSingle();
-      
-      if (profileError) {
-        console.error('❌ Erreur profil:', profileError);
-      }
-      
-      if (profile) {
-        console.log('✅ Profil trouvé:', profile);
-        return true;
-      }
-      
-      console.log(`⏳ Profil non trouvé, attente de 1 seconde...`);
-      await new Promise(resolve => setTimeout(resolve, 1000));
-    }
-    
-    console.error('❌ Profil non trouvé après 15 tentatives (15 secondes)');
-    return false;
-  };
 
   const handleSubmit = async () => {
     if (!validateStep(4)) return;
 
     setIsLoading(true);
-    setSubmitCooldown(30); // 30 second cooldown to prevent spam
+    setSubmitCooldown(30);
 
     try {
-      // 1. Create Supabase auth user
-      const redirectUrl = `${window.location.origin}/auth`;
+      console.log('🚀 Création du compte utilisateur...');
       
+      // 1. Create user account with email confirmation
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.adminEmail,
         password: formData.password,
         options: {
-          emailRedirectTo: redirectUrl,
+          emailRedirectTo: `${window.location.origin}/complete-registration`,
           data: {
             first_name: formData.adminFirstName,
             last_name: formData.adminLastName,
@@ -203,101 +150,48 @@ const SchoolRegistrationPage = () => {
         throw new Error('Erreur lors de la création du compte utilisateur');
       }
 
-      // 2. Wait for session and profile to be created by the trigger
-      const sessionAndProfileReady = await waitForSessionAndProfile(authData.user.id);
-      if (!sessionAndProfileReady) {
-        throw new Error('La session ou le profil n\'a pas pu être établi. Veuillez réessayer.');
-      }
-      // 3. Upload logo if provided
-      let logoUrl = null;
+      console.log('✅ Compte créé:', authData.user.email);
+
+      // 2. Save registration data to localStorage for completion after email confirmation
+      const registrationData = {
+        userId: authData.user.id,
+        schoolName: formData.schoolName,
+        schoolType: formData.schoolType,
+        academicYear: formData.academicYear,
+        academicYearStartDate: formData.academicYearStartDate,
+        academicYearEndDate: formData.academicYearEndDate,
+        address: formData.address,
+        schoolPhone: formData.schoolPhone,
+        adminPhone: formData.adminPhone,
+        language: formData.language,
+        semesterType: formData.semesterType,
+        currency: formData.currency,
+        timezone: formData.timezone,
+        sponsorName: formData.sponsorName,
+        sponsorPhone: formData.sponsorPhone,
+        sponsorEmail: formData.sponsorEmail,
+        timestamp: Date.now()
+      };
+      
+      localStorage.setItem('pending_school_registration', JSON.stringify(registrationData));
+      console.log('💾 Données sauvegardées dans localStorage');
+      
+      // If logo file exists, convert to base64 for storage
       if (formData.logoFile) {
-        const fileName = `${Date.now()}-${formData.logoFile.name}`;
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('school-logos')
-          .upload(fileName, formData.logoFile);
-
-        if (uploadError) {
-          console.error('Logo upload error:', uploadError);
-          // Continue without logo if upload fails
-        } else {
-          logoUrl = supabase.storage
-            .from('school-logos')
-            .getPublicUrl(uploadData.path).data.publicUrl;
-        }
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          localStorage.setItem('pending_school_logo', reader.result as string);
+          console.log('📸 Logo sauvegardé');
+        };
+        reader.readAsDataURL(formData.logoFile);
       }
-
-      // 4. Create school record
-        const { data: schoolData, error: schoolError } = await supabase
-        .from('schools')
-        .insert({
-          name: formData.schoolName,
-          school_type: formData.schoolType,
-          academic_year: formData.academicYear,
-          address: formData.address,
-          phone: formData.schoolPhone,
-          email: formData.adminEmail, // Use admin email as school contact
-          logo_url: logoUrl,
-          language: formData.language,
-          semester_type: formData.semesterType,
-          currency: formData.currency,
-          timezone: formData.timezone,
-          sponsor_name: formData.sponsorName || null,
-          sponsor_phone: formData.sponsorPhone || null,
-          sponsor_email: formData.sponsorEmail || null,
-          created_by: authData.user.id, // Link school to the user who created it
-        })
-        .select()
-        .single();
-
-      if (schoolError) {
-        throw schoolError;
-      }
-
-      // 4. Update profile with school_id
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({
-          school_id: schoolData.id,
-          phone: formData.adminPhone || null
-        })
-        .eq('id', authData.user.id);
-
-      if (profileError) {
-        throw profileError;
-      }
-
-      // 5. Create academic year with proper dates
-      const { error: academicYearError } = await supabase
-        .from('academic_years')
-        .insert({
-          school_id: schoolData.id,
-          name: formData.academicYear,
-          start_date: formData.academicYearStartDate,
-          end_date: formData.academicYearEndDate,
-          is_current: true
-        });
-
-      if (academicYearError) {
-        console.error('Academic year creation error:', academicYearError);
-        throw new Error('Erreur lors de la création de l\'année académique');
-      }
-
-      // 6. Initialize school (create subjects, payment categories)
-      const { error: initError } = await supabase.rpc('initialize_new_school', {
-        school_id_param: schoolData.id,
-        school_type_param: formData.schoolType,
-        academic_year_name_param: formData.academicYear
-      });
-
-      if (initError) {
-        }
 
       // Success message
-      alert(`École créée avec succès ! 
+      alert(`Compte créé avec succès ! 
 
 Un email de confirmation a été envoyé à ${formData.adminEmail}. 
 
-Veuillez cliquer sur le lien dans l'email pour activer votre compte, puis vous pourrez vous connecter.`);
+Veuillez cliquer sur le lien dans l'email pour activer votre compte, puis vous connecter pour finaliser la création de votre école.`);
 
       // Redirect to login
       window.location.href = '/auth';
@@ -305,19 +199,11 @@ Veuillez cliquer sur le lien dans l'email pour activer votre compte, puis vous p
     } catch (error: any) {
       console.error('Registration error:', error);
       
-      // Handle specific error types
       if (error.message.includes('User already registered') || error.message.includes('already been registered')) {
         alert('Cette adresse email est déjà utilisée. Veuillez utiliser une autre adresse ou vous connecter.');
       } else if (error.message.includes('Password should be at least 6 characters')) {
         alert('Le mot de passe doit contenir au moins 6 caractères.');
-      } else if (error.message.includes('violates foreign key constraint') || error.message.includes('created_by_fkey')) {
-        alert('Erreur de synchronisation lors de la création du profil. Veuillez réessayer dans quelques instants.');
-      } else if (error.message.includes('row-level security') || error.code === 'PGRST001') {
-        alert('Erreur d\'autorisation lors de la création des données. Veuillez contacter le support technique.');
-      } else if (error.message.includes('profil utilisateur')) {
-        alert(error.message); // Use the specific profile error message
-      } else if (error.message.includes('Invalid login credentials')) {
-        alert('Identifiants de connexion invalides. Veuillez vérifier votre email et mot de passe.'); } else {
+      } else {
         alert('Erreur lors de la création du compte: ' + (error.message || 'Erreur inconnue. Veuillez réessayer.'));
       }
     } finally {
