@@ -173,6 +173,37 @@ export const useTeacherClasses = () => {
     }
   }, [schoolId, userId, isTeacherRole, fetchTeacherClasses]);
 
+  // Synchronisation en temps réel
+  useEffect(() => {
+    if (!schoolId || !userId || !isTeacherRole) {
+      return;
+    }
+
+    // Écouter les changements sur les schedules
+    const channel = supabase
+      .channel('teacher-classes-sync')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'schedules',
+          filter: `school_id=eq.${schoolId}`
+        },
+        () => {
+          // Rafraîchir après 500ms pour éviter trop de requêtes
+          setTimeout(() => {
+            fetchTeacherClasses();
+          }, 500);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [schoolId, userId, isTeacherRole, fetchTeacherClasses]);
+
   return {
     classes,
     loading,

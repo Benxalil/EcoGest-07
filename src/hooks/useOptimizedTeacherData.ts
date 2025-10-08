@@ -3,6 +3,7 @@ import { useOptimizedUserData } from './useOptimizedUserData';
 import { supabase } from '@/integrations/supabase/client';
 import { useOptimizedCache } from './useOptimizedCache';
 import { filterAnnouncementsByRole } from '@/utils/announcementFilters';
+import { retryWithBackoff } from '@/utils/retryWithBackoff';
 
 export interface TeacherDashboardData {
   classes: any[];
@@ -59,63 +60,75 @@ export const useOptimizedTeacherData = () => {
       const today = new Date();
       const dayOfWeek = today.getDay();
 
-      // Requête optimisée - seulement les schedules du professeur
-      const { data: schedulesData, error: schedulesError } = await supabase
-        .from('schedules')
-        .select('id, subject, start_time, end_time, day_of_week, class_id')
-        .eq('teacher_id', teacherId)
-        .eq('school_id', profile.schoolId);
-
-      if (schedulesError) {
-        throw new Error(schedulesError.message);
-      }
+      // Requête optimisée avec retry - seulement les schedules du professeur
+      const schedulesData = await retryWithBackoff(async () => {
+        const { data, error } = await supabase
+          .from('schedules')
+          .select('id, subject, start_time, end_time, day_of_week, class_id, classes(id, name)')
+          .eq('teacher_id', teacherId)
+          .eq('school_id', profile.schoolId);
+        
+        if (error) throw error;
+        return data || [];
+      });
 
       // Extraire les class_ids uniques
-      const classIds = [...new Set((schedulesData || []).map(s => s.class_id))];
+      const classIds = [...new Set(schedulesData.map(s => s.class_id))];
       
       // Filtrer les emplois du temps d'aujourd'hui
-      const todaySchedules = (schedulesData || []).filter(s => s.day_of_week === dayOfWeek);
+      const todaySchedules = schedulesData.filter(s => s.day_of_week === dayOfWeek);
 
-      // Récupérer classes, étudiants et annonces en parallèle
-      const [classesResult, studentsResult, announcementsResult] = await Promise.all([
+      // Récupérer étudiants et annonces en parallèle (si classes existent)
+      const [studentsData, announcementsData] = await Promise.all([
         classIds.length > 0
-          ? supabase
-              .from('classes')
-              .select('id, name, effectif')
-              .in('id', classIds)
-          : Promise.resolve({ data: [] }),
-        classIds.length > 0
-          ? supabase
-              .from('students')
-              .select('id, first_name, last_name, class_id')
-              .eq('school_id', profile.schoolId)
-              .eq('is_active', true)
-              .in('class_id', classIds)
-          : Promise.resolve({ data: [] }),
-        supabase
-          .from('announcements')
-          .select('id, title, content, created_at, priority')
-          .eq('school_id', profile.schoolId)
-          .eq('is_published', true)
-          .order('created_at', { ascending: false })
-          .limit(5)
+          ? retryWithBackoff(async () => {
+              const { data, error } = await supabase
+                .from('students')
+                .select('id, first_name, last_name, class_id')
+                .eq('school_id', profile.schoolId)
+                .eq('is_active', true)
+                .in('class_id', classIds);
+              if (error) throw error;
+              return data || [];
+            })
+          : Promise.resolve([]),
+        retryWithBackoff(async () => {
+          const { data, error } = await supabase
+            .from('announcements')
+            .select('id, title, content, created_at, priority')
+            .eq('school_id', profile.schoolId)
+            .eq('is_published', true)
+            .order('created_at', { ascending: false })
+            .limit(5);
+          if (error) throw error;
+          return data || [];
+        })
       ]);
+
+      // Extraire les classes uniques depuis schedulesData
+      const classesMap = new Map();
+      schedulesData.forEach(schedule => {
+        if (schedule.classes && !classesMap.has(schedule.class_id)) {
+          classesMap.set(schedule.class_id, schedule.classes);
+        }
+      });
+      const classes = Array.from(classesMap.values());
 
       // Filtrer les annonces pour les enseignants
       const filteredAnnouncements = filterAnnouncementsByRole(
-        announcementsResult.data || [],
+        announcementsData,
         'teacher',
         false
       );
 
       const teacherData = {
-        classes: classesResult.data || [],
-        students: studentsResult.data || [],
+        classes: classes,
+        students: studentsData,
         todaySchedules: todaySchedules,
         announcements: filteredAnnouncements,
         stats: {
-          totalClasses: (classesResult.data || []).length,
-          totalStudents: (studentsResult.data || []).length,
+          totalClasses: classes.length,
+          totalStudents: studentsData.length,
           todayCourses: todaySchedules.length,
           totalAnnouncements: filteredAnnouncements.length
         }
@@ -135,7 +148,7 @@ export const useOptimizedTeacherData = () => {
       setData(prev => ({
         ...prev,
         loading: false,
-        error: error instanceof Error ? error.message : 'Error loading teacher data'
+        error: error instanceof Error ? error.message : 'Erreur de chargement'
       }));
     }
   }, [profile?.schoolId, teacherId, userLoading, profile?.role, cache]);

@@ -126,23 +126,27 @@ const TeacherDashboard = memo(() => {
           </div>
           {todaySchedules.length === 0 ? (
             <p className="text-center text-muted-foreground py-8">
-              {new Date().getDay() === 0 ? "Aucun cours prévu le dimanche" : "Aucun cours prévu aujourd'hui"}
+              {new Date().getDay() === 0 
+                ? "Aucun cours prévu le dimanche" 
+                : stats.totalClasses === 0
+                  ? "Vous n'êtes affecté à aucune classe"
+                  : "Aucun cours prévu aujourd'hui"}
             </p>
           ) : (
             <div className="space-y-3">
               {todaySchedules.map((schedule: any) => (
-                <div key={schedule.id} className="border rounded-lg p-3 bg-blue-50">
+                <div key={schedule.id} className="border rounded-lg p-3 bg-blue-50 dark:bg-blue-950">
                   <div className="flex items-center justify-between mb-2">
-                    <h4 className="font-medium text-blue-800">
+                    <h4 className="font-medium text-blue-800 dark:text-blue-200">
                       {schedule.classes?.name || 'Classe'}
                     </h4>
-                    <span className="text-xs text-blue-600 font-medium">
-                      {schedule.start_time} - {schedule.end_time}
+                    <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">
+                      {schedule.start_time?.substring(0, 5)} - {schedule.end_time?.substring(0, 5)}
                     </span>
                   </div>
-                  <p className="text-sm text-gray-700">
+                  <p className="text-sm text-gray-700 dark:text-gray-300">
                     <span className="font-medium">{schedule.subject}</span>
-                    {schedule.room && <span className="text-gray-500 ml-2">• Salle {schedule.room}</span>}
+                    {schedule.room && <span className="text-gray-500 dark:text-gray-400 ml-2">• Salle {schedule.room}</span>}
                   </p>
                 </div>
               ))}
