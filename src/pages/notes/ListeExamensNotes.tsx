@@ -11,7 +11,7 @@ import { fr } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { useClasses } from "@/hooks/useClasses";
 import { useUserRole } from "@/hooks/useUserRole";
-import { useTeacherFilter } from "@/hooks/useTeacherFilter";
+import { useTeacherData } from "@/hooks/useTeacherData";
 import { formatClassName } from "@/utils/classNameFormatter";
 interface Examen {
   id: string;
@@ -36,12 +36,10 @@ interface Classe {
   libelle: string;
   effectif: number;
 }
-const fetchExamens = async (): Promise<Examen[]> => {
+const fetchExamens = async (teacherClassIds?: string[]): Promise<Examen[]> => {
   try {
-    const {
-      data,
-      error
-    } = await supabase.from('exams').select(`
+    // Construire la requête de base
+    let query = supabase.from('exams').select(`
         *,
         classes(
           id,
@@ -49,9 +47,17 @@ const fetchExamens = async (): Promise<Examen[]> => {
           level,
           section
         )
-      `).order('exam_date', {
+      `);
+    
+    // ✅ FILTRE CÔTÉ SERVEUR pour les enseignants
+    if (teacherClassIds && teacherClassIds.length > 0) {
+      query = query.in('class_id', teacherClassIds);
+    }
+    
+    const { data, error } = await query.order('exam_date', {
       ascending: false
     });
+    
     if (error) throw error;
 
     // Grouper les examens par titre et date pour afficher une seule bande par examen
@@ -110,9 +116,10 @@ export default function ListeExamensNotes() {
     isTeacher,
     userProfile
   } = useUserRole();
-  const {
-    teacherClassIds
-  } = useTeacherFilter();
+  
+  // ✅ Utiliser useTeacherData pour obtenir les classes filtrées de l'enseignant
+  const { classes: teacherClasses, loading: teacherDataLoading } = useTeacherData();
+  const teacherClassIds = isTeacher() ? teacherClasses.map(c => c.id) : [];
   const safeFormatDate = (value?: string, fmt = "PPP") => {
     if (!value) return "Date non définie";
     const d = new Date(value);
@@ -126,6 +133,9 @@ export default function ListeExamensNotes() {
     }
   };
   useEffect(() => {
+    // ⚡ Attendre que teacherClassIds soit chargé pour les enseignants
+    if (isTeacher() && teacherClassIds.length === 0) return;
+    
     loadData();
 
     // Synchronisation en temps réel pour les examens
@@ -151,7 +161,7 @@ export default function ListeExamensNotes() {
     return () => {
       supabase.removeChannel(examsChannel);
     };
-  }, [userProfile?.schoolId]);
+  }, [userProfile?.schoolId, teacherClassIds]);
   const getClasseNom = (classeId: string, classesData?: Array<{
     id: string;
     name: string;
@@ -203,11 +213,14 @@ export default function ListeExamensNotes() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const examensData = await fetchExamens();
-
-      // Filtrer les examens pour les enseignants - seulement ceux des classes qu'ils enseignent
-      const filteredData = isTeacher() ? examensData.filter(exam => exam.classes.some(classId => teacherClassIds.includes(classId))) : examensData;
-      setExamens(filteredData);
+      
+      // ✅ PASSER les teacherClassIds à fetchExamens pour filtrage côté serveur
+      const examensData = await fetchExamens(
+        isTeacher() ? teacherClassIds : undefined
+      );
+      
+      // Plus besoin de filtrer côté client - déjà fait côté serveur
+      setExamens(examensData);
     } catch (error) {
       console.error("Erreur lors du chargement des données:", error);
     } finally {
@@ -215,7 +228,7 @@ export default function ListeExamensNotes() {
     }
   };
   const filteredExamens = examens.filter(examen => examen.titre.toLowerCase().includes(searchTerm.toLowerCase()) || examen.type.toLowerCase().includes(searchTerm.toLowerCase()) || getClassesNoms(examen).toLowerCase().includes(searchTerm.toLowerCase()));
-  if (loading) {
+  if (loading || teacherDataLoading) {
     return <Layout>
         <div className="container mx-auto p-6">
           <div className="flex items-center justify-center min-h-[400px]">

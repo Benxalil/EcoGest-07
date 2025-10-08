@@ -7,7 +7,7 @@ import { ArrowLeft, Users, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useClasses } from "@/hooks/useClasses";
 import { useUserRole } from "@/hooks/useUserRole";
-import { useTeacherFilter } from "@/hooks/useTeacherFilter";
+import { useTeacherData } from "@/hooks/useTeacherData";
 import { formatClassName } from "@/utils/classNameFormatter";
 
 // Helper function to define academic order
@@ -58,7 +58,9 @@ export default function ListeClassesNotes() {
   const navigate = useNavigate();
   const { classes, loading } = useClasses();
   const { isTeacher } = useUserRole();
-  const { teacherClassIds, loading: filterLoading } = useTeacherFilter();
+  
+  // ✅ Utiliser useTeacherData pour obtenir les classes filtrées de l'enseignant
+  const { classes: teacherClasses, loading: teacherDataLoading } = useTeacherData();
 
   const handleViewNotes = (classeId: string) => {
     navigate(`/notes/classe/${classeId}`);
@@ -66,7 +68,7 @@ export default function ListeClassesNotes() {
 
   // Filtrer les classes pour les enseignants
   const filteredClasses = isTeacher() 
-    ? classes.filter(classe => teacherClassIds.includes(classe.id))
+    ? teacherClasses
     : classes;
 
   const classesFiltered = filteredClasses.filter((classe) =>
@@ -77,7 +79,7 @@ export default function ListeClassesNotes() {
   // Trier les classes dans l'ordre académique
   const sortedClasses = sortClassesAcademically(classesFiltered);
 
-  if (loading || filterLoading) {
+  if (loading || teacherDataLoading) {
     return (
       <Layout>
         <div className="container mx-auto py-8">
