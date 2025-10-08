@@ -159,57 +159,45 @@ export function AjoutEnseignantForm({ onSuccess }: AjoutEnseignantFormProps) {
     name: "matieres"
   });
 
-  // Générer automatiquement matricule et mot de passe au chargement
+  // Générer automatiquement matricule et mot de passe UNIQUEMENT au focus du formulaire
   useEffect(() => {
-    // Ne pas générer automatiquement si pas de schoolId
     if (!userProfile?.schoolId) return;
     
+    // Générer IMMÉDIATEMENT au montage (une seule fois)
     const initializeForm = async () => {
       const teacherSettings = getTeacherSettingsFromStorage();
       
-      // Générer le matricule seulement si la génération automatique est activée
       if (teacherSettings.autoGenerateUsername) {
         const nextNumber = await getNextTeacherNumber(userProfile.schoolId);
         form.setValue("matricule", nextNumber);
       }
       
-      // Appliquer le mot de passe par défaut (affiché avec des pointillés)
       form.setValue("motDePasse", teacherSettings.defaultTeacherPassword);
     };
     
     initializeForm();
-  }, [form, userProfile?.schoolId]);
+  }, []); // Dépendances vides = une seule fois au montage
 
   // Écouter les changements des paramètres depuis les Paramètres
   useEffect(() => {
     if (!userProfile?.schoolId) return;
 
-    const handleSettingsUpdate = async () => {
+    const handleSettingsUpdate = () => {
       const teacherSettings = getTeacherSettingsFromStorage();
-      
-      // Ne régénérer que si le champ n'a pas été modifié manuellement
-      const currentMatricule = form.getValues('matricule');
       const currentPassword = form.getValues('motDePasse');
       
-      // Régénérer le matricule si la génération automatique est activée
-      if (teacherSettings.autoGenerateUsername && !currentMatricule) {
-        const nextNumber = await getNextTeacherNumber(userProfile.schoolId);
-        form.setValue("matricule", nextNumber);
-      }
-      
-      // Mettre à jour le mot de passe par défaut
+      // Mettre à jour UNIQUEMENT le mot de passe (pas le matricule)
       if (currentPassword !== teacherSettings.defaultTeacherPassword) {
         form.setValue("motDePasse", teacherSettings.defaultTeacherPassword);
       }
     };
 
-    // Écouter l'événement personnalisé de mise à jour des paramètres
     window.addEventListener('schoolSettingsUpdated', handleSettingsUpdate);
     
     return () => {
       window.removeEventListener('schoolSettingsUpdated', handleSettingsUpdate);
     };
-  }, [form, userProfile?.schoolId]);
+  }, [form]);
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

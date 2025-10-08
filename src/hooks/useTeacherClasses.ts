@@ -107,7 +107,7 @@ export const useTeacherClasses = () => {
         return;
       }
 
-      // Récupérer les classes
+      // Récupérer les classes ET le nombre d'élèves en une seule requête optimisée
       const { data: classesData, error: classesError } = await supabase
         .from('classes')
         .select('*')
@@ -118,20 +118,25 @@ export const useTeacherClasses = () => {
         throw classesError;
       }
 
-      // Récupérer le nombre d'élèves pour chaque classe
-      const classesWithEnrollment = await Promise.all(
-        (classesData || []).map(async (classe: any) => {
-          const { count } = await supabase
-            .from('students')
-            .select('*', { count: 'exact', head: true })
-            .eq('class_id', classe.id);
-          
-          return {
-            ...classe,
-            enrollment_count: count || 0
-          };
-        })
-      );
+      // Récupérer le nombre d'élèves pour TOUTES les classes en UNE SEULE requête groupée
+      const { data: studentCounts } = await supabase
+        .from('students')
+        .select('class_id')
+        .in('class_id', classIds)
+        .eq('is_active', true);
+
+      // Créer un Map pour compter rapidement les élèves par classe
+      const enrollmentMap = new Map<string, number>();
+      (studentCounts || []).forEach((student: any) => {
+        const currentCount = enrollmentMap.get(student.class_id) || 0;
+        enrollmentMap.set(student.class_id, currentCount + 1);
+      });
+
+      // Ajouter le comptage aux classes
+      const classesWithEnrollment = (classesData || []).map((classe: any) => ({
+        ...classe,
+        enrollment_count: enrollmentMap.get(classe.id) || 0
+      }));
 
       setClasses(classesWithEnrollment);
       retryCountRef.current = 0;

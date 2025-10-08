@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserRole } from './useUserRole';
 import { useToast } from '@/hooks/use-toast';
+import { debounce } from '@/utils/debounce';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
 export interface TeacherData {
@@ -286,9 +287,28 @@ export const useTeachers = () => {
     fetchTeachers();
   }, [fetchTeachers]);
 
-  // Realtime synchronization
+  // Realtime synchronization avec debounce
   useEffect(() => {
     if (!userProfile?.schoolId) return;
+
+    // Debounce les mises à jour pour éviter trop de re-renders
+    const debouncedUpdate = debounce((payload: any) => {
+      if (payload.eventType === 'INSERT') {
+        setTeachers(prev => {
+          const exists = prev.some(t => t.id === payload.new.id);
+          if (exists) return prev;
+          return [...prev, payload.new as TeacherData].sort((a, b) => 
+            a.last_name.localeCompare(b.last_name)
+          );
+        });
+      } else if (payload.eventType === 'UPDATE') {
+        setTeachers(prev => prev.map(t => 
+          t.id === payload.new.id ? payload.new as TeacherData : t
+        ));
+      } else if (payload.eventType === 'DELETE') {
+        setTeachers(prev => prev.filter(t => t.id !== payload.old.id));
+      }
+    }, 300);
 
     const channel: RealtimeChannel = supabase
       .channel('teachers-changes')
@@ -300,23 +320,7 @@ export const useTeachers = () => {
           table: 'teachers',
           filter: `school_id=eq.${userProfile.schoolId}`
         },
-        (payload) => {
-          if (payload.eventType === 'INSERT') {
-            setTeachers(prev => {
-              const exists = prev.some(t => t.id === payload.new.id);
-              if (exists) return prev;
-              return [...prev, payload.new as TeacherData].sort((a, b) => 
-                a.last_name.localeCompare(b.last_name)
-              );
-            });
-          } else if (payload.eventType === 'UPDATE') {
-            setTeachers(prev => prev.map(t => 
-              t.id === payload.new.id ? payload.new as TeacherData : t
-            ));
-          } else if (payload.eventType === 'DELETE') {
-            setTeachers(prev => prev.filter(t => t.id !== payload.old.id));
-          }
-        }
+        debouncedUpdate
       )
       .subscribe();
 

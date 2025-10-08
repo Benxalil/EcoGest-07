@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AjoutEnseignantForm } from "@/components/enseignants/AjoutEnseignantForm";
@@ -16,6 +16,7 @@ import { Search, Pencil, UserMinus, Users, UserCheck, UserX } from "lucide-react
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useTeachers } from "@/hooks/useTeachers";
+import { debounce } from "@/utils/debounce";
 
 interface Enseignant {
   id: string;
@@ -33,6 +34,7 @@ interface ListeEnseignantsProps {
 
 export function ListeEnseignants({ onEdit }: ListeEnseignantsProps) {
   const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const { teachers, loading, deleteTeacher } = useTeachers();
   const { toast } = useToast();
@@ -41,10 +43,21 @@ export function ListeEnseignants({ onEdit }: ListeEnseignantsProps) {
     setIsAddDialogOpen(false);
   };
 
-  // Calculer les statistiques
-  const totalEnseignants = teachers.length;
-  const enseignantsActifs = teachers.filter(teacher => teacher.is_active === true).length;
-  const enseignantsInactifs = teachers.filter(teacher => teacher.is_active === false).length;
+  // Debounce la recherche pour éviter trop de re-renders
+  useEffect(() => {
+    const debouncedUpdate = debounce(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 300);
+    
+    debouncedUpdate();
+  }, [searchTerm]);
+
+  // Calculer les statistiques (memoized)
+  const stats = useMemo(() => ({
+    total: teachers.length,
+    actifs: teachers.filter(t => t.is_active === true).length,
+    inactifs: teachers.filter(t => t.is_active === false).length,
+  }), [teachers]);
 
   const handleDelete = async (id: string) => {
     if (window.confirm("Êtes-vous sûr de vouloir supprimer cet enseignant ?")) {
@@ -58,12 +71,16 @@ export function ListeEnseignants({ onEdit }: ListeEnseignantsProps) {
     }
   };
 
-  const filteredEnseignants = teachers.filter((enseignant) =>
-    Object.values(enseignant).some(
-      (value) =>
-        typeof value === "string" &&
-        value.toLowerCase().includes(searchTerm.toLowerCase())
-    )
+  // Filtrer avec le terme de recherche debounced (memoized)
+  const filteredEnseignants = useMemo(() => 
+    teachers.filter((enseignant) =>
+      Object.values(enseignant).some(
+        (value) =>
+          typeof value === "string" &&
+          value.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
+      )
+    ),
+    [teachers, debouncedSearchTerm]
   );
 
   if (loading) {
@@ -97,7 +114,7 @@ export function ListeEnseignants({ onEdit }: ListeEnseignantsProps) {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{totalEnseignants}</div>
+            <div className="text-2xl font-bold text-blue-600">{stats.total}</div>
           </CardContent>
         </Card>
 
@@ -109,7 +126,7 @@ export function ListeEnseignants({ onEdit }: ListeEnseignantsProps) {
             <UserCheck className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{enseignantsActifs}</div>
+            <div className="text-2xl font-bold text-green-600">{stats.actifs}</div>
           </CardContent>
         </Card>
 
@@ -121,7 +138,7 @@ export function ListeEnseignants({ onEdit }: ListeEnseignantsProps) {
             <UserX className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">{enseignantsInactifs}</div>
+            <div className="text-2xl font-bold text-red-600">{stats.inactifs}</div>
           </CardContent>
         </Card>
       </div>
