@@ -12,6 +12,7 @@ const CompleteRegistration = () => {
   useEffect(() => {
     const completeRegistration = async () => {
       try {
+        console.log('🔍 === DÉBUT DE LA FINALISATION DE L\'INSCRIPTION ===');
         console.log('🔍 Vérification de l\'authentification...');
         
         // 1. Verify user is authenticated
@@ -25,30 +26,48 @@ const CompleteRegistration = () => {
           return;
         }
 
-        console.log('✅ Session trouvée:', session.user.email);
+        console.log('✅ Session trouvée:', {
+          email: session.user.email,
+          userId: session.user.id,
+          emailVerified: session.user.email_confirmed_at
+        });
 
         // 2. Get registration data from localStorage
         const registrationDataStr = localStorage.getItem('pending_school_registration');
         const logoDataStr = localStorage.getItem('pending_school_logo');
         
+        console.log('📦 Vérification localStorage:', {
+          hasRegistrationData: !!registrationDataStr,
+          hasLogoData: !!logoDataStr
+        });
+
         if (!registrationDataStr) {
-          console.error('❌ Aucune donnée d\'inscription trouvée');
+          console.error('❌ Aucune donnée d\'inscription trouvée dans localStorage');
           setStatus('error');
-          setMessage('Aucune inscription en attente trouvée.');
-          setTimeout(() => navigate('/'), 3000);
+          setMessage('Aucune inscription en attente. Veuillez recommencer l\'inscription.');
+          setTimeout(() => navigate('/inscription'), 3000);
           return;
         }
 
         const registrationData = JSON.parse(registrationDataStr);
-        console.log('📋 Données d\'inscription récupérées');
+        console.log('📋 Données d\'inscription récupérées:', {
+          schoolName: registrationData.schoolName,
+          academicYear: registrationData.academicYear,
+          timestamp: new Date(registrationData.timestamp).toISOString()
+        });
 
-        // Check if data is not too old (1 hour)
-        const oneHour = 60 * 60 * 1000;
-        if (Date.now() - registrationData.timestamp > oneHour) {
+        // Check if data is not too old (24 hours instead of 1 hour for better UX)
+        const twentyFourHours = 24 * 60 * 60 * 1000;
+        const dataAge = Date.now() - registrationData.timestamp;
+        
+        if (dataAge > twentyFourHours) {
+          console.error('❌ Données expirées:', { 
+            ageInHours: Math.round(dataAge / (60 * 60 * 1000)) 
+          });
           localStorage.removeItem('pending_school_registration');
           localStorage.removeItem('pending_school_logo');
           setStatus('error');
-          setMessage('Les données d\'inscription ont expiré. Veuillez recommencer.');
+          setMessage('Les données d\'inscription ont expiré (plus de 24h). Veuillez recommencer.');
           setTimeout(() => navigate('/inscription'), 3000);
           return;
         }
@@ -81,34 +100,46 @@ const CompleteRegistration = () => {
 
         // 4. Create school record
         console.log('🏫 Création de l\'école...');
+        const schoolInsertData = {
+          name: registrationData.schoolName,
+          school_type: registrationData.schoolType,
+          academic_year: registrationData.academicYear,
+          address: registrationData.address,
+          phone: registrationData.schoolPhone,
+          email: session.user.email,
+          logo_url: logoUrl,
+          language: registrationData.language,
+          semester_type: registrationData.semesterType,
+          currency: registrationData.currency,
+          timezone: registrationData.timezone,
+          sponsor_name: registrationData.sponsorName || null,
+          sponsor_phone: registrationData.sponsorPhone || null,
+          sponsor_email: registrationData.sponsorEmail || null,
+          created_by: session.user.id,
+        };
+        
+        console.log('📝 Données école à insérer:', schoolInsertData);
+        
         const { data: schoolData, error: schoolError } = await supabase
           .from('schools')
-          .insert({
-            name: registrationData.schoolName,
-            school_type: registrationData.schoolType,
-            academic_year: registrationData.academicYear,
-            address: registrationData.address,
-            phone: registrationData.schoolPhone,
-            email: session.user.email,
-            logo_url: logoUrl,
-            language: registrationData.language,
-            semester_type: registrationData.semesterType,
-            currency: registrationData.currency,
-            timezone: registrationData.timezone,
-            sponsor_name: registrationData.sponsorName || null,
-            sponsor_phone: registrationData.sponsorPhone || null,
-            sponsor_email: registrationData.sponsorEmail || null,
-            created_by: session.user.id,
-          })
+          .insert(schoolInsertData)
           .select()
           .single();
 
         if (schoolError) {
-          console.error('❌ Erreur création école:', schoolError);
-          throw new Error('Erreur lors de la création de l\'école');
+          console.error('❌ Erreur création école:', {
+            code: schoolError.code,
+            message: schoolError.message,
+            details: schoolError.details,
+            hint: schoolError.hint
+          });
+          throw new Error(`Erreur lors de la création de l'école: ${schoolError.message}`);
         }
 
-        console.log('✅ École créée:', schoolData.id);
+        console.log('✅ École créée avec succès:', {
+          id: schoolData.id,
+          name: schoolData.name
+        });
 
         // 5. Update user profile with school_id
         console.log('👤 Mise à jour du profil...');
@@ -169,9 +200,18 @@ const CompleteRegistration = () => {
         }, 2000);
 
       } catch (error: any) {
-        console.error('❌ Erreur lors de la finalisation:', error);
+        console.error('❌ === ERREUR LORS DE LA FINALISATION ===');
+        console.error('❌ Type:', error.constructor.name);
+        console.error('❌ Message:', error.message);
+        console.error('❌ Stack:', error.stack);
+        console.error('❌ Détails complets:', error);
+        
         setStatus('error');
-        setMessage(error.message || 'Une erreur est survenue. Veuillez contacter le support.');
+        const errorMessage = error.message || 'Une erreur est survenue lors de la création de l\'école.';
+        setMessage(`${errorMessage} Contactez le support si le problème persiste.`);
+        
+        // Don't remove localStorage data in case of error, so user can retry
+        console.log('ℹ️ Les données d\'inscription sont conservées pour permettre une nouvelle tentative');
       }
     };
 

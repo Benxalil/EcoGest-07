@@ -1,6 +1,7 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useUserRole } from "@/hooks/useUserRole";
+import { supabase } from "@/integrations/supabase/client";
 
 interface AuthenticatedLayoutProps {
   children: React.ReactNode;
@@ -10,17 +11,64 @@ const AuthenticatedLayout: React.FC<AuthenticatedLayoutProps> = ({ children }) =
   const { user, loading } = useUserRole();
   const navigate = useNavigate();
   const location = useLocation();
+  const [checkingSchool, setCheckingSchool] = useState(true);
 
   // Don't check authentication for public routes
-  const publicRoutes = ['/auth', '/inscription'];
+  const publicRoutes = ['/auth', '/inscription', '/complete-registration'];
   const isPublicRoute = publicRoutes.includes(location.pathname);
+
+  useEffect(() => {
+    const checkSchoolRegistration = async () => {
+      // Skip check for public routes or if user is not loaded
+      if (isPublicRoute || !user || loading) {
+        setCheckingSchool(false);
+        return;
+      }
+
+      try {
+        // Check if user has a school_id in their profile
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('school_id')
+          .eq('id', user.id)
+          .single();
+
+        if (error) {
+          console.error('Erreur lors de la vérification du profil:', error);
+          setCheckingSchool(false);
+          return;
+        }
+
+        // If user has no school_id and has pending registration data
+        if (!profile?.school_id) {
+          const pendingRegistration = localStorage.getItem('pending_school_registration');
+          
+          if (pendingRegistration) {
+            console.log('🔄 Redirection vers la finalisation de l\'inscription...');
+            navigate('/complete-registration');
+            return;
+          } else {
+            // No school and no pending registration - might be a teacher or parent
+            console.log('ℹ️ Utilisateur sans école assignée');
+          }
+        }
+
+        setCheckingSchool(false);
+      } catch (error) {
+        console.error('Erreur lors de la vérification:', error);
+        setCheckingSchool(false);
+      }
+    };
+
+    checkSchoolRegistration();
+  }, [user, loading, isPublicRoute, navigate, location.pathname]);
 
   if (isPublicRoute) {
     return <>{children}</>;
   }
 
-  // Show loader while checking authentication
-  if (loading) {
+  // Show loader while checking authentication or school registration
+  if (loading || checkingSchool) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
