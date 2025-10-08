@@ -32,6 +32,17 @@ const CompleteRegistration = () => {
           emailVerified: session.user.email_confirmed_at
         });
 
+        // SÉCURITÉ : Vérifier que l'email est bien confirmé
+        if (!session.user.email_confirmed_at) {
+          console.error('❌ Email non confirmé');
+          setStatus('error');
+          setMessage('Veuillez d\'abord confirmer votre email avant de continuer.');
+          setTimeout(() => navigate('/auth/pending-confirmation'), 2000);
+          return;
+        }
+
+        console.log('✅ Email confirmé');
+
         // 2. Get registration data from localStorage
         const registrationDataStr = localStorage.getItem('pending_school_registration');
         const logoDataStr = localStorage.getItem('pending_school_logo');
@@ -56,21 +67,23 @@ const CompleteRegistration = () => {
           timestamp: new Date(registrationData.timestamp).toISOString()
         });
 
-        // Check if data is not too old (24 hours instead of 1 hour for better UX)
-        const twentyFourHours = 24 * 60 * 60 * 1000;
+        // Check if data is not too old (7 days for better UX)
+        const sevenDays = 7 * 24 * 60 * 60 * 1000;
         const dataAge = Date.now() - registrationData.timestamp;
         
-        if (dataAge > twentyFourHours) {
+        if (dataAge > sevenDays) {
           console.error('❌ Données expirées:', { 
             ageInHours: Math.round(dataAge / (60 * 60 * 1000)) 
           });
           localStorage.removeItem('pending_school_registration');
           localStorage.removeItem('pending_school_logo');
           setStatus('error');
-          setMessage('Les données d\'inscription ont expiré (plus de 24h). Veuillez recommencer.');
+          setMessage('Votre session a expiré (plus de 7 jours). Veuillez recommencer l\'inscription.');
           setTimeout(() => navigate('/inscription'), 3000);
           return;
         }
+
+        console.log('✅ Données valides (âge: ' + Math.round(dataAge / 1000 / 60 / 60) + ' heures)');
 
         setMessage('Création de votre école...');
 

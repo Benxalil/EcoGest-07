@@ -14,7 +14,7 @@ const AuthenticatedLayout: React.FC<AuthenticatedLayoutProps> = ({ children }) =
   const [checkingSchool, setCheckingSchool] = useState(true);
 
   // Don't check authentication for public routes
-  const publicRoutes = ['/auth', '/inscription', '/complete-registration'];
+  const publicRoutes = ['/auth', '/inscription', '/complete-registration', '/auth/pending-confirmation'];
   const isPublicRoute = publicRoutes.includes(location.pathname);
 
   useEffect(() => {
@@ -29,7 +29,7 @@ const AuthenticatedLayout: React.FC<AuthenticatedLayoutProps> = ({ children }) =
         // Check if user has a school_id in their profile
         const { data: profile, error } = await supabase
           .from('profiles')
-          .select('school_id')
+          .select('school_id, role')
           .eq('id', user.id)
           .single();
 
@@ -39,17 +39,20 @@ const AuthenticatedLayout: React.FC<AuthenticatedLayoutProps> = ({ children }) =
           return;
         }
 
-        // If user has no school_id and has pending registration data
-        if (!profile?.school_id) {
+        // LOGIQUE AMÉLIORÉE : Vérifier si l'utilisateur est school_admin sans école
+        if (profile?.role === 'school_admin' && !profile?.school_id) {
           const pendingRegistration = localStorage.getItem('pending_school_registration');
           
           if (pendingRegistration) {
-            console.log('🔄 Redirection vers la finalisation de l\'inscription...');
+            console.log('🔄 Redirection vers /complete-registration - École non finalisée');
             navigate('/complete-registration');
             return;
           } else {
-            // No school and no pending registration - might be a teacher or parent
-            console.log('ℹ️ Utilisateur sans école assignée');
+            // Pas de données en attente, demander de recommencer
+            console.warn('⚠️ Aucune donnée d\'inscription en attente trouvée');
+            alert('Aucune inscription en attente détectée. Veuillez recommencer le processus d\'inscription.');
+            navigate('/inscription');
+            return;
           }
         }
 

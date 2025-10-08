@@ -186,15 +186,29 @@ const SchoolRegistrationPage = () => {
         reader.readAsDataURL(formData.logoFile);
       }
 
-      // Success message
-      alert(`Compte créé avec succès ! 
+      // Vérifier si l'email est confirmé
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      
+      if (!authUser?.email_confirmed_at) {
+        console.log('⏳ Email non confirmé, redirection vers page d\'attente');
+        
+        alert(`Compte créé avec succès ! 
 
-Un email de confirmation a été envoyé à ${formData.adminEmail}. 
+Un email de confirmation a été envoyé à ${formData.adminEmail}.
 
-Veuillez cliquer sur le lien dans l'email pour activer votre compte, puis vous connecter pour finaliser la création de votre école.`);
+Veuillez cliquer sur le lien dans l'email pour activer votre compte.
 
-      // Redirect to login
-      window.location.href = '/auth';
+Une fois confirmé, vous serez automatiquement redirigé pour finaliser la création de votre école.`);
+        
+        // Rediriger vers page d'attente de confirmation
+        window.location.href = '/auth/pending-confirmation';
+      } else {
+        // Email déjà confirmé (mode développement)
+        console.log('✅ Email déjà confirmé, redirection directe vers finalisation');
+        
+        // Rediriger directement vers la finalisation
+        window.location.href = '/complete-registration';
+      }
 
     } catch (error: any) {
       console.error('Registration error:', error);
