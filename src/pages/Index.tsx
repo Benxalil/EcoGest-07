@@ -108,20 +108,20 @@ const Index = () => {
 
   // Optimisation avec useMemo pour éviter les recalculs
   const recentAnnouncements = useMemo(() => 
-    announcements
+    (announcements || [])
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
       .slice(0, 3), 
     [announcements]
   );
   const urgentAnnouncements = useMemo(() => 
-    announcements.filter(announcement => announcement.priority === 'urgent' || announcement.is_urgent), 
+    (announcements || []).filter(announcement => announcement.priority === 'urgent' || announcement.is_urgent), 
     [announcements]
   );
 
 
   // Optimisation avec useMemo pour éviter les recalculs
   const recentStudents = useMemo(() => {
-    return students
+    return (students || [])
       .sort((a: any, b: any) => {
         const dateA = new Date(a.created_at || '2024-01-01');
         const dateB = new Date(b.created_at || '2024-01-01');
@@ -134,19 +134,19 @@ const Index = () => {
   const statsData = useMemo(() => [
       {
         title: "Total des étudiants",
-        value: students.length.toString(),
+        value: (students || []).length.toString(),
         icon: Users,
         color: "text-blue-500",
       },
       {
         title: "Nombre total d'enseignants",
-      value: teachers.length.toString(),
+      value: (teachers || []).length.toString(),
         icon: GraduationCap,
         color: "text-green-500",
       },
       {
         title: "Classes actives",
-        value: classes.length.toString(),
+        value: (classes || []).length.toString(),
         icon: School,
         color: "text-purple-500",
       },
@@ -156,7 +156,7 @@ const Index = () => {
         icon: Calendar,
         color: "text-orange-500",
       },
-  ], [students.length, teachers.length, classes.length, academicYear]);
+  ], [students, teachers, classes, academicYear]);
 
   // Define helper function first
   const generateMonthlyEnrollment = useMemo(() => (students: any[]) => {
@@ -169,11 +169,11 @@ const Index = () => {
 
   // Optimisation avec useMemo pour les données analytiques
   const analyticsData = useMemo(() => ({
-    classDistribution: classes.map((classe: any) => ({
+    classDistribution: (classes || []).map((classe: any) => ({
       name: formatClassName(classe),
-      students: students.filter((s: any) => s.class_id === classe.id).length
+      students: (students || []).filter((s: any) => s.class_id === classe.id).length
     })),
-    monthlyEnrollment: generateMonthlyEnrollment(students),
+    monthlyEnrollment: generateMonthlyEnrollment(students || []),
     attendanceRate: 85, // Placeholder
     averageGrade: 14.5 // Placeholder
   }), [classes, students, generateMonthlyEnrollment]);
@@ -218,7 +218,7 @@ const Index = () => {
   ];
 
   const displayedSchedules = useMemo(() => 
-    showMoreSchedules ? todaySchedules : todaySchedules.slice(0, 5), 
+    showMoreSchedules ? (todaySchedules || []) : (todaySchedules || []).slice(0, 5), 
     [showMoreSchedules, todaySchedules]
   );
 
@@ -415,14 +415,14 @@ const Index = () => {
                         </div>
                       </div>
                     ))}
-                    {todaySchedules.length > 5 && (
+                    {(todaySchedules || []).length > 5 && (
                       <Button 
                         variant="ghost" 
                         size="sm" 
                         onClick={() => setShowMoreSchedules(!showMoreSchedules)}
                         className="w-full text-xs sm:text-sm"
                       >
-                        {showMoreSchedules ? "Voir moins" : `Voir plus (${todaySchedules.length - 5} autres)`}
+                        {showMoreSchedules ? "Voir moins" : `Voir plus (${(todaySchedules || []).length - 5} autres)`}
                       </Button>
                     )}
                   </div>
@@ -519,10 +519,10 @@ const Index = () => {
                   <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5" />
                   <h3 className="font-semibold text-sm sm:text-base">Distribution par classe</h3>
                 </div>
-                {classes.length > 0 ? (
+                {(classes || []).length > 0 ? (
                   <ChartContainer config={chartConfig} className="h-[250px] sm:h-[300px]">
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={classes.map(cls => ({ name: cls.name, students: 0 }))}>
+                      <BarChart data={(classes || []).map(cls => ({ name: cls.name, students: 0 }))}>
                         <XAxis dataKey="name" fontSize={12} />
                         <YAxis fontSize={12} />
                         <ChartTooltip content={<ChartTooltipContent />} />
@@ -541,7 +541,7 @@ const Index = () => {
                   <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5" />
                   <h3 className="font-semibold text-sm sm:text-base">Inscriptions mensuelles</h3>
                 </div>
-                {students.length > 0 ? (
+                {(students || []).length > 0 ? (
                   <ChartContainer config={chartConfig} className="h-[250px] sm:h-[300px]">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={[
@@ -602,7 +602,7 @@ const Index = () => {
                       Classes actives
                     </p>
                     <p className="text-2xl sm:text-3xl font-bold text-purple-500">
-                      {classes.length}
+                      {(classes || []).length}
                     </p>
                   </div>
                   <School className="h-5 w-5 sm:h-6 sm:w-6 text-purple-500 flex-shrink-0 ml-2" />

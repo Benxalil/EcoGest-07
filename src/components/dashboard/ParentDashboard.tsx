@@ -91,7 +91,7 @@ const ParentDashboard = memo(() => {
               <Skeleton className="h-20 w-full" />
               <Skeleton className="h-20 w-full" />
             </div>
-          ) : todaySchedules.length === 0 ? (
+          ) : (todaySchedules || []).length === 0 ? (
             <p className="text-center text-muted-foreground py-8">
               {new Date().getDay() === 0 
                 ? "Aucun cours prévu le dimanche" 
@@ -99,7 +99,7 @@ const ParentDashboard = memo(() => {
             </p>
           ) : (
             <div className="space-y-3">
-              {todaySchedules.map((schedule: any) => (
+              {(todaySchedules || []).map((schedule: any) => (
                 <div key={schedule.id} className="border rounded-lg p-3 bg-primary/5">
                   <div className="flex items-center justify-between mb-2">
                     <h4 className="font-medium text-primary">
@@ -142,13 +142,13 @@ const ParentDashboard = memo(() => {
               <Skeleton className="h-20 w-full" />
               <Skeleton className="h-20 w-full" />
             </div>
-          ) : announcements.length === 0 ? (
+          ) : (announcements || []).length === 0 ? (
             <p className="text-center text-muted-foreground py-8">
               Aucune annonce récente
             </p>
           ) : (
             <div className="space-y-3">
-              {announcements.map((announcement: any) => (
+              {(announcements || []).map((announcement: any) => (
                 <div key={announcement.id} className="border rounded-lg p-3 hover:bg-orange-50/50 transition-colors">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">

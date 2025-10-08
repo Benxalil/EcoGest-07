@@ -74,7 +74,7 @@ const StudentDashboard = memo(() => {
             <Calendar className="h-5 w-5 text-primary" />
             <h3 className="font-semibold">Mon Emploi du Temps Aujourd'hui</h3>
           </div>
-          {todaySchedules.length === 0 ? (
+          {(todaySchedules || []).length === 0 ? (
             <p className="text-center text-muted-foreground py-8">
               {new Date().getDay() === 0 
                 ? "Aucun cours prévu le dimanche" 
@@ -82,7 +82,7 @@ const StudentDashboard = memo(() => {
             </p>
           ) : (
             <div className="space-y-3">
-              {todaySchedules.map((schedule: any) => (
+              {(todaySchedules || []).map((schedule: any) => (
                 <div key={schedule.id} className="border rounded-lg p-3 bg-primary/5 hover:bg-primary/10 transition-colors">
                   <div className="flex items-start justify-between gap-3 mb-2">
                     <div className="flex-1 min-w-0">
@@ -122,13 +122,13 @@ const StudentDashboard = memo(() => {
             <Megaphone className="h-5 w-5 text-orange-600" />
             <h3 className="font-semibold">Annonces Récentes</h3>
           </div>
-          {announcements.length === 0 ? (
+          {(announcements || []).length === 0 ? (
             <p className="text-center text-muted-foreground py-8">
               Aucune annonce récente
             </p>
           ) : (
             <div className="space-y-3">
-              {announcements.slice(0, 3).map((announcement: any) => (
+              {(announcements || []).slice(0, 3).map((announcement: any) => (
                 <div key={announcement.id} className="border rounded-lg p-3 hover:bg-orange-50/50 transition-colors">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
