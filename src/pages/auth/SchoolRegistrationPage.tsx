@@ -119,22 +119,33 @@ const SchoolRegistrationPage = () => {
     setCurrentStep(prev => Math.max(prev - 1, 1));
   };
   // Helper function to wait for profile creation by trigger
-  const checkProfile = async (userId: string, maxAttempts = 10): Promise<boolean> => {
+  const checkProfile = async (userId: string, maxAttempts = 15): Promise<boolean> => {
+    console.log('🔍 Vérification du profil pour:', userId);
+    
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-      const { data: profile } = await supabase
+      console.log(`Tentative ${attempt}/${maxAttempts} de vérification du profil...`);
+      
+      const { data: profile, error } = await supabase
         .from('profiles')
-        .select('id')
+        .select('id, email, role')
         .eq('id', userId)
         .maybeSingle();
       
+      if (error) {
+        console.error('❌ Erreur lors de la vérification du profil:', error);
+      }
+      
       if (profile) {
+        console.log('✅ Profil trouvé:', profile);
         return true;
       }
       
-      // Wait 1 second before next attempt
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      console.log(`⏳ Profil non trouvé, attente de 2 secondes... (tentative ${attempt}/${maxAttempts})`);
+      // Wait 2 seconds before next attempt (increased from 1 second)
+      await new Promise(resolve => setTimeout(resolve, 2000));
     }
     
+    console.error('❌ Profil non créé après', maxAttempts, 'tentatives (30 secondes)');
     return false;
   };
 
