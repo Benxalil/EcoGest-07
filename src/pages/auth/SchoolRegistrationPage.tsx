@@ -118,61 +118,23 @@ const SchoolRegistrationPage = () => {
   const prevStep = () => {
     setCurrentStep(prev => Math.max(prev - 1, 1));
   };
-  // Helper function to wait for profile creation with manual fallback
-  const waitForProfile = async (userId: string, userData: any, maxAttempts = 10): Promise<boolean> => {
+  // Helper function to wait for profile creation by trigger
+  const checkProfile = async (userId: string, maxAttempts = 10): Promise<boolean> => {
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-      const { data: profile, error } = await supabase
+      const { data: profile } = await supabase
         .from('profiles')
         .select('id')
         .eq('id', userId)
         .maybeSingle();
       
-      if (error) {
-        console.error(`Error checking profile (attempt ${attempt}):`, error);
-        if (error.code === 'PGRST116') {
-          // Profile not found yet, continue waiting } else {
-          // Other error, stop trying
-          throw error;
-        }
-      }
-      
       if (profile) {
         return true;
       }
       
-      // If this is the last attempt and profile still doesn't exist, try to create it manually
-      if (attempt === maxAttempts) {
-        try {
-          const { error: createError } = await supabase
-            .from('profiles')
-            .insert({
-              id: userId,
-              first_name: userData.first_name || 'User',
-              last_name: userData.last_name || '',
-              email: userData.email,
-              role: userData.role || 'school_admin',
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            });
-
-          if (createError) {
-            console.error('Manual profile creation failed:', createError);
-            throw createError;
-          }
-
-          return true;
-        } catch (manualError: any) {
-          console.error('Failed to create profile manually:', manualError);
-          throw new Error(`Échec de création du profil utilisateur : ${manualError.message}`);
-        }
-      }
-      
-      // Wait 500ms before next attempt, increasing delay slightly each time
-      const delay = 500 + (attempt * 100);
-      await new Promise(resolve => setTimeout(resolve, delay));
+      // Wait 1 second before next attempt
+      await new Promise(resolve => setTimeout(resolve, 1000));
     }
     
-    console.error('Profile creation timeout after all attempts');
     return false;
   };
 
@@ -207,18 +169,10 @@ const SchoolRegistrationPage = () => {
         throw new Error('Erreur lors de la création du compte utilisateur');
       }
 
-      // 2. Wait for profile to be created by the trigger (with manual fallback)
-      const userData = {
-        first_name: formData.adminFirstName,
-        last_name: formData.adminLastName,
-        email: formData.adminEmail,
-        role: 'school_admin'
-      };
-      
-      const profileCreated = await waitForProfile(authData.user.id, userData);
+      // 2. Wait for profile to be created by the trigger
+      const profileCreated = await checkProfile(authData.user.id);
       if (!profileCreated) {
-        console.error('Profile creation failed after all attempts');
-        throw new Error('Le profil utilisateur n\'a pas pu être créé. Veuillez réessayer ou contacter le support technique.');
+        throw new Error('Le profil utilisateur n\'a pas pu être créé automatiquement. Veuillez réessayer.');
       }
       // 3. Upload logo if provided
       let logoUrl = null;
