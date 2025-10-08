@@ -4,20 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Users, Calendar, Clock, BookOpen, Megaphone, Award } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useOptimizedUserData } from "@/hooks/useOptimizedUserData";
-import { useOptimizedTeacherData } from "@/hooks/useOptimizedTeacherData";
+import { useTeacherData } from "@/hooks/useTeacherData";
 
 const TeacherDashboard = memo(() => {
   const navigate = useNavigate();
-  const { profile } = useOptimizedUserData();
-  const { 
-    classes,
-    students,
-    todaySchedules,
-    announcements,
-    stats,
-    loading,
-    error
-  } = useOptimizedTeacherData();
+  const { profile, loading: profileLoading } = useOptimizedUserData();
+  const { classes, totalStudents, todaySchedules, announcements, loading: dataLoading, error } = useTeacherData();
 
   // Memoized greeting function
   const greeting = useMemo(() => {
@@ -31,7 +23,7 @@ const TeacherDashboard = memo(() => {
   const navigateToStudents = useCallback(() => navigate("/eleves"), [navigate]);
   const navigateToAnnouncements = useCallback(() => navigate("/annonces"), [navigate]);
 
-  if (loading) {
+  if (profileLoading || dataLoading) {
     return null; // Pas d'affichage pendant le chargement pour éviter le flash
   }
 
@@ -66,7 +58,7 @@ const TeacherDashboard = memo(() => {
                 Mes Classes
               </p>
               <p className="text-2xl sm:text-3xl font-bold text-blue-600">
-                {stats.totalClasses}
+                {classes.length}
               </p>
             </div>
             <BookOpen className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600 flex-shrink-0 ml-2" />
@@ -80,7 +72,7 @@ const TeacherDashboard = memo(() => {
                 Mes Élèves
               </p>
               <p className="text-2xl sm:text-3xl font-bold text-green-600">
-                {stats.totalStudents}
+                {totalStudents}
               </p>
             </div>
             <Users className="h-5 w-5 sm:h-6 sm:w-6 text-green-600 flex-shrink-0 ml-2" />
@@ -94,7 +86,7 @@ const TeacherDashboard = memo(() => {
                 Cours Aujourd'hui
               </p>
               <p className="text-2xl sm:text-3xl font-bold text-purple-600">
-                {stats.todayCourses}
+                {todaySchedules.length}
               </p>
             </div>
             <Clock className="h-5 w-5 sm:h-6 sm:w-6 text-purple-600 flex-shrink-0 ml-2" />
@@ -108,7 +100,7 @@ const TeacherDashboard = memo(() => {
                 Annonces
               </p>
               <p className="text-2xl sm:text-3xl font-bold text-orange-600">
-                {stats.totalAnnouncements}
+                {announcements.length}
               </p>
             </div>
             <Megaphone className="h-5 w-5 sm:h-6 sm:w-6 text-orange-600 flex-shrink-0 ml-2" />
@@ -128,7 +120,7 @@ const TeacherDashboard = memo(() => {
             <p className="text-center text-muted-foreground py-8">
               {new Date().getDay() === 0 
                 ? "Aucun cours prévu le dimanche" 
-                : stats.totalClasses === 0
+                : classes.length === 0
                   ? "Vous n'êtes affecté à aucune classe"
                   : "Aucun cours prévu aujourd'hui"}
             </p>
@@ -176,7 +168,7 @@ const TeacherDashboard = memo(() => {
             </p>
           ) : (
             <div className="space-y-3">
-              {announcements.slice(0, 3).map((announcement: any) => (
+              {announcements.map((announcement: any) => (
                 <div key={announcement.id} className="border rounded-lg p-3 hover:bg-orange-50">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
