@@ -60,8 +60,8 @@ export const useOptimizedTeacherData = () => {
       const today = new Date();
       const dayOfWeek = today.getDay();
 
-      // Requête optimisée avec retry - seulement les schedules du professeur
-      const schedulesData = await retryWithBackoff(async () => {
+      // Requête optimisée avec retry - schedules du professeur par teacher_id
+      let schedulesData = await retryWithBackoff(async () => {
         const { data, error } = await supabase
           .from('schedules')
           .select('id, subject, start_time, end_time, day_of_week, class_id, classes(id, name)')
@@ -71,6 +71,21 @@ export const useOptimizedTeacherData = () => {
         if (error) throw error;
         return data || [];
       });
+
+      // Fallback: si aucun schedule avec teacher_id, chercher par nom
+      if (schedulesData.length === 0) {
+        const teacherFullName = `${profile.firstName} ${profile.lastName}`;
+        schedulesData = await retryWithBackoff(async () => {
+          const { data, error } = await supabase
+            .from('schedules')
+            .select('id, subject, start_time, end_time, day_of_week, class_id, classes(id, name)')
+            .eq('teacher', teacherFullName)
+            .eq('school_id', profile.schoolId);
+          
+          if (error) throw error;
+          return data || [];
+        });
+      }
 
       // Extraire les class_ids uniques
       const classIds = [...new Set(schedulesData.map(s => s.class_id))];
@@ -134,8 +149,8 @@ export const useOptimizedTeacherData = () => {
         }
       };
 
-      // Cache pour 2 minutes (réduire la charge serveur)
-      cache.set(cacheKey, teacherData, 120 * 1000);
+      // Cache pour 30 secondes (mise à jour plus rapide)
+      cache.set(cacheKey, teacherData, 30 * 1000);
       
       setData({
         ...teacherData,
@@ -182,9 +197,24 @@ export const useOptimizedTeacherData = () => {
           event: '*',
           schema: 'public',
           table: 'schedules',
-          filter: `teacher_id=eq.${teacherId}`
+          filter: `school_id=eq.${profile.schoolId}` // Écouter TOUS les schedules de l'école
         },
-        () => debouncedFetch()
+        (payload) => {
+          // Filtrer côté client pour cet enseignant
+          const teacherFullName = `${profile.firstName} ${profile.lastName}`;
+          const newRecord = payload.new as any;
+          const oldRecord = payload.old as any;
+          const isForThisTeacher = 
+            newRecord?.teacher_id === teacherId || 
+            oldRecord?.teacher_id === teacherId ||
+            newRecord?.teacher === teacherFullName ||
+            oldRecord?.teacher === teacherFullName;
+          
+          if (isForThisTeacher) {
+            cache.deleteWithEvent(cacheKey); // Invalider immédiatement
+            debouncedFetch();
+          }
+        }
       )
       .on(
         'postgres_changes',
