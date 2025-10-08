@@ -119,6 +119,8 @@ export default function ListeClassesNotes() {
           <div className="relative w-full max-w-md">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
             <Input
+              id="search-classes"
+              name="search-classes"
               placeholder="Rechercher une classe..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}

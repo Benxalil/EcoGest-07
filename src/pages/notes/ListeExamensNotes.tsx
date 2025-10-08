@@ -342,7 +342,14 @@ export default function ListeExamensNotes() {
           
           <div className="relative w-full max-w-md">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <Input placeholder="Rechercher un examen..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10" />
+            <Input 
+              id="search-exams"
+              name="search-exams"
+              placeholder="Rechercher un examen..." 
+              value={searchTerm} 
+              onChange={e => setSearchTerm(e.target.value)} 
+              className="pl-10" 
+            />
           </div>
         </div>
 
