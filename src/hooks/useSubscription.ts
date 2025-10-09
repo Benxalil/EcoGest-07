@@ -89,30 +89,21 @@ export const useSubscription = () => {
         const now = new Date();
         const daysRemaining = Math.ceil((trialEndDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 
-        if (school.subscription_status === 'cancelled' || school.subscription_status === 'suspended') {
-          setSubscriptionStatus({
-            isTrialActive: false,
-            trialStartDate: null,
-            trialEndDate,
-            daysRemaining: 0,
-            showWarning: false,
-            isExpired: true,
-          });
-        } else {
-          // Trial status
-          const isTrialActive = daysRemaining > 0;
-          const showWarning = daysRemaining <= 5 && daysRemaining > 0;
-          const isExpired = daysRemaining <= 0;
+        // La logique doit être basée uniquement sur les jours restants
+        // Le statut 'cancelled' ou 'suspended' ne doit pas forcer l'expiration
+        // tant qu'il reste des jours
+        const isExpired = daysRemaining <= 0;
+        const isTrialActive = daysRemaining > 0 && school.subscription_status === 'trial';
+        const showWarning = daysRemaining <= 5 && daysRemaining > 0;
 
-          setSubscriptionStatus({
-            isTrialActive,
-            trialStartDate: null,
-            trialEndDate,
-            daysRemaining: Math.max(0, daysRemaining),
-            showWarning,
-            isExpired,
-          });
-        }
+        setSubscriptionStatus({
+          isTrialActive,
+          trialStartDate: null,
+          trialEndDate,
+          daysRemaining: Math.max(0, daysRemaining),
+          showWarning,
+          isExpired,
+        });
       } else {
         // Pas de trial_end_date, donc pas d'essai actif
         setSubscriptionStatus({
