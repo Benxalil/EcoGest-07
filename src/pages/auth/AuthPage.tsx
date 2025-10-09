@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { EyeIcon, EyeOffIcon, Mail, Lock, User, UserCircle, Building2, Info } from "lucide-react";
 import { EcoGestFullLogo } from "@/assets/EcoGestLogo";
 import { useToast } from "@/hooks/use-toast";
@@ -16,6 +16,7 @@ import { Moon, Sun } from "lucide-react";
 const AuthPage = () => {
   const { toast } = useToast();
   const { theme, setTheme } = useTheme();
+  const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [loginType, setLoginType] = useState<"admin" | "user">("user");
@@ -58,7 +59,7 @@ const AuthPage = () => {
         email = buildAuthEmail(parsed.matricule, parsed.schoolSuffix);
       }
 
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data: authData, error } = await supabase.auth.signInWithPassword({
         email: email,
         password: loginData.password,
       });
@@ -82,11 +83,27 @@ const AuthPage = () => {
           variant: "destructive",
         });
       } else {
-        toast({
-          title: "Connexion réussie",
-          description: "Bienvenue !",
-        });
-        window.location.href = "/";
+        // Attendre que la session soit complètement établie
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (session) {
+          toast({
+            title: "Connexion réussie",
+            description: "Bienvenue !",
+          });
+          
+          // Utiliser navigate au lieu de window.location.href
+          // Petit délai pour s'assurer que la session est persistée
+          setTimeout(() => {
+            navigate("/", { replace: true });
+          }, 100);
+        } else {
+          toast({
+            title: "Erreur",
+            description: "Impossible d'établir la session. Veuillez réessayer.",
+            variant: "destructive",
+          });
+        }
       }
     } catch (error) {
       console.error("Login error:", error);
