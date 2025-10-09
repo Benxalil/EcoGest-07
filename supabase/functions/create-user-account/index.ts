@@ -111,10 +111,10 @@ serve(async (req) => {
       )
     }
 
-    // Créer l'entrée dans profiles
+    // Créer ou mettre à jour l'entrée dans profiles (upsert pour éviter les conflits)
     const { error: profileError } = await supabaseClient
       .from('profiles')
-      .insert({
+      .upsert({
         id: authUser.user.id,
         email: authEmail,
         first_name,
@@ -122,6 +122,8 @@ serve(async (req) => {
         role,
         school_id,
         is_active: true
+      }, {
+        onConflict: 'id'
       })
 
     if (profileError) {
