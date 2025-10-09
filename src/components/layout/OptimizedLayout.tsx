@@ -27,7 +27,7 @@ const Layout = memo(({ children }: LayoutProps) => {
   
   // Optimized subscription status check
   const isExpired = useMemo(() => {
-    return subscriptionStatus.isExpired || subscriptionStatus.showWarning;
+    return subscriptionStatus.isExpired; // Blocker uniquement si vraiment expiré
   }, [subscriptionStatus]);
 
   // Handle sidebar toggle
