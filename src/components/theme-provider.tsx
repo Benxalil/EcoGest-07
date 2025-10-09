@@ -32,7 +32,12 @@ export function ThemeProvider({
     if (isAuthPage) {
       return "light";
     }
-    return (localStorage.getItem(storageKey) as Theme) || defaultTheme;
+    const savedTheme = localStorage.getItem(storageKey) as Theme;
+    // Ne jamais retourner "system", toujours utiliser "light" ou "dark"
+    if (savedTheme === "system" || !savedTheme) {
+      return defaultTheme;
+    }
+    return savedTheme;
   })
 
   useEffect(() => {
