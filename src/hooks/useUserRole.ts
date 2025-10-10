@@ -60,7 +60,7 @@ export const useUserRole = () => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(() => loadCachedProfile());
-  const [loading, setLoading] = useState(!loadCachedProfile()); // Pas de loading si on a le cache
+  const [loading, setLoading] = useState(true); // Toujours commencer en loading pour vérifier la session
 
   const fetchUserProfile = async (userId: string) => {
     try {
@@ -96,16 +96,28 @@ export const useUserRole = () => {
 
     // Check for existing session immediately
     const initSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!isMounted) return;
-      
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      if (session?.user) {
-        await fetchUserProfile(session.user.id);
-      } else {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (!isMounted) return;
+        
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        if (session?.user) {
+          // Si on a déjà le profil en cache, on le garde pendant le fetch
+          const cachedProfile = loadCachedProfile();
+          if (cachedProfile && cachedProfile.id === session.user.id) {
+            setUserProfile(cachedProfile);
+          }
+          await fetchUserProfile(session.user.id);
+        } else {
+          setUserProfile(null);
+          localStorage.removeItem(CACHE_KEY);
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error('Error initializing session:', error);
         setLoading(false);
       }
     };
@@ -123,7 +135,7 @@ export const useUserRole = () => {
         // Only refetch on SIGNED_IN event to avoid duplicate calls
         if (event === 'SIGNED_IN' && session?.user) {
           setTimeout(() => fetchUserProfile(session.user.id), 0);
-        } else if (!session) {
+        } else if (event === 'SIGNED_OUT' || !session) {
           setUserProfile(null);
           localStorage.removeItem(CACHE_KEY); // Nettoyer le cache
           setLoading(false);
