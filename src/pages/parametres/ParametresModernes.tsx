@@ -420,6 +420,8 @@ export default function ParametresModernes() {
       // Sauvegarder les autres paramètres en localStorage (notifications, sécurité, sauvegarde)
       localStorage.setItem('settings', JSON.stringify(generalSettings));
       localStorage.setItem('teacherSettings', JSON.stringify(teacherSettings));
+      localStorage.setItem('studentSettings', JSON.stringify(studentSettings));
+      localStorage.setItem('parentSettings', JSON.stringify(parentSettings));
       localStorage.setItem('notificationSettings', JSON.stringify(notificationSettings));
       localStorage.setItem('securitySettings', JSON.stringify(securitySettings));
       localStorage.setItem('backupSettings', JSON.stringify(backupSettings));
