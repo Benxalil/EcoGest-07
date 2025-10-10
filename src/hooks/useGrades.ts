@@ -66,7 +66,7 @@ export const useGrades = (studentId?: string, subjectId?: string, examId?: strin
 
       let query = supabase
         .from('grades')
-        .select('*')
+        .select('id, student_id, subject_id, exam_id, grade_value, max_grade, coefficient, semester, exam_type, created_at, updated_at, created_by, school_id')
         .eq('school_id', userProfile.schoolId)
         .order('created_at', { ascending: false });
 

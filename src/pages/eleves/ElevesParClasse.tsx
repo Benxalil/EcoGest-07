@@ -218,7 +218,7 @@ export default function ElevesParClasse() {
         const {
           data: documents,
           error
-        } = await supabase.from('student_documents').select('*').eq('student_id', selectedStudent.id).eq('file_type', 'photo').order('created_at', {
+        } = await supabase.from('student_documents').select('id, student_id, file_path, file_name, file_type, created_at').eq('student_id', selectedStudent.id).eq('file_type', 'photo').order('created_at', {
           ascending: false
         }).limit(1);
         if (error) {
@@ -314,7 +314,7 @@ export default function ElevesParClasse() {
       const {
         data: documents,
         error
-      } = await supabase.from('student_documents').select('*').eq('student_id', selectedStudent.id).eq('file_type', 'photo').order('created_at', {
+      } = await supabase.from('student_documents').select('id, student_id, file_path, file_name, file_type, created_at').eq('student_id', selectedStudent.id).eq('file_type', 'photo').order('created_at', {
         ascending: false
       }).limit(1);
       if (!error && documents && documents.length > 0) {

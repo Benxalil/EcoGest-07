@@ -46,7 +46,7 @@ export const usePayments = () => {
       setLoading(true);
       const { data: paymentsData, error } = await supabase
         .from('payments')
-        .select('*')
+        .select('id, student_id, amount, payment_method, payment_type, payment_month, paid_by, phone_number, payment_date, school_id, created_at, updated_at')
         .eq('school_id', userProfile.schoolId)
         .order('created_at', { ascending: false });
 
