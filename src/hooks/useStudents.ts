@@ -16,9 +16,13 @@ export interface Student {
   phone?: string;
   parent_phone?: string;
   parent_email?: string;
+  parent_first_name?: string;
+  parent_last_name?: string;
+  parent_matricule?: string;
   emergency_contact?: string;
   school_id: string;
   class_id?: string;
+  user_id?: string;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -246,14 +250,30 @@ export function useStudents(classId?: string) {
         });
       }
 
-      // Créer le compte d'authentification pour le parent
-      await createStudentAuthAccount(
-        parentMatricule, 
-        schoolSuffix, 
-        'Parent de ' + studentData.first_name, 
-        studentData.last_name,
-        'parent123'
-      );
+      // Créer le compte d'authentification pour le parent UNIQUEMENT s'il n'existe pas déjà
+      // Si parent_matricule est fourni, cela signifie qu'on lie à un parent existant
+      if (!studentData.parent_matricule) {
+        await createStudentAuthAccount(
+          parentMatricule, 
+          schoolSuffix, 
+          'Parent de ' + studentData.first_name, 
+          studentData.last_name,
+          'parent123'
+        );
+      } else {
+        // Si parent existant, on vérifie qu'il existe bien dans la base
+        const { data: existingParent } = await supabase
+          .from('students')
+          .select('parent_matricule')
+          .eq('school_id', userProfile?.schoolId)
+          .eq('parent_matricule', studentData.parent_matricule)
+          .limit(1)
+          .maybeSingle();
+
+        if (!existingParent) {
+          throw new Error('Le matricule parent spécifié n\'existe pas dans le système');
+        }
+      }
 
       // Créer l'élève avec l'ID utilisateur si le compte auth a été créé
       const { data, error } = await supabase
@@ -261,7 +281,7 @@ export function useStudents(classId?: string) {
         .insert([{
           ...studentData,
           student_number: studentNumber,
-          parent_matricule: parentMatricule,
+          parent_matricule: studentData.parent_matricule || parentMatricule, // Utiliser parent_matricule fourni ou généré
           user_id: authUser?.id || null
         }])
         .select(`

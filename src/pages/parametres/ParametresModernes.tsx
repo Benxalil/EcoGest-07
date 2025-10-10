@@ -21,6 +21,7 @@ import { TeacherSettings } from "@/components/parametres/TeacherSettings";
 import { SchoolPrefixManager } from "@/components/admin/SchoolPrefixManager";
 import { Database as DatabaseType } from "@/integrations/supabase/types";
 import { supabase } from "@/integrations/supabase/client";
+import { useSchoolSettings } from "@/hooks/useSchoolSettings";
 
 interface GeneralSettings {
   formatNomUtilisateur: string;
@@ -81,6 +82,7 @@ export default function ParametresModernes() {
   const { subscriptionStatus, simulateSubscriptionState } = useSubscription();
   const { isTeacher, loading, userProfile, simulateRole, resetRoleSimulation, isSimulating } = useUserRole();
   const { schoolData, updateSchoolData, loading: schoolLoading } = useSchoolData();
+  const { settings: schoolSettings, loading: settingsLoading, updateSettings: updateSchoolSettings } = useSchoolSettings();
   
   const [showPasswords, setShowPasswords] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -389,11 +391,23 @@ export default function ParametresModernes() {
         throw new Error("Échec de la mise à jour des données de l'école");
       }
 
-      // Sauvegarder les autres paramètres en localStorage
+      // Sauvegarder les formats de matricule dans la base de données via useSchoolSettings
+      const settingsSuccess = await updateSchoolSettings({
+        studentMatriculeFormat: studentSettings.matriculeFormat,
+        parentMatriculeFormat: parentSettings.matriculeFormat,
+        defaultStudentPassword: studentSettings.defaultStudentPassword,
+        defaultParentPassword: parentSettings.defaultParentPassword,
+        autoGenerateStudentMatricule: studentSettings.autoGenerateMatricule,
+        autoGenerateParentMatricule: parentSettings.autoGenerateMatricule,
+      });
+
+      if (!settingsSuccess) {
+        throw new Error("Échec de la mise à jour des paramètres de matricules");
+      }
+
+      // Sauvegarder les autres paramètres en localStorage (notifications, sécurité, sauvegarde)
       localStorage.setItem('settings', JSON.stringify(generalSettings));
       localStorage.setItem('teacherSettings', JSON.stringify(teacherSettings));
-      localStorage.setItem('studentSettings', JSON.stringify(studentSettings));
-      localStorage.setItem('parentSettings', JSON.stringify(parentSettings));
       localStorage.setItem('notificationSettings', JSON.stringify(notificationSettings));
       localStorage.setItem('securitySettings', JSON.stringify(securitySettings));
       localStorage.setItem('backupSettings', JSON.stringify(backupSettings));
@@ -708,23 +722,73 @@ export default function ParametresModernes() {
                       }}
                       placeholder="ELEVE"
                     />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Format: {studentSettings.matriculeFormat}001, {studentSettings.matriculeFormat}002, etc.
+                    </p>
                   </div>
                   <div>
-                    <Label>Préfixe Enseignants</Label>
+                    <Label>Préfixe Parents</Label>
                     <Input 
-                      value={teacherSettings.teacherPrefix}
+                      value={parentSettings.matriculeFormat}
                       onChange={e => {
-                        setTeacherSettings(prev => ({...prev, teacherPrefix: e.target.value}));
+                        setParentSettings(prev => ({...prev, matriculeFormat: e.target.value}));
                         setHasUnsavedChanges(true);
                       }}
-                      placeholder="PROF"
+                      placeholder="PAR"
                     />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Format: {parentSettings.matriculeFormat}001, {parentSettings.matriculeFormat}002, etc.
+                    </p>
                   </div>
                 </div>
                 
+                <Separator />
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label>Mot de passe par défaut (Élèves)</Label>
+                    <div className="relative">
+                      <Input 
+                        type={showPasswords ? "text" : "password"}
+                        value={studentSettings.defaultStudentPassword}
+                        onChange={e => {
+                          setStudentSettings(prev => ({...prev, defaultStudentPassword: e.target.value}));
+                          setHasUnsavedChanges(true);
+                        }}
+                        placeholder="student123"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-0 top-0"
+                        onClick={() => setShowPasswords(!showPasswords)}
+                      >
+                        {showPasswords ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                  </div>
+                  <div>
+                    <Label>Mot de passe par défaut (Parents)</Label>
+                    <div className="relative">
+                      <Input 
+                        type={showPasswords ? "text" : "password"}
+                        value={parentSettings.defaultParentPassword}
+                        onChange={e => {
+                          setParentSettings(prev => ({...prev, defaultParentPassword: e.target.value}));
+                          setHasUnsavedChanges(true);
+                        }}
+                        placeholder="parent123"
+                      />
+                    </div>
+                  </div>
+                </div>
+                
+                <Separator />
+                
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <Label htmlFor="autoGenMatricule">Génération automatique des matricules</Label>
+                    <Label htmlFor="autoGenMatricule">Génération automatique des matricules élèves</Label>
                     <Switch 
                       id="autoGenMatricule"
                       checked={studentSettings.autoGenerateMatricule}
@@ -736,12 +800,12 @@ export default function ParametresModernes() {
                   </div>
                   
                   <div className="flex items-center justify-between">
-                    <Label htmlFor="autoGenUsername">Génération automatique des noms d'utilisateur</Label>
+                    <Label htmlFor="autoGenParentMatricule">Génération automatique des matricules parents</Label>
                     <Switch 
-                      id="autoGenUsername"
-                      checked={teacherSettings.autoGenerateUsername}
+                      id="autoGenParentMatricule"
+                      checked={parentSettings.autoGenerateMatricule}
                       onCheckedChange={(checked) => {
-                        setTeacherSettings(prev => ({...prev, autoGenerateUsername: checked}));
+                        setParentSettings(prev => ({...prev, autoGenerateMatricule: checked}));
                         setHasUnsavedChanges(true);
                       }}
                     />

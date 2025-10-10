@@ -988,15 +988,20 @@ export type Database = {
         Row: {
           academic_year: string
           address: string | null
+          auto_generate_parent_matricule: boolean | null
+          auto_generate_student_matricule: boolean | null
           created_at: string | null
           created_by: string | null
           creation_year: number | null
           currency: Database["public"]["Enums"]["currency_type"] | null
+          default_parent_password: string | null
+          default_student_password: string | null
           email: string | null
           id: string
           language: Database["public"]["Enums"]["language_type"] | null
           logo_url: string | null
           name: string
+          parent_matricule_format: string | null
           phone: string | null
           school_suffix: string | null
           school_type: Database["public"]["Enums"]["school_type"] | null
@@ -1008,6 +1013,7 @@ export type Database = {
           sponsor_name: string | null
           sponsor_phone: string | null
           starter_compatible: boolean
+          student_matricule_format: string | null
           subscription_plan: string | null
           subscription_status:
             | Database["public"]["Enums"]["subscription_status"]
@@ -1019,15 +1025,20 @@ export type Database = {
         Insert: {
           academic_year?: string
           address?: string | null
+          auto_generate_parent_matricule?: boolean | null
+          auto_generate_student_matricule?: boolean | null
           created_at?: string | null
           created_by?: string | null
           creation_year?: number | null
           currency?: Database["public"]["Enums"]["currency_type"] | null
+          default_parent_password?: string | null
+          default_student_password?: string | null
           email?: string | null
           id?: string
           language?: Database["public"]["Enums"]["language_type"] | null
           logo_url?: string | null
           name: string
+          parent_matricule_format?: string | null
           phone?: string | null
           school_suffix?: string | null
           school_type?: Database["public"]["Enums"]["school_type"] | null
@@ -1039,6 +1050,7 @@ export type Database = {
           sponsor_name?: string | null
           sponsor_phone?: string | null
           starter_compatible?: boolean
+          student_matricule_format?: string | null
           subscription_plan?: string | null
           subscription_status?:
             | Database["public"]["Enums"]["subscription_status"]
@@ -1050,15 +1062,20 @@ export type Database = {
         Update: {
           academic_year?: string
           address?: string | null
+          auto_generate_parent_matricule?: boolean | null
+          auto_generate_student_matricule?: boolean | null
           created_at?: string | null
           created_by?: string | null
           creation_year?: number | null
           currency?: Database["public"]["Enums"]["currency_type"] | null
+          default_parent_password?: string | null
+          default_student_password?: string | null
           email?: string | null
           id?: string
           language?: Database["public"]["Enums"]["language_type"] | null
           logo_url?: string | null
           name?: string
+          parent_matricule_format?: string | null
           phone?: string | null
           school_suffix?: string | null
           school_type?: Database["public"]["Enums"]["school_type"] | null
@@ -1070,6 +1087,7 @@ export type Database = {
           sponsor_name?: string | null
           sponsor_phone?: string | null
           starter_compatible?: boolean
+          student_matricule_format?: string | null
           subscription_plan?: string | null
           subscription_status?:
             | Database["public"]["Enums"]["subscription_status"]
