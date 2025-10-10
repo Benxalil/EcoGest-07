@@ -214,6 +214,25 @@ export default function ParametresModernes() {
     }
   }, [schoolData, academicYear, schoolLoading]);
 
+  // Synchroniser les paramètres élèves/parents avec la base de données
+  useEffect(() => {
+    if (!settingsLoading && schoolSettings) {
+      setStudentSettings(prev => ({
+        ...prev,
+        matriculeFormat: schoolSettings.studentMatriculeFormat,
+        defaultStudentPassword: schoolSettings.defaultStudentPassword,
+        autoGenerateMatricule: schoolSettings.autoGenerateStudentMatricule,
+      }));
+      
+      setParentSettings(prev => ({
+        ...prev,
+        matriculeFormat: schoolSettings.parentMatriculeFormat,
+        defaultParentPassword: schoolSettings.defaultParentPassword,
+        autoGenerateMatricule: schoolSettings.autoGenerateParentMatricule,
+      }));
+    }
+  }, [schoolSettings, settingsLoading]);
+
   // Charger les dates de l'année académique depuis la base de données
   useEffect(() => {
     const loadAcademicYearDates = async () => {
@@ -269,15 +288,8 @@ export default function ParametresModernes() {
         setTeacherSettings(JSON.parse(teachers));
       }
 
-      const students = localStorage.getItem('studentSettings');
-      if (students) {
-        setStudentSettings(JSON.parse(students));
-      }
-
-      const parents = localStorage.getItem('parentSettings');
-      if (parents) {
-        setParentSettings(JSON.parse(parents));
-      }
+      // Note: studentSettings et parentSettings viennent maintenant de la base de données via useSchoolSettings
+      // Ne plus les charger depuis localStorage
 
       const notifications = localStorage.getItem('notificationSettings');
       if (notifications) {
@@ -440,8 +452,7 @@ export default function ParametresModernes() {
     if (confirm('Êtes-vous sûr de vouloir réinitialiser tous les paramètres ?')) {
       localStorage.removeItem('settings');
       localStorage.removeItem('teacherSettings');
-      localStorage.removeItem('studentSettings');
-      localStorage.removeItem('parentSettings');
+      // Note: studentSettings et parentSettings sont maintenant en base de données
       localStorage.removeItem('notificationSettings');
       localStorage.removeItem('securitySettings');
       localStorage.removeItem('backupSettings');
@@ -711,36 +722,44 @@ export default function ParametresModernes() {
                 
                 <Separator />
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label>Préfixe Élèves</Label>
-                    <Input 
-                      value={studentSettings.matriculeFormat}
-                      onChange={e => {
-                        setStudentSettings(prev => ({...prev, matriculeFormat: e.target.value}));
-                        setHasUnsavedChanges(true);
-                      }}
-                      placeholder="ELEVE"
-                    />
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Format: {studentSettings.matriculeFormat}001, {studentSettings.matriculeFormat}002, etc.
-                    </p>
+                {settingsLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="text-sm text-muted-foreground">
+                      Chargement des formats de matricule...
+                    </div>
                   </div>
-                  <div>
-                    <Label>Préfixe Parents</Label>
-                    <Input 
-                      value={parentSettings.matriculeFormat}
-                      onChange={e => {
-                        setParentSettings(prev => ({...prev, matriculeFormat: e.target.value}));
-                        setHasUnsavedChanges(true);
-                      }}
-                      placeholder="PAR"
-                    />
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Format: {parentSettings.matriculeFormat}001, {parentSettings.matriculeFormat}002, etc.
-                    </p>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label>Préfixe Élèves</Label>
+                      <Input 
+                        value={studentSettings.matriculeFormat}
+                        onChange={e => {
+                          setStudentSettings(prev => ({...prev, matriculeFormat: e.target.value}));
+                          setHasUnsavedChanges(true);
+                        }}
+                        placeholder="ELEVE"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Format: {studentSettings.matriculeFormat}001, {studentSettings.matriculeFormat}002, etc.
+                      </p>
+                    </div>
+                    <div>
+                      <Label>Préfixe Parents</Label>
+                      <Input 
+                        value={parentSettings.matriculeFormat}
+                        onChange={e => {
+                          setParentSettings(prev => ({...prev, matriculeFormat: e.target.value}));
+                          setHasUnsavedChanges(true);
+                        }}
+                        placeholder="PAR"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Format: {parentSettings.matriculeFormat}001, {parentSettings.matriculeFormat}002, etc.
+                      </p>
+                    </div>
                   </div>
-                </div>
+                )}
                 
                 <Separator />
                 
