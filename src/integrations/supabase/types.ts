@@ -1680,6 +1680,13 @@ export type Database = {
         }
         Returns: number
       }
+      get_next_user_number_continuous: {
+        Args: {
+          role_param: Database["public"]["Enums"]["user_role"]
+          school_id_param: string
+        }
+        Returns: number
+      }
       get_school_profiles: {
         Args: { target_school_id: string }
         Returns: {

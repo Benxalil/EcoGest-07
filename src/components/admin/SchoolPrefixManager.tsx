@@ -65,7 +65,7 @@ export function SchoolPrefixManager() {
       });
 
       if (!success) {
-        throw new Error("Impossible de mettre à jour le matricule");
+        throw new Error("Impossible de mettre à jour le matricule. Veuillez vérifier qu'il est unique.");
       }
 
       // Étape 2: Synchroniser tous les identifiants utilisateurs
@@ -98,9 +98,14 @@ export function SchoolPrefixManager() {
 
     } catch (error) {
       console.error('Erreur:', error);
+      const errorMessage = error instanceof Error ? error.message : "Erreur lors de la mise à jour";
+      const isUniqueError = errorMessage.includes('unique') || errorMessage.includes('duplicate') || errorMessage.includes('already exists');
+      
       toast({
         title: "Erreur",
-        description: error instanceof Error ? error.message : "Erreur lors de la mise à jour",
+        description: isUniqueError 
+          ? "⚠️ Ce matricule d'école est déjà utilisé par une autre école. Veuillez en choisir un autre."
+          : errorMessage,
         variant: "destructive"
       });
     } finally {
@@ -125,9 +130,9 @@ export function SchoolPrefixManager() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Matricule d'école</CardTitle>
+        <CardTitle>Matricule de l'école</CardTitle>
         <CardDescription>
-          Ce matricule identifie votre école et est utilisé pour construire les identifiants de connexion de tous vos utilisateurs
+          Ce matricule identifie votre école de manière unique au niveau système et est utilisé pour construire les identifiants de connexion de tous vos utilisateurs
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -156,7 +161,7 @@ export function SchoolPrefixManager() {
         </Alert>
 
         <div className="space-y-2">
-          <Label htmlFor="school-suffix">Matricule d'école</Label>
+          <Label htmlFor="school-suffix">Matricule de l'école</Label>
           <div className="flex gap-2">
             <Input
               id="school-suffix"
@@ -182,10 +187,12 @@ export function SchoolPrefixManager() {
           </div>
           <p className="text-xs text-muted-foreground">
             ⚠️ Lettres, chiffres et underscores (_) uniquement. Exemple : ecole_best, mon_ecole_2024
+            <br />
+            🔒 <strong>Le matricule doit être unique au niveau système</strong> - aucune autre école ne peut utiliser le même.
           </p>
           {schoolData?.school_suffix && schoolData.school_suffix !== schoolSuffix && (
             <p className="text-xs text-orange-600 dark:text-orange-400 font-medium">
-              ⚡ Attention : La modification du matricule mettra à jour tous les identifiants existants
+              ⚡ Attention : La modification du matricule mettra à jour tous les identifiants existants, mais les numéros continueront de manière séquentielle (pas de redémarrage du compteur).
             </p>
           )}
         </div>
@@ -194,9 +201,11 @@ export function SchoolPrefixManager() {
           <Alert className="bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800">
             <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
             <AlertDescription className="text-green-700 dark:text-green-300">
-              <strong>Matricule configuré :</strong> {schoolData.school_suffix}
+              <strong>Matricule de l'école configuré :</strong> {schoolData.school_suffix}
               <br />
               Tous vos utilisateurs se connectent avec : <code className="bg-green-100 dark:bg-green-900 px-1 rounded">MATRICULE@{schoolData.school_suffix}</code>
+              <br />
+              🔒 Ce matricule est unique au niveau système et garantit l'isolation totale de vos données.
             </AlertDescription>
           </Alert>
         )}
