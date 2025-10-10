@@ -61,29 +61,7 @@ interface EleveFormData {
   documents?: DocumentData[];
 }
 
-// Fonction pour récupérer les paramètres des élèves depuis le localStorage
-const getStudentSettingsFromStorage = () => {
-  try {
-    const savedSettings = localStorage.getItem('studentSettings');
-    if (savedSettings) {
-      return JSON.parse(savedSettings);
-    }
-    return {
-      autoGenerateMatricule: true,
-      matriculeFormat: 'ELEVE',
-      defaultStudentPassword: 'student123',
-      parentNotifications: true
-    };
-  } catch (error) {
-    console.error("Erreur lors de la récupération des paramètres des élèves:", error);
-    return {
-      autoGenerateMatricule: true,
-      matriculeFormat: 'ELEVE',
-      defaultStudentPassword: 'student123',
-      parentNotifications: true
-    };
-  }
-};
+// Cette fonction a été supprimée - les paramètres sont maintenant gérés via useSchoolSettings()
 
 // Fonction pour générer le prochain numéro automatiquement basé sur les matricules existants
 const getNextStudentNumber = async (schoolId: string, prefix: string): Promise<string> => {
@@ -125,24 +103,7 @@ const getNextStudentNumber = async (schoolId: string, prefix: string): Promise<s
   }
 };
 
-// Fonction pour récupérer les paramètres des parents
-const getParentSettingsFromStorage = () => {
-  try {
-    const settings = localStorage.getItem('parentSettings');
-    if (settings) {
-      return JSON.parse(settings);
-    }
-  } catch (error) {
-    console.error('Erreur lors de la récupération des paramètres parents:', error);
-  }
-  
-  // Valeurs par défaut si aucun paramètre n'est trouvé
-  return {
-    matriculeFormat: 'PAR',
-    defaultParentPassword: '123456',
-    autoGenerateMatricule: true
-  };
-};
+// Cette fonction a été supprimée - les paramètres sont maintenant gérés via useSchoolSettings()
 
 // Générer le prochain numéro de matricule pour les parents (basé sur le matricule élève)
 const getNextParentNumber = (studentMatricule: string, type: 'PERE' | 'MERE', parentFormat: string, studentFormat: string) => {
@@ -1002,6 +963,11 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
                   <FormControl>
                     <Input {...field} readOnly className="bg-muted" />
                   </FormControl>
+                  {!settingsLoading && userProfile?.schoolId && (
+                    <div className="text-sm text-muted-foreground mt-1">
+                      Format: {schoolSettings.studentMatriculeFormat}XXX@{userProfile.schoolId.substring(0, 8)}.ecogest.app
+                    </div>
+                  )}
                   <FormMessage />
                 </FormItem>} />
 
@@ -1228,10 +1194,19 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
                 <FormField control={form.control} name="pereNomUtilisateur" render={({
                 field
               }) => <FormItem>
-                      <FormLabel>Nom d'utilisateur</FormLabel>
+                      <FormLabel>Nom d'utilisateur (Père)</FormLabel>
                       <FormControl>
-                        <Input {...field} readOnly className="bg-muted" />
+                        <Input 
+                          {...field} 
+                          disabled={schoolSettings.autoGenerateParentMatricule && !useFatherExisting}
+                          className={schoolSettings.autoGenerateParentMatricule && !useFatherExisting ? "bg-muted" : ""}
+                        />
                       </FormControl>
+                      {!settingsLoading && !useFatherExisting && userProfile?.schoolId && (
+                        <div className="text-sm text-muted-foreground mt-1">
+                          Format: {schoolSettings.parentMatriculeFormat}XXX@{userProfile.schoolId.substring(0, 8)}.ecogest.app
+                        </div>
+                      )}
                       <FormMessage />
                     </FormItem>} />
 
@@ -1330,10 +1305,19 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
                 <FormField control={form.control} name="mereNomUtilisateur" render={({
                 field
               }) => <FormItem>
-                      <FormLabel>Nom d'utilisateur (optionnel)</FormLabel>
+                      <FormLabel>Nom d'utilisateur (Mère) (optionnel)</FormLabel>
                       <FormControl>
-                        <Input {...field} readOnly className="bg-muted" />
+                        <Input 
+                          {...field} 
+                          disabled={schoolSettings.autoGenerateParentMatricule && !useMotherExisting}
+                          className={schoolSettings.autoGenerateParentMatricule && !useMotherExisting ? "bg-muted" : ""}
+                        />
                       </FormControl>
+                      {!settingsLoading && !useMotherExisting && userProfile?.schoolId && (
+                        <div className="text-sm text-muted-foreground mt-1">
+                          Format: {schoolSettings.parentMatriculeFormat}XXX@{userProfile.schoolId.substring(0, 8)}.ecogest.app
+                        </div>
+                      )}
                       <FormMessage />
                     </FormItem>} />
 

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserRole } from './useUserRole';
+import { useSchoolSettings } from './useSchoolSettings';
 import { useToast } from '@/hooks/use-toast';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
@@ -39,6 +40,7 @@ export function useStudents(classId?: string) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { userProfile } = useUserRole();
+  const { settings: schoolSettings } = useSchoolSettings();
   const { toast } = useToast();
 
   const fetchStudents = useCallback(async () => {
@@ -210,21 +212,32 @@ export function useStudents(classId?: string) {
 
       const schoolSuffix = schoolData?.school_suffix || 'school';
 
-      // Générer l'identifiant complet avec le suffixe de l'école
-      const { data: fullIdentifier, error: identifierError } = await supabase.rpc('generate_user_identifier', {
-        school_id_param: userProfile?.schoolId,
-        role_param: 'student'
-      });
+      // Utiliser le student_number fourni (déjà généré avec le bon format dans AjoutEleveForm)
+      // ou générer un nouveau si non fourni
+      let studentNumber = studentData.student_number;
+      
+      if (!studentNumber) {
+        // Fallback: générer un identifiant si non fourni
+        const { data: fullIdentifier, error: identifierError } = await supabase.rpc('generate_user_identifier', {
+          school_id_param: userProfile?.schoolId,
+          role_param: 'student'
+        });
 
-      if (identifierError || !fullIdentifier) {
-        throw new Error('Impossible de générer l\'identifiant');
+        if (identifierError || !fullIdentifier) {
+          throw new Error('Impossible de générer l\'identifiant');
+        }
+
+        studentNumber = fullIdentifier.split('@')[0];
       }
 
-      // Extraire le numéro de l'identifiant généré pour créer le compte auth
-      const studentNumber = fullIdentifier.split('@')[0];
-
-      // Générer le matricule parent
-      const parentMatricule = studentNumber.replace('ELEVE', 'PARENT').replace('Eleve', 'Parent');
+      // Générer le matricule parent en utilisant le format personnalisé
+      let parentMatricule = studentData.parent_matricule;
+      
+      if (!parentMatricule) {
+        // Extraire le numéro du matricule élève et créer le matricule parent
+        const numberPart = studentNumber.replace(schoolSettings.studentMatriculeFormat, '');
+        parentMatricule = `${schoolSettings.parentMatriculeFormat}${numberPart}`;
+      }
 
       // Mise à jour optimiste
       optimisticStudent = {
@@ -239,8 +252,14 @@ export function useStudents(classId?: string) {
         a.first_name.localeCompare(b.first_name)
       ));
 
-      // Créer le compte d'authentification pour l'élève
-      const authUser = await createStudentAuthAccount(studentNumber, schoolSuffix, studentData.first_name, studentData.last_name);
+      // Créer le compte d'authentification pour l'élève avec le mot de passe personnalisé
+      const authUser = await createStudentAuthAccount(
+        studentNumber, 
+        schoolSuffix, 
+        studentData.first_name, 
+        studentData.last_name,
+        schoolSettings.defaultStudentPassword
+      );
       
       if (!authUser) {
         toast({
@@ -250,15 +269,14 @@ export function useStudents(classId?: string) {
         });
       }
 
-      // Créer le compte d'authentification pour le parent UNIQUEMENT s'il n'existe pas déjà
-      // Si parent_matricule est fourni, cela signifie qu'on lie à un parent existant
+      // Créer le compte parent avec le mot de passe personnalisé
       if (!studentData.parent_matricule) {
         await createStudentAuthAccount(
           parentMatricule, 
           schoolSuffix, 
           'Parent de ' + studentData.first_name, 
           studentData.last_name,
-          'parent123'
+          schoolSettings.defaultParentPassword
         );
       } else {
         // Si parent existant, on vérifie qu'il existe bien dans la base
