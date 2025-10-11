@@ -39,7 +39,13 @@ export const useTeachers = () => {
   const { toast } = useToast();
 
   // Créer un compte d'authentification pour l'enseignant
-  const createTeacherAuthAccount = async (employeeNumber: string, schoolSuffix: string, firstName: string, lastName: string, defaultPassword: string = 'teacher123') => {
+  const createTeacherAuthAccount = async (
+    employeeNumber: string, 
+    schoolSuffix: string, 
+    firstName: string, 
+    lastName: string, 
+    password: string
+  ) => {
     try {
       // Pour les enseignants, on envoie seulement le matricule (pas d'email)
       // L'Edge Function va construire l'email valide pour Supabase
@@ -48,7 +54,7 @@ export const useTeachers = () => {
       const { data, error } = await supabase.functions.invoke('create-user-account', {
         body: { 
           email: employeeNumber, // Juste le matricule (ex: Prof03)
-          password: defaultPassword, 
+          password: password, 
           role: 'teacher', 
           first_name: firstName, 
           last_name: lastName,
@@ -94,7 +100,7 @@ export const useTeachers = () => {
     }
   }, [userProfile?.schoolId]);
 
-  const createTeacher = async (teacherData: CreateTeacherData & { employee_number?: string }) => {
+  const createTeacher = async (teacherData: CreateTeacherData & { employee_number?: string; password?: string }) => {
     if (!userProfile?.schoolId) return false;
 
     const tempId = `temp-${Date.now()}`;
@@ -127,6 +133,9 @@ export const useTeachers = () => {
         employee_number = fullIdentifier.split('@')[0];
       }
 
+      // Utiliser le mot de passe fourni ou utiliser une valeur par défaut
+      const password = teacherData.password || 'teacher123';
+
       // Mise à jour optimiste
       optimisticTeacher = {
         id: tempId,
@@ -145,8 +154,14 @@ export const useTeachers = () => {
 
       setTeachers(prev => [...prev, optimisticTeacher!]);
 
-      // Créer le compte d'authentification
-      const authUser = await createTeacherAuthAccount(employee_number, schoolSuffix, teacherData.first_name, teacherData.last_name);
+      // Créer le compte d'authentification avec le mot de passe personnalisé
+      const authUser = await createTeacherAuthAccount(
+        employee_number, 
+        schoolSuffix, 
+        teacherData.first_name, 
+        teacherData.last_name,
+        password
+      );
       
       if (!authUser) {
         toast({

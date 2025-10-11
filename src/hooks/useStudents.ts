@@ -167,18 +167,25 @@ export function useStudents(classId?: string) {
     };
   }, [userProfile?.schoolId]);
 
-  // Créer un compte d'authentification pour l'élève
-  const createStudentAuthAccount = async (studentNumber: string, schoolSuffix: string, firstName: string, lastName: string, defaultPassword: string = 'student123') => {
+  // Créer un compte d'authentification pour l'élève ou le parent
+  const createStudentAuthAccount = async (
+    studentNumber: string, 
+    schoolSuffix: string, 
+    firstName: string, 
+    lastName: string, 
+    password: string,
+    role: 'student' | 'parent' | 'teacher'
+  ) => {
     try {
-      // Pour les élèves, on envoie seulement le matricule (pas d'email)
+      // Pour les élèves et parents, on envoie seulement le matricule (pas d'email)
       // L'Edge Function va construire l'email valide pour Supabase
       
       // Créer le compte via Edge Function
       const { data, error } = await supabase.functions.invoke('create-user-account', {
         body: { 
           email: studentNumber, // Juste le matricule (ex: Eleve001)
-          password: defaultPassword, 
-          role: defaultPassword === 'parent123' ? 'parent' : 'student', 
+          password: password, 
+          role: role, 
           first_name: firstName, 
           last_name: lastName,
           school_id: userProfile?.schoolId,
@@ -277,7 +284,8 @@ export function useStudents(classId?: string) {
         schoolSuffix, 
         studentData.first_name, 
         studentData.last_name,
-        studentPassword
+        studentPassword,
+        'student'
       );
       
       if (!authUser) {
@@ -295,7 +303,8 @@ export function useStudents(classId?: string) {
           schoolSuffix, 
           'Parent de ' + studentData.first_name, 
           studentData.last_name,
-          parentPassword
+          parentPassword,
+          'parent'
         );
       } else {
         // Si parent existant, on vérifie qu'il existe bien dans la base

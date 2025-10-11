@@ -228,7 +228,7 @@ export function AjoutEnseignantForm({ onSuccess }: AjoutEnseignantFormProps) {
 
   const onSubmit = async (data: z.infer<typeof formSchema>) => {
     try {
-      // Créer l'enseignant via Supabase
+      // Créer l'enseignant via Supabase avec le mot de passe personnalisé
       const success = await createTeacher({
         first_name: data.prenom,
         last_name: data.nom,
@@ -236,7 +236,8 @@ export function AjoutEnseignantForm({ onSuccess }: AjoutEnseignantFormProps) {
         address: data.adresse,
         specialization: data.matieres.map(m => m.matiere).join(', '),
         is_active: data.statut,
-        employee_number: data.matricule
+        employee_number: data.matricule,
+        password: data.motDePasse // Passer le mot de passe personnalisé
       });
       
       if (success) {
