@@ -198,11 +198,30 @@ export function useStudents(classId?: string) {
     }
   };
 
-  const addStudent = async (studentData: Omit<Student, 'id' | 'created_at' | 'updated_at'>) => {
+  const addStudent = async (studentData: Omit<Student, 'id' | 'created_at' | 'updated_at'>, customSettings?: {
+    studentMatriculeFormat?: string;
+    parentMatriculeFormat?: string;
+    defaultStudentPassword?: string;
+    defaultParentPassword?: string;
+  }) => {
     const tempId = `temp-${Date.now()}`;
     let optimisticStudent: Student | null = null;
 
     try {
+      // Récupérer les paramètres personnalisés depuis localStorage ou utiliser les valeurs par défaut
+      const studentSettings = customSettings?.studentMatriculeFormat 
+        ? customSettings.studentMatriculeFormat 
+        : schoolSettings.studentMatriculeFormat;
+      const parentSettings = customSettings?.parentMatriculeFormat 
+        ? customSettings.parentMatriculeFormat 
+        : schoolSettings.parentMatriculeFormat;
+      const studentPassword = customSettings?.defaultStudentPassword 
+        ? customSettings.defaultStudentPassword 
+        : schoolSettings.defaultStudentPassword;
+      const parentPassword = customSettings?.defaultParentPassword 
+        ? customSettings.defaultParentPassword 
+        : schoolSettings.defaultParentPassword;
+
       // D'abord, récupérer le suffixe de l'école
       const { data: schoolData } = await supabase
         .from('schools')
@@ -235,8 +254,8 @@ export function useStudents(classId?: string) {
       
       if (!parentMatricule) {
         // Extraire le numéro du matricule élève et créer le matricule parent
-        const numberPart = studentNumber.replace(schoolSettings.studentMatriculeFormat, '');
-        parentMatricule = `${schoolSettings.parentMatriculeFormat}${numberPart}`;
+        const numberPart = studentNumber.replace(studentSettings, '');
+        parentMatricule = `${parentSettings}${numberPart}`;
       }
 
       // Mise à jour optimiste
@@ -258,7 +277,7 @@ export function useStudents(classId?: string) {
         schoolSuffix, 
         studentData.first_name, 
         studentData.last_name,
-        schoolSettings.defaultStudentPassword
+        studentPassword
       );
       
       if (!authUser) {
@@ -276,7 +295,7 @@ export function useStudents(classId?: string) {
           schoolSuffix, 
           'Parent de ' + studentData.first_name, 
           studentData.last_name,
-          schoolSettings.defaultParentPassword
+          parentPassword
         );
       } else {
         // Si parent existant, on vérifie qu'il existe bien dans la base

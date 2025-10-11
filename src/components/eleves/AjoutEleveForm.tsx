@@ -782,6 +782,40 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
           
           schoolId = profile?.school_id || schoolId;
         }
+
+        // Récupérer les paramètres personnalisés depuis localStorage
+        const getStudentSettingsFromStorage = () => {
+          const stored = localStorage.getItem('studentSettings');
+          if (stored) {
+            try {
+              return JSON.parse(stored);
+            } catch (e) {
+              console.error('Error parsing studentSettings:', e);
+            }
+          }
+          return {
+            matriculeFormat: schoolSettings.studentMatriculeFormat,
+            defaultPassword: schoolSettings.defaultStudentPassword
+          };
+        };
+
+        const getParentSettingsFromStorage = () => {
+          const stored = localStorage.getItem('parentSettings');
+          if (stored) {
+            try {
+              return JSON.parse(stored);
+            } catch (e) {
+              console.error('Error parsing parentSettings:', e);
+            }
+          }
+          return {
+            matriculeFormat: schoolSettings.parentMatriculeFormat,
+            defaultPassword: schoolSettings.defaultParentPassword
+          };
+        };
+
+        const currentStudentSettings = getStudentSettingsFromStorage();
+        const currentParentSettings = getParentSettingsFromStorage();
         
       const studentData = {
         student_number: data.numeroPerso,
@@ -808,8 +842,13 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
         // Mise à jour d'un élève existant
         result = await updateStudent(initialData.id, studentData);
       } else {
-        // Ajout d'un nouvel élève
-        result = await addStudent(studentData);
+        // Ajout d'un nouvel élève avec les paramètres personnalisés
+        result = await addStudent(studentData, {
+          studentMatriculeFormat: currentStudentSettings.matriculeFormat,
+          parentMatriculeFormat: currentParentSettings.matriculeFormat,
+          defaultStudentPassword: currentStudentSettings.defaultPassword,
+          defaultParentPassword: currentParentSettings.defaultPassword
+        });
       }
       
       // Vérifier que l'élève a bien été créé/modifié
