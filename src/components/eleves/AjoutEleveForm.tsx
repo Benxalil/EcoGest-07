@@ -795,7 +795,7 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
           }
           return {
             matriculeFormat: schoolSettings.studentMatriculeFormat,
-            defaultPassword: schoolSettings.defaultStudentPassword
+            defaultStudentPassword: schoolSettings.defaultStudentPassword
           };
         };
 
@@ -810,7 +810,7 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
           }
           return {
             matriculeFormat: schoolSettings.parentMatriculeFormat,
-            defaultPassword: schoolSettings.defaultParentPassword
+            defaultParentPassword: schoolSettings.defaultParentPassword
           };
         };
 
@@ -846,8 +846,8 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
         result = await addStudent(studentData, {
           studentMatriculeFormat: currentStudentSettings.matriculeFormat,
           parentMatriculeFormat: currentParentSettings.matriculeFormat,
-          defaultStudentPassword: currentStudentSettings.defaultPassword,
-          defaultParentPassword: currentParentSettings.defaultPassword
+          defaultStudentPassword: currentStudentSettings.defaultStudentPassword,
+          defaultParentPassword: currentParentSettings.defaultParentPassword
         });
       }
       
