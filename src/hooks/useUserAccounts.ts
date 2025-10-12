@@ -39,6 +39,17 @@ export const useUserAccounts = (classId?: string) => {
 
     setLoading(true);
     try {
+      // Récupérer d'abord les paramètres de l'école pour les mots de passe
+      const { data: schoolData, error: schoolError } = await supabase
+        .from('schools')
+        .select('default_student_password, default_parent_password')
+        .eq('id', userProfile.schoolId)
+        .single();
+
+      if (schoolError) throw schoolError;
+
+      const studentPassword = schoolData?.default_student_password || 'student123';
+      const parentPassword = schoolData?.default_parent_password || 'parent123';
       // Récupérer les élèves avec leurs classes
       let studentsQuery = supabase
         .from('students')
@@ -86,8 +97,8 @@ export const useUserAccounts = (classId?: string) => {
           class_name: student.classes 
             ? `${student.classes.name} ${student.classes.level}${student.classes.section ? ' - ' + student.classes.section : ''}`
             : 'Sans classe',
-          defaultPassword: 'student123',
-          parentPassword: 'parent123'
+          defaultPassword: studentPassword,
+          parentPassword: parentPassword
         };
       });
 
@@ -102,12 +113,21 @@ export const useUserAccounts = (classId?: string) => {
 
       if (teachersError) throw teachersError;
 
+      // Récupérer le mot de passe par défaut pour les enseignants depuis schools
+      const { data: teacherSchoolData } = await supabase
+        .from('schools')
+        .select('default_student_password')
+        .eq('id', userProfile.schoolId)
+        .single();
+
+      const teacherPassword = teacherSchoolData?.default_student_password || 'teacher123';
+
       const formattedTeachers: TeacherAccount[] = (teachersData || []).map((teacher: any) => ({
         id: teacher.id,
         employee_number: teacher.employee_number,
         first_name: teacher.first_name,
         last_name: teacher.last_name,
-        defaultPassword: 'teacher123'
+        defaultPassword: teacherPassword
       }));
 
       setTeachers(formattedTeachers);
