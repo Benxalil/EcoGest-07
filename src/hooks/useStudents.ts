@@ -229,6 +229,12 @@ export function useStudents(classId?: string) {
         ? customSettings.defaultParentPassword 
         : schoolSettings.defaultParentPassword;
 
+      console.log('🔐 Mots de passe utilisés:', {
+        studentPassword: studentPassword ? '***' + studentPassword.slice(-3) : 'non défini',
+        parentPassword: parentPassword ? '***' + parentPassword.slice(-3) : 'non défini',
+        customSettings: customSettings ? 'Fourni' : 'Non fourni'
+      });
+
       // D'abord, récupérer le suffixe de l'école
       const { data: schoolData } = await supabase
         .from('schools')

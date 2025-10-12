@@ -106,6 +106,10 @@ export const useTeachers = () => {
     const tempId = `temp-${Date.now()}`;
     let optimisticTeacher: TeacherData | null = null;
 
+    console.log('🔐 Mot de passe enseignant:', {
+      password: teacherData.password ? '***' + teacherData.password.slice(-3) : 'non défini'
+    });
+
     try {
       // D'abord, récupérer le suffixe de l'école
       const { data: schoolData } = await supabase

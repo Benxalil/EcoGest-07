@@ -84,6 +84,7 @@ serve(async (req) => {
     }
 
     console.log('Creating user with auth email:', authEmail, 'role:', role)
+    console.log('🔐 Password received (length):', password?.length || 0)
 
     // Créer l'utilisateur dans auth.users
     const { data: authUser, error: authError } = await supabaseClient.auth.admin.createUser({

@@ -83,6 +83,14 @@ export function CreerAnnonceModal({ open, onOpenChange }: CreerAnnonceModalProps
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    console.log('🔍 Soumission du formulaire annonce:', { 
+      titre, 
+      contenu, 
+      dateExpiration, 
+      destinataires, 
+      priorite 
+    });
+    
     if (!titre || !contenu || !dateExpiration || destinataires.length === 0) {
       showError({
         title: "Champs manquants",
@@ -166,14 +174,15 @@ export function CreerAnnonceModal({ open, onOpenChange }: CreerAnnonceModalProps
           <div className="space-y-2">
             <Label>Date d'expiration *</Label>
             <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant={"outline"}
-                  className={cn(
-                    "w-full pl-3 text-left font-normal",
-                    !dateExpiration && "text-muted-foreground"
-                  )}
-                >
+                <PopoverTrigger asChild>
+                  <Button
+                    variant={"outline"}
+                    aria-label="Sélectionner la date d'expiration"
+                    className={cn(
+                      "w-full pl-3 text-left font-normal",
+                      !dateExpiration && "text-muted-foreground"
+                    )}
+                  >
                   {dateExpiration ? (
                     format(dateExpiration, "PPP", { locale: fr })
                   ) : (
@@ -248,13 +257,14 @@ export function CreerAnnonceModal({ open, onOpenChange }: CreerAnnonceModalProps
             >
               Annuler
             </Button>
-            <Button 
-              type="submit" 
-              disabled={isSubmitting}
-              className="min-w-[120px]"
-            >
-              {isSubmitting ? "Création..." : "Créer l'annonce"}
-            </Button>
+              <Button 
+                type="submit"
+                title="Créer cette annonce"
+                disabled={isSubmitting}
+                className="min-w-[120px]"
+              >
+                {isSubmitting ? "Création..." : "Créer l'annonce"}
+              </Button>
           </div>
         </form>
       </DialogContent>
