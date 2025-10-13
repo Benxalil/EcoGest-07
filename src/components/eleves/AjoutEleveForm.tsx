@@ -740,13 +740,26 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
         // Récupérer les paramètres personnalisés depuis localStorage
         const getStudentSettingsFromStorage = () => {
           const stored = localStorage.getItem('studentSettings');
+          console.log('📖 Lecture studentSettings depuis localStorage:', stored);
+          
           if (stored) {
             try {
-              return JSON.parse(stored);
+              const parsed = JSON.parse(stored);
+              console.log('✅ studentSettings parsé:', { 
+                matriculeFormat: parsed.matriculeFormat, 
+                password: parsed.defaultStudentPassword ? '***' + parsed.defaultStudentPassword.slice(-3) : 'vide' 
+              });
+              return parsed;
             } catch (e) {
-              console.error('Error parsing studentSettings:', e);
+              console.error('❌ Error parsing studentSettings:', e);
             }
           }
+          
+          console.log('⚠️ Utilisation des valeurs par défaut (student):', { 
+            matriculeFormat: schoolSettings.studentMatriculeFormat,
+            password: schoolSettings.defaultStudentPassword ? '***' + schoolSettings.defaultStudentPassword.slice(-3) : 'vide'
+          });
+          
           return {
             matriculeFormat: schoolSettings.studentMatriculeFormat,
             defaultStudentPassword: schoolSettings.defaultStudentPassword
@@ -755,13 +768,26 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
 
         const getParentSettingsFromStorage = () => {
           const stored = localStorage.getItem('parentSettings');
+          console.log('📖 Lecture parentSettings depuis localStorage:', stored);
+          
           if (stored) {
             try {
-              return JSON.parse(stored);
+              const parsed = JSON.parse(stored);
+              console.log('✅ parentSettings parsé:', {
+                matriculeFormat: parsed.matriculeFormat,
+                password: parsed.defaultParentPassword ? '***' + parsed.defaultParentPassword.slice(-3) : 'vide'
+              });
+              return parsed;
             } catch (e) {
-              console.error('Error parsing parentSettings:', e);
+              console.error('❌ Error parsing parentSettings:', e);
             }
           }
+          
+          console.log('⚠️ Utilisation des valeurs par défaut (parent):', {
+            matriculeFormat: schoolSettings.parentMatriculeFormat,
+            password: schoolSettings.defaultParentPassword ? '***' + schoolSettings.defaultParentPassword.slice(-3) : 'vide'
+          });
+          
           return {
             matriculeFormat: schoolSettings.parentMatriculeFormat,
             defaultParentPassword: schoolSettings.defaultParentPassword
@@ -797,6 +823,11 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
         result = await updateStudent(initialData.id, studentData);
       } else {
         // Ajout d'un nouvel élève avec les paramètres personnalisés
+        console.log('🔐 Mots de passe transmis à addStudent:', {
+          studentPassword: currentStudentSettings.defaultStudentPassword ? '***' + currentStudentSettings.defaultStudentPassword.slice(-3) : 'vide',
+          parentPassword: currentParentSettings.defaultParentPassword ? '***' + currentParentSettings.defaultParentPassword.slice(-3) : 'vide'
+        });
+        
         result = await addStudent(studentData, {
           studentMatriculeFormat: currentStudentSettings.matriculeFormat,
           parentMatriculeFormat: currentParentSettings.matriculeFormat,
