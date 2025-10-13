@@ -24,6 +24,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useTeachers } from "@/hooks/useTeachers";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useSubjects } from "@/hooks/useSubjects";
+import { useSchoolSettings } from "@/hooks/useSchoolSettings";
 import { supabase } from "@/integrations/supabase/client";
 import { Plus, Trash2 } from "lucide-react";
 
@@ -77,6 +78,7 @@ export function AjoutEnseignantForm({ onSuccess }: AjoutEnseignantFormProps) {
   const { createTeacher } = useTeachers();
   const { userProfile } = useUserRole();
   const { subjects: allMatieres } = useSubjects();
+  const { settings: schoolSettings, loading: settingsLoading } = useSchoolSettings();
   
   // Dédupliquer les matières par nom pour éviter les doublons entre classes
   const matieres = useMemo(() => {
@@ -89,30 +91,11 @@ export function AjoutEnseignantForm({ onSuccess }: AjoutEnseignantFormProps) {
     return Array.from(uniqueMatieres.values());
   }, [allMatieres]);
 
-  // Fonction pour récupérer les paramètres des enseignants
-  const getTeacherSettingsFromStorage = () => {
-    try {
-      const settings = localStorage.getItem('teacherSettings');
-      if (settings) {
-        return JSON.parse(settings);
-      }
-    } catch (error) {
-      console.error('Erreur lors de la récupération des paramètres enseignants:', error);
-    }
-    
-    // Valeurs par défaut si aucun paramètre n'est trouvé
-    return {
-      teacherPrefix: 'Prof',
-      defaultTeacherPassword: '123456',
-      autoGenerateUsername: true
-    };
-  };
-
   // Générer le prochain numéro de matricule basé sur le nombre total d'enseignants
   const getNextTeacherNumber = async (schoolId: string): Promise<string> => {
     try {
-      const teacherSettings = getTeacherSettingsFromStorage();
-      const prefix = teacherSettings.teacherPrefix || 'Prof';
+      // Utiliser les paramètres depuis la base de données uniquement
+      const prefix = schoolSettings.studentMatriculeFormat.replace('ELEVE', 'PROF') || 'Prof';
       
       // Compter le nombre total d'enseignants actifs dans l'école
       const { count, error } = await supabase
@@ -159,45 +142,22 @@ export function AjoutEnseignantForm({ onSuccess }: AjoutEnseignantFormProps) {
     name: "matieres"
   });
 
-  // Générer automatiquement matricule et mot de passe UNIQUEMENT au focus du formulaire
+  // Générer automatiquement matricule et mot de passe au chargement
   useEffect(() => {
-    if (!userProfile?.schoolId) return;
+    if (!userProfile?.schoolId || settingsLoading) return;
     
-    // Générer IMMÉDIATEMENT au montage (une seule fois)
     const initializeForm = async () => {
-      const teacherSettings = getTeacherSettingsFromStorage();
-      
-      if (teacherSettings.autoGenerateUsername) {
+      // Utiliser uniquement les paramètres depuis la base de données
+      if (schoolSettings.autoGenerateStudentMatricule) {
         const nextNumber = await getNextTeacherNumber(userProfile.schoolId);
         form.setValue("matricule", nextNumber);
       }
       
-      form.setValue("motDePasse", teacherSettings.defaultTeacherPassword);
+      form.setValue("motDePasse", schoolSettings.defaultStudentPassword);
     };
     
     initializeForm();
-  }, []); // Dépendances vides = une seule fois au montage
-
-  // Écouter les changements des paramètres depuis les Paramètres
-  useEffect(() => {
-    if (!userProfile?.schoolId) return;
-
-    const handleSettingsUpdate = () => {
-      const teacherSettings = getTeacherSettingsFromStorage();
-      const currentPassword = form.getValues('motDePasse');
-      
-      // Mettre à jour UNIQUEMENT le mot de passe (pas le matricule)
-      if (currentPassword !== teacherSettings.defaultTeacherPassword) {
-        form.setValue("motDePasse", teacherSettings.defaultTeacherPassword);
-      }
-    };
-
-    window.addEventListener('schoolSettingsUpdated', handleSettingsUpdate);
-    
-    return () => {
-      window.removeEventListener('schoolSettingsUpdated', handleSettingsUpdate);
-    };
-  }, [form]);
+  }, [userProfile?.schoolId, settingsLoading]); // Se déclenche quand les settings sont chargés
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
