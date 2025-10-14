@@ -106,10 +106,10 @@ export default function ListeMatieres() {
               Retour aux Classes
             </Button>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">
+              <h1 className="text-2xl font-bold text-foreground">
                 Notes - {classe?.libelle || "Classe"}
               </h1>
-              <p className="text-gray-600">
+              <p className="text-muted-foreground">
                 Effectif: {classe?.effectif} élèves
               </p>
             </div>
@@ -135,12 +135,12 @@ export default function ListeMatieres() {
         </div>
 
         <div className="mb-6">
-          <p className="text-gray-600 mb-4">
+          <p className="text-muted-foreground mb-4">
             Sélectionnez une matière pour consulter ou saisir les notes des élèves.
           </p>
           
           <div className="relative w-full max-w-md">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
               id="search-subjects"
               name="search-subjects"
@@ -181,7 +181,7 @@ export default function ListeMatieres() {
 
         {matieresFiltered.length === 0 && (
           <div className="text-center py-12">
-            <p className="text-gray-500">
+            <p className="text-muted-foreground">
               {searchTerm ? "Aucune matière trouvée pour cette recherche." : "Aucune matière disponible."}
             </p>
           </div>

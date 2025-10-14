@@ -72,10 +72,10 @@ export default function ListeElevesNotes() {
               Retour aux Matières
             </Button>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">
+              <h1 className="text-2xl font-bold text-foreground">
                 Évaluer les Élèves - {matiere?.nom}
               </h1>
-              <p className="text-gray-600">
+              <p className="text-muted-foreground">
                 Classe: {classe?.name} {classe?.level}{classe?.section ? ` - ${classe?.section}` : ''}
               </p>
             </div>
@@ -83,12 +83,12 @@ export default function ListeElevesNotes() {
         </div>
 
         <div className="mb-6">
-          <p className="text-gray-600 mb-4">
+          <p className="text-muted-foreground mb-4">
             Sélectionnez un élève pour saisir ses notes individuellement.
           </p>
           
           <div className="relative w-full max-w-md">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
               placeholder="Rechercher un élève..."
               value={searchTerm}
@@ -109,7 +109,7 @@ export default function ListeElevesNotes() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm text-muted-foreground">
                     <span className="font-medium">Matière:</span> {matiere?.nom}
                   </p>
                   <Button
@@ -127,7 +127,7 @@ export default function ListeElevesNotes() {
 
         {elevesFiltered.length === 0 && (
           <div className="text-center py-12">
-            <p className="text-gray-500">
+            <p className="text-muted-foreground">
               {searchTerm ? "Aucun élève trouvé pour cette recherche." : "Aucun élève dans cette classe."}
             </p>
           </div>

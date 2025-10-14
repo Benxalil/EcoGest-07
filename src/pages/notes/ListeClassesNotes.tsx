@@ -107,17 +107,17 @@ export default function ListeClassesNotes() {
               <ArrowLeft className="h-4 w-4 mr-2" />
               Retour
             </Button>
-            <h1 className="text-2xl font-bold text-gray-900">Gestion des Notes</h1>
+            <h1 className="text-2xl font-bold text-foreground">Gestion des Notes</h1>
           </div>
         </div>
 
         <div className="mb-6">
-          <p className="text-gray-600 mb-4">
+          <p className="text-muted-foreground mb-4">
             Sélectionnez une classe pour consulter et saisir les notes des élèves.
           </p>
           
           <div className="relative w-full max-w-md">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
               id="search-classes"
               name="search-classes"
@@ -157,7 +157,7 @@ export default function ListeClassesNotes() {
 
         {sortedClasses.length === 0 && (
           <div className="text-center py-12">
-            <p className="text-gray-500">
+            <p className="text-muted-foreground">
               {searchTerm ? "Aucune classe trouvée pour cette recherche." : "Aucune classe disponible."}
             </p>
           </div>

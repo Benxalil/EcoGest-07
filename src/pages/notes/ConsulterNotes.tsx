@@ -262,7 +262,7 @@ export default function ConsulterNotes() {
     return <Layout>
         <div className="container mx-auto p-6">
           <div className="text-center py-12">
-            <p className="text-gray-500">Classe non trouvée.</p>
+            <p className="text-muted-foreground">Classe non trouvée.</p>
             <Button onClick={() => navigate(-1)} className="mt-4">
               Retour
             </Button>
@@ -282,10 +282,10 @@ export default function ConsulterNotes() {
                 Retour
               </Button>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">
+                <h1 className="text-2xl font-bold text-foreground">
                   Consulter les Notes
                 </h1>
-                <p className="text-gray-600">
+                <p className="text-muted-foreground">
                   {classe.libelle}
                 </p>
               </div>
@@ -293,7 +293,7 @@ export default function ConsulterNotes() {
           </div>
 
           <div className="mb-6">
-            <p className="text-gray-600 mb-4">
+            <p className="text-muted-foreground mb-4">
               Sélectionnez une matière pour consulter et saisir les notes des élèves.
             </p>
           </div>
@@ -318,7 +318,7 @@ export default function ConsulterNotes() {
           </div>
 
           {subjects.length === 0 && <div className="text-center py-12">
-              <p className="text-gray-500">Aucune matière disponible pour cette classe.</p>
+              <p className="text-muted-foreground">Aucune matière disponible pour cette classe.</p>
             </div>}
         </div>
       </Layout>;
@@ -340,10 +340,10 @@ export default function ConsulterNotes() {
               Retour
             </Button>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">
+              <h1 className="text-2xl font-bold text-foreground">
                 Consulter les Notes
               </h1>
-              <p className="text-gray-600">
+              <p className="text-muted-foreground">
                 {classe.libelle} - {matiere.nom}
                 {currentExam && ` - ${currentExam.title}`}
                 {currentExam?.semester && ` - ${currentExam.semester}`}
@@ -444,7 +444,7 @@ export default function ConsulterNotes() {
             </Table>
             
             {elevesFiltered.length === 0 && <div className="text-center py-8">
-                <p className="text-gray-500">Aucun élève trouvé.</p>
+                <p className="text-muted-foreground">Aucun élève trouvé.</p>
               </div>}
           </CardContent>
         </Card>

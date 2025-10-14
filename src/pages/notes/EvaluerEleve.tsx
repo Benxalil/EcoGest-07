@@ -303,10 +303,10 @@ export default function EvaluerEleve() {
               Retour
             </Button>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">
+              <h1 className="text-2xl font-bold text-foreground">
                 Évaluer - {eleve?.prenom} {eleve?.nom}
               </h1>
-              <p className="text-gray-600">
+              <p className="text-muted-foreground">
                 Matière: {matiere?.nom} | Classe: {classe?.libelle}
               </p>
             </div>
