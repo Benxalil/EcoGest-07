@@ -42,12 +42,12 @@ const allMenuItems: MenuItem[] = [{
   parentAccess: true
 }, {
   title: "Enseignants",
-  icon: BookOpen,
+  icon: GraduationCap,
   path: "/enseignants",
   adminOnly: true
 }, {
   title: "Matières",
-  icon: GraduationCap,
+  icon: BookOpen,
   path: "/matieres",
   adminOnly: true,
   studentAccess: true
