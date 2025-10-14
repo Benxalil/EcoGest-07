@@ -27,7 +27,12 @@ interface AttendanceRecord {
   type: "absence" | "retard";
   reason?: string;
   period?: string;
+  recorded_by?: string;
   students: {
+    first_name: string;
+    last_name: string;
+  };
+  teachers?: {
     first_name: string;
     last_name: string;
   };
@@ -66,7 +71,12 @@ export default function ConsulterAbsencesRetards() {
             type,
             reason,
             period,
+            recorded_by,
             students!inner (
+              first_name,
+              last_name
+            ),
+            teachers (
               first_name,
               last_name
             )
@@ -136,26 +146,36 @@ export default function ConsulterAbsencesRetards() {
     }
   };
 
-  // Grouper les enregistrements par date
+  // Grouper les enregistrements par date ET enseignant
   const groupAttendancesByDate = () => {
     const grouped = filteredAttendances.reduce((acc, record) => {
-      if (!acc[record.date]) {
-        acc[record.date] = [];
+      const teacherName = record.teachers 
+        ? `${record.teachers.first_name} ${record.teachers.last_name}`
+        : "Enseignant inconnu";
+      const key = `${record.date}|${teacherName}`;
+      
+      if (!acc[key]) {
+        acc[key] = {
+          date: record.date,
+          teacherName,
+          records: []
+        };
       }
-      acc[record.date].push(record);
+      acc[key].records.push(record);
       return acc;
-    }, {} as Record<string, AttendanceRecord[]>);
+    }, {} as Record<string, { date: string; teacherName: string; records: AttendanceRecord[] }>);
 
     // Trier les dates par ordre décroissant (plus récent en premier)
-    return Object.keys(grouped)
-      .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())
-      .map(date => ({
-        date,
-        records: grouped[date],
+    return Object.values(grouped)
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .map(group => ({
+        date: group.date,
+        teacherName: group.teacherName,
+        records: group.records,
         stats: {
-          total: grouped[date].length,
-          absence: grouped[date].filter(r => r.type === "absence").length,
-          retard: grouped[date].filter(r => r.type === "retard").length,
+          total: group.records.length,
+          absence: group.records.filter(r => r.type === "absence").length,
+          retard: group.records.filter(r => r.type === "retard").length,
         }
       }));
   };
@@ -315,14 +335,14 @@ export default function ConsulterAbsencesRetards() {
           </Card>
         ) : (
           <div className="space-y-4">
-            {groupAttendancesByDate().map(({ date, records: dateRecords, stats }) => (
-              <Card key={date} className="overflow-hidden">
+            {groupAttendancesByDate().map(({ date, teacherName, records: dateRecords, stats }) => (
+              <Card key={`${date}-${teacherName}`} className="overflow-hidden">
                 <CardHeader className="pb-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <Calendar className="h-5 w-5 text-blue-500" />
                       <CardTitle className="text-lg">
-                        {formatDate(date)}
+                        {formatDate(date)} - <span className="text-primary">{teacherName}</span>
                       </CardTitle>
                     </div>
                     <div className="flex gap-2 text-sm">
