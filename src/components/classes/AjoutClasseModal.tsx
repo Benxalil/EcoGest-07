@@ -83,12 +83,15 @@ export function AjoutClasseModal({ open, onOpenChange, onSuccess }: AjoutClasseM
       }
 
       console.log("Proceeding with class creation");
+      const series = data.series && data.series !== "none" ? data.series : "";
+      const label = data.label && data.label !== "none" ? data.label : "";
+      
       const success = await createClass({
         name: data.name,
         level: data.level,
-        section: data.series && data.label 
-          ? `${data.series}${data.label}` 
-          : (data.series || data.label || ""),
+        section: series && label 
+          ? `${series}${label}` 
+          : (series || label || ""),
       });
 
       if (success) {
@@ -120,12 +123,15 @@ export function AjoutClasseModal({ open, onOpenChange, onSuccess }: AjoutClasseM
       
       // Continuer avec la création de la classe
       const data = form.getValues();
+      const series = data.series && data.series !== "none" ? data.series : "";
+      const label = data.label && data.label !== "none" ? data.label : "";
+      
       const success = await createClass({
         name: data.name,
         level: data.level,
-        section: data.series && data.label 
-          ? `${data.series}${data.label}` 
-          : (data.series || data.label || ""),
+        section: series && label 
+          ? `${series}${label}` 
+          : (series || label || ""),
       });
 
       if (success) {
@@ -242,7 +248,7 @@ export function AjoutClasseModal({ open, onOpenChange, onSuccess }: AjoutClasseM
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="">Aucune</SelectItem>
+                      <SelectItem value="none">Aucune</SelectItem>
                       {DEFAULT_SERIES.map((s) => (
                         <SelectItem key={s.code} value={s.code}>
                           {s.code} - {s.name}
@@ -268,7 +274,7 @@ export function AjoutClasseModal({ open, onOpenChange, onSuccess }: AjoutClasseM
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="">Aucun</SelectItem>
+                      <SelectItem value="none">Aucun</SelectItem>
                       {DEFAULT_LABELS.map((label) => (
                         <SelectItem key={label.code} value={label.code}>
                           {label.name}
@@ -382,7 +388,7 @@ export function AjoutClasseModal({ open, onOpenChange, onSuccess }: AjoutClasseM
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="">Aucune</SelectItem>
+                  <SelectItem value="none">Aucune</SelectItem>
                   {DEFAULT_SERIES.map((s) => (
                     <SelectItem key={s.code} value={s.code}>
                       {s.code} - {s.name}
@@ -408,7 +414,7 @@ export function AjoutClasseModal({ open, onOpenChange, onSuccess }: AjoutClasseM
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="">Aucun</SelectItem>
+                  <SelectItem value="none">Aucun</SelectItem>
                   {DEFAULT_LABELS.map((label) => (
                     <SelectItem key={label.code} value={label.code}>
                       {label.name}
