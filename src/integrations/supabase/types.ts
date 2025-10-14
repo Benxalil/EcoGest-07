@@ -215,6 +215,59 @@ export type Database = {
           },
         ]
       }
+      audit_logs: {
+        Row: {
+          category: Database["public"]["Enums"]["log_category"]
+          context: Json | null
+          created_at: string | null
+          details: Json | null
+          error_stack: string | null
+          id: string
+          ip_address: unknown | null
+          level: Database["public"]["Enums"]["log_level"]
+          message: string
+          school_id: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          category: Database["public"]["Enums"]["log_category"]
+          context?: Json | null
+          created_at?: string | null
+          details?: Json | null
+          error_stack?: string | null
+          id?: string
+          ip_address?: unknown | null
+          level: Database["public"]["Enums"]["log_level"]
+          message: string
+          school_id?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["log_category"]
+          context?: Json | null
+          created_at?: string | null
+          details?: Json | null
+          error_stack?: string | null
+          id?: string
+          ip_address?: unknown | null
+          level?: Database["public"]["Enums"]["log_level"]
+          message?: string
+          school_id?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_logs_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       class_labels: {
         Row: {
           created_at: string
@@ -1702,6 +1755,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      cleanup_old_audit_logs: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       generate_school_suffix: {
         Args: { school_name: string }
         Returns: string
@@ -1785,6 +1842,8 @@ export type Database = {
       currency_type: "FCFA" | "EUR" | "USD" | "MAD" | "GNF"
       gender: "M" | "F"
       language_type: "french" | "arabic"
+      log_category: "auth" | "database" | "api" | "ui" | "business" | "security"
+      log_level: "debug" | "info" | "warn" | "error" | "critical"
       payment_status: "pending" | "paid" | "overdue" | "cancelled"
       school_type: "public" | "private" | "semi_private" | "international"
       semester_system_type: "semester" | "trimester"
@@ -1926,6 +1985,8 @@ export const Constants = {
       currency_type: ["FCFA", "EUR", "USD", "MAD", "GNF"],
       gender: ["M", "F"],
       language_type: ["french", "arabic"],
+      log_category: ["auth", "database", "api", "ui", "business", "security"],
+      log_level: ["debug", "info", "warn", "error", "critical"],
       payment_status: ["pending", "paid", "overdue", "cancelled"],
       school_type: ["public", "private", "semi_private", "international"],
       semester_system_type: ["semester", "trimester"],
