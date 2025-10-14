@@ -209,14 +209,14 @@ export function Sidebar({
           <Button 
             variant="ghost" 
             size="sm"
-            className="fixed top-2 left-2 z-50 bg-sidebar-background/90 backdrop-blur-sm shadow-md" 
+            className="fixed top-2 left-2 z-50 bg-sidebar/90 backdrop-blur-sm shadow-md" 
             onClick={() => setIsOpen(true)}
           >
             <Menu className="h-4 w-4" />
           </Button>
         )}
 
-      <div className={cn("fixed inset-y-0 left-0 transform bg-sidebar-background shadow-lg transition-all duration-300 ease-in-out flex flex-col", {
+      <div className={cn("fixed inset-y-0 left-0 transform bg-sidebar shadow-lg transition-all duration-300 ease-in-out flex flex-col", {
         "-translate-x-full": isMobile && !isOpen,
         "translate-x-0": !isMobile || isOpen,
         "w-64": !isMobile && !isCollapsed,
