@@ -51,37 +51,35 @@ const sortClassesAcademically = (classes: any[]): any[] => {
   });
 };
 
-// Fonction mémoïsée pour calculer les statistiques de paiement par classe
-const getClassesWithPaymentStats = useMemo(() => {
-  return (classes: any[], students: any[], payments: any[], currentMonth: string) => {
-    // Trier les classes d'abord
-    const sortedClasses = sortClassesAcademically([...classes]);
+// Fonction pour calculer les statistiques de paiement par classe
+const getClassesWithPaymentStats = (classes: any[], students: any[], payments: any[], currentMonth: string) => {
+  // Trier les classes d'abord
+  const sortedClasses = sortClassesAcademically([...classes]);
+  
+  return sortedClasses.map((classe: any) => {
+    const nomCompletClasse = formatClassName(classe);
+    // Filtrer les élèves de cette classe
+    const elevesClasse = students.filter((student: any) => student.class_id === classe.id);
     
-    return sortedClasses.map((classe: any) => {
-      const nomCompletClasse = formatClassName(classe);
-      // Filtrer les élèves de cette classe
-      const elevesClasse = students.filter((student: any) => student.class_id === classe.id);
-      
-      // Compter les élèves payés pour ce mois
-      const elevesPayes = elevesClasse.filter((student: any) => {
-        return payments.some((payment: any) => 
-          payment.student_id === student.id && 
-          payment.payment_month === currentMonth
-        );
-      }).length;
-      
-      const totalEleves = elevesClasse.length;
-      
-      return {
-        id: classe.id,
-        nom: nomCompletClasse,
-        elevesPayes,
-        totalEleves,
-        eleves: elevesClasse
-      };
-    });
-  };
-}, []);
+    // Compter les élèves payés pour ce mois
+    const elevesPayes = elevesClasse.filter((student: any) => {
+      return payments.some((payment: any) => 
+        payment.student_id === student.id && 
+        payment.payment_month === currentMonth
+      );
+    }).length;
+    
+    const totalEleves = elevesClasse.length;
+    
+    return {
+      id: classe.id,
+      nom: nomCompletClasse,
+      elevesPayes,
+      totalEleves,
+      eleves: elevesClasse
+    };
+  });
+};
 
 
 export default function GestionPaiements() {
