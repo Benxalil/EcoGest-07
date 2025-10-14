@@ -133,8 +133,8 @@ export default function ListeAnnonces() {
       <div className="container mx-auto p-6">
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Annonces</h1>
-            <p className="text-gray-600 mt-2">Gérez les annonces de votre école</p>
+            <h1 className="text-3xl font-bold text-foreground">Annonces</h1>
+            <p className="text-muted-foreground mt-2">Gérez les annonces de votre école</p>
           </div>
           {isAdmin() && (
             <Button onClick={() => setIsModalOpen(true)} className="bg-blue-600 hover:bg-blue-700">
@@ -155,9 +155,9 @@ export default function ListeAnnonces() {
             {convertedAnnonces.length === 0 ? (
               <Card>
                 <CardContent className="flex flex-col items-center justify-center py-12">
-                  <Calendar className="h-12 w-12 text-gray-400 mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Aucune annonce</h3>
-                  <p className="text-gray-500 text-center mb-4">
+                  <Calendar className="h-12 w-12 text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-semibold text-foreground mb-2">Aucune annonce</h3>
+                  <p className="text-muted-foreground text-center mb-4">
                     Commencez par créer votre première annonce pour informer votre communauté.
                   </p>
                   {isAdmin() && (
@@ -192,8 +192,8 @@ export default function ListeAnnonces() {
                               </div>
                             </div>
                           </CardHeader>
-                          <CardContent>
-                            <div className="flex items-center justify-between text-sm text-gray-500">
+                           <CardContent>
+                            <div className="flex items-center justify-between text-sm text-muted-foreground">
                               <div className="flex items-center space-x-4">
                                 <div className="flex items-center">
                                   <Calendar className="h-4 w-4 mr-1" />
@@ -300,9 +300,9 @@ export default function ListeAnnonces() {
             {urgentesAVenir.length === 0 && urgentesPassees.length === 0 ? (
               <Card>
                 <CardContent className="flex flex-col items-center justify-center py-12">
-                  <Calendar className="h-12 w-12 text-gray-400 mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Aucune annonce urgente</h3>
-                  <p className="text-gray-500 text-center">
+                  <Calendar className="h-12 w-12 text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-semibold text-foreground mb-2">Aucune annonce urgente</h3>
+                  <p className="text-muted-foreground text-center">
                     Aucune annonce urgente pour le moment.
                   </p>
                 </CardContent>
@@ -327,8 +327,8 @@ export default function ListeAnnonces() {
                               <Badge variant="destructive">Urgent</Badge>
                             </div>
                           </CardHeader>
-                          <CardContent>
-                            <div className="flex items-center justify-between text-sm text-gray-500">
+                           <CardContent>
+                            <div className="flex items-center justify-between text-sm text-muted-foreground">
                               <div className="flex items-center space-x-4">
                                 <div className="flex items-center">
                                   <Calendar className="h-4 w-4 mr-1" />
@@ -431,11 +431,11 @@ export default function ListeAnnonces() {
             {normalesAVenir.length === 0 && normalesPassees.length === 0 ? (
               <Card>
                 <CardContent className="flex flex-col items-center justify-center py-12">
-                  <Calendar className="h-12 w-12 text-gray-400 mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Aucune annonce normale</h3>
-                  <p className="text-gray-500 text-center">
+                  <Calendar className="h-12 w-12 text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-semibold text-foreground mb-2">Aucune annonce normale</h3>
+                  <p className="text-muted-foreground text-center">
                     Aucune annonce normale pour le moment.
-                    </p>
+                  </p>
                   </CardContent>
                 </Card>
               ) : (
@@ -458,8 +458,8 @@ export default function ListeAnnonces() {
                               <Badge variant="secondary">Normal</Badge>
                             </div>
                           </CardHeader>
-                          <CardContent>
-                            <div className="flex items-center justify-between text-sm text-gray-500">
+                           <CardContent>
+                            <div className="flex items-center justify-between text-sm text-muted-foreground">
                               <div className="flex items-center space-x-4">
                                 <div className="flex items-center">
                                   <Calendar className="h-4 w-4 mr-1" />
