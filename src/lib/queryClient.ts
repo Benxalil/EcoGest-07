@@ -104,3 +104,67 @@ export const QueryKeys = {
   schedules: (schoolId?: string, teacherId?: string, classId?: string) => 
     ['schedules', schoolId, teacherId, classId].filter(Boolean),
 } as const;
+
+/**
+ * Configuration avancée du cache par type de query
+ * ✅ TTL adaptés selon la fréquence de changement des données
+ * ✅ Stratégies de refetch intelligentes
+ */
+export const QueryConfigs = {
+  // Données statiques - Cache long, pas de refetch automatique
+  classes: {
+    staleTime: CacheStaleTime.CLASSES,
+    gcTime: 15 * 60 * 1000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  },
+  
+  subjects: {
+    staleTime: CacheStaleTime.SUBJECTS,
+    gcTime: 15 * 60 * 1000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+  },
+  
+  // Données semi-dynamiques - Cache moyen, refetch sur reconnect
+  students: {
+    staleTime: CacheStaleTime.STUDENTS,
+    gcTime: 10 * 60 * 1000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: true,
+  },
+  
+  teachers: {
+    staleTime: CacheStaleTime.TEACHERS,
+    gcTime: 10 * 60 * 1000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+  },
+  
+  // Données critiques - Cache court, refetch sur focus
+  payments: {
+    staleTime: CacheStaleTime.PAYMENTS,
+    gcTime: 5 * 60 * 1000,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+  },
+  
+  grades: {
+    staleTime: CacheStaleTime.GRADES,
+    gcTime: 5 * 60 * 1000,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
+  },
+  
+  // Notifications - Cache très court, refetch fréquent
+  notifications: {
+    staleTime: CacheStaleTime.NOTIFICATIONS,
+    gcTime: 2 * 60 * 1000,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
+    refetchInterval: 60 * 1000, // Refetch toutes les minutes
+  },
+} as const;

@@ -7,6 +7,7 @@ import './index.css'
 import { performanceMonitor } from './utils/performanceMonitor'
 import { initializePerformanceOptimizations } from './utils/performanceOptimizer'
 import { queryClient } from './lib/queryClient'
+import { PerformanceMonitorWidget } from './components/debug/PerformanceMonitorWidget'
 
 // Initialize performance monitoring and optimizations
 if (typeof window !== 'undefined') {
@@ -21,7 +22,10 @@ createRoot(rootElement).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <App />
+      {/* ✅ React Query DevTools - Seulement en dev */}
       {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
+      {/* ✅ Moniteur de performances - Seulement en dev */}
+      {import.meta.env.DEV && <PerformanceMonitorWidget />}
     </QueryClientProvider>
   </StrictMode>
 );
