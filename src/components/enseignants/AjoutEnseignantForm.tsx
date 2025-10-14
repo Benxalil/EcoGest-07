@@ -142,50 +142,24 @@ export function AjoutEnseignantForm({ onSuccess }: AjoutEnseignantFormProps) {
     name: "matieres"
   });
 
-  // Fonction pour lire les paramètres enseignants depuis localStorage
-  const getTeacherSettingsFromStorage = () => {
-    const stored = localStorage.getItem('teacherSettings');
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored);
-        return {
-          matriculeFormat: parsed.matriculeFormat,
-          defaultPassword: parsed.defaultPassword,
-          autoGenerateMatricule: parsed.autoGenerateMatricule
-        };
-      } catch (e) {
-        console.error('❌ Error parsing teacherSettings:', e);
-      }
-    }
-    // Fallback vers schoolSettings (base de données)
-    return {
-      matriculeFormat: schoolSettings.studentMatriculeFormat,
-      defaultPassword: schoolSettings.defaultStudentPassword,
-      autoGenerateMatricule: schoolSettings.autoGenerateStudentMatricule
-    };
-  };
-
   // Générer automatiquement matricule et mot de passe au chargement
   useEffect(() => {
-    if (!userProfile?.schoolId || settingsLoading) return;
+    if (!userProfile?.schoolId || settingsLoading || !schoolSettings) return;
     
     const initializeForm = async () => {
-      // Lire les paramètres depuis localStorage
-      const currentTeacherSettings = getTeacherSettingsFromStorage();
+      console.log('🔧 Initialisation enseignant avec paramètres DB:', schoolSettings);
       
-      console.log('🔧 Initialisation enseignant avec paramètres localStorage:', currentTeacherSettings);
+      // Générer automatiquement le matricule
+      const nextNumber = await getNextTeacherNumber(userProfile.schoolId);
+      form.setValue("matricule", nextNumber);
       
-      // Utiliser les paramètres depuis localStorage
-      if (currentTeacherSettings.autoGenerateMatricule) {
-        const nextNumber = await getNextTeacherNumber(userProfile.schoolId);
-        form.setValue("matricule", nextNumber);
-      }
-      
-      form.setValue("motDePasse", currentTeacherSettings.defaultPassword);
+      // Définir le mot de passe par défaut depuis les paramètres de l'école
+      const defaultPassword = schoolSettings.defaultStudentPassword || 'teacher123';
+      form.setValue("motDePasse", defaultPassword);
     };
     
     initializeForm();
-  }, [userProfile?.schoolId, settingsLoading]); // Se déclenche quand les settings sont chargés
+  }, [userProfile?.schoolId, settingsLoading, schoolSettings]); // Se déclenche quand les settings sont chargés
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
