@@ -10,7 +10,8 @@ import { Eye, Edit, Trash2, UserPlus, Search, ArrowLeft, Users, Download, FileTe
 import { useToast } from "@/hooks/use-toast";
 import { useClasses } from "@/hooks/useClasses";
 import { useStudents, Student } from "@/hooks/useStudents";
-import { useStudentDocuments } from "@/hooks/useStudentDocuments";
+import { useStudentDocuments, StudentDocument } from "@/hooks/useStudentDocuments";
+import { DocumentViewerModal } from "@/components/eleves/DocumentViewerModal";
 import { useUserRole } from "@/hooks/useUserRole";
 import { supabase } from "@/integrations/supabase/client";
 import { formatClassName } from "@/utils/classNameFormatter";
@@ -37,6 +38,9 @@ function DocumentsSection({
     userProfile
   } = useUserRole();
   const [uploading, setUploading] = useState(false);
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [selectedDocument, setSelectedDocument] = useState<StudentDocument | null>(null);
+  const [documentUrl, setDocumentUrl] = useState<string>("");
 
   // Filtrer les documents pour exclure les photos
   const documentFiles = documents.filter(doc => doc.file_type === 'document');
@@ -106,10 +110,30 @@ function DocumentsSection({
   const handleDownloadDocument = async (document: any) => {
     await downloadDocument(document.file_path, document.file_name);
   };
-  const handlePreviewDocument = async (document: any) => {
+  const handlePreviewDocument = async (document: StudentDocument) => {
     const url = await getDocumentUrl(document.file_path);
     if (url) {
-      window.open(url, '_blank');
+      setSelectedDocument(document);
+      setDocumentUrl(url);
+      setViewerOpen(true);
+    } else {
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger le document",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleCloseViewer = () => {
+    setViewerOpen(false);
+    setSelectedDocument(null);
+    setDocumentUrl("");
+  };
+
+  const handleDownloadFromViewer = () => {
+    if (selectedDocument) {
+      downloadDocument(selectedDocument.file_path, selectedDocument.file_name);
     }
   };
   return <div>
@@ -147,6 +171,16 @@ function DocumentsSection({
               </div>
             </div>)}
         </div> : <p className="text-gray-500 italic">Aucun document disponible</p>}
+
+      {selectedDocument && (
+        <DocumentViewerModal
+          isOpen={viewerOpen}
+          onClose={handleCloseViewer}
+          document={selectedDocument}
+          documentUrl={documentUrl}
+          onDownload={handleDownloadFromViewer}
+        />
+      )}
     </div>;
 }
 export default function ElevesParClasse() {
