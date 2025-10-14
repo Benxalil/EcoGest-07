@@ -91,35 +91,13 @@ export function AjoutEnseignantForm({ onSuccess }: AjoutEnseignantFormProps) {
     return Array.from(uniqueMatieres.values());
   }, [allMatieres]);
 
-  // Fonction pour obtenir les paramètres enseignants (localStorage avec fallback vers DB)
-  const getTeacherSettingsFromStorage = () => {
-    const storageSettings = localStorage.getItem('teacherSettings');
-    if (storageSettings) {
-      try {
-        const parsed = JSON.parse(storageSettings);
-        return {
-          teacherPrefix: parsed.teacherPrefix || schoolSettings.teacherMatriculeFormat,
-          defaultTeacherPassword: parsed.defaultTeacherPassword || schoolSettings.defaultTeacherPassword,
-          autoGenerateUsername: parsed.autoGenerateUsername ?? schoolSettings.autoGenerateTeacherMatricule
-        };
-      } catch (error) {
-        console.error('Erreur parsing teacherSettings:', error);
-      }
-    }
-    // Fallback vers les paramètres de la base de données
-    return {
-      teacherPrefix: schoolSettings.teacherMatriculeFormat,
-      defaultTeacherPassword: schoolSettings.defaultTeacherPassword,
-      autoGenerateUsername: schoolSettings.autoGenerateTeacherMatricule
-    };
-  };
+  // ✅ Les paramètres viennent directement de useSchoolSettings (source unique de vérité)
 
   // Générer le prochain numéro de matricule basé sur le nombre total d'enseignants
   const getNextTeacherNumber = async (schoolId: string): Promise<string> => {
     try {
-      // Obtenir le prefix dynamiquement depuis les paramètres
-      const teacherSettings = getTeacherSettingsFromStorage();
-      const prefix = teacherSettings.teacherPrefix || 'PROF';
+      // ✅ Obtenir le prefix directement depuis schoolSettings
+      const prefix = schoolSettings.teacherMatriculeFormat || 'PROF';
       
       // Compter le nombre total d'enseignants actifs dans l'école
       const { count, error } = await supabase
@@ -171,24 +149,23 @@ export function AjoutEnseignantForm({ onSuccess }: AjoutEnseignantFormProps) {
     if (!userProfile?.schoolId || settingsLoading || !schoolSettings) return;
     
     const initializeForm = async () => {
-      // Obtenir les paramètres enseignants avec fallback localStorage -> DB
-      const teacherSettings = getTeacherSettingsFromStorage();
+      // ✅ Utiliser directement schoolSettings (source unique)
       
       console.log('🔧 Initialisation enseignant avec paramètres:', {
-        source: 'localStorage + DB fallback',
-        teacherPrefix: teacherSettings.teacherPrefix,
-        autoGenerate: teacherSettings.autoGenerateUsername,
-        defaultPassword: teacherSettings.defaultTeacherPassword
+        source: 'DB (useSchoolSettings)',
+        teacherPrefix: schoolSettings.teacherMatriculeFormat,
+        autoGenerate: schoolSettings.autoGenerateTeacherMatricule,
+        defaultPassword: schoolSettings.defaultTeacherPassword
       });
       
       // Générer automatiquement le matricule si activé dans les paramètres
-      if (teacherSettings.autoGenerateUsername) {
+      if (schoolSettings.autoGenerateTeacherMatricule) {
         const nextNumber = await getNextTeacherNumber(userProfile.schoolId);
         form.setValue("matricule", nextNumber);
       }
       
       // Définir le mot de passe par défaut depuis les paramètres
-      const defaultPassword = teacherSettings.defaultTeacherPassword || 'teacher123';
+      const defaultPassword = schoolSettings.defaultTeacherPassword || 'teacher123';
       form.setValue("motDePasse", defaultPassword);
     };
     
@@ -198,17 +175,16 @@ export function AjoutEnseignantForm({ onSuccess }: AjoutEnseignantFormProps) {
     const handleSettingsUpdate = async () => {
       console.log('🔄 Mise à jour des paramètres enseignants détectée');
       
-      // Recharger les paramètres
-      const teacherSettings = getTeacherSettingsFromStorage();
+      // ✅ Les paramètres viennent automatiquement de schoolSettings (Realtime)
       
       // Régénérer le matricule si la génération auto est activée
-      if (teacherSettings.autoGenerateUsername) {
+      if (schoolSettings.autoGenerateTeacherMatricule) {
         const nextNumber = await getNextTeacherNumber(userProfile.schoolId);
         form.setValue("matricule", nextNumber);
       }
       
       // Mettre à jour le mot de passe par défaut
-      const defaultPassword = teacherSettings.defaultTeacherPassword || 'teacher123';
+      const defaultPassword = schoolSettings.defaultTeacherPassword || 'teacher123';
       form.setValue("motDePasse", defaultPassword);
     };
 
