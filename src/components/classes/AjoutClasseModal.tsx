@@ -11,8 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useSubscriptionPlan } from "@/hooks/useSubscriptionPlan";
 import { useClasses } from "@/hooks/useClasses";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { useDefaultSeries } from "@/hooks/useDefaultSeries";
-import { useDefaultLabels } from "@/hooks/useDefaultLabels";
+import { DEFAULT_SERIES, DEFAULT_LABELS } from "@/constants/classOptions";
 
 const formSchema = z.object({
   name: z.string().min(1, "Le nom est requis"),
@@ -35,8 +34,6 @@ export function AjoutClasseModal({ open, onOpenChange, onSuccess }: AjoutClasseM
   const { classes, createClass } = useClasses();
   const [showStarterWarning, setShowStarterWarning] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { series, loading: seriesLoading, error: seriesError } = useDefaultSeries();
-  const { labels: classLabels, loading: labelsLoading, error: labelsError } = useDefaultLabels();
   
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -54,36 +51,6 @@ export function AjoutClasseModal({ open, onOpenChange, onSuccess }: AjoutClasseM
     try {
       setIsSubmitting(true);
       console.log("Form submission started", { data, currentPlan, classesCount: classes.length });
-
-      // Vérifier les erreurs de chargement des données
-      if (seriesError || labelsError) {
-        toast({
-          title: "Erreur de chargement",
-          description: "Impossible de charger les données nécessaires. Veuillez réessayer.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Vérifier que les données sont chargées
-      if (seriesLoading || labelsLoading) {
-        toast({
-          title: "Chargement en cours",
-          description: "Veuillez patienter pendant le chargement des données.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Vérifier que les données ne sont pas vides
-      if (series.length === 0 || classLabels.length === 0) {
-        toast({
-          title: "Données manquantes",
-          description: "Les données de référence ne sont pas disponibles. Veuillez contacter l'administrateur.",
-          variant: "destructive",
-        });
-        return;
-      }
 
       // Vérifier les limites d'abonnement
       const currentClassCount = classes.length;
@@ -271,15 +238,11 @@ export function AjoutClasseModal({ open, onOpenChange, onSuccess }: AjoutClasseM
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {seriesLoading ? (
-                        <SelectItem value="loading" disabled>Chargement des séries...</SelectItem>
-                      ) : (
-                        series.map((s) => (
-                          <SelectItem key={s.id} value={s.code}>
-                            {s.code} - {s.name}
-                          </SelectItem>
-                        ))
-                      )}
+                      {DEFAULT_SERIES.map((s) => (
+                        <SelectItem key={s.code} value={s.code}>
+                          {s.code} - {s.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -300,15 +263,11 @@ export function AjoutClasseModal({ open, onOpenChange, onSuccess }: AjoutClasseM
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {labelsLoading ? (
-                        <SelectItem value="loading" disabled>Chargement des libellés...</SelectItem>
-                      ) : (
-                        classLabels.map((label) => (
-                          <SelectItem key={label.id} value={label.code}>
-                            {label.name}
-                          </SelectItem>
-                        ))
-                      )}
+                      {DEFAULT_LABELS.map((label) => (
+                        <SelectItem key={label.code} value={label.code}>
+                          {label.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -316,8 +275,8 @@ export function AjoutClasseModal({ open, onOpenChange, onSuccess }: AjoutClasseM
               )}
             />
 
-            <Button type="submit" className="w-full" disabled={isSubmitting || seriesLoading || labelsLoading || Boolean(seriesError) || Boolean(labelsError)}>
-              {isSubmitting ? 'Création...' : seriesLoading || labelsLoading ? 'Chargement...' : seriesError || labelsError ? 'Erreur de chargement' : 'Créer la classe'}
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
+              {isSubmitting ? 'Création...' : 'Créer la classe'}
             </Button>
           </form>
         </Form>
@@ -417,15 +376,11 @@ export function AjoutClasseModal({ open, onOpenChange, onSuccess }: AjoutClasseM
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {seriesLoading ? (
-                    <SelectItem value="loading" disabled>Chargement des séries...</SelectItem>
-                  ) : (
-                    series.map((s) => (
-                      <SelectItem key={s.id} value={s.code}>
-                        {s.code} - {s.name}
-                      </SelectItem>
-                    ))
-                  )}
+                  {DEFAULT_SERIES.map((s) => (
+                    <SelectItem key={s.code} value={s.code}>
+                      {s.code} - {s.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               <FormMessage />
@@ -446,15 +401,11 @@ export function AjoutClasseModal({ open, onOpenChange, onSuccess }: AjoutClasseM
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {labelsLoading ? (
-                    <SelectItem value="loading" disabled>Chargement des libellés...</SelectItem>
-                  ) : (
-                    classLabels.map((label) => (
-                      <SelectItem key={label.id} value={label.code}>
-                        {label.name}
-                      </SelectItem>
-                    ))
-                  )}
+                  {DEFAULT_LABELS.map((label) => (
+                    <SelectItem key={label.code} value={label.code}>
+                      {label.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               <FormMessage />
@@ -462,8 +413,8 @@ export function AjoutClasseModal({ open, onOpenChange, onSuccess }: AjoutClasseM
           )}
         />
 
-        <Button type="submit" className="w-full" disabled={isSubmitting || seriesLoading || labelsLoading || Boolean(seriesError) || Boolean(labelsError)}>
-          {isSubmitting ? 'Création...' : seriesLoading || labelsLoading ? 'Chargement...' : seriesError || labelsError ? 'Erreur de chargement' : 'Créer la classe'}
+        <Button type="submit" className="w-full" disabled={isSubmitting}>
+          {isSubmitting ? 'Création...' : 'Créer la classe'}
         </Button>
         </form>
       </Form>

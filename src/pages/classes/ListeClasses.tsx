@@ -1,5 +1,4 @@
-import { useState, useEffect } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import {
@@ -68,23 +67,9 @@ const sortClassesAcademically = (classes: ClassData[]): ClassData[] => {
 export default function ListeClasses() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const { isFeatureLimited, getFeatureLimit, currentPlan } = useSubscriptionPlan();
   const { showError } = useNotifications();
   const { isTeacher, isAdmin } = useUserRole();
-
-  // Précharger les données de séries et libellés pour le modal
-  useEffect(() => {
-    // Précharger en parallèle pour des performances optimales
-    queryClient.prefetchQuery({
-      queryKey: ['default_series'],
-      staleTime: 5 * 60 * 1000,
-    });
-    queryClient.prefetchQuery({
-      queryKey: ['default_labels'],
-      staleTime: 5 * 60 * 1000,
-    });
-  }, [queryClient]);
   
   // Utiliser conditionnellement le bon hook selon le rôle
   const isTeacherRole = isTeacher();
