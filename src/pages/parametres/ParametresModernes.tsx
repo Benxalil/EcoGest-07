@@ -420,16 +420,14 @@ export default function ParametresModernes() {
         throw new Error("Échec de la mise à jour des paramètres de matricules");
       }
 
-      // ✅ Sauvegarder uniquement les paramètres sans équivalent DB en localStorage
+      // Sauvegarder les autres paramètres en localStorage (notifications, sécurité, sauvegarde)
       localStorage.setItem('settings', JSON.stringify(generalSettings));
+      localStorage.setItem('teacherSettings', JSON.stringify(teacherSettings));
+      localStorage.setItem('studentSettings', JSON.stringify(studentSettings));
+      localStorage.setItem('parentSettings', JSON.stringify(parentSettings));
       localStorage.setItem('notificationSettings', JSON.stringify(notificationSettings));
       localStorage.setItem('securitySettings', JSON.stringify(securitySettings));
       localStorage.setItem('backupSettings', JSON.stringify(backupSettings));
-      
-      // ✅ Nettoyer les anciennes clés localStorage (migration)
-      localStorage.removeItem('teacherSettings');
-      localStorage.removeItem('studentSettings');
-      localStorage.removeItem('parentSettings');
 
       // Déclencher un événement pour notifier les autres composants
       window.dispatchEvent(new Event('schoolSettingsUpdated'));

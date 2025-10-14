@@ -339,7 +339,50 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
     }
   });
 
-  // ✅ Les paramètres viennent directement de useSchoolSettings (source unique de vérité)
+  // Fonctions pour lire depuis localStorage
+  const getStudentSettingsFromStorage = () => {
+    const stored = localStorage.getItem('studentSettings');
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        return {
+          matriculeFormat: parsed.matriculeFormat,
+          defaultStudentPassword: parsed.defaultStudentPassword,
+          autoGenerateMatricule: parsed.autoGenerateMatricule
+        };
+      } catch (e) {
+        console.error('❌ Error parsing studentSettings:', e);
+      }
+    }
+    // Fallback vers schoolSettings (base de données)
+    return {
+      matriculeFormat: schoolSettings.studentMatriculeFormat,
+      defaultStudentPassword: schoolSettings.defaultStudentPassword,
+      autoGenerateMatricule: schoolSettings.autoGenerateStudentMatricule
+    };
+  };
+
+  const getParentSettingsFromStorage = () => {
+    const stored = localStorage.getItem('parentSettings');
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        return {
+          matriculeFormat: parsed.matriculeFormat,
+          defaultParentPassword: parsed.defaultParentPassword,
+          autoGenerateMatricule: parsed.autoGenerateMatricule
+        };
+      } catch (e) {
+        console.error('❌ Error parsing parentSettings:', e);
+      }
+    }
+    // Fallback vers schoolSettings (base de données)
+    return {
+      matriculeFormat: schoolSettings.parentMatriculeFormat,
+      defaultParentPassword: schoolSettings.defaultParentPassword,
+      autoGenerateMatricule: schoolSettings.autoGenerateParentMatricule
+    };
+  };
 
   // Réinitialiser le formulaire quand initialData change (pour la modification)
   useEffect(() => {
@@ -438,32 +481,28 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
     }
 
     const generateInitialValues = async () => {
-      // ✅ Utiliser directement schoolSettings (source unique)
+      // Lire les paramètres depuis localStorage
+      const currentStudentSettings = getStudentSettingsFromStorage();
+      const currentParentSettings = getParentSettingsFromStorage();
       
-      console.log('🔧 Initialisation avec paramètres DB:', {
-        student: {
-          matriculeFormat: schoolSettings.studentMatriculeFormat,
-          autoGenerate: schoolSettings.autoGenerateStudentMatricule
-        },
-        parent: {
-          matriculeFormat: schoolSettings.parentMatriculeFormat,
-          autoGenerate: schoolSettings.autoGenerateParentMatricule
-        }
+      console.log('🔧 Initialisation avec paramètres localStorage:', {
+        student: currentStudentSettings,
+        parent: currentParentSettings
       });
       
       // Générer le matricule de l'élève
-      if (schoolSettings.autoGenerateStudentMatricule && !manuallyEditedFields.has('numeroPerso')) {
-        const nextNumber = await getNextStudentNumber(userProfile.schoolId, schoolSettings.studentMatriculeFormat);
+      if (currentStudentSettings.autoGenerateMatricule && !manuallyEditedFields.has('numeroPerso')) {
+        const nextNumber = await getNextStudentNumber(userProfile.schoolId, currentStudentSettings.matriculeFormat);
         form.setValue("numeroPerso", nextNumber);
         
         // ✅ Générer les matricules parents indépendamment
-        if (schoolSettings.autoGenerateParentMatricule) {
-          const parentNumber = await getNextParentNumber(userProfile.schoolId, schoolSettings.parentMatriculeFormat);
+        if (currentParentSettings.autoGenerateMatricule) {
+          const parentNumber = await getNextParentNumber(userProfile.schoolId, currentParentSettings.matriculeFormat);
           if (!manuallyEditedFields.has('pereNomUtilisateur')) {
             form.setValue("pereNomUtilisateur", parentNumber);
           }
           
-          const motherNumber = await getNextParentNumber(userProfile.schoolId, schoolSettings.parentMatriculeFormat);
+          const motherNumber = await getNextParentNumber(userProfile.schoolId, currentParentSettings.matriculeFormat);
           if (!manuallyEditedFields.has('mereNomUtilisateur')) {
             form.setValue("mereNomUtilisateur", motherNumber);
           }
@@ -472,15 +511,15 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
       
       // Définir le mot de passe par défaut pour l'élève
       if (!manuallyEditedFields.has('motDePasse')) {
-        form.setValue("motDePasse", schoolSettings.defaultStudentPassword);
+        form.setValue("motDePasse", currentStudentSettings.defaultStudentPassword);
       }
       
       // Définir les mots de passe par défaut pour les parents
       if (!manuallyEditedFields.has('pereMotDePasse')) {
-        form.setValue("pereMotDePasse", schoolSettings.defaultParentPassword);
+        form.setValue("pereMotDePasse", currentParentSettings.defaultParentPassword);
       }
       if (!manuallyEditedFields.has('mereMotDePasse')) {
-        form.setValue("mereMotDePasse", schoolSettings.defaultParentPassword);
+        form.setValue("mereMotDePasse", currentParentSettings.defaultParentPassword);
       }
     };
     
@@ -490,31 +529,27 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
     const handleSettingsUpdate = async () => {
       if (isEditing || !userProfile?.schoolId) return;
       
-      // ✅ Les paramètres viennent automatiquement de schoolSettings (Realtime)
+      // Lire les nouveaux paramètres depuis localStorage
+      const currentStudentSettings = getStudentSettingsFromStorage();
+      const currentParentSettings = getParentSettingsFromStorage();
       
-      console.log('🔄 Mise à jour avec paramètres DB (Realtime):', {
-        student: {
-          matriculeFormat: schoolSettings.studentMatriculeFormat,
-          autoGenerate: schoolSettings.autoGenerateStudentMatricule
-        },
-        parent: {
-          matriculeFormat: schoolSettings.parentMatriculeFormat,
-          autoGenerate: schoolSettings.autoGenerateParentMatricule
-        }
+      console.log('🔄 Mise à jour avec paramètres localStorage:', {
+        student: currentStudentSettings,
+        parent: currentParentSettings
       });
       
       // Régénérer le matricule uniquement si l'utilisateur ne l'a pas modifié manuellement
-      if (schoolSettings.autoGenerateStudentMatricule && !manuallyEditedFields.has('numeroPerso')) {
-        const nextNumber = await getNextStudentNumber(userProfile.schoolId, schoolSettings.studentMatriculeFormat);
+      if (currentStudentSettings.autoGenerateMatricule && !manuallyEditedFields.has('numeroPerso')) {
+        const nextNumber = await getNextStudentNumber(userProfile.schoolId, currentStudentSettings.matriculeFormat);
         form.setValue("numeroPerso", nextNumber);
         
         // ✅ Mettre à jour les matricules parents indépendamment si nécessaire
-        if (schoolSettings.autoGenerateParentMatricule) {
-          const parentNumber = await getNextParentNumber(userProfile.schoolId, schoolSettings.parentMatriculeFormat);
+        if (currentParentSettings.autoGenerateMatricule) {
+          const parentNumber = await getNextParentNumber(userProfile.schoolId, currentParentSettings.matriculeFormat);
           if (!manuallyEditedFields.has('pereNomUtilisateur')) {
             form.setValue("pereNomUtilisateur", parentNumber);
           }
-          const motherNumber = await getNextParentNumber(userProfile.schoolId, schoolSettings.parentMatriculeFormat);
+          const motherNumber = await getNextParentNumber(userProfile.schoolId, currentParentSettings.matriculeFormat);
           if (!manuallyEditedFields.has('mereNomUtilisateur')) {
             form.setValue("mereNomUtilisateur", motherNumber);
           }
@@ -523,15 +558,15 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
       
       // Mettre à jour le mot de passe par défaut uniquement si l'utilisateur ne l'a pas modifié
       if (!manuallyEditedFields.has('motDePasse')) {
-        form.setValue("motDePasse", schoolSettings.defaultStudentPassword);
+        form.setValue("motDePasse", currentStudentSettings.defaultStudentPassword);
       }
       
       // Mettre à jour les mots de passe des parents
       if (!manuallyEditedFields.has('pereMotDePasse')) {
-        form.setValue("pereMotDePasse", schoolSettings.defaultParentPassword);
+        form.setValue("pereMotDePasse", currentParentSettings.defaultParentPassword);
       }
       if (!manuallyEditedFields.has('mereMotDePasse')) {
-        form.setValue("mereMotDePasse", schoolSettings.defaultParentPassword);
+        form.setValue("mereMotDePasse", currentParentSettings.defaultParentPassword);
       }
     };
 
@@ -894,17 +929,13 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
           schoolId = profile?.school_id || schoolId;
         }
 
-        // ✅ Utiliser directement schoolSettings (source unique)
+        // Récupérer les paramètres personnalisés depuis localStorage
+        const currentStudentSettings = getStudentSettingsFromStorage();
+        const currentParentSettings = getParentSettingsFromStorage();
         
-        console.log('📝 Soumission avec paramètres DB:', {
-          student: {
-            matriculeFormat: schoolSettings.studentMatriculeFormat,
-            defaultPassword: schoolSettings.defaultStudentPassword
-          },
-          parent: {
-            matriculeFormat: schoolSettings.parentMatriculeFormat,
-            defaultPassword: schoolSettings.defaultParentPassword
-          }
+        console.log('📝 Soumission avec paramètres localStorage:', {
+          student: currentStudentSettings,
+          parent: currentParentSettings
         });
         
       const studentData = {
@@ -932,17 +963,17 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
         // Mise à jour d'un élève existant
         result = await updateStudent(initialData.id, studentData);
       } else {
-        // Ajout d'un nouvel élève avec les paramètres depuis DB
+        // Ajout d'un nouvel élève avec les paramètres personnalisés
         console.log('🔐 Mots de passe transmis à addStudent:', {
-          studentPassword: schoolSettings.defaultStudentPassword ? '***' + schoolSettings.defaultStudentPassword.slice(-3) : 'vide',
-          parentPassword: schoolSettings.defaultParentPassword ? '***' + schoolSettings.defaultParentPassword.slice(-3) : 'vide'
+          studentPassword: currentStudentSettings.defaultStudentPassword ? '***' + currentStudentSettings.defaultStudentPassword.slice(-3) : 'vide',
+          parentPassword: currentParentSettings.defaultParentPassword ? '***' + currentParentSettings.defaultParentPassword.slice(-3) : 'vide'
         });
         
         result = await addStudent(studentData, {
-          studentMatriculeFormat: schoolSettings.studentMatriculeFormat,
-          parentMatriculeFormat: schoolSettings.parentMatriculeFormat,
-          defaultStudentPassword: schoolSettings.defaultStudentPassword,
-          defaultParentPassword: schoolSettings.defaultParentPassword
+          studentMatriculeFormat: currentStudentSettings.matriculeFormat,
+          parentMatriculeFormat: currentParentSettings.matriculeFormat,
+          defaultStudentPassword: currentStudentSettings.defaultStudentPassword,
+          defaultParentPassword: currentParentSettings.defaultParentPassword
         });
       }
       
