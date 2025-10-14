@@ -57,7 +57,8 @@ export function useStudentDocuments(studentId?: string) {
   const uploadDocument = async (
     studentId: string, 
     file: File, 
-    type: 'photo' | 'document'
+    type: 'photo' | 'document',
+    documentName?: string
   ): Promise<{ success: boolean; document?: StudentDocument; error?: string }> => {
     try {
       if (!userProfile?.schoolId) {
@@ -123,7 +124,7 @@ export function useStudentDocuments(studentId?: string) {
           file_path: filePath,
           file_type: type,
           file_size: file.size,
-          document_name: file.name,
+          document_name: documentName || file.name,
           school_id: userProfile.schoolId,
           uploaded_by: userProfile.id,
           mime_type: file.type

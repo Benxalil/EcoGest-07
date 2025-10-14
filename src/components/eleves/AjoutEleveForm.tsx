@@ -273,6 +273,8 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
   const [useMotherExisting, setUseMotherExisting] = useState(false);
   const [fatherMatricule, setFatherMatricule] = useState("");
   const [motherMatricule, setMotherMatricule] = useState("");
+  const [fatherValidationStatus, setFatherValidationStatus] = useState<'idle' | 'checking' | 'valid' | 'invalid'>('idle');
+  const [motherValidationStatus, setMotherValidationStatus] = useState<'idle' | 'checking' | 'valid' | 'invalid'>('idle');
   
   // États pour suivre les champs modifiés manuellement
   const [manuallyEditedFields, setManuallyEditedFields] = useState<Set<string>>(new Set());
@@ -704,6 +706,40 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
       return { exists: false };
     }
   };
+
+  // Vérification en temps réel du matricule père
+  useEffect(() => {
+    if (!useFatherExisting || !fatherMatricule.trim()) {
+      setFatherValidationStatus('idle');
+      return;
+    }
+
+    setFatherValidationStatus('checking');
+    
+    const timeoutId = setTimeout(async () => {
+      const result = await verifyParentExists(fatherMatricule);
+      setFatherValidationStatus(result.exists ? 'valid' : 'invalid');
+    }, 500); // Debounce de 500ms
+
+    return () => clearTimeout(timeoutId);
+  }, [fatherMatricule, useFatherExisting, userProfile?.schoolId]);
+
+  // Vérification en temps réel du matricule mère
+  useEffect(() => {
+    if (!useMotherExisting || !motherMatricule.trim()) {
+      setMotherValidationStatus('idle');
+      return;
+    }
+
+    setMotherValidationStatus('checking');
+    
+    const timeoutId = setTimeout(async () => {
+      const result = await verifyParentExists(motherMatricule);
+      setMotherValidationStatus(result.exists ? 'valid' : 'invalid');
+    }, 500); // Debounce de 500ms
+
+    return () => clearTimeout(timeoutId);
+  }, [motherMatricule, useMotherExisting, userProfile?.schoolId]);
   // Fonction pour uploader les documents vers Supabase
   const uploadDocuments = async (studentId: string, schoolId: string, studentData: any) => {
     if (!documents || documents.length === 0) return;
@@ -712,8 +748,8 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
       for (const doc of documents) {
         if (!doc.file || !doc.name.trim()) continue;
 
-        // Upload du document vers Supabase
-        const result = await uploadDocument(studentId, doc.file, 'document');
+        // Upload du document vers Supabase avec le nom saisi par l'utilisateur
+        const result = await uploadDocument(studentId, doc.file, 'document', doc.name);
         
         if (!result.success) {
           console.error('Erreur lors de l\'upload du document:', result.error);
@@ -1218,15 +1254,49 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
             <FormItem>
               <FormLabel>Matricule du parent (père)</FormLabel>
               <FormControl>
-                <Input 
-                  value={fatherMatricule}
-                  onChange={(e) => setFatherMatricule(e.target.value)}
-                  placeholder="Ex: PAR001"
-                />
+                <div className="relative">
+                  <Input 
+                    value={fatherMatricule}
+                    onChange={(e) => setFatherMatricule(e.target.value)}
+                    placeholder="Ex: PAR001"
+                    className={
+                      fatherValidationStatus === 'valid' ? 'border-green-500' :
+                      fatherValidationStatus === 'invalid' ? 'border-red-500' :
+                      ''
+                    }
+                  />
+                  {fatherValidationStatus === 'checking' && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                    </div>
+                  )}
+                  {fatherValidationStatus === 'valid' && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 text-green-500">
+                      ✓
+                    </div>
+                  )}
+                  {fatherValidationStatus === 'invalid' && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 text-red-500">
+                      ✗
+                    </div>
+                  )}
+                </div>
               </FormControl>
-              <p className="text-xs text-muted-foreground mt-1">
-                Entrez le matricule du parent existant pour l'associer à cet élève
-              </p>
+              {fatherValidationStatus === 'valid' && (
+                <p className="text-xs text-green-600 mt-1">
+                  ✓ Matricule valide - Parent trouvé dans le système
+                </p>
+              )}
+              {fatherValidationStatus === 'invalid' && (
+                <p className="text-xs text-red-600 mt-1">
+                  ✗ Matricule invalide - Aucun parent trouvé avec ce matricule
+                </p>
+              )}
+              {fatherValidationStatus === 'idle' && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Entrez le matricule du parent existant pour l'associer à cet élève
+                </p>
+              )}
             </FormItem>
           ) : (
             <>
@@ -1347,15 +1417,49 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
             <FormItem>
               <FormLabel>Matricule du parent (mère)</FormLabel>
               <FormControl>
-                <Input 
-                  value={motherMatricule}
-                  onChange={(e) => setMotherMatricule(e.target.value)}
-                  placeholder="Ex: PAR001"
-                />
+                <div className="relative">
+                  <Input 
+                    value={motherMatricule}
+                    onChange={(e) => setMotherMatricule(e.target.value)}
+                    placeholder="Ex: PAR002"
+                    className={
+                      motherValidationStatus === 'valid' ? 'border-green-500' :
+                      motherValidationStatus === 'invalid' ? 'border-red-500' :
+                      ''
+                    }
+                  />
+                  {motherValidationStatus === 'checking' && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                    </div>
+                  )}
+                  {motherValidationStatus === 'valid' && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 text-green-500">
+                      ✓
+                    </div>
+                  )}
+                  {motherValidationStatus === 'invalid' && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 text-red-500">
+                      ✗
+                    </div>
+                  )}
+                </div>
               </FormControl>
-              <p className="text-xs text-muted-foreground mt-1">
-                Entrez le matricule du parent existant pour l'associer à cet élève
-              </p>
+              {motherValidationStatus === 'valid' && (
+                <p className="text-xs text-green-600 mt-1">
+                  ✓ Matricule valide - Parent trouvé dans le système
+                </p>
+              )}
+              {motherValidationStatus === 'invalid' && (
+                <p className="text-xs text-red-600 mt-1">
+                  ✗ Matricule invalide - Aucun parent trouvé avec ce matricule
+                </p>
+              )}
+              {motherValidationStatus === 'idle' && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Entrez le matricule du parent existant pour l'associer à cet élève
+                </p>
+              )}
             </FormItem>
           ) : (
             <>
