@@ -51,8 +51,10 @@ const destinatairesOptions = [
   { id: "parents", label: "Parents" },
   { id: "eleves", label: "Élèves" },
   { id: "professeurs", label: "Professeurs" },
-  { id: "administration", label: "Administration" },
 ];
+
+// Options spécifiques (sans "Tous")
+const specificOptions = destinatairesOptions.filter(opt => opt.id !== "tous");
 
 export function CreerAnnonceModal({ open, onOpenChange }: CreerAnnonceModalProps) {
   const { showSuccess, showError } = useNotifications();
@@ -65,11 +67,24 @@ export function CreerAnnonceModal({ open, onOpenChange }: CreerAnnonceModalProps
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleDestinatairesChange = (destinataire: string, checked: boolean) => {
-    setDestinataires(prev => 
-      checked 
-        ? [...prev, destinataire]
-        : prev.filter(d => d !== destinataire)
-    );
+    if (destinataire === "Tous") {
+      // Si "Tous" est coché, cocher toutes les cases spécifiques
+      if (checked) {
+        setDestinataires(specificOptions.map(opt => opt.label));
+      } else {
+        // Si "Tous" est décoché, tout décocher
+        setDestinataires([]);
+      }
+    } else {
+      // Gestion d'une case spécifique
+      setDestinataires(prev => {
+        const newDestinataires = checked 
+          ? [...prev, destinataire]
+          : prev.filter(d => d !== destinataire);
+        
+        return newDestinataires;
+      });
+    }
   };
 
   const resetForm = () => {
@@ -225,23 +240,29 @@ export function CreerAnnonceModal({ open, onOpenChange }: CreerAnnonceModalProps
               </p>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              {destinatairesOptions.map((item) => (
-                <div key={item.id} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={item.id}
-                    checked={destinataires.includes(item.label)}
-                    onCheckedChange={(checked) => 
-                      handleDestinatairesChange(item.label, checked as boolean)
-                    }
-                  />
-                  <Label 
-                    htmlFor={item.id} 
-                    className="text-sm font-normal cursor-pointer"
-                  >
-                    {item.label}
-                  </Label>
-                </div>
-              ))}
+              {destinatairesOptions.map((item) => {
+                const isChecked = item.id === "tous" 
+                  ? specificOptions.every(opt => destinataires.includes(opt.label))
+                  : destinataires.includes(item.label);
+                
+                return (
+                  <div key={item.id} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={item.id}
+                      checked={isChecked}
+                      onCheckedChange={(checked) => 
+                        handleDestinatairesChange(item.label, checked as boolean)
+                      }
+                    />
+                    <Label 
+                      htmlFor={item.id} 
+                      className="text-sm font-normal cursor-pointer"
+                    >
+                      {item.label}
+                    </Label>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
