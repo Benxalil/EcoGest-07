@@ -393,50 +393,76 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
         lieuNaissance: initialData.place_of_birth || "",
         adresse: initialData.address || "",
         telephone: initialData.phone || "",
-        classe: initialData.classes ? `${initialData.classes.name} ${initialData.classes.level}${initialData.classes.section ? ` - ${initialData.classes.section}` : ''}` : "",
-        perePrenom: initialData.perePrenom || "",
-        pereNom: initialData.pereNom || "",
-        pereAdresse: initialData.pereAdresse || "",
+        classe: initialData.classes ? `${initialData.classes.name} ${initialData.classes.level}${initialData.classes.section ? ` - ${initialData.classes.section}` : ''}` : className || "",
+        perePrenom: initialData.parent_first_name || "",
+        pereNom: initialData.parent_last_name || "",
+        pereAdresse: initialData.address || "",
         pereTelephone: initialData.parent_phone || "",
-        pereNomUtilisateur: initialData.pereNomUtilisateur || "",
-        pereMotDePasse: initialData.pereMotDePasse || "",
-        merePrenom: initialData.merePrenom || "",
-        mereNom: initialData.mereNom || "",
-        mereAdresse: initialData.mereAdresse || "",
-        mereTelephone: initialData.mereTelephone || "",
-        mereNomUtilisateur: initialData.mereNomUtilisateur || "",
-        mereMotDePasse: initialData.mereMotDePasse || "",
-        contactUrgenceNom: initialData.contactUrgenceNom || "",
+        pereNomUtilisateur: initialData.parent_matricule || "",
+        pereMotDePasse: "",
+        merePrenom: "",
+        mereNom: "",
+        mereAdresse: "",
+        mereTelephone: "",
+        mereNomUtilisateur: "",
+        mereMotDePasse: "",
+        contactUrgenceNom: initialData.emergency_contact?.split(' - ')[0] || "",
         contactUrgenceTelephone: initialData.emergency_contact?.split(' - ')[1]?.split(' (')[0] || "",
         contactUrgenceRelation: initialData.emergency_contact?.split(' (')[1]?.replace(')', '') || "",
         statut: initialData?.is_active !== undefined ? initialData.is_active : true
       });
 
-      // Charger la photo existante de l'élève
-      const loadExistingPhoto = async () => {
+      // Charger la photo et les documents existants de l'élève
+      const loadExistingData = async () => {
         try {
-          const { data: documents, error } = await supabase
+          // Charger tous les documents
+          const { data: allDocuments, error: docsError } = await supabase
             .from('student_documents')
             .select('*')
             .eq('student_id', initialData.id)
-            .eq('file_type', 'photo')
-            .order('created_at', { ascending: false })
-            .limit(1);
+            .order('created_at', { ascending: false });
 
-          if (!error && documents && documents.length > 0) {
-            const { data } = supabase.storage
-              .from('student-files')
-              .getPublicUrl(documents[0].file_path);
-            setPhotoPreview(data.publicUrl);
+          if (docsError) {
+            console.error('Erreur lors du chargement des documents:', docsError);
+            return;
+          }
+
+          if (allDocuments && allDocuments.length > 0) {
+            // Séparer la photo des autres documents
+            const photoDoc = allDocuments.find(doc => doc.file_type === 'photo');
+            const otherDocs = allDocuments.filter(doc => doc.file_type === 'document');
+
+            // Charger la photo
+            if (photoDoc) {
+              const { data: photoData, error: photoError } = await supabase.storage
+                .from('student-files')
+                .createSignedUrl(photoDoc.file_path, 3600);
+              
+              if (!photoError && photoData) {
+                setPhotoPreview(photoData.signedUrl);
+              }
+            }
+
+            // Charger les documents existants
+            const formattedDocs: ExistingDocumentData[] = otherDocs.map((doc) => ({
+              id: doc.id,
+              document_name: doc.document_name,
+              file_name: doc.file_name,
+              file_path: doc.file_path,
+              file_size: doc.file_size,
+              mime_type: doc.mime_type
+            }));
+
+            setExistingDocuments(formattedDocs);
           }
         } catch (error) {
-          console.error('Erreur lors du chargement de la photo existante:', error);
+          console.error('Erreur lors du chargement des données existantes:', error);
         }
       };
 
-      loadExistingPhoto();
+      loadExistingData();
     }
-  }, [initialData, isEditing, form]);
+  }, [initialData, isEditing, form, className]);
 
   // Générer automatiquement le matricule et mot de passe au chargement initial ou lors de changements de settings
   useEffect(() => {
@@ -648,33 +674,81 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
   }, [isEditing, initialData]);
 
   // Fonction pour prévisualiser un document
-  const previewDocument = (document: ExistingDocumentData) => {
-    if (document.file_path) {
-      window.open(document.file_path, '_blank');
+  const previewDocument = async (document: ExistingDocumentData) => {
+    try {
+      const { data, error } = await supabase.storage
+        .from('student-files')
+        .createSignedUrl(document.file_path, 3600);
+      
+      if (error) throw error;
+      
+      if (data?.signedUrl) {
+        window.open(data.signedUrl, '_blank');
+      }
+    } catch (error) {
+      console.error('Erreur lors de la prévisualisation:', error);
+      showError({ 
+        title: "Erreur", 
+        description: "Impossible de prévisualiser le document" 
+      });
     }
   };
 
   // Fonction pour télécharger un document existant
-  const downloadDocument = (doc: ExistingDocumentData) => {
-    if (doc.file_path) {
+  const downloadDocument = async (doc: ExistingDocumentData) => {
+    try {
+      const { data, error } = await supabase.storage
+        .from('student-files')
+        .download(doc.file_path);
+      
+      if (error) throw error;
+      
+      const url = URL.createObjectURL(data);
       const link = window.document.createElement('a');
-      link.href = doc.file_path;
+      link.href = url;
       link.download = doc.file_name;
       link.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Erreur lors du téléchargement:', error);
+      showError({ 
+        title: "Erreur", 
+        description: "Impossible de télécharger le document" 
+      });
     }
   };
 
   // Fonction pour supprimer un document existant
-  const removeExistingDocument = (documentId: string) => {
-    const existingDocs = localStorage.getItem('student_documents');
-    if (existingDocs) {
-      const allDocuments = JSON.parse(existingDocs);
-      const updatedDocuments = allDocuments.filter((doc: any) => doc.id !== documentId);
-      localStorage.setItem('student_documents', JSON.stringify(updatedDocuments));
+  const removeExistingDocument = async (documentId: string) => {
+    try {
+      const docToDelete = existingDocuments.find(doc => doc.id === documentId);
+      if (!docToDelete) return;
+
+      // Supprimer le fichier du storage
+      const { error: storageError } = await supabase.storage
+        .from('student-files')
+        .remove([docToDelete.file_path]);
+
+      if (storageError) throw storageError;
+
+      // Supprimer l'enregistrement de la base de données
+      const { error: dbError } = await supabase
+        .from('student_documents')
+        .delete()
+        .eq('id', documentId);
+
+      if (dbError) throw dbError;
+
       setExistingDocuments(existingDocuments.filter(doc => doc.id !== documentId));
       showSuccess({ 
         title: "Succès", 
         description: "Document supprimé avec succès" 
+      });
+    } catch (error) {
+      console.error('Erreur lors de la suppression:', error);
+      showError({ 
+        title: "Erreur", 
+        description: "Impossible de supprimer le document" 
       });
     }
   };
