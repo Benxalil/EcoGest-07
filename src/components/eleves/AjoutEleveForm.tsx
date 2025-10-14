@@ -66,38 +66,26 @@ interface EleveFormData {
 // Les paramètres sont désormais récupérés uniquement depuis la base de données via useSchoolSettings
 // Plus besoin de localStorage - supprimé pour éviter les problèmes de synchronisation
 
-// Fonction pour générer le prochain numéro automatiquement basé sur les matricules existants
+// Fonction pour générer le prochain numéro automatiquement basé sur le nombre total d'élèves
+// ✅ LOGIQUE HARMONISÉE avec les enseignants : comptage continu indépendant du format
 const getNextStudentNumber = async (schoolId: string, prefix: string): Promise<string> => {
   try {
-    // Récupérer tous les matricules existants avec ce préfixe
-    const { data: students, error } = await supabase
+    // ✅ NOUVEAU : Compter TOUS les élèves actifs (comme pour les enseignants)
+    const { count, error } = await supabase
       .from('students')
-      .select('student_number')
+      .select('*', { count: 'exact', head: true })
       .eq('school_id', schoolId)
-      .eq('is_active', true)
-      .like('student_number', `${prefix}%`);
+      .eq('is_active', true);
 
     if (error) {
-      console.error("Erreur lors de la récupération des matricules:", error);
+      console.error("Erreur lors du comptage des élèves:", error);
       return `${prefix}001`;
     }
 
-    // Extraire les numéros existants
-    const existingNumbers = students
-      ?.map(s => {
-        const numStr = s.student_number?.replace(prefix, '');
-        return parseInt(numStr) || 0;
-      })
-      .filter(n => !isNaN(n)) || [];
-
-    // Trouver le premier numéro disponible
-    let nextNumber = 1;
-    while (existingNumbers.includes(nextNumber)) {
-      nextNumber++;
-    }
-    
-    // Formater avec 3 chiffres minimum (ex: 001, 002, 015)
+    // ✅ Le prochain numéro = total d'élèves + 1
+    const nextNumber = (count || 0) + 1;
     const formattedNumber = nextNumber.toString().padStart(3, '0');
+    
     return `${prefix}${formattedNumber}`;
     
   } catch (error) {
@@ -108,17 +96,33 @@ const getNextStudentNumber = async (schoolId: string, prefix: string): Promise<s
 
 // Cette fonction a été supprimée - les paramètres sont maintenant gérés via useSchoolSettings()
 
-// Générer le prochain numéro de matricule pour les parents (basé sur le matricule élève)
-const getNextParentNumber = (studentMatricule: string, type: 'PERE' | 'MERE', parentFormat: string, studentFormat: string) => {
+// Générer le prochain numéro de matricule pour les parents
+// ✅ LOGIQUE HARMONISÉE : numérotation indépendante basée sur le nombre total de parents
+const getNextParentNumber = async (schoolId: string, parentFormat: string): Promise<string> => {
   try {
-    // Extraire le numéro du matricule élève pour le réutiliser
-    const numberPart = studentMatricule.replace(studentFormat, '');
+    // ✅ NOUVEAU : Compter TOUS les parents actifs via leurs profils
+    // Chercher dans la table profiles les utilisateurs avec role='parent'
+    const { count, error } = await supabase
+      .from('profiles')
+      .select('*', { count: 'exact', head: true })
+      .eq('school_id', schoolId)
+      .eq('role', 'parent')
+      .eq('is_active', true);
+
+    if (error) {
+      console.error("Erreur lors du comptage des parents:", error);
+      return `${parentFormat}001`;
+    }
+
+    // ✅ Le prochain numéro = total de parents + 1
+    const nextNumber = (count || 0) + 1;
+    const formattedNumber = nextNumber.toString().padStart(3, '0');
     
-    // Utiliser le même numéro pour les parents
-    return `${parentFormat}${numberPart}`;
+    return `${parentFormat}${formattedNumber}`;
+    
   } catch (error) {
     console.error("Erreur lors de la génération du numéro parent:", error);
-    return `PAR001`;
+    return `${parentFormat}001`;
   }
 };
 
@@ -491,14 +495,14 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
         const nextNumber = await getNextStudentNumber(userProfile.schoolId, currentStudentSettings.matriculeFormat);
         form.setValue("numeroPerso", nextNumber);
         
-        // Générer les matricules parents
+        // ✅ Générer les matricules parents indépendamment
         if (currentParentSettings.autoGenerateMatricule) {
-          const parentNumber = getNextParentNumber(nextNumber, 'PERE', currentParentSettings.matriculeFormat, currentStudentSettings.matriculeFormat);
+          const parentNumber = await getNextParentNumber(userProfile.schoolId, currentParentSettings.matriculeFormat);
           if (!manuallyEditedFields.has('pereNomUtilisateur')) {
             form.setValue("pereNomUtilisateur", parentNumber);
           }
           
-          const motherNumber = getNextParentNumber(nextNumber, 'MERE', currentParentSettings.matriculeFormat, currentStudentSettings.matriculeFormat);
+          const motherNumber = await getNextParentNumber(userProfile.schoolId, currentParentSettings.matriculeFormat);
           if (!manuallyEditedFields.has('mereNomUtilisateur')) {
             form.setValue("mereNomUtilisateur", motherNumber);
           }
@@ -539,14 +543,14 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
         const nextNumber = await getNextStudentNumber(userProfile.schoolId, currentStudentSettings.matriculeFormat);
         form.setValue("numeroPerso", nextNumber);
         
-        // Mettre à jour les matricules parents si nécessaire
+        // ✅ Mettre à jour les matricules parents indépendamment si nécessaire
         if (currentParentSettings.autoGenerateMatricule) {
-          const parentNumber = getNextParentNumber(nextNumber, 'PERE', currentParentSettings.matriculeFormat, currentStudentSettings.matriculeFormat);
+          const parentNumber = await getNextParentNumber(userProfile.schoolId, currentParentSettings.matriculeFormat);
           if (!manuallyEditedFields.has('pereNomUtilisateur')) {
             form.setValue("pereNomUtilisateur", parentNumber);
           }
+          const motherNumber = await getNextParentNumber(userProfile.schoolId, currentParentSettings.matriculeFormat);
           if (!manuallyEditedFields.has('mereNomUtilisateur')) {
-            const motherNumber = getNextParentNumber(nextNumber, 'MERE', currentParentSettings.matriculeFormat, currentStudentSettings.matriculeFormat);
             form.setValue("mereNomUtilisateur", motherNumber);
           }
         }
