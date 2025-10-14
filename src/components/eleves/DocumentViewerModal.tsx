@@ -42,12 +42,12 @@ export function DocumentViewerModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
-        <DialogHeader>
+      <DialogContent className="max-w-4xl h-[90vh] flex flex-col p-0">
+        <DialogHeader className="px-6 pt-6 pb-4">
           <DialogTitle>{document.document_name}</DialogTitle>
         </DialogHeader>
 
-        <div className="flex-1 overflow-hidden bg-muted rounded-lg flex items-center justify-center min-h-[500px] relative">
+        <div className="flex-1 overflow-hidden bg-muted mx-6 rounded-lg flex relative">
           {isLoading && (
             <div className="absolute inset-0 flex items-center justify-center bg-background/80">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
@@ -57,7 +57,7 @@ export function DocumentViewerModal({
           {isPdf ? (
             <iframe
               src={documentUrl}
-              className="w-full h-full border-0"
+              className="w-full h-full border-0 rounded-lg"
               title={document.document_name}
               onLoad={handleLoad}
             />
@@ -65,7 +65,7 @@ export function DocumentViewerModal({
             <img
               src={documentUrl}
               alt={document.document_name}
-              className="max-w-full max-h-full object-contain"
+              className="w-full h-full object-contain rounded-lg"
               onLoad={handleLoad}
             />
           ) : (
@@ -81,7 +81,7 @@ export function DocumentViewerModal({
           )}
         </div>
 
-        <DialogFooter className="flex justify-between sm:justify-between">
+        <DialogFooter className="flex justify-between sm:justify-between px-6 py-4">
           <Button onClick={onDownload} variant="outline" className="gap-2">
             <Download className="h-4 w-4" />
             Télécharger
