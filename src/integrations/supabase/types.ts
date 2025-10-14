@@ -1740,7 +1740,25 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      index_size_report: {
+        Row: {
+          index_name: unknown | null
+          scans: number | null
+          schemaname: unknown | null
+          size: string | null
+          table_name: unknown | null
+        }
+        Relationships: []
+      }
+      slow_queries_monitoring: {
+        Row: {
+          avg_ms: number | null
+          calls: number | null
+          query_preview: string | null
+          total_ms: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       associate_orphan_grades_to_exams: {
@@ -1824,6 +1842,26 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      gtrgm_compress: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gtrgm_decompress: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gtrgm_in: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gtrgm_options: {
+        Args: { "": unknown }
+        Returns: undefined
+      }
+      gtrgm_out: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
       initialize_new_school: {
         Args: {
           academic_year_name_param?: string
@@ -1831,6 +1869,18 @@ export type Database = {
           school_type_param?: Database["public"]["Enums"]["school_type"]
         }
         Returns: undefined
+      }
+      set_limit: {
+        Args: { "": number }
+        Returns: number
+      }
+      show_limit: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
+      show_trgm: {
+        Args: { "": string }
+        Returns: string[]
       }
       validate_school_isolation: {
         Args: Record<PropertyKey, never>
