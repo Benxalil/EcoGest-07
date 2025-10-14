@@ -127,7 +127,7 @@ export default function ListeEmplois() {
       <Layout>
         <div className="container mx-auto p-6">
           <div className="text-center py-12">
-            <p className="text-gray-500 text-lg">Chargement des classes...</p>
+            <p className="text-muted-foreground text-lg">Chargement des classes...</p>
           </div>
         </div>
       </Layout>
@@ -139,21 +139,21 @@ export default function ListeEmplois() {
       <Layout>
         <div className="container mx-auto p-6">
           <div className="mb-6">
-            <h1 className="text-2xl font-bold text-gray-900">
-              {isTeacher() ? "Mes classes" : "Liste des classes du Primaire"}
+            <h1 className="text-2xl font-bold text-foreground">
+              {isTeacher() ? "Mes classes" : "Gérer l'emploi des Classes"}
             </h1>
           </div>
 
           <div className="text-center py-12">
             {hasNoClasses ? (
               <>
-                <p className="text-gray-500 text-lg mb-4">Vous n'êtes encore affecté à aucune classe</p>
-                <p className="text-gray-400 mb-6">Veuillez contacter l'administrateur pour être assigné à des classes via l'emploi du temps</p>
+                <p className="text-muted-foreground text-lg mb-4">Vous n'êtes encore affecté à aucune classe</p>
+                <p className="text-muted-foreground/70 mb-6">Veuillez contacter l'administrateur pour être assigné à des classes via l'emploi du temps</p>
               </>
             ) : (
               <>
-                <p className="text-gray-500 text-lg mb-4">Aucune classe n'a été enregistrée</p>
-                <p className="text-gray-400 mb-6">Veuillez d'abord créer des classes avant de gérer les emplois du temps</p>
+                <p className="text-muted-foreground text-lg mb-4">Aucune classe n'a été enregistrée</p>
+                <p className="text-muted-foreground/70 mb-6">Veuillez d'abord créer des classes avant de gérer les emplois du temps</p>
                 {isAdmin() && (
                   <Button onClick={() => navigate("/classes")}>
                     Aller à la gestion des classes
@@ -171,14 +171,14 @@ export default function ListeEmplois() {
     <Layout>
       <div className="container mx-auto p-6">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">
+          <h1 className="text-2xl font-bold text-foreground">
             {userProfile?.role === 'student' 
               ? "Mon Emploi du Temps" 
               : isParent()
                 ? "Emploi du temps de mes enfants"
                 : isTeacher() 
                   ? "Mes classes" 
-                  : "Liste des classes du Primaire"}
+                  : "Gérer l'emploi des Classes"}
           </h1>
         </div>
 
@@ -200,7 +200,7 @@ export default function ListeEmplois() {
             </TableHeader>
             <TableBody>
               {sortedClasses.map((classe) => (
-                <TableRow key={classe.id} className="hover:bg-gray-50">
+                <TableRow key={classe.id} className="hover:bg-accent/50">
                   <TableCell className="font-medium">{formatClassName(classe)}</TableCell>
                   <TableCell className="text-center">
                     <Button
