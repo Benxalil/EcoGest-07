@@ -31,12 +31,16 @@ export interface CreatePaymentData {
 
 export const usePayments = () => {
   const [payments, setPayments] = useState<Payment[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { userProfile } = useUserRole();
   const { toast } = useToast();
 
-  const fetchPayments = async () => {
+  const fetchPayments = async (
+    page: number = 1,
+    pageSize: number = 100
+  ) => {
     if (!userProfile?.schoolId) {
       setLoading(false);
       return;
@@ -44,19 +48,26 @@ export const usePayments = () => {
 
     try {
       setLoading(true);
-      const { data: paymentsData, error } = await supabase
+      
+      const startIndex = (page - 1) * pageSize;
+
+      const { data: paymentsData, error, count } = await supabase
         .from('payments')
-        .select('id, student_id, amount, payment_method, payment_type, payment_month, paid_by, phone_number, payment_date, school_id, created_at, updated_at')
+        .select('id, student_id, amount, payment_method, payment_type, payment_month, paid_by, phone_number, payment_date, school_id, created_at, updated_at', { count: 'exact' })
         .eq('school_id', userProfile.schoolId)
+        .range(startIndex, startIndex + pageSize - 1)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
       
       // Utiliser les données directement telles qu'elles arrivent de Supabase
       setPayments(paymentsData || []);
+      setTotalCount(count || 0);
     } catch (err) {
       console.error('Erreur lors de la récupération des paiements:', err);
       setError(err instanceof Error ? err.message : 'Erreur inconnue');
+      setPayments([]);
+      setTotalCount(0);
     } finally {
       setLoading(false);
     }
@@ -193,12 +204,14 @@ export const usePayments = () => {
 
   return {
     payments,
+    totalCount,
     loading,
     error,
     createPayment,
     updatePayment,
     deletePayment,
     refreshPayments: fetchPayments,
+    fetchPayments,
     hasStudentPaid,
     getStudentPayment
   };

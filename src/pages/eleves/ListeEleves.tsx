@@ -98,35 +98,41 @@ const fetchStudentsByClass = async (userProfile?: any, isTeacher?: boolean): Pro
       console.log('✅ Classes enseignant:', allowedClassIds);
     }
 
-    // Récupérer les classes (filtrées pour les enseignants)
-    let classesQuery = supabase
-      .from('classes')
-      .select('*')
-      .order('name');
+    // ✅ Paralléliser les requêtes pour classes et students (optimisation N+1)
+    const [classesResult, studentsResult] = await Promise.all([
+      (async () => {
+        let classesQuery = supabase
+          .from('classes')
+          .select('*')
+          .order('name');
 
-    if (isTeacher && allowedClassIds.length > 0) {
-      classesQuery = classesQuery.in('id', allowedClassIds);
-    }
+        if (isTeacher && allowedClassIds.length > 0) {
+          classesQuery = classesQuery.in('id', allowedClassIds);
+        }
 
-    const { data: classes, error: classesError } = await classesQuery;
+        return await classesQuery;
+      })(),
+      (async () => {
+        let studentsQuery = supabase
+          .from('students')
+          .select(`
+            *,
+            classes!inner(*)
+          `)
+          .order('first_name');
+
+        if (isTeacher && allowedClassIds.length > 0) {
+          studentsQuery = studentsQuery.in('class_id', allowedClassIds);
+        }
+
+        return await studentsQuery;
+      })()
+    ]);
+
+    const { data: classes, error: classesError } = classesResult;
+    const { data: students, error: studentsError } = studentsResult;
 
     if (classesError) throw classesError;
-
-    // Récupérer les élèves (filtrés par classes pour les enseignants)
-    let studentsQuery = supabase
-      .from('students')
-      .select(`
-        *,
-        classes!inner(*)
-      `)
-      .order('first_name');
-
-    if (isTeacher && allowedClassIds.length > 0) {
-      studentsQuery = studentsQuery.in('class_id', allowedClassIds);
-    }
-
-    const { data: students, error: studentsError } = await studentsQuery;
-
     if (studentsError) throw studentsError;
 
     // Organiser les élèves par classe

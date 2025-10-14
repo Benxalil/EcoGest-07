@@ -37,21 +37,28 @@ export interface Student {
 
 export function useStudents(classId?: string) {
   const [students, setStudents] = useState<Student[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { userProfile } = useUserRole();
   const { settings: schoolSettings } = useSchoolSettings();
   const { toast } = useToast();
 
-  const fetchStudents = useCallback(async () => {
+  const fetchStudents = useCallback(async (
+    page: number = 1,
+    pageSize: number = 50
+  ) => {
     try {
       setLoading(true);
       setError(null);
 
       if (!userProfile?.schoolId) {
         setStudents([]);
+        setTotalCount(0);
         return;
       }
+
+      const startIndex = (page - 1) * pageSize;
 
       let query = supabase
         .from('students')
@@ -63,9 +70,10 @@ export function useStudents(classId?: string) {
             level,
             section
           )
-        `)
+        `, { count: 'exact' })
         .eq('school_id', userProfile.schoolId)
         .eq('is_active', true)
+        .range(startIndex, startIndex + pageSize - 1)
         .order('first_name');
 
       // Si un classId est spécifié, filtrer par classe
@@ -73,7 +81,7 @@ export function useStudents(classId?: string) {
         query = query.eq('class_id', classId);
       }
 
-      const { data, error: fetchError } = await query;
+      const { data, error: fetchError, count } = await query;
 
       if (fetchError) {
         console.error('Erreur lors de la récupération des élèves:', fetchError);
@@ -81,10 +89,12 @@ export function useStudents(classId?: string) {
       }
 
       setStudents(data || []);
+      setTotalCount(count || 0);
     } catch (err) {
       console.error('Erreur lors de la récupération des élèves:', err);
       setError(err instanceof Error ? err.message : 'Erreur inconnue');
       setStudents([]);
+      setTotalCount(0);
     } finally {
       setLoading(false);
     }
@@ -458,11 +468,13 @@ export function useStudents(classId?: string) {
 
   return {
     students,
+    totalCount,
     loading,
     error,
     addStudent,
     updateStudent,
     deleteStudent,
-    refreshStudents
+    refreshStudents,
+    fetchStudents
   };
 }
