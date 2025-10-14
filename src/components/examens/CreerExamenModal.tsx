@@ -312,7 +312,7 @@ export const CreerExamenModal: React.FC<CreerExamenModalProps> = ({ createExam, 
                 id="anneeAcademique"
                 value={anneeAcademique}
                 readOnly
-                className="bg-gray-50"
+                className="bg-muted"
                 placeholder="Ex: 2024/2025"
               />
             </div>
