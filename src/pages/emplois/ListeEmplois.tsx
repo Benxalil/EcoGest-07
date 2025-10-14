@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -19,6 +19,7 @@ import { formatClassName } from "@/utils/classNameFormatter";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useParentChildren } from "@/hooks/useParentChildren";
 import { LoadingSkeleton } from "@/components/ui/loading-skeleton";
+import { Skeleton } from "@/components/ui/skeleton";
 
 // Helper function to define academic order
 const getClassOrder = (name: string, section: string): number => {
@@ -76,23 +77,23 @@ export default function ListeEmplois() {
   const { classes, loading } = isTeacher() ? teacherData : adminData;
   const hasNoClasses = isTeacher() && teacherData.hasNoClasses;
 
-  // Récupérer la classe de l'élève si c'est un élève
+  // OPTIMISÉ: Charger en parallèle la classe de l'élève
   useEffect(() => {
-    const loadStudentClass = async () => {
+    const loadData = async () => {
       if (userProfile?.role === 'student' && userProfile?.id && userProfile?.schoolId) {
         try {
-          const { data: student, error } = await supabase
+          const { data: student } = await supabase
             .from('students')
             .select('class_id')
             .eq('user_id', userProfile.id)
             .eq('school_id', userProfile.schoolId)
-            .single();
+            .maybeSingle(); // Évite l'erreur si aucun résultat
 
-          if (!error && student) {
+          if (student) {
             setStudentClassId(student.class_id);
           }
         } catch (err) {
-          console.error("Erreur lors du chargement de la classe de l'élève:", err);
+          console.error("Erreur chargement classe élève:", err);
         } finally {
           setStudentLoading(false);
         }
@@ -101,8 +102,8 @@ export default function ListeEmplois() {
       }
     };
 
-    loadStudentClass();
-  }, [userProfile]);
+    loadData();
+  }, [userProfile?.role, userProfile?.id, userProfile?.schoolId]);
 
   // Filtrer les classes pour les élèves et parents
   let displayedClasses = classes;
@@ -118,16 +119,22 @@ export default function ListeEmplois() {
     displayedClasses = classes.filter(c => childrenClassIds.includes(c.id));
   }
 
-  // Trier les classes dans l'ordre académique
-  const sortedClasses = sortClassesAcademically(displayedClasses);
+  // OPTIMISÉ: Mémoriser le tri pour éviter recalcul
+  const sortedClasses = useMemo(() => 
+    sortClassesAcademically(displayedClasses),
+    [displayedClasses]
+  );
 
-  // Si aucune classe n'a été enregistrée
+  // OPTIMISÉ: Squelette de chargement au lieu de texte vide
   if (loading || studentLoading || (isParent() && parentChildrenLoading)) {
     return (
       <Layout>
         <div className="container mx-auto p-6">
-          <div className="text-center py-12">
-            <p className="text-muted-foreground text-lg">Chargement des classes...</p>
+          <Skeleton className="h-8 w-64 mb-6" />
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <Skeleton key={i} className="h-16 w-full" />
+            ))}
           </div>
         </div>
       </Layout>

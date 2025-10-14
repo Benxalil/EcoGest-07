@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useOptimizedUserData } from './useOptimizedUserData';
 
@@ -21,14 +21,14 @@ export const useTodaySchedules = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Obtenir le jour actuel en français (Lundi, Mardi, etc.)
-  const getCurrentDay = useCallback(() => {
+  // OPTIMISÉ: useMemo pour le jour actuel
+  const currentDay = useMemo(() => {
     const days = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
-    const today = new Date().getDay();
-    return days[today];
+    return days[new Date().getDay()];
   }, []);
 
-  const fetchTodaySchedules = useCallback(async () => {
+  // OPTIMISÉ: Mémorisé avec les bonnes dépendances
+  const fetchTodaySchedules = useMemo(() => async () => {
     if (!profile?.schoolId) {
       setLoading(false);
       return;
@@ -36,45 +36,44 @@ export const useTodaySchedules = () => {
 
     try {
       setLoading(true);
-      const currentDay = getCurrentDay();
 
-      // Récupérer tous les emplois du temps pour aujourd'hui
+      // OPTIMISÉ: Requête simplifiée sans JOIN
       const { data: schedulesData, error: schedulesError } = await supabase
         .from('schedules')
-        .select(`
-          id,
-          subject,
-          teacher,
-          start_time,
-          end_time,
-          class_id,
-          classes!inner(
-            id,
-            name,
-            level,
-            section
-          )
-        `)
+        .select('id, subject, teacher, start_time, end_time, class_id')
         .eq('school_id', profile.schoolId)
         .eq('day', currentDay)
-        .order('start_time');
+        .order('start_time')
+        .limit(50);
 
       if (schedulesError) throw schedulesError;
 
-      // Grouper les cours par classe
+      // Récupérer les classes en parallèle
+      const classIds = [...new Set(schedulesData?.map(s => s.class_id) || [])];
+      const { data: classesData } = await supabase
+        .from('classes')
+        .select('id, name, level, section')
+        .in('id', classIds);
+
+      const classesMap = new Map(
+        classesData?.map(c => [c.id, c]) || []
+      );
+
+      // Grouper par classe
       const groupedSchedules: { [key: string]: TodayScheduleItem } = {};
 
       schedulesData?.forEach((schedule: any) => {
         const classId = schedule.class_id;
-        const className = schedule.classes?.section 
-          ? `${schedule.classes.name} ${schedule.classes.section}`
-          : schedule.classes?.name || 'Classe inconnue';
+        const classInfo = classesMap.get(classId);
+        const className = classInfo?.section 
+          ? `${classInfo.name} ${classInfo.section}`
+          : classInfo?.name || 'Classe inconnue';
 
         if (!groupedSchedules[classId]) {
           groupedSchedules[classId] = {
             id: classId,
-            className: className,
-            classId: classId,
+            className,
+            classId,
             courses: []
           };
         }
@@ -97,7 +96,7 @@ export const useTodaySchedules = () => {
     } finally {
       setLoading(false);
     }
-  }, [profile?.schoolId, getCurrentDay]);
+  }, [profile?.schoolId, currentDay]);
 
   useEffect(() => {
     fetchTodaySchedules();
@@ -107,7 +106,7 @@ export const useTodaySchedules = () => {
     schedules,
     loading,
     error,
-    currentDay: getCurrentDay(),
+    currentDay,
     refetch: fetchTodaySchedules
   };
 };

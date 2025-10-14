@@ -49,16 +49,19 @@ export const useSchedules = (classId?: string) => {
 
     try {
       setLoading(true);
+      // OPTIMISÉ: Limite raisonnable + tri côté serveur
       const { data, error } = await supabase
         .from('schedules')
         .select('*')
         .eq('school_id', userProfile.schoolId)
         .eq('class_id', classId)
-        .order('day, start_time');
+        .order('day_of_week')
+        .order('start_time')
+        .limit(100);
 
       if (error) throw error;
 
-      // Organiser les cours par jour - utiliser le format correct attendu par la DB
+      // Organiser les cours par jour
       const days = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
       const organizedSchedules: DaySchedule[] = days.map(day => ({
         day,

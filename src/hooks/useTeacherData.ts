@@ -44,20 +44,27 @@ export const useTeacherData = () => {
     setData(prev => ({ ...prev, loading: true, error: null }));
 
     try {
-      // Récupérer TOUTES les données en parallèle avec Promise.all
+      // OPTIMISÉ: Une seule requête combinée avec JOIN pour tout récupérer
       const [schedulesResult, announcementsResult] = await Promise.all([
-        // Schedules par teacher_id (seulement si teacherId existe)
+        // Schedules avec classes et students en une seule requête
         teacherId
           ? supabase
               .from('schedules')
-              .select('*, classes(*)')
+              .select(`
+                *,
+                classes!inner (
+                  *,
+                  students!students_class_id_fkey (
+                    id,
+                    class_id,
+                    is_active
+                  )
+                )
+              `)
               .eq('school_id', profile.schoolId)
               .eq('teacher_id', teacherId)
-          : supabase
-              .from('schedules')
-              .select('*, classes(*)')
-              .eq('school_id', profile.schoolId)
-              .limit(0), // Retourne un résultat vide si pas de teacherId
+              .limit(50) // Limite raisonnable
+          : Promise.resolve({ data: [], error: null }),
 
         // Announcements (limité à 5)
         supabase
@@ -69,52 +76,36 @@ export const useTeacherData = () => {
           .limit(5)
       ]);
 
-      let schedulesData = schedulesResult.data || [];
+      const schedulesData = schedulesResult.data || [];
 
-      // Fallback par nom si aucun schedule trouvé avec teacher_id
-      if (schedulesData.length === 0 && profile.firstName && profile.lastName) {
-        const fallbackResult = await supabase
-          .from('schedules')
-          .select('*, classes(*)')
-          .eq('school_id', profile.schoolId)
-          .eq('teacher', `${profile.firstName} ${profile.lastName}`);
-        
-        schedulesData = fallbackResult.data || [];
-      }
-
-      // Extraire les class_ids uniques
-      const classIds = [...new Set(schedulesData.map(s => s.class_id).filter(Boolean))];
-
-      // Récupérer les classes et students en parallèle
-      const [classesResult, studentsResult] = await Promise.all([
-        classIds.length > 0
-          ? supabase
-              .from('classes')
-              .select('*')
-              .in('id', classIds)
-              .order('name')
-          : Promise.resolve({ data: [], error: null }),
-
-        classIds.length > 0
-          ? supabase
-              .from('students')
-              .select('class_id')
-              .in('class_id', classIds)
-              .eq('is_active', true)
-          : Promise.resolve({ data: [], error: null })
-      ]);
-
-      // Compter les élèves par classe
+      // Extraire classes uniques avec leurs élèves
+      const classesMap = new Map<string, any>();
       const enrollmentMap = new Map<string, number>();
-      (studentsResult.data || []).forEach((student: any) => {
-        const currentCount = enrollmentMap.get(student.class_id) || 0;
-        enrollmentMap.set(student.class_id, currentCount + 1);
+
+      schedulesData.forEach((schedule: any) => {
+        if (schedule.classes) {
+          const classId = schedule.classes.id;
+          
+          if (!classesMap.has(classId)) {
+            classesMap.set(classId, {
+              ...schedule.classes,
+              enrollment_count: 0
+            });
+          }
+
+          // Compter les élèves actifs
+          const activeStudents = (schedule.classes.students || []).filter(
+            (s: any) => s.is_active
+          );
+          enrollmentMap.set(classId, activeStudents.length);
+        }
       });
 
-      // Ajouter le nombre d'élèves aux classes
-      const classesWithEnrollment = (classesResult.data || []).map((classe: any) => ({
+      // Finaliser les classes avec enrollment
+      const classesWithEnrollment = Array.from(classesMap.values()).map(classe => ({
         ...classe,
-        enrollment_count: enrollmentMap.get(classe.id) || 0
+        enrollment_count: enrollmentMap.get(classe.id) || 0,
+        students: undefined // Nettoyer les données imbriquées
       }));
 
       // Filtrer les cours d'aujourd'hui
@@ -127,17 +118,20 @@ export const useTeacherData = () => {
         s => s.day?.toUpperCase() === dayMapping[today]
       );
 
+      // Compter le total d'élèves
+      const totalStudents = Array.from(enrollmentMap.values()).reduce((sum, count) => sum + count, 0);
+
       const teacherData: TeacherData = {
         classes: classesWithEnrollment,
-        totalStudents: studentsResult.data?.length || 0,
+        totalStudents,
         todaySchedules,
         announcements: announcementsResult.data || [],
         loading: false,
         error: null
       };
 
-      // Mettre en cache pour 30 secondes
-      cache.set(cacheKey, teacherData, 30 * 1000);
+      // Cache plus agressif: 5 minutes
+      cache.set(cacheKey, teacherData, 5 * 60 * 1000);
       setData(teacherData);
 
     } catch (err: any) {
@@ -150,7 +144,7 @@ export const useTeacherData = () => {
     } finally {
       isFetchingRef.current = false;
     }
-  }, [profile?.schoolId, profile?.id, profile?.firstName, profile?.lastName, teacherId, cache, cacheKey]);
+  }, [profile?.schoolId, profile?.id, teacherId, cache, cacheKey]);
 
   // Fetch initial
   useEffect(() => {
@@ -159,13 +153,16 @@ export const useTeacherData = () => {
     }
   }, [profileLoading, profile?.schoolId, fetchTeacherData]);
 
-  // Realtime - UN SEUL CHANNEL pour tout
+  // Realtime optimisé avec debounce
   useEffect(() => {
     if (!profile?.schoolId) return;
 
+    let timeoutId: NodeJS.Timeout;
     const handleUpdate = () => {
       cache.deleteWithEvent(cacheKey);
-      setTimeout(fetchTeacherData, 300);
+      // Debounce augmenté à 1 seconde pour éviter les refetch multiples
+      if (timeoutId) clearTimeout(timeoutId);
+      timeoutId = setTimeout(fetchTeacherData, 1000);
     };
 
     const channel = supabase
@@ -191,6 +188,7 @@ export const useTeacherData = () => {
       .subscribe();
 
     return () => {
+      if (timeoutId) clearTimeout(timeoutId);
       supabase.removeChannel(channel);
     };
   }, [profile?.schoolId, fetchTeacherData, cache, cacheKey]);
