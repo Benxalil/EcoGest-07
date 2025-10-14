@@ -285,7 +285,7 @@ export default function EmploiDuTemps() {
       <Layout>
         <div className="container mx-auto p-6">
           <div className="text-center py-12">
-            <p className="text-gray-500 text-lg">Chargement des données...</p>
+            <p className="text-muted-foreground text-lg">Chargement des données...</p>
           </div>
         </div>
       </Layout>
@@ -302,16 +302,16 @@ export default function EmploiDuTemps() {
               variant="ghost"
               size="sm"
               onClick={handleBack}
-              className="mr-4 p-2 hover:bg-gray-100"
+              className="mr-4 p-2"
             >
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <h1 className="text-2xl font-bold text-gray-900">Accès refusé</h1>
+            <h1 className="text-2xl font-bold text-foreground">Accès refusé</h1>
           </div>
           <div className="text-center py-12">
             <AlertTriangle className="h-16 w-16 text-yellow-500 mx-auto mb-4" />
-            <p className="text-gray-500 text-lg mb-4">Vous n'avez pas accès à cet emploi du temps</p>
-            <p className="text-gray-400 mb-6">Cette classe ne vous est pas attribuée</p>
+            <p className="text-muted-foreground text-lg mb-4">Vous n'avez pas accès à cet emploi du temps</p>
+            <p className="text-muted-foreground/70 mb-6">Cette classe ne vous est pas attribuée</p>
             <Button onClick={handleBack}>Retour à mes classes</Button>
           </div>
         </div>
@@ -328,11 +328,11 @@ export default function EmploiDuTemps() {
               variant="ghost"
               size="sm"
               onClick={handleBack}
-              className="mr-4 p-2 hover:bg-gray-100"
+              className="mr-4 p-2"
             >
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <h1 className="text-2xl font-bold text-gray-900">
+            <h1 className="text-2xl font-bold text-foreground">
               Emploi du temps classe de : {className}
             </h1>
           </div>
@@ -521,11 +521,11 @@ export default function EmploiDuTemps() {
                            <FormItem>
                              <FormLabel>Matière</FormLabel>
                              <FormControl>
-                               <Input 
-                                 value={subjects.find(s => s.id === field.value)?.name || ''} 
-                                 readOnly 
-                                 className="bg-gray-50"
-                               />
+                                <Input 
+                                  value={subjects.find(s => s.id === field.value)?.name || ''} 
+                                  readOnly 
+                                  className="bg-muted/30"
+                                />
                              </FormControl>
                            </FormItem>
                          )}
@@ -538,14 +538,14 @@ export default function EmploiDuTemps() {
                            <FormItem>
                              <FormLabel>Enseignant</FormLabel>
                              <FormControl>
-                               <Input 
-                                 value={(() => {
-                                   const teacher = teachers.find(t => t.id === field.value);
-                                   return teacher ? `${teacher.first_name} ${teacher.last_name}` : '';
-                                 })()} 
-                                 readOnly 
-                                 className="bg-gray-50"
-                               />
+                                <Input 
+                                  value={(() => {
+                                    const teacher = teachers.find(t => t.id === field.value);
+                                    return teacher ? `${teacher.first_name} ${teacher.last_name}` : '';
+                                  })()} 
+                                  readOnly 
+                                  className="bg-muted/30"
+                                />
                              </FormControl>
                            </FormItem>
                          )}
@@ -649,19 +649,19 @@ export default function EmploiDuTemps() {
                 day.day === 'VENDREDI' ? 'bg-green-100' :
                 'bg-gray-100'
               }`}>
-                <div className={`p-2 text-center font-bold ${day.day === 'LUNDI' ? 'text-white' : 'text-gray-800'}`}>
+                 <div className={`p-2 text-center font-bold ${day.day === 'LUNDI' ? 'text-white' : 'text-foreground'}`}>
                   {day.day}
                 </div>
-                <div className="bg-white min-h-[400px] flex">
+                <div className="bg-card min-h-[400px] flex">
                   {/* Trait vertical avec labels MATIN et SOIR */}
-                  <div className="w-12 bg-gray-50 border-r-2 border-gray-300 flex flex-col">
+                  <div className="w-12 bg-muted/30 border-r-2 border-border flex flex-col">
                     <div className="flex-1 flex items-center justify-center">
-                      <div className="transform -rotate-90 text-xs font-bold text-gray-600 whitespace-nowrap">
+                      <div className="transform -rotate-90 text-xs font-bold text-muted-foreground whitespace-nowrap">
                         MATIN
                       </div>
                     </div>
                     <div className="flex-1 flex items-center justify-center">
-                      <div className="transform -rotate-90 text-xs font-bold text-gray-600 whitespace-nowrap">
+                      <div className="transform -rotate-90 text-xs font-bold text-muted-foreground whitespace-nowrap">
                         SOIR
                       </div>
                     </div>
@@ -670,7 +670,7 @@ export default function EmploiDuTemps() {
                   {/* Contenu des cours */}
                   <div className="flex-1 flex flex-col">
                     {/* Section Matin */}
-                    <div className="flex-1 p-2 border-b border-gray-200">
+                    <div className="flex-1 p-2 border-b border-border">
                       {matin.map((course, courseIndex) => {
                         const originalCourseIndex = day.courses.findIndex(c => 
                           c.subject === course.subject && 
@@ -683,13 +683,13 @@ export default function EmploiDuTemps() {
                             key={`matin-${courseIndex}`} 
                             className={`p-2 mb-2 rounded ${
                               day.day === 'LUNDI' ? 'bg-blue-500 text-white' :
-                              'bg-gray-100'
+                              'bg-accent/50'
                             }`}
                           >
                             <div className="font-medium text-xs mb-1">{course.subject}</div>
                             {/* Afficher le nom de l'enseignant s'il existe */}
                             {course.teacher && (
-                              <div className="text-xs mb-1 italic text-gray-700">
+                              <div className="text-xs mb-1 italic text-muted-foreground">
                                 Enseignant&nbsp;: {course.teacher}
                               </div>
                             )}
@@ -711,7 +711,7 @@ export default function EmploiDuTemps() {
                               )}
                               {isAdmin() && (
                                 <Pencil 
-                                  className="h-3 w-3 cursor-pointer text-gray-600 hover:text-gray-800" 
+                                  className="h-3 w-3 cursor-pointer text-muted-foreground hover:text-foreground" 
                                   onClick={() => handleEditCourse(dayIndex, originalCourseIndex, course)}
                                 />
                               )}
@@ -735,13 +735,13 @@ export default function EmploiDuTemps() {
                             key={`soir-${courseIndex}`} 
                             className={`p-2 mb-2 rounded ${
                               day.day === 'LUNDI' ? 'bg-blue-500 text-white' :
-                              'bg-gray-100'
+                              'bg-accent/50'
                             }`}
                           >
                             <div className="font-medium text-xs mb-1">{course.subject}</div>
                             {/* Afficher le nom de l'enseignant s'il existe */}
                             {course.teacher && (
-                              <div className="text-xs mb-1 italic text-gray-700">
+                              <div className="text-xs mb-1 italic text-muted-foreground">
                                 Enseignant&nbsp;: {course.teacher}
                               </div>
                             )}
@@ -763,7 +763,7 @@ export default function EmploiDuTemps() {
                               )}
                               {isAdmin() && (
                                 <Pencil 
-                                  className="h-3 w-3 cursor-pointer text-gray-600 hover:text-gray-800" 
+                                  className="h-3 w-3 cursor-pointer text-muted-foreground hover:text-foreground" 
                                   onClick={() => handleEditCourse(dayIndex, originalCourseIndex, course)}
                                 />
                               )}
