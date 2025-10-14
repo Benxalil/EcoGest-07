@@ -46,12 +46,18 @@ export const useTeacherData = () => {
     try {
       // Récupérer TOUTES les données en parallèle avec Promise.all
       const [schedulesResult, announcementsResult] = await Promise.all([
-        // Schedules par teacher_id
-        supabase
-          .from('schedules')
-          .select('*, classes(*)')
-          .eq('school_id', profile.schoolId)
-          .eq('teacher_id', teacherId || ''),
+        // Schedules par teacher_id (seulement si teacherId existe)
+        teacherId
+          ? supabase
+              .from('schedules')
+              .select('*, classes(*)')
+              .eq('school_id', profile.schoolId)
+              .eq('teacher_id', teacherId)
+          : supabase
+              .from('schedules')
+              .select('*, classes(*)')
+              .eq('school_id', profile.schoolId)
+              .limit(0), // Retourne un résultat vide si pas de teacherId
 
         // Announcements (limité à 5)
         supabase
