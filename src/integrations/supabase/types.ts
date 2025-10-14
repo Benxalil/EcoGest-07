@@ -1084,12 +1084,14 @@ export type Database = {
           address: string | null
           auto_generate_parent_matricule: boolean | null
           auto_generate_student_matricule: boolean | null
+          auto_generate_teacher_matricule: boolean | null
           created_at: string | null
           created_by: string | null
           creation_year: number | null
           currency: Database["public"]["Enums"]["currency_type"] | null
           default_parent_password: string | null
           default_student_password: string | null
+          default_teacher_password: string | null
           email: string | null
           id: string
           language: Database["public"]["Enums"]["language_type"] | null
@@ -1112,6 +1114,7 @@ export type Database = {
           subscription_status:
             | Database["public"]["Enums"]["subscription_status"]
             | null
+          teacher_matricule_format: string | null
           timezone: string | null
           trial_end_date: string | null
           updated_at: string | null
@@ -1121,12 +1124,14 @@ export type Database = {
           address?: string | null
           auto_generate_parent_matricule?: boolean | null
           auto_generate_student_matricule?: boolean | null
+          auto_generate_teacher_matricule?: boolean | null
           created_at?: string | null
           created_by?: string | null
           creation_year?: number | null
           currency?: Database["public"]["Enums"]["currency_type"] | null
           default_parent_password?: string | null
           default_student_password?: string | null
+          default_teacher_password?: string | null
           email?: string | null
           id?: string
           language?: Database["public"]["Enums"]["language_type"] | null
@@ -1149,6 +1154,7 @@ export type Database = {
           subscription_status?:
             | Database["public"]["Enums"]["subscription_status"]
             | null
+          teacher_matricule_format?: string | null
           timezone?: string | null
           trial_end_date?: string | null
           updated_at?: string | null
@@ -1158,12 +1164,14 @@ export type Database = {
           address?: string | null
           auto_generate_parent_matricule?: boolean | null
           auto_generate_student_matricule?: boolean | null
+          auto_generate_teacher_matricule?: boolean | null
           created_at?: string | null
           created_by?: string | null
           creation_year?: number | null
           currency?: Database["public"]["Enums"]["currency_type"] | null
           default_parent_password?: string | null
           default_student_password?: string | null
+          default_teacher_password?: string | null
           email?: string | null
           id?: string
           language?: Database["public"]["Enums"]["language_type"] | null
@@ -1186,6 +1194,7 @@ export type Database = {
           subscription_status?:
             | Database["public"]["Enums"]["subscription_status"]
             | null
+          teacher_matricule_format?: string | null
           timezone?: string | null
           trial_end_date?: string | null
           updated_at?: string | null

@@ -94,8 +94,8 @@ export function AjoutEnseignantForm({ onSuccess }: AjoutEnseignantFormProps) {
   // Générer le prochain numéro de matricule basé sur le nombre total d'enseignants
   const getNextTeacherNumber = async (schoolId: string): Promise<string> => {
     try {
-      // Utiliser les paramètres depuis la base de données uniquement
-      const prefix = schoolSettings.studentMatriculeFormat.replace('ELEVE', 'PROF') || 'Prof';
+      // Utiliser le format de matricule enseignant depuis les paramètres de l'école
+      const prefix = schoolSettings?.teacherMatriculeFormat || 'PROF';
       
       // Compter le nombre total d'enseignants actifs dans l'école
       const { count, error } = await supabase
@@ -106,7 +106,7 @@ export function AjoutEnseignantForm({ onSuccess }: AjoutEnseignantFormProps) {
 
       if (error) {
         console.error("Erreur lors du comptage des enseignants:", error);
-        return `${prefix}01`;
+        return `${prefix}001`;
       }
 
       // Le prochain numéro est simplement le nombre total + 1
@@ -116,7 +116,7 @@ export function AjoutEnseignantForm({ onSuccess }: AjoutEnseignantFormProps) {
       return `${prefix}${formattedNumber}`;
     } catch (error) {
       console.error("Erreur lors de la génération du numéro:", error);
-      return `Prof001`;
+      return `PROF001`;
     }
   };
 
@@ -149,12 +149,14 @@ export function AjoutEnseignantForm({ onSuccess }: AjoutEnseignantFormProps) {
     const initializeForm = async () => {
       console.log('🔧 Initialisation enseignant avec paramètres DB:', schoolSettings);
       
-      // Générer automatiquement le matricule
-      const nextNumber = await getNextTeacherNumber(userProfile.schoolId);
-      form.setValue("matricule", nextNumber);
+      // Générer automatiquement le matricule si activé dans les paramètres
+      if (schoolSettings.autoGenerateTeacherMatricule) {
+        const nextNumber = await getNextTeacherNumber(userProfile.schoolId);
+        form.setValue("matricule", nextNumber);
+      }
       
-      // Définir le mot de passe par défaut depuis les paramètres de l'école
-      const defaultPassword = schoolSettings.defaultStudentPassword || 'teacher123';
+      // Définir le mot de passe par défaut depuis les paramètres de l'école pour les enseignants
+      const defaultPassword = schoolSettings.defaultTeacherPassword || 'teacher123';
       form.setValue("motDePasse", defaultPassword);
     };
     
