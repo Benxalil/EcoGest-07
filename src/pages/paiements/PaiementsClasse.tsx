@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, FileText, Search } from "lucide-react";
+import { ArrowLeft, FileText, Search, Eye } from "lucide-react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
@@ -52,6 +52,8 @@ export default function PaiementsClasse() {
   const [modalOpen, setModalOpen] = useState(false);
   const [eleveSelectionne, setEleveSelectionne] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [previewModalOpen, setPreviewModalOpen] = useState(false);
+  const [previewEleve, setPreviewEleve] = useState<any>(null);
 
   // Trouver la classe par son ID
   const classeData = classes.find(c => c.id === classeId);
@@ -120,8 +122,8 @@ export default function PaiementsClasse() {
         <div className="container mx-auto py-8">
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-              <p className="text-gray-600">Chargement des données...</p>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+              <p className="text-muted-foreground">Chargement des données...</p>
             </div>
           </div>
         </div>
@@ -324,10 +326,10 @@ export default function PaiementsClasse() {
             Retour
           </Button>
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">
+            <h1 className="text-3xl font-bold text-foreground">
               Paiements - {nomClasse}
             </h1>
-            <p className="text-gray-600 mt-1">{mois} {academicYear.split('/')[1]}</p>
+            <p className="text-muted-foreground mt-1">{mois} {academicYear.split('/')[1]}</p>
           </div>
         </div>
 
@@ -335,7 +337,7 @@ export default function PaiementsClasse() {
         <Card>
           <CardContent className="pt-6">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
                 placeholder="Rechercher un élève par prénom, nom ou matricule..."
                 value={searchTerm}
@@ -362,7 +364,7 @@ export default function PaiementsClasse() {
               <CardTitle className="text-sm font-medium">Élèves Payés</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-600">{elevesPayes}</div>
+              <div className="text-2xl font-bold text-green-500 dark:text-green-400">{elevesPayes}</div>
             </CardContent>
           </Card>
           
@@ -371,7 +373,7 @@ export default function PaiementsClasse() {
               <CardTitle className="text-sm font-medium">Non Payés</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-red-600">{elevesNonPayes}</div>
+              <div className="text-2xl font-bold text-red-500 dark:text-red-400">{elevesNonPayes}</div>
             </CardContent>
           </Card>
         </div>
@@ -397,7 +399,7 @@ export default function PaiementsClasse() {
                 <TableBody>
                   {elevesFiltres.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                         {searchTerm ? "Aucun élève trouvé pour cette recherche" : "Aucun élève dans cette classe"}
                       </TableCell>
                     </TableRow>
@@ -407,7 +409,7 @@ export default function PaiementsClasse() {
                       <TableCell className="font-medium">
                         <div>
                           <div className="font-semibold">{eleve.first_name} {eleve.last_name}</div>
-                          <div className="text-sm text-gray-500">Matricule: {eleve.student_number}</div>
+                          <div className="text-sm text-muted-foreground">Matricule: {eleve.student_number}</div>
                         </div>
                       </TableCell>
                       <TableCell>{getStatutBadge(eleve.statut)}</TableCell>
@@ -415,30 +417,44 @@ export default function PaiementsClasse() {
                         {eleve.modePaiement ? (
                           <Badge variant="outline">{eleve.modePaiement}</Badge>
                         ) : (
-                          <span className="text-gray-400">-</span>
+                          <span className="text-muted">-</span>
                         )}
                       </TableCell>
                       <TableCell>
                         {eleve.montant > 0 ? 
                           `${eleve.montant.toLocaleString()} FCFA` : 
-                          <span className="text-gray-400">-</span>
+                          <span className="text-muted">-</span>
                         }
                       </TableCell>
                       <TableCell>
-                        {eleve.datePaiement || <span className="text-gray-400">-</span>}
+                        {eleve.datePaiement || <span className="text-muted">-</span>}
                       </TableCell>
                       <TableCell>
                         <div className="flex space-x-2">
                           {eleve.statut === "payé" ? (
-                            <Button 
-                              size="sm" 
-                              variant="outline" 
-                              className="h-8"
-                              onClick={() => genererRecuPDF(eleve)}
-                            >
-                              <FileText className="h-4 w-4 mr-1" />
-                              Reçu
-                            </Button>
+                            <>
+                              <Button 
+                                size="sm" 
+                                variant="outline" 
+                                className="h-8"
+                                onClick={() => {
+                                  setPreviewEleve(eleve);
+                                  setPreviewModalOpen(true);
+                                }}
+                              >
+                                <Eye className="h-4 w-4 mr-1" />
+                                Voir
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant="outline" 
+                                className="h-8"
+                                onClick={() => genererRecuPDF(eleve)}
+                              >
+                                <FileText className="h-4 w-4 mr-1" />
+                                Reçu
+                              </Button>
+                            </>
                            ) : (
                              <Dialog open={modalOpen} onOpenChange={setModalOpen}>
                                <DialogTrigger asChild>
@@ -629,6 +645,139 @@ export default function PaiementsClasse() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Modale de prévisualisation du reçu */}
+        <Dialog open={previewModalOpen} onOpenChange={setPreviewModalOpen}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Prévisualisation du Reçu de Paiement</DialogTitle>
+            </DialogHeader>
+            {previewEleve && (
+              <div className="space-y-4 p-4 border rounded-lg">
+                {/* En-tête */}
+                <div className="text-center border-b pb-4">
+                  <h2 className="text-2xl font-bold text-primary">Reçu de Paiement</h2>
+                </div>
+                
+                {/* Informations école */}
+                <div className="space-y-2 border-b pb-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm text-muted-foreground">École</p>
+                      <p className="font-semibold">{schoolSettings?.name || 'École'}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm text-muted-foreground">Date</p>
+                      <p className="font-semibold">
+                        {previewEleve.datePaiement ? 
+                          new Date(previewEleve.datePaiement).toLocaleDateString('fr-FR') : 
+                          new Date().toLocaleDateString('fr-FR')
+                        }
+                      </p>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Adresse</p>
+                    <p className="text-sm">{schoolSettings?.address || 'Adresse non définie'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Téléphone</p>
+                    <p className="text-sm">{schoolSettings?.phone || 'Non défini'}</p>
+                  </div>
+                </div>
+
+                {/* Informations élève */}
+                <div className="space-y-2 border-b pb-4">
+                  <h3 className="font-bold text-primary">ÉLÈVE</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Prénom & Nom</p>
+                      <p className="font-semibold">{previewEleve.first_name} {previewEleve.last_name}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Date de Naissance</p>
+                      <p className="text-sm">
+                        {previewEleve.date_of_birth ? 
+                          new Date(previewEleve.date_of_birth).toLocaleDateString('fr-FR') : 
+                          "Non définie"
+                        }
+                      </p>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Classe</p>
+                    <p className="font-semibold">{nomClasse}</p>
+                  </div>
+                </div>
+
+                {/* Détails du paiement */}
+                <div className="space-y-2 border-b pb-4">
+                  <h3 className="font-bold text-primary text-center mb-4">DÉTAILS DE PAIEMENT</h3>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Description</TableHead>
+                        <TableHead>Mois</TableHead>
+                        <TableHead>Montant</TableHead>
+                        <TableHead>Mode de paiement</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      <TableRow>
+                        <TableCell>
+                          {previewEleve.typePaiement === 'mensualite' ? 'Mensualité' : 
+                           previewEleve.typePaiement === 'inscription' ? 'Frais d\'inscription' : 'Autre'}
+                        </TableCell>
+                        <TableCell>
+                          {previewEleve.typePaiement === 'mensualite' && previewEleve.moisMensualite ? 
+                            previewEleve.moisMensualite : '-'}
+                        </TableCell>
+                        <TableCell className="font-bold">
+                          {(previewEleve.montant || 0).toLocaleString()} FCFA
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{previewEleve.modePaiement}</Badge>
+                        </TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </div>
+
+                {/* Informations du payeur */}
+                <div className="space-y-2 pt-2">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Payé par</p>
+                      <p className="font-semibold">{previewEleve.payePar || 'Non défini'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Numéro de téléphone</p>
+                      <p className="font-semibold">{previewEleve.numeroTelephone || 'Non défini'}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Signature */}
+                <div className="text-center pt-6 border-t">
+                  <p className="text-sm text-muted-foreground italic">
+                    Signature et cachet de l'établissement
+                  </p>
+                </div>
+
+                {/* Bouton de téléchargement */}
+                <div className="flex justify-end pt-4">
+                  <Button onClick={() => {
+                    genererRecuPDF(previewEleve);
+                    setPreviewModalOpen(false);
+                  }}>
+                    <FileText className="h-4 w-4 mr-2" />
+                    Télécharger le PDF
+                  </Button>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </Layout>
   );

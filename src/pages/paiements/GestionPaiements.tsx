@@ -164,9 +164,9 @@ export default function GestionPaiements() {
         <div className="container mx-auto py-8">
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-              <p className="text-gray-600">Chargement des données de paiement...</p>
-              <p className="text-sm text-gray-500 mt-2">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+              <p className="text-muted-foreground">Chargement des données de paiement...</p>
+              <p className="text-sm text-muted-foreground mt-2">
                 Classes: {classesLoading ? 'Chargement...' : `${classes.length} trouvées`} | 
                 Élèves: {studentsLoading ? 'Chargement...' : `${students.length} trouvés`}
               </p>
@@ -190,8 +190,8 @@ export default function GestionPaiements() {
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Gestion des Paiements</h1>
-            <p className="text-gray-600 mt-1">Suivi des paiements des mensualités scolaires</p>
+            <h1 className="text-3xl font-bold text-foreground">Gestion des Paiements</h1>
+            <p className="text-muted-foreground mt-1">Suivi des paiements des mensualités scolaires</p>
           </div>
         </div>
 
