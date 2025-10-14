@@ -581,6 +581,47 @@ export type Database = {
           },
         ]
       }
+      matricule_generation_log: {
+        Row: {
+          generated_email: string | null
+          generated_matricule: string
+          id: string
+          role: Database["public"]["Enums"]["user_role"]
+          school_id: string | null
+          source: string | null
+          timestamp: string | null
+          user_id: string | null
+        }
+        Insert: {
+          generated_email?: string | null
+          generated_matricule: string
+          id?: string
+          role: Database["public"]["Enums"]["user_role"]
+          school_id?: string | null
+          source?: string | null
+          timestamp?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          generated_email?: string | null
+          generated_matricule?: string
+          id?: string
+          role?: Database["public"]["Enums"]["user_role"]
+          school_id?: string | null
+          source?: string | null
+          timestamp?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "matricule_generation_log_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           created_at: string | null
@@ -1673,6 +1714,17 @@ export type Database = {
         }
         Returns: string
       }
+      generate_user_matricule_v2: {
+        Args: {
+          role_param: Database["public"]["Enums"]["user_role"]
+          school_id_param: string
+        }
+        Returns: {
+          format_used: string
+          full_email: string
+          matricule: string
+        }[]
+      }
       get_next_user_identifier_number: {
         Args: {
           role_param: Database["public"]["Enums"]["user_role"]
@@ -1682,6 +1734,14 @@ export type Database = {
       }
       get_next_user_number_continuous: {
         Args: {
+          role_param: Database["public"]["Enums"]["user_role"]
+          school_id_param: string
+        }
+        Returns: number
+      }
+      get_next_user_number_from_all_sources: {
+        Args: {
+          prefix_pattern: string
           role_param: Database["public"]["Enums"]["user_role"]
           school_id_param: string
         }
