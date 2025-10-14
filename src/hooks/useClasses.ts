@@ -1,7 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserRole } from './useUserRole';
 import { useToast } from '@/hooks/use-toast';
+import { QueryKeys, CacheStaleTime } from '@/lib/queryClient';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
 export interface ClassData {
@@ -26,60 +28,55 @@ export interface CreateClassData {
   capacity?: number;
 }
 
+// Fonction de fetch séparée pour React Query
+const fetchClassesFromSupabase = async (schoolId: string): Promise<ClassData[]> => {
+  const { data: classesData, error } = await supabase
+    .from('classes')
+    .select(`
+      *,
+      students:students(count)
+    `)
+    .eq('school_id', schoolId)
+    .order('name');
+
+  if (error) throw error;
+  
+  // Transformer les données pour inclure enrollment_count
+  return (classesData || []).map((classe: any) => ({
+    ...classe,
+    enrollment_count: classe.students?.[0]?.count || 0,
+    students: undefined
+  }));
+};
+
 export const useClasses = () => {
-  const [classes, setClasses] = useState<ClassData[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
   const { userProfile } = useUserRole();
   const { toast } = useToast();
 
-  const fetchClasses = useCallback(async () => {
-    if (!userProfile?.schoolId) {
-      setLoading(false);
-      return;
-    }
+  // ✅ Query avec cache automatique
+  const {
+    data: classes = [],
+    isLoading: loading,
+    error: queryError,
+    refetch: fetchClasses
+  } = useQuery({
+    queryKey: QueryKeys.classes(userProfile?.schoolId),
+    queryFn: () => fetchClassesFromSupabase(userProfile!.schoolId),
+    staleTime: CacheStaleTime.CLASSES,
+    gcTime: 10 * 60 * 1000,
+    enabled: !!userProfile?.schoolId,
+  });
 
-    try {
-      setLoading(true);
-      // Optimisation: Une seule requête avec LEFT JOIN pour compter les élèves
-      const { data: classesData, error } = await supabase
-        .from('classes')
-        .select(`
-          *,
-          students:students(count)
-        `)
-        .eq('school_id', userProfile.schoolId)
-        .order('name');
+  const error = queryError instanceof Error ? queryError.message : null;
 
-      if (error) throw error;
-      
-      // Transformer les données pour inclure enrollment_count
-      const classesWithEnrollment = (classesData || []).map((classe: any) => ({
-        ...classe,
-        enrollment_count: classe.students?.[0]?.count || 0,
-        students: undefined // Supprimer la propriété temporaire
-      }));
-      
-      setClasses(classesWithEnrollment);
-    } catch (err) {
-      console.error('Erreur lors de la récupération des classes:', err);
-      setError(err instanceof Error ? err.message : 'Erreur inconnue');
-    } finally {
-      setLoading(false);
-    }
-  }, [userProfile?.schoolId]);
-
-  const createClass = async (classData: CreateClassData) => {
-    if (!userProfile?.schoolId) return false;
-
-    const tempId = `temp-${Date.now()}`;
-    let optimisticClass: ClassData | null = null;
-
-    try {
+  // ✅ Mutation optimiste pour createClass
+  const createClassMutation = useMutation({
+    mutationFn: async (classData: CreateClassData) => {
       const { data: academicYears, error: academicError } = await supabase
         .from('academic_years')
         .select('id')
-        .eq('school_id', userProfile.schoolId)
+        .eq('school_id', userProfile!.schoolId)
         .eq('is_current', true)
         .single();
 
@@ -89,95 +86,80 @@ export const useClasses = () => {
       const { data: existingClass } = await supabase
         .from('classes')
         .select('name, section')
-        .eq('school_id', userProfile.schoolId)
+        .eq('school_id', userProfile!.schoolId)
         .eq('academic_year_id', academicYears.id)
         .eq('name', classData.name)
         .eq('section', classData.section || null)
         .maybeSingle();
 
       if (existingClass) {
-        // Extraire le libellé (dernière lettre) pour l'affichage
         const labelMatch = existingClass.section?.match(/[A-Z]$/);
         const label = labelMatch ? ` ${labelMatch[0]}` : '';
-        
-        toast({
-          title: 'Classe existante',
-          description: `Une classe "${classData.name}${label}" existe déjà pour cette année académique.`,
-          variant: 'destructive',
-        });
-        return false;
+        throw new Error(`Une classe "${classData.name}${label}" existe déjà pour cette année académique.`);
       }
-
-      // Mise à jour optimiste
-      optimisticClass = {
-        ...classData,
-        id: tempId,
-        school_id: userProfile.schoolId,
-        academic_year_id: academicYears.id,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        enrollment_count: 0
-      };
-
-      setClasses(prev => [...prev, optimisticClass!].sort((a, b) => 
-        a.name.localeCompare(b.name)
-      ));
 
       const { data, error } = await supabase
         .from('classes')
         .insert({
           ...classData,
-          school_id: userProfile.schoolId,
+          school_id: userProfile!.schoolId,
           academic_year_id: academicYears.id,
         })
         .select()
         .single();
 
       if (error) throw error;
-
-      // Remplacer l'élément optimiste par le réel
-      setClasses(prev => prev.map(c => c.id === tempId ? { ...data, enrollment_count: 0 } : c));
-
-      toast({
-        title: 'Succès',
-        description: 'Classe créée avec succès',
-      });
-      return true;
-    } catch (err) {
-      // Rollback en cas d'erreur
-      if (optimisticClass) {
-        setClasses(prev => prev.filter(c => c.id !== tempId));
-      }
-
-      console.error('Erreur lors de la création de la classe:', err);
+      return data;
+    },
+    onMutate: async (classData) => {
+      await queryClient.cancelQueries({ queryKey: QueryKeys.classes(userProfile?.schoolId) });
+      const previousClasses = queryClient.getQueryData(QueryKeys.classes(userProfile?.schoolId));
       
-      // Gestion spécifique de l'erreur de contrainte d'unicité
-      if (err instanceof Error && err.message.includes('duplicate key value violates unique constraint')) {
-        toast({
-          title: 'Classe déjà existante',
-          description: 'Une classe avec ce nom existe déjà. Veuillez choisir un nom différent.',
-          variant: 'destructive',
-        });
+      queryClient.setQueryData<ClassData[]>(
+        QueryKeys.classes(userProfile?.schoolId),
+        (old = []) => [...old, {
+          ...classData,
+          id: `temp-${Date.now()}`,
+          school_id: userProfile!.schoolId,
+          academic_year_id: '',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          enrollment_count: 0
+        }]
+      );
+      
+      return { previousClasses };
+    },
+    onError: (err, _, context) => {
+      queryClient.setQueryData(QueryKeys.classes(userProfile?.schoolId), context?.previousClasses);
+      
+      if (err instanceof Error && err.message.includes('existe déjà')) {
+        toast({ title: 'Classe existante', description: err.message, variant: 'destructive' });
       } else {
-        toast({
-          title: 'Erreur',
-          description: err instanceof Error ? err.message : 'Erreur inconnue',
-          variant: 'destructive',
-        });
+        toast({ title: 'Erreur', description: err instanceof Error ? err.message : 'Erreur inconnue', variant: 'destructive' });
       }
+    },
+    onSuccess: () => {
+      toast({ title: 'Succès', description: 'Classe créée avec succès' });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: QueryKeys.classes(userProfile?.schoolId) });
+    }
+  });
+
+  const createClass = useCallback(async (classData: CreateClassData) => {
+    if (!userProfile?.schoolId) return false;
+    try {
+      await createClassMutation.mutateAsync(classData);
+      return true;
+    } catch {
       return false;
     }
-  };
+  }, [userProfile?.schoolId, createClassMutation]);
 
-  const updateClass = async (id: string, classData: Partial<CreateClassData>) => {
-    const previousState = classes.find(c => c.id === id);
-
-    try {
-      // Mise à jour optimiste
-      setClasses(prev => prev.map(c => 
-        c.id === id ? { ...c, ...classData, updated_at: new Date().toISOString() } : c
-      ));
-
+  // ✅ Mutation pour updateClass
+  const updateClassMutation = useMutation({
+    mutationFn: async ({ id, classData }: { id: string; classData: Partial<CreateClassData> }) => {
       const { data, error } = await supabase
         .from('classes')
         .update(classData)
@@ -186,71 +168,81 @@ export const useClasses = () => {
         .single();
 
       if (error) throw error;
-
-      // Remplacer avec les données réelles
-      setClasses(prev => prev.map(c => c.id === id ? { ...data, enrollment_count: c.enrollment_count } : c));
-
-      toast({
-        title: 'Succès',
-        description: 'Classe mise à jour avec succès',
-      });
-      return true;
-    } catch (err) {
-      // Rollback en cas d'erreur
-      if (previousState) {
-        setClasses(prev => prev.map(c => c.id === id ? previousState : c));
-      }
-
-      console.error('Erreur lors de la mise à jour de la classe:', err);
-      toast({
-        title: 'Erreur',
-        description: err instanceof Error ? err.message : 'Erreur inconnue',
-        variant: 'destructive',
-      });
-      return false;
+      return data;
+    },
+    onMutate: async ({ id, classData }) => {
+      await queryClient.cancelQueries({ queryKey: QueryKeys.classes(userProfile?.schoolId) });
+      const previousClasses = queryClient.getQueryData(QueryKeys.classes(userProfile?.schoolId));
+      
+      queryClient.setQueryData<ClassData[]>(
+        QueryKeys.classes(userProfile?.schoolId),
+        (old = []) => old.map(c => c.id === id ? { ...c, ...classData, updated_at: new Date().toISOString() } : c)
+      );
+      
+      return { previousClasses };
+    },
+    onError: (err, _, context) => {
+      queryClient.setQueryData(QueryKeys.classes(userProfile?.schoolId), context?.previousClasses);
+      toast({ title: 'Erreur', description: err instanceof Error ? err.message : 'Erreur inconnue', variant: 'destructive' });
+    },
+    onSuccess: () => {
+      toast({ title: 'Succès', description: 'Classe mise à jour avec succès' });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: QueryKeys.classes(userProfile?.schoolId) });
     }
-  };
+  });
 
-  const deleteClass = async (id: string) => {
-    const previousState = classes.find(c => c.id === id);
-
+  const updateClass = useCallback(async (id: string, classData: Partial<CreateClassData>) => {
+    if (!userProfile?.schoolId) return false;
     try {
-      // Suppression optimiste
-      setClasses(prev => prev.filter(c => c.id !== id));
-
-      const { error } = await supabase
-        .from('classes')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-
-      toast({
-        title: 'Succès',
-        description: 'Classe supprimée avec succès',
-      });
+      await updateClassMutation.mutateAsync({ id, classData });
       return true;
-    } catch (err) {
-      // Rollback en cas d'erreur
-      if (previousState) {
-        setClasses(prev => [...prev, previousState]);
-      }
-
-      console.error('Erreur lors de la suppression de la classe:', err);
-      toast({
-        title: 'Erreur',
-        description: err instanceof Error ? err.message : 'Erreur inconnue',
-        variant: 'destructive',
-      });
+    } catch {
       return false;
     }
-  };
+  }, [userProfile?.schoolId, updateClassMutation]);
 
-  useEffect(() => {
-    fetchClasses();
-  }, [fetchClasses]);
+  // ✅ Mutation pour deleteClass
+  const deleteClassMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('classes').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: QueryKeys.classes(userProfile?.schoolId) });
+      const previousClasses = queryClient.getQueryData(QueryKeys.classes(userProfile?.schoolId));
+      
+      queryClient.setQueryData<ClassData[]>(
+        QueryKeys.classes(userProfile?.schoolId),
+        (old = []) => old.filter(c => c.id !== id)
+      );
+      
+      return { previousClasses };
+    },
+    onError: (err, _, context) => {
+      queryClient.setQueryData(QueryKeys.classes(userProfile?.schoolId), context?.previousClasses);
+      toast({ title: 'Erreur', description: err instanceof Error ? err.message : 'Erreur inconnue', variant: 'destructive' });
+    },
+    onSuccess: () => {
+      toast({ title: 'Succès', description: 'Classe supprimée avec succès' });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: QueryKeys.classes(userProfile?.schoolId) });
+    }
+  });
 
-  // Realtime synchronization
+  const deleteClass = useCallback(async (id: string) => {
+    if (!userProfile?.schoolId) return false;
+    try {
+      await deleteClassMutation.mutateAsync(id);
+      return true;
+    } catch {
+      return false;
+    }
+  }, [userProfile?.schoolId, deleteClassMutation]);
+
+  // ✅ Realtime synchronization avec invalidation React Query
   useEffect(() => {
     if (!userProfile?.schoolId) return;
 
@@ -264,24 +256,9 @@ export const useClasses = () => {
           table: 'classes',
           filter: `school_id=eq.${userProfile.schoolId}`
         },
-        async (payload) => {
-          if (payload.eventType === 'INSERT') {
-            const newClass = payload.new as ClassData;
-            setClasses(prev => {
-              const exists = prev.some(c => c.id === newClass.id);
-              if (exists) return prev;
-              return [...prev, { ...newClass, enrollment_count: 0 }].sort((a, b) => 
-                a.name.localeCompare(b.name)
-              );
-            });
-          } else if (payload.eventType === 'UPDATE') {
-            const updatedClass = payload.new as ClassData;
-            setClasses(prev => prev.map(c => 
-              c.id === updatedClass.id ? { ...updatedClass, enrollment_count: c.enrollment_count } : c
-            ));
-          } else if (payload.eventType === 'DELETE') {
-            setClasses(prev => prev.filter(c => c.id !== payload.old.id));
-          }
+        () => {
+          // Invalider le cache React Query au lieu de gérer l'état manuellement
+          queryClient.invalidateQueries({ queryKey: QueryKeys.classes(userProfile.schoolId) });
         }
       )
       .subscribe();
@@ -289,7 +266,7 @@ export const useClasses = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [userProfile?.schoolId]);
+  }, [userProfile?.schoolId, queryClient]);
 
   return {
     classes,

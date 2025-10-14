@@ -176,7 +176,7 @@ export default function ListeClasses() {
           <div className="text-center py-12">
             <p className="text-destructive text-lg mb-4">Erreur lors du chargement</p>
             <p className="text-muted-foreground/80 mb-6">{error}</p>
-            <Button onClick={refreshClasses}>
+            <Button onClick={() => refreshClasses()}>
               Réessayer
             </Button>
           </div>

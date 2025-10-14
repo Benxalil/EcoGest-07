@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,6 +15,7 @@ import { useUserRole } from "@/hooks/useUserRole";
 import { formatClassName } from "@/utils/classNameFormatter";
 import { useClasses } from "@/hooks/useClasses";
 import { useStudents } from "@/hooks/useStudents";
+import { StudentRow } from "@/components/ui/StudentRow";
 
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
@@ -478,17 +479,18 @@ export default function ListeEleves() {
     return result;
   }, [classesWithStudents, searchQuery]);
 
-  const handleViewStudent = (student: Student) => {
+  // ✅ Handlers mémoïsés avec useCallback pour éviter re-renders
+  const handleViewStudent = useCallback((student: Student) => {
     setSelectedStudent(student);
     setIsDialogOpen(true);
-  };
+  }, []);
 
-  const handleModifierEleve = (student: Student) => {
+  const handleModifierEleve = useCallback((student: Student) => {
     setStudentToEdit(student);
     setIsEditDialogOpen(true);
-  };
+  }, []);
 
-  const handleSupprimerEleve = async (studentId: string) => {
+  const handleSupprimerEleve = useCallback(async (studentId: string) => {
     try {
       const { error } = await supabase
         .from('students')
@@ -511,7 +513,7 @@ export default function ListeEleves() {
         variant: "destructive"
       });
     }
-  };
+  }, [refreshStudents, toast]);
 
   if (isLoading) {
     return (
