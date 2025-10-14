@@ -230,7 +230,6 @@ export default function ListeMatieres() {
                 variant="ghost"
                 size="icon"
                 onClick={() => navigate(-1)}
-                className="hover:bg-gray-100"
               >
                 <ArrowLeft className="h-5 w-5" />
               </Button>
@@ -240,7 +239,7 @@ export default function ListeMatieres() {
 
           <div className="text-center py-12">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-gray-500 text-lg">Chargement des matières...</p>
+            <p className="text-muted-foreground text-lg">Chargement des matières...</p>
           </div>
         </div>
       </Layout>
@@ -257,7 +256,6 @@ export default function ListeMatieres() {
                 variant="ghost"
                 size="icon"
                 onClick={() => navigate(-1)}
-                className="hover:bg-gray-100"
               >
                 <ArrowLeft className="h-5 w-5" />
               </Button>
@@ -266,8 +264,8 @@ export default function ListeMatieres() {
           </div>
 
           <div className="text-center py-12">
-            <p className="text-gray-500 text-lg mb-4">Aucune classe n'a été créée</p>
-            <p className="text-gray-400 mb-6">Commencez par créer des classes pour gérer les matières</p>
+            <p className="text-muted-foreground text-lg mb-4">Aucune classe n'a été créée</p>
+            <p className="text-muted-foreground/70 mb-6">Commencez par créer des classes pour gérer les matières</p>
             <Button onClick={() => navigate("/classes/ajouter")}>
               Créer une classe
             </Button>
@@ -294,7 +292,6 @@ export default function ListeMatieres() {
               variant="ghost"
               size="icon"
               onClick={() => navigate(-1)}
-              className="hover:bg-gray-100"
             >
               <ArrowLeft className="h-5 w-5" />
             </Button>
@@ -311,20 +308,20 @@ export default function ListeMatieres() {
             
             return (
               <Collapsible key={classe.id} open={isExpanded} onOpenChange={() => toggleClasseExpansion(classe.id)}>
-                <div className="border rounded-lg bg-white shadow">
+                <div className="border rounded-lg bg-card shadow">
                   <div className="flex items-center justify-between p-4">
                     <CollapsibleTrigger className="flex-1">
-                      <div className="flex items-center gap-3 hover:bg-gray-50 p-2 rounded">
+                      <div className="flex items-center gap-3 hover:bg-accent p-2 rounded">
                         {isExpanded ? (
-                          <ChevronDown className="h-5 w-5 text-gray-600" />
+                          <ChevronDown className="h-5 w-5 text-muted-foreground" />
                         ) : (
-                          <ChevronRight className="h-5 w-5 text-gray-600" />
+                          <ChevronRight className="h-5 w-5 text-muted-foreground" />
                         )}
                         <div className="text-left">
-                          <h3 className="text-lg font-semibold text-blue-600">
+                          <h3 className="text-lg font-semibold text-primary">
                             {getClasseLabel(classe)}
                           </h3>
-                          <p className="text-sm text-gray-500">
+                          <p className="text-sm text-muted-foreground">
                             {matieresClasse.length} matière{matieresClasse.length !== 1 ? 's' : ''}
                           </p>
                         </div>
@@ -347,24 +344,24 @@ export default function ListeMatieres() {
                     </div>
                   
                   <CollapsibleContent>
-                    <div className="border-t bg-gray-50">
+                    <div className="border-t bg-muted/30">
                       {matieresClasse.length === 0 ? (
-                        <div className="p-6 text-center text-gray-500">
+                        <div className="p-6 text-center text-muted-foreground">
                           Aucune matière enregistrée pour cette classe
                         </div>
                       ) : (
                         <div className="p-4">
                           <div className="grid gap-3">
                             {matieresClasse.map((matiere) => (
-                              <div key={matiere.id} className="flex items-center justify-between p-3 bg-white border rounded-lg">
+                              <div key={matiere.id} className="flex items-center justify-between p-3 bg-card border rounded-lg">
                                 <div>
                                   <h4 className="font-medium">
                                     {matiere.nom}
                                     {matiere.abreviation && (
-                                      <span className="text-gray-500 ml-2">({matiere.abreviation})</span>
+                                      <span className="text-muted-foreground ml-2">({matiere.abreviation})</span>
                                     )}
                                   </h4>
-                                  <p className="text-sm text-gray-500">Moyenne: {matiere.moyenne} | Coefficient: {matiere.coefficient}</p>
+                                  <p className="text-sm text-muted-foreground">Moyenne: {matiere.moyenne} | Coefficient: {matiere.coefficient}</p>
                                 </div>
                                 {userProfile?.role !== 'student' && (
                                   <div className="flex gap-2">
