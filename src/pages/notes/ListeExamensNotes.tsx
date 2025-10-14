@@ -106,6 +106,7 @@ const getSemestreBadge = (semestre: string) => {
 export default function ListeExamensNotes() {
   const [examens, setExamens] = useState<Examen[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedExamen, setSelectedExamen] = useState<Examen | null>(null);
   const navigate = useNavigate();
@@ -122,10 +123,15 @@ export default function ListeExamensNotes() {
   // ✅ Utiliser useTeacherData pour obtenir les classes filtrées de l'enseignant
   const { classes: teacherClasses, loading: teacherDataLoading } = useTeacherData();
   
-  // ⚡ Stabiliser teacherClassIds avec useMemo pour éviter les re-renders inutiles
-  const teacherClassIds = useMemo(() => 
-    isTeacher() ? teacherClasses.map(c => c.id) : [],
+  // ⚡ Stabiliser teacherClassIds avec JSON.stringify pour éviter les boucles infinies
+  const teacherClassIdsString = useMemo(() => 
+    JSON.stringify(isTeacher() ? teacherClasses.map(c => c.id) : []),
     [isTeacher, teacherClasses]
+  );
+  
+  const teacherClassIds = useMemo(() => 
+    JSON.parse(teacherClassIdsString),
+    [teacherClassIdsString]
   );
   const safeFormatDate = (value?: string, fmt = "PPP") => {
     if (!value) return "Date non définie";
@@ -139,6 +145,7 @@ export default function ListeExamensNotes() {
       return "Date non définie";
     }
   };
+  // ✅ useEffect 1 : Chargement initial uniquement
   useEffect(() => {
     // Attendre que le profil utilisateur soit chargé
     if (!userProfile?.schoolId) return;
@@ -150,8 +157,12 @@ export default function ListeExamensNotes() {
     if (isLoadingRef.current) return;
     
     loadData();
+  }, [userProfile?.schoolId, teacherClassIdsString, teacherDataLoading]);
 
-    // Synchronisation en temps réel pour les examens
+  // ✅ useEffect 2 : Realtime INDÉPENDANT (ne dépend QUE de schoolId)
+  useEffect(() => {
+    if (!userProfile?.schoolId) return;
+    
     const examsChannel = supabase
       .channel('exams-notes-realtime')
       .on(
@@ -175,7 +186,7 @@ export default function ListeExamensNotes() {
     return () => {
       supabase.removeChannel(examsChannel);
     };
-  }, [userProfile?.schoolId, teacherClassIds, teacherDataLoading]);
+  }, [userProfile?.schoolId]);
   const getClasseNom = (classeId: string, classesData?: Array<{
     id: string;
     name: string;
@@ -234,6 +245,7 @@ export default function ListeExamensNotes() {
     try {
       isLoadingRef.current = true;
       setLoading(true);
+      setError(null); // ✅ Réinitialiser l'erreur
       
       // ✅ PASSER les teacherClassIds à fetchExamens pour filtrage côté serveur
       const examensData = await fetchExamens(
@@ -244,6 +256,7 @@ export default function ListeExamensNotes() {
       setExamens(examensData);
     } catch (error) {
       console.error("Erreur lors du chargement des données:", error);
+      setError("Impossible de charger les examens. Veuillez réessayer.");
     } finally {
       setLoading(false);
       isLoadingRef.current = false;
@@ -257,6 +270,22 @@ export default function ListeExamensNotes() {
             <div className="text-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
               <p>Chargement des examens...</p>
+            </div>
+          </div>
+        </div>
+      </Layout>;
+  }
+
+  // ✅ Afficher l'erreur avec un bouton Réessayer
+  if (error) {
+    return <Layout>
+        <div className="container mx-auto p-6">
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="text-center">
+              <p className="text-destructive mb-4 text-lg">{error}</p>
+              <Button onClick={() => loadData()} variant="default">
+                Réessayer
+              </Button>
             </div>
           </div>
         </div>
