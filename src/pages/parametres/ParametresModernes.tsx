@@ -407,10 +407,13 @@ export default function ParametresModernes() {
       const settingsSuccess = await updateSchoolSettings({
         studentMatriculeFormat: studentSettings.matriculeFormat,
         parentMatriculeFormat: parentSettings.matriculeFormat,
+        teacherMatriculeFormat: teacherSettings.teacherPrefix,
         defaultStudentPassword: studentSettings.defaultStudentPassword,
         defaultParentPassword: parentSettings.defaultParentPassword,
+        defaultTeacherPassword: teacherSettings.defaultTeacherPassword,
         autoGenerateStudentMatricule: studentSettings.autoGenerateMatricule,
         autoGenerateParentMatricule: parentSettings.autoGenerateMatricule,
+        autoGenerateTeacherMatricule: teacherSettings.autoGenerateUsername,
       });
 
       if (!settingsSuccess) {

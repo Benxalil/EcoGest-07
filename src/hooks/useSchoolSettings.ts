@@ -63,6 +63,43 @@ export const useSchoolSettings = () => {
     };
 
     loadSettings();
+
+    // Souscrire aux changements en temps réel de la table schools
+    const channel = supabase
+      .channel('schools-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'schools',
+          filter: `id=eq.${userProfile.schoolId}`
+        },
+        (payload) => {
+          console.log('🔔 Mise à jour temps réel des paramètres école détectée', payload);
+          
+          const newData = payload.new;
+          setSettings({
+            studentMatriculeFormat: newData.student_matricule_format || DEFAULT_SETTINGS.studentMatriculeFormat,
+            parentMatriculeFormat: newData.parent_matricule_format || DEFAULT_SETTINGS.parentMatriculeFormat,
+            teacherMatriculeFormat: newData.teacher_matricule_format || DEFAULT_SETTINGS.teacherMatriculeFormat,
+            defaultStudentPassword: newData.default_student_password || DEFAULT_SETTINGS.defaultStudentPassword,
+            defaultParentPassword: newData.default_parent_password || DEFAULT_SETTINGS.defaultParentPassword,
+            defaultTeacherPassword: newData.default_teacher_password || DEFAULT_SETTINGS.defaultTeacherPassword,
+            autoGenerateStudentMatricule: newData.auto_generate_student_matricule ?? DEFAULT_SETTINGS.autoGenerateStudentMatricule,
+            autoGenerateParentMatricule: newData.auto_generate_parent_matricule ?? DEFAULT_SETTINGS.autoGenerateParentMatricule,
+            autoGenerateTeacherMatricule: newData.auto_generate_teacher_matricule ?? DEFAULT_SETTINGS.autoGenerateTeacherMatricule,
+          });
+          
+          // Émettre l'événement pour notifier les autres composants
+          window.dispatchEvent(new CustomEvent('schoolSettingsUpdated'));
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [userProfile?.schoolId]);
 
   const updateSettings = async (newSettings: Partial<SchoolSettings>) => {
