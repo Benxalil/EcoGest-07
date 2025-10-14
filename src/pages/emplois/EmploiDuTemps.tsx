@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useForm } from "react-hook-form";
 import { useState, useEffect } from "react";
-import { BookOpen, UserCheck, Pencil, ArrowLeft, Trash2, AlertTriangle } from "lucide-react";
+import { BookOpen, UserCheck, Pencil, ArrowLeft, Trash2, AlertTriangle, Loader2 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useClasses } from "@/hooks/useClasses";
 import { formatClassName } from "@/utils/classNameFormatter";
@@ -65,6 +65,7 @@ export default function EmploiDuTemps() {
   } | null>(null);
   const [className, setClassName] = useState<string>("");
   const [hasAccess, setHasAccess] = useState<boolean>(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleBack = () => {
     navigate('/emplois-du-temps');
@@ -203,7 +204,9 @@ export default function EmploiDuTemps() {
   };
 
   const onSubmit = async (data: CourseFormData) => {
-    if (!classeId) return;
+    if (!classeId || isSubmitting) return;
+    
+    setIsSubmitting(true);
     
     const courseData = {
       subject: data.subject,
@@ -214,17 +217,24 @@ export default function EmploiDuTemps() {
       class_id: classeId
     };
 
+    let success = false;
+
     if (editingCourse && editingCourse.course.id) {
       // Mode édition - mettre à jour le cours existant
-      await updateCourse(editingCourse.course.id, courseData); } else {
+      success = await updateCourse(editingCourse.course.id, courseData);
+    } else {
       // Mode ajout - créer un nouveau cours
-      await createCourse(courseData);
+      success = await createCourse(courseData);
     }
 
-    // Réinitialiser le formulaire et fermer la dialog
-    form.reset();
-    setEditingCourse(null);
-    setIsDialogOpen(false);
+    setIsSubmitting(false);
+
+    // Ne fermer le modal que si l'opération a réussi
+    if (success) {
+      form.reset();
+      setEditingCourse(null);
+      setIsDialogOpen(false);
+    }
   };
 
   const handleDialogClose = (open: boolean) => {
@@ -460,7 +470,7 @@ export default function EmploiDuTemps() {
                         {editingCourse && (
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
-                              <Button type="button" variant="destructive" size="sm">
+                              <Button type="button" variant="destructive" size="sm" disabled={isSubmitting}>
                                 <Trash2 className="h-4 w-4 mr-2" />
                                 Supprimer
                               </Button>
@@ -491,11 +501,18 @@ export default function EmploiDuTemps() {
                         )}
                       </div>
                       <div className="flex space-x-4">
-                        <Button type="button" variant="outline" onClick={() => handleDialogClose(false)}>
+                        <Button type="button" variant="outline" onClick={() => handleDialogClose(false)} disabled={isSubmitting}>
                           Annuler
                         </Button>
-                        <Button type="submit" className="bg-blue-500 hover:bg-blue-600 text-white">
-                          {editingCourse ? "Modifier" : "Enregistrer"}
+                        <Button type="submit" className="bg-blue-500 hover:bg-blue-600 text-white" disabled={isSubmitting}>
+                          {isSubmitting ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Enregistrement...
+                            </>
+                          ) : (
+                            editingCourse ? "Modifier" : "Enregistrer"
+                          )}
                         </Button>
                       </div>
                     </div>

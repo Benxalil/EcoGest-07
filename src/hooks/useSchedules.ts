@@ -93,6 +93,28 @@ export const useSchedules = (classId?: string) => {
       const dbDay = dayMapping[courseData.day] || courseData.day;
       const dayOfWeek = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'].indexOf(dbDay) + 1;
 
+      // Vérifier les conflits d'horaires avant l'insertion
+      const { data: existingSchedules, error: checkError } = await supabase
+        .from('schedules')
+        .select('id, subject, teacher, start_time, end_time')
+        .eq('school_id', userProfile.schoolId)
+        .eq('class_id', courseData.class_id)
+        .eq('day_of_week', dayOfWeek)
+        .eq('start_time', courseData.start_time);
+
+      if (checkError) throw checkError;
+
+      // Si un cours existe déjà à ce créneau
+      if (existingSchedules && existingSchedules.length > 0) {
+        const existing = existingSchedules[0];
+        toast({
+          title: "⚠️ Conflit d'horaire détecté",
+          description: `Un cours de ${existing.subject} (${existing.teacher}) existe déjà ${dbDay} à ${courseData.start_time}. Veuillez choisir un autre créneau.`,
+          variant: "destructive",
+        });
+        return false;
+      }
+
       const { error } = await supabase
         .from('schedules')
         .insert({
@@ -117,16 +139,22 @@ export const useSchedules = (classId?: string) => {
       await fetchSchedules();
 
       toast({
-        title: "Cours ajouté avec succès",
+        title: "✅ Cours ajouté avec succès",
         description: `Le cours ${courseData.subject} a été ajouté.`,
       });
 
       return true;
     } catch (err) {
       console.error('Erreur lors de la création du cours:', err);
+      
+      // Améliorer le message d'erreur pour les contraintes
+      const errorMessage = err instanceof Error && err.message.includes('schedules_no_time_conflict')
+        ? "Un cours existe déjà à ce créneau horaire. Veuillez choisir un autre horaire."
+        : (err instanceof Error ? err.message : "Une erreur est survenue lors de la création du cours.");
+      
       toast({
-        title: "Erreur lors de la création",
-        description: err instanceof Error ? err.message : "Une erreur est survenue lors de la création du cours.",
+        title: "❌ Erreur lors de la création",
+        description: errorMessage,
         variant: "destructive",
       });
       return false;
