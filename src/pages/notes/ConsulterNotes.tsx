@@ -305,7 +305,7 @@ export default function ConsulterNotes() {
                   <div className="flex items-center gap-6 flex-1">
                     <h3 className="font-semibold text-base min-w-[200px]">{subject.name}</h3>
                     <span className="text-sm text-muted-foreground">
-                      {subject.hours_per_week ? `${subject.hours_per_week}h/sem` : ''}
+                      Moyenne: {subject.hours_per_week || 20} | Coef: {subject.coefficient || 1}
                     </span>
                   </div>
                 </div>
@@ -383,14 +383,19 @@ export default function ConsulterNotes() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
               <div>
                 <span className="font-medium">Classe:</span> {classe.libelle}
               </div>
               <div>
                 <span className="font-medium">Effectif:</span> {classe.effectif} élèves
               </div>
-              
+              <div>
+                <span className="font-medium">Moyenne:</span> /{matiere.maxScore}
+              </div>
+              <div>
+                <span className="font-medium">Coefficient:</span> {matiere.coefficient}
+              </div>
             </div>
           </CardContent>
         </Card>
