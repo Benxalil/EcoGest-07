@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
@@ -116,10 +116,17 @@ export default function ListeExamensNotes() {
     isTeacher,
     userProfile
   } = useUserRole();
+  // ⚡ Protection contre les appels multiples
+  const isLoadingRef = useRef(false);
   
   // ✅ Utiliser useTeacherData pour obtenir les classes filtrées de l'enseignant
   const { classes: teacherClasses, loading: teacherDataLoading } = useTeacherData();
-  const teacherClassIds = isTeacher() ? teacherClasses.map(c => c.id) : [];
+  
+  // ⚡ Stabiliser teacherClassIds avec useMemo pour éviter les re-renders inutiles
+  const teacherClassIds = useMemo(() => 
+    isTeacher() ? teacherClasses.map(c => c.id) : [],
+    [isTeacher, teacherClasses]
+  );
   const safeFormatDate = (value?: string, fmt = "PPP") => {
     if (!value) return "Date non définie";
     const d = new Date(value);
@@ -139,11 +146,12 @@ export default function ListeExamensNotes() {
     // Pour les enseignants, attendre que teacherDataLoading soit terminé
     if (isTeacher() && teacherDataLoading) return;
     
+    // ⚡ Éviter les appels multiples simultanés
+    if (isLoadingRef.current) return;
+    
     loadData();
 
     // Synchronisation en temps réel pour les examens
-    if (!userProfile?.schoolId) return;
-
     const examsChannel = supabase
       .channel('exams-notes-realtime')
       .on(
@@ -156,7 +164,10 @@ export default function ListeExamensNotes() {
         },
         (payload) => {
           console.log('Exam change detected in notes:', payload);
-          loadData();
+          // ⚡ Ne pas recharger si un chargement est déjà en cours
+          if (!isLoadingRef.current) {
+            loadData();
+          }
         }
       )
       .subscribe();
@@ -214,7 +225,14 @@ export default function ListeExamensNotes() {
     navigate(`/notes/classe/${classeId}`);
   };
   const loadData = async () => {
+    // ⚡ Protection contre les appels multiples
+    if (isLoadingRef.current) {
+      console.log('⚠️ loadData déjà en cours, appel ignoré');
+      return;
+    }
+    
     try {
+      isLoadingRef.current = true;
       setLoading(true);
       
       // ✅ PASSER les teacherClassIds à fetchExamens pour filtrage côté serveur
@@ -228,6 +246,7 @@ export default function ListeExamensNotes() {
       console.error("Erreur lors du chargement des données:", error);
     } finally {
       setLoading(false);
+      isLoadingRef.current = false;
     }
   };
   const filteredExamens = examens.filter(examen => examen.titre.toLowerCase().includes(searchTerm.toLowerCase()) || examen.type.toLowerCase().includes(searchTerm.toLowerCase()) || getClassesNoms(examen).toLowerCase().includes(searchTerm.toLowerCase()));
