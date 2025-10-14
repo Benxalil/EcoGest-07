@@ -13,6 +13,7 @@ import {
 import { Plus, ArrowLeft, Edit, Trash2, FileText, GraduationCap, Users, BookOpen } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AjoutClasseModal } from "@/components/classes/AjoutClasseModal";
+import { ModifierClasseModal } from "@/components/classes/ModifierClasseModal";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
@@ -67,6 +68,8 @@ const sortClassesAcademically = (classes: ClassData[]): ClassData[] => {
 
 export default function ListeClasses() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [selectedClass, setSelectedClass] = useState<ClassData | null>(null);
   const navigate = useNavigate();
   const { isFeatureLimited, getFeatureLimit, currentPlan } = useSubscriptionPlan();
   const { showError } = useNotifications();
@@ -120,7 +123,14 @@ export default function ListeClasses() {
   const totalEtudiants = classes.reduce((total, classe) => total + (classe.enrollment_count || 0), 0);
 
   const handleEditClass = (classe: ClassData) => {
-    navigate(`/classes/modifier?id=${classe.id}`);
+    setSelectedClass(classe);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleEditSuccess = () => {
+    setIsEditDialogOpen(false);
+    setSelectedClass(null);
+    refreshClasses();
   };
 
   const handleDeleteClass = async (classe: ClassData) => {
@@ -479,6 +489,22 @@ export default function ListeClasses() {
             </TableBody>
           </Table>
         </div>
+
+        {/* Modal de modification */}
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Modifier la classe</DialogTitle>
+            </DialogHeader>
+            {selectedClass && (
+              <ModifierClasseModal 
+                classe={selectedClass}
+                onSuccess={handleEditSuccess}
+                onClose={() => setIsEditDialogOpen(false)}
+              />
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </Layout>
   );
