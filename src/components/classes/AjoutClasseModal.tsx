@@ -16,8 +16,8 @@ import { DEFAULT_SERIES, DEFAULT_LABELS } from "@/constants/classOptions";
 const formSchema = z.object({
   name: z.string().min(1, "Le nom est requis"),
   level: z.string().min(1, "Le niveau est requis"),
-  series: z.string().min(1, "La série est requise"),
-  label: z.string().min(1, "Le libellé est requis"),
+  series: z.string().optional(),
+  label: z.string().optional(),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -86,7 +86,9 @@ export function AjoutClasseModal({ open, onOpenChange, onSuccess }: AjoutClasseM
       const success = await createClass({
         name: data.name,
         level: data.level,
-        section: `${data.series}${data.label}`, // Combine series and label for section
+        section: data.series && data.label 
+          ? `${data.series}${data.label}` 
+          : (data.series || data.label || ""),
       });
 
       if (success) {
@@ -121,7 +123,9 @@ export function AjoutClasseModal({ open, onOpenChange, onSuccess }: AjoutClasseM
       const success = await createClass({
         name: data.name,
         level: data.level,
-        section: `${data.series}${data.label}`,
+        section: data.series && data.label 
+          ? `${data.series}${data.label}` 
+          : (data.series || data.label || ""),
       });
 
       if (success) {
@@ -230,14 +234,15 @@ export function AjoutClasseModal({ open, onOpenChange, onSuccess }: AjoutClasseM
               name="series"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Série</FormLabel>
+                  <FormLabel>Série (optionnel)</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Sélectionner une série" />
+                        <SelectValue placeholder="Sélectionner une série (optionnel)" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
+                      <SelectItem value="">Aucune</SelectItem>
                       {DEFAULT_SERIES.map((s) => (
                         <SelectItem key={s.code} value={s.code}>
                           {s.code} - {s.name}
@@ -255,14 +260,15 @@ export function AjoutClasseModal({ open, onOpenChange, onSuccess }: AjoutClasseM
               name="label"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Libellé</FormLabel>
+                  <FormLabel>Libellé (optionnel)</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Sélectionner un libellé" />
+                        <SelectValue placeholder="Sélectionner un libellé (optionnel)" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
+                      <SelectItem value="">Aucun</SelectItem>
                       {DEFAULT_LABELS.map((label) => (
                         <SelectItem key={label.code} value={label.code}>
                           {label.name}
@@ -368,14 +374,15 @@ export function AjoutClasseModal({ open, onOpenChange, onSuccess }: AjoutClasseM
           name="series"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Série</FormLabel>
+              <FormLabel>Série (optionnel)</FormLabel>
               <Select onValueChange={field.onChange} defaultValue={field.value}>
                 <FormControl>
                   <SelectTrigger>
-                    <SelectValue placeholder="Sélectionner une série" />
+                    <SelectValue placeholder="Sélectionner une série (optionnel)" />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
+                  <SelectItem value="">Aucune</SelectItem>
                   {DEFAULT_SERIES.map((s) => (
                     <SelectItem key={s.code} value={s.code}>
                       {s.code} - {s.name}
@@ -393,14 +400,15 @@ export function AjoutClasseModal({ open, onOpenChange, onSuccess }: AjoutClasseM
           name="label"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Libellé</FormLabel>
+              <FormLabel>Libellé (optionnel)</FormLabel>
               <Select onValueChange={field.onChange} defaultValue={field.value}>
                 <FormControl>
                   <SelectTrigger>
-                    <SelectValue placeholder="Sélectionner un libellé" />
+                    <SelectValue placeholder="Sélectionner un libellé (optionnel)" />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
+                  <SelectItem value="">Aucun</SelectItem>
                   {DEFAULT_LABELS.map((label) => (
                     <SelectItem key={label.code} value={label.code}>
                       {label.name}

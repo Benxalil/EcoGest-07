@@ -95,7 +95,7 @@ export default function ModifierClasse() {
     return (
       <Layout>
         <div className="container mx-auto py-8">
-          <p>Chargement...</p>
+          <p className="text-muted-foreground">Chargement...</p>
         </div>
       </Layout>
     );
@@ -105,7 +105,7 @@ export default function ModifierClasse() {
     return (
       <Layout>
         <div className="container mx-auto py-8">
-          <p>Classe non trouvée</p>
+          <p className="text-destructive">Classe non trouvée</p>
         </div>
       </Layout>
     );
@@ -123,7 +123,7 @@ export default function ModifierClasse() {
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <h1 className="text-3xl font-bold">Modifier la classe</h1>
+          <h1 className="text-3xl font-bold text-foreground">Modifier la classe</h1>
         </div>
         
         <Form {...form}>

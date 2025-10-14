@@ -28,7 +28,7 @@ export default function AjoutClasse() {
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <h1 className="text-3xl font-bold">Ajouter une classe</h1>
+          <h1 className="text-3xl font-bold text-foreground">Ajouter une classe</h1>
         </div>
         
         <div className="max-w-md">
