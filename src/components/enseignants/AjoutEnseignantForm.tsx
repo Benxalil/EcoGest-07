@@ -142,18 +142,46 @@ export function AjoutEnseignantForm({ onSuccess }: AjoutEnseignantFormProps) {
     name: "matieres"
   });
 
+  // Fonction pour lire les paramètres enseignants depuis localStorage
+  const getTeacherSettingsFromStorage = () => {
+    const stored = localStorage.getItem('teacherSettings');
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        return {
+          matriculeFormat: parsed.matriculeFormat,
+          defaultPassword: parsed.defaultPassword,
+          autoGenerateMatricule: parsed.autoGenerateMatricule
+        };
+      } catch (e) {
+        console.error('❌ Error parsing teacherSettings:', e);
+      }
+    }
+    // Fallback vers schoolSettings (base de données)
+    return {
+      matriculeFormat: schoolSettings.studentMatriculeFormat,
+      defaultPassword: schoolSettings.defaultStudentPassword,
+      autoGenerateMatricule: schoolSettings.autoGenerateStudentMatricule
+    };
+  };
+
   // Générer automatiquement matricule et mot de passe au chargement
   useEffect(() => {
     if (!userProfile?.schoolId || settingsLoading) return;
     
     const initializeForm = async () => {
-      // Utiliser uniquement les paramètres depuis la base de données
-      if (schoolSettings.autoGenerateStudentMatricule) {
+      // Lire les paramètres depuis localStorage
+      const currentTeacherSettings = getTeacherSettingsFromStorage();
+      
+      console.log('🔧 Initialisation enseignant avec paramètres localStorage:', currentTeacherSettings);
+      
+      // Utiliser les paramètres depuis localStorage
+      if (currentTeacherSettings.autoGenerateMatricule) {
         const nextNumber = await getNextTeacherNumber(userProfile.schoolId);
         form.setValue("matricule", nextNumber);
       }
       
-      form.setValue("motDePasse", schoolSettings.defaultStudentPassword);
+      form.setValue("motDePasse", currentTeacherSettings.defaultPassword);
     };
     
     initializeForm();
