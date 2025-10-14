@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { generateUUID } from "@/utils/uuid";
 interface DocumentData {
@@ -57,6 +58,7 @@ interface EleveFormData {
   contactUrgenceNom: string;
   contactUrgenceTelephone: string;
   contactUrgenceRelation: string;
+  statut: boolean;
   photo?: FileList;
   documents?: DocumentData[];
 }
@@ -326,7 +328,8 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
       mereMotDePasse: initialData?.mereMotDePasse || "",
       contactUrgenceNom: initialData?.contactUrgenceNom || "",
       contactUrgenceTelephone: initialData?.emergency_contact?.split(' - ')[1]?.split(' (')[0] || "",
-      contactUrgenceRelation: initialData?.emergency_contact?.split(' (')[1]?.replace(')', '') || ""
+      contactUrgenceRelation: initialData?.emergency_contact?.split(' (')[1]?.replace(')', '') || "",
+      statut: initialData?.is_active !== undefined ? initialData.is_active : true
     }
   });
 
@@ -403,7 +406,8 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
         mereMotDePasse: initialData.mereMotDePasse || "",
         contactUrgenceNom: initialData.contactUrgenceNom || "",
         contactUrgenceTelephone: initialData.emergency_contact?.split(' - ')[1]?.split(' (')[0] || "",
-        contactUrgenceRelation: initialData.emergency_contact?.split(' (')[1]?.replace(')', '') || ""
+        contactUrgenceRelation: initialData.emergency_contact?.split(' (')[1]?.replace(')', '') || "",
+        statut: initialData?.is_active !== undefined ? initialData.is_active : true
       });
 
       // Charger la photo existante de l'élève
@@ -836,7 +840,7 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
         emergency_contact: recoveredEmergencyContact || `${data.contactUrgenceNom} - ${data.contactUrgenceTelephone} (${data.contactUrgenceRelation})`,
         school_id: schoolId,
         class_id: classId || selectedClass?.id,
-        is_active: true,
+        is_active: data.statut,
         parent_matricule: useFatherExisting ? fatherMatricule : (useMotherExisting ? motherMatricule : null)
       };
 
@@ -956,7 +960,7 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
         emergency_contact: `${data.contactUrgenceNom} - ${data.contactUrgenceTelephone} (${data.contactUrgenceRelation})`,
         school_id: schoolId,
         class_id: selectedClass?.id,
-        is_active: true
+        is_active: data.statut
       };
 
       const result = await addStudent(studentData);
@@ -1722,6 +1726,30 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
           <p className="text-xs text-muted-foreground">
             Formats acceptés : PDF, DOC, DOCX, JPG, PNG (max 10Mo par fichier)
           </p>
+        </div>
+
+        {/* Section Statut de l'élève */}
+        <div className="space-y-4">
+          <FormField
+            control={form.control}
+            name="statut"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                <div className="space-y-0.5">
+                  <FormLabel>Statut de l'élève</FormLabel>
+                  <div className="text-sm text-muted-foreground">
+                    Activer ou désactiver l'élève
+                  </div>
+                </div>
+                <FormControl>
+                  <Switch
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
         </div>
 
         <Button type="submit" className="w-full">
