@@ -94,12 +94,12 @@ const fetchExamens = async (teacherClassIds?: string[]): Promise<Examen[]> => {
   }
 };
 const getSemestreBadge = (semestre: string) => {
-  const colors = {
-    "1er semestre": "bg-blue-100 text-blue-800",
-    "2e semestre": "bg-green-100 text-green-800",
-    "3e semestre": "bg-purple-100 text-purple-800"
+  const variants = {
+    "1er semestre": "default",
+    "2e semestre": "secondary",
+    "3e semestre": "outline"
   };
-  return <Badge variant="outline" className={colors[semestre as keyof typeof colors] || "bg-gray-100 text-gray-800"}>
+  return <Badge variant={(variants[semestre as keyof typeof variants] || "outline") as any}>
       {semestre}
     </Badge>;
 };
@@ -269,7 +269,7 @@ export default function ListeExamensNotes() {
           <div className="flex items-center justify-center min-h-[400px]">
             <div className="text-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-              <p>Chargement des examens...</p>
+              <p className="text-muted-foreground">Chargement des examens...</p>
             </div>
           </div>
         </div>
@@ -331,7 +331,7 @@ export default function ListeExamensNotes() {
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Retour
               </Button>
-              <h1 className="text-2xl font-bold text-gray-900">
+              <h1 className="text-2xl font-bold text-foreground">
                 Gestion des Notes - {selectedExamen.titre}
               </h1>
             </div>
@@ -339,7 +339,7 @@ export default function ListeExamensNotes() {
 
           <div className="mb-6">
             <div className="flex items-center gap-4 mb-4">
-              <h1 className="text-3xl font-bold">{selectedExamen.titre}</h1>
+              <h1 className="text-3xl font-bold text-foreground">{selectedExamen.titre}</h1>
               {selectedExamen.type === "Composition" && selectedExamen.semestre && getSemestreBadge(selectedExamen.semestre)}
               <div className="flex items-center gap-1 text-sm text-muted-foreground">
                 <Calendar className="h-4 w-4" />
@@ -352,19 +352,19 @@ export default function ListeExamensNotes() {
           </div>
 
           <div className="space-y-3">
-            {classesExamen.map(classe => <div key={classe.id} className="flex items-center justify-between p-4 bg-background rounded-lg border">
+            {classesExamen.map(classe => <div key={classe.id} className="flex items-center justify-between p-4 bg-card text-card-foreground rounded-lg border border-border">
                 <div className="flex items-center gap-3">
                   <School className="h-5 w-5 text-primary" />
                    <span className="font-medium">{formatClassName(classe)}</span>
                 </div>
-                <Button onClick={() => handleGererNotesClasse(classe.id)} className="bg-primary text-primary-foreground hover:bg-primary/90" size="sm">
+                <Button onClick={() => handleGererNotesClasse(classe.id)} variant="default" size="sm">
                   Gérer les Notes
                 </Button>
               </div>)}
           </div>
 
           {classesExamen.length === 0 && <div className="text-center py-12">
-              <p className="text-gray-500">
+              <p className="text-muted-foreground">
                 Aucune classe associée à cet examen.
               </p>
             </div>}
@@ -381,18 +381,18 @@ export default function ListeExamensNotes() {
               <ArrowLeft className="h-4 w-4 mr-2" />
               Retour
             </Button>
-            <h1 className="text-2xl font-bold text-gray-900">Gestion des Notes</h1>
+            <h1 className="text-2xl font-bold text-foreground">Gestion des Notes</h1>
           </div>
           
         </div>
 
         <div className="mb-6">
-          <p className="text-gray-600 mb-4">
+          <p className="text-muted-foreground mb-4">
             Sélectionnez un examen pour consulter et saisir les notes des élèves.
           </p>
           
           <div className="relative w-full max-w-md">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input 
               id="search-exams"
               name="search-exams"
@@ -405,16 +405,16 @@ export default function ListeExamensNotes() {
         </div>
 
         <div className="grid gap-4">
-          {filteredExamens.map(examen => <Card key={examen.id} className="hover:shadow-md transition-shadow">
+          {filteredExamens.map(examen => <Card key={examen.id} className="hover:shadow-md transition-shadow border-border">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex-1 space-y-2">
                     <div className="flex items-center gap-3">
-                      <h3 className="font-semibold text-lg text-gray-900">{examen.titre}</h3>
+                      <h3 className="font-semibold text-lg text-foreground">{examen.titre}</h3>
                       {getSemestreBadge(examen.semestre)}
                     </div>
                     
-                    <div className="flex items-center gap-4 text-sm text-gray-600">
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
                       <div className="flex items-center gap-1">
                         <Calendar className="h-4 w-4" />
                         {safeFormatDate(examen.dateExamen)}
@@ -441,7 +441,7 @@ export default function ListeExamensNotes() {
         </div>
 
         {filteredExamens.length === 0 && <div className="text-center py-12">
-            <p className="text-gray-500">
+            <p className="text-muted-foreground">
               {searchTerm 
                 ? "Aucun examen trouvé pour cette recherche." 
                 : isTeacher() && teacherClassIds.length === 0
