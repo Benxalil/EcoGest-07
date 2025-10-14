@@ -342,11 +342,11 @@ export default function ResultatsSemestre() {
             </Button>
             <div>
               <h1 className="text-2xl font-bold">{formatClassName({ name: classe.session, section: classe.libelle })}</h1>
-              <p className="text-gray-600">
+              <p className="text-muted-foreground">
                 Liste des élèves pour cette classe (Nombre d'élèves : {eleves.length})
               </p>
               {isExamView && activeExamData && (
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-muted-foreground">
                   Date: {new Date(activeExamData.exam_date).toLocaleDateString()}
                 </p>
               )}
@@ -387,29 +387,29 @@ export default function ResultatsSemestre() {
         </div>
 
         {/* Tableau des résultats avec format original */}
-        <div className="bg-white rounded-lg shadow">
+        <div className="bg-card rounded-lg shadow border border-border">
           {/* Barre bleue avec titre du semestre/examen */}
-          <div className="bg-blue-600 text-white text-center py-3 rounded-t-lg">
+          <div className="bg-primary text-primary-foreground text-center py-3 rounded-t-lg">
             <h2 className="text-lg font-semibold uppercase">{getSemestreLabel()}</h2>
           </div>
           
           {/* Barre noire avec "Tous les bulletins" */}
-          <div className="bg-black text-white text-center py-2">
+          <div className="bg-foreground text-background text-center py-2">
             <span className="text-sm font-medium">Tous les bulletins</span>
           </div>
           
           <Table>
             <TableHeader>
               {/* Première ligne d'en-tête */}
-              <TableRow className="bg-gray-100">
+              <TableRow className="bg-muted">
                 <TableHead className="w-12 text-center font-bold">N°</TableHead>
                 {showCalculatedRank && <TableHead className="w-16 text-center font-bold">Rang</TableHead>}
                 <TableHead className="font-bold">Nom et Prénom</TableHead>
                 
                 {isCompositionView ? (
                   <>
-                    <TableHead className="text-center font-bold bg-blue-50 border-r-2 border-gray-300">Devoir</TableHead>
-                    <TableHead className="text-center font-bold bg-green-50">Composition</TableHead>
+                    <TableHead className="text-center font-bold bg-primary/10 border-r-2 border-border">Devoir</TableHead>
+                    <TableHead className="text-center font-bold bg-secondary/10">Composition</TableHead>
                   </>
                 ) : (
                   <>
@@ -425,17 +425,17 @@ export default function ResultatsSemestre() {
               
               {/* Deuxième ligne d'en-tête pour les examens de composition */}
               {isCompositionView && (
-                <TableRow className="bg-gray-50">
+                <TableRow className="bg-muted/50">
                   <TableHead className="border-b"></TableHead>
                   {showCalculatedRank && <TableHead className="border-b"></TableHead>}
                   <TableHead className="border-b"></TableHead>
-                  <TableHead className="text-center bg-blue-50 border-r-2 border-b border-gray-300">
+                  <TableHead className="text-center bg-primary/10 border-r-2 border-b border-border">
                     <div className="grid grid-cols-2 gap-2 text-xs font-semibold">
                       <span>Notes</span>
                       <span>Moyenne</span>
                     </div>
                   </TableHead>
-                  <TableHead className="text-center bg-green-50 border-b">
+                  <TableHead className="text-center bg-secondary/10 border-b">
                     <div className="grid grid-cols-2 gap-2 text-xs font-semibold">
                       <span>Notes</span>
                       <span>Moyenne</span>
@@ -460,10 +460,10 @@ export default function ResultatsSemestre() {
                 });
                 
                 return (
-                  <TableRow key={eleve.id} className="hover:bg-gray-50">
+                  <TableRow key={eleve.id} className="hover:bg-accent/50">
                     <TableCell className="text-center font-medium">{eleve.numero || index + 1}</TableCell>
                     {showCalculatedRank && (
-                      <TableCell className="text-center font-bold text-blue-600">
+                      <TableCell className="text-center font-bold text-primary">
                         {eleve.rang}
                       </TableCell>
                     )}

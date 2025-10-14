@@ -201,7 +201,7 @@ export default function ListeClassesResultats() {
       <Layout>
         <div className="container mx-auto p-6">
           <div className="text-center py-12">
-            <p className="text-gray-500 text-lg">Chargement des classes...</p>
+            <p className="text-muted-foreground text-lg">Chargement des classes...</p>
           </div>
         </div>
       </Layout>
@@ -235,8 +235,8 @@ export default function ListeClassesResultats() {
           </div>
 
           <div className="text-center py-12">
-            <p className="text-gray-500 text-lg mb-4">Aucune classe n'a été créée</p>
-            <p className="text-gray-400 mb-6">Commencez par créer des classes pour consulter les résultats</p>
+            <p className="text-muted-foreground text-lg mb-4">Aucune classe n'a été créée</p>
+            <p className="text-muted-foreground mb-6">Commencez par créer des classes pour consulter les résultats</p>
             <Button onClick={() => navigate("/classes/ajouter")}>
               Créer une classe
             </Button>
@@ -255,7 +255,7 @@ export default function ListeClassesResultats() {
               variant="ghost"
               size="icon"
               onClick={() => navigate(-1)}
-              className="hover:bg-gray-100"
+              className="hover:bg-accent"
             >
               <ArrowLeft className="h-5 w-5" />
             </Button>
@@ -281,16 +281,16 @@ export default function ListeClassesResultats() {
             }}>
               <DialogTrigger asChild>
                 <div
-                  className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer group"
+                  className="flex items-center justify-between p-4 bg-card border border-border rounded-lg hover:bg-accent transition-colors cursor-pointer group"
                   onClick={() => handleClasseClick(classe)}
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                    <span className="text-lg font-medium text-gray-700">
+                    <div className="w-3 h-3 bg-primary rounded-full"></div>
+                    <span className="text-lg font-medium text-foreground">
                       {formatClassName(classe)}
                     </span>
                   </div>
-                  <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-blue-500 transition-colors" />
+                  <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
                 </div>
               </DialogTrigger>
               
@@ -303,17 +303,17 @@ export default function ListeClassesResultats() {
                 <div className="py-4">
                   {resultsLoading ? (
                     <div className="text-center py-8">
-                      <Loader2 className="h-8 w-8 animate-spin text-blue-500 mx-auto mb-4" />
-                      <p className="text-gray-500 text-lg mb-2">Chargement des examens...</p>
-                      <p className="text-gray-400 text-sm">
+                      <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
+                      <p className="text-muted-foreground text-lg mb-2">Chargement des examens...</p>
+                      <p className="text-muted-foreground text-sm">
                         Récupération des examens disponibles pour cette classe
                       </p>
                     </div>
                   ) : classExamens.length === 0 ? (
                     <div className="text-center py-8">
-                      <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                      <p className="text-gray-500 text-lg mb-2">Aucun examen créé pour cette classe</p>
-                      <p className="text-gray-400 text-sm mb-4">
+                      <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                      <p className="text-muted-foreground text-lg mb-2">Aucun examen créé pour cette classe</p>
+                      <p className="text-muted-foreground text-sm mb-4">
                         Commencez par créer des examens pour consulter les résultats
                       </p>
                       <Button 
@@ -328,39 +328,39 @@ export default function ListeClassesResultats() {
                     </div>
                   ) : (
                     <div className="space-y-3 max-h-96 overflow-y-auto">
-                      <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                        <div className="flex items-center gap-2 text-blue-700">
+                      <div className="mb-4 p-3 bg-primary/10 border border-primary/20 rounded-lg">
+                        <div className="flex items-center gap-2 text-primary">
                           <Book className="h-4 w-4" />
                           <span className="font-medium text-sm">
                             {classExamens.length} examen{classExamens.length > 1 ? 's' : ''} disponible{classExamens.length > 1 ? 's' : ''}
                           </span>
                         </div>
-                        <p className="text-blue-600 text-xs mt-1">
+                        <p className="text-primary/80 text-xs mt-1">
                           Cliquez sur un examen pour consulter les résultats des élèves
                         </p>
                       </div>
                       
                       {classExamens.map((examen) => (
-                        <div key={examen.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                        <div key={examen.id} className="border border-border rounded-lg p-4 hover:bg-accent transition-colors">
                           <div className="flex items-start justify-between">
                             <div className="flex items-start gap-3 flex-1">
                               {getExamenIcon(examen.type)}
                               <div className="flex-1">
                                 <div className="flex items-center gap-2 mb-2">
-                                  <h3 className="font-semibold text-gray-900">{examen.titre}</h3>
+                                  <h3 className="font-semibold text-foreground">{examen.titre}</h3>
                                   <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getExamenBadgeColor(examen.type)}`}>
                                     {examen.type}
                                   </span>
                                 </div>
-                                <div className="flex items-center gap-4 text-sm text-gray-600">
+                                <div className="flex items-center gap-4 text-sm text-muted-foreground">
                                   <div className="flex items-center gap-1">
                                     <Calendar className="h-3 w-3" />
                                     {format(new Date(examen.dateExamen), 'dd MMMM yyyy', { locale: fr })}
                                   </div>
-                                  <span className="text-gray-400">•</span>
+                                  <span className="text-muted-foreground">•</span>
                                   <span>{examen.anneeAcademique}</span>
                                 </div>
-                                <div className="mt-2 text-xs text-gray-500">
+                                <div className="mt-2 text-xs text-muted-foreground">
                                   Cliquez sur "Consulter" pour voir les notes des élèves
                                 </div>
                               </div>
