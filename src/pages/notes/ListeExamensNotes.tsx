@@ -133,8 +133,11 @@ export default function ListeExamensNotes() {
     }
   };
   useEffect(() => {
-    // ⚡ Attendre que teacherClassIds soit chargé pour les enseignants
-    if (isTeacher() && teacherClassIds.length === 0) return;
+    // Attendre que le profil utilisateur soit chargé
+    if (!userProfile?.schoolId) return;
+    
+    // Pour les enseignants, attendre que teacherDataLoading soit terminé
+    if (isTeacher() && teacherDataLoading) return;
     
     loadData();
 
@@ -161,7 +164,7 @@ export default function ListeExamensNotes() {
     return () => {
       supabase.removeChannel(examsChannel);
     };
-  }, [userProfile?.schoolId, teacherClassIds]);
+  }, [userProfile?.schoolId, teacherClassIds, teacherDataLoading]);
   const getClasseNom = (classeId: string, classesData?: Array<{
     id: string;
     name: string;
@@ -228,7 +231,7 @@ export default function ListeExamensNotes() {
     }
   };
   const filteredExamens = examens.filter(examen => examen.titre.toLowerCase().includes(searchTerm.toLowerCase()) || examen.type.toLowerCase().includes(searchTerm.toLowerCase()) || getClassesNoms(examen).toLowerCase().includes(searchTerm.toLowerCase()));
-  if (loading || teacherDataLoading) {
+  if (loading) {
     return <Layout>
         <div className="container mx-auto p-6">
           <div className="flex items-center justify-center min-h-[400px]">
@@ -391,7 +394,11 @@ export default function ListeExamensNotes() {
 
         {filteredExamens.length === 0 && <div className="text-center py-12">
             <p className="text-gray-500">
-              {searchTerm ? "Aucun examen trouvé pour cette recherche." : "Aucun examen disponible. Créez d'abord des examens dans la section Examens."}
+              {searchTerm 
+                ? "Aucun examen trouvé pour cette recherche." 
+                : isTeacher() && teacherClassIds.length === 0
+                  ? "Aucun examen disponible. Vous n'êtes assigné à aucune classe pour le moment."
+                  : "Aucun examen disponible. Créez d'abord des examens dans la section Examens."}
             </p>
           </div>}
         
