@@ -92,7 +92,7 @@ export default function ListeClassesExamens() {
             </Button>
             <div>
               <h1 className="text-2xl font-bold text-primary">Examens</h1>
-              <p className="text-gray-600 text-sm">Gérer les examens et les évaluations</p>
+              <p className="text-muted-foreground text-sm">Gérer les examens et les évaluations</p>
             </div>
           </div>
           <CreerExamenModal 

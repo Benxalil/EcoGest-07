@@ -12,16 +12,16 @@ interface StatsCardProps {
 }
 
 const StatsCard: React.FC<StatsCardProps> = ({ title, value, subtitle, icon, iconBgColor }) => (
-  <Card className="bg-white border border-gray-200">
+  <Card>
     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-      <CardTitle className="text-sm font-medium text-gray-600">{title}</CardTitle>
+      <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
       <div className={`h-8 w-8 rounded-lg ${iconBgColor} flex items-center justify-center`}>
         {icon}
       </div>
     </CardHeader>
     <CardContent>
-      <div className="text-2xl font-bold text-gray-900">{value}</div>
-      <p className="text-xs text-gray-500 mt-1">{subtitle}</p>
+      <div className="text-2xl font-bold text-foreground">{value}</div>
+      <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>
     </CardContent>
   </Card>
 );
@@ -72,22 +72,22 @@ export const ExamensStats: React.FC<ExamensStatsProps> = ({ classes }) => {
       title: "Total des examens",
       value: totalExamens,
       subtitle: "Tous les temps",
-      icon: <BookOpen className="h-4 w-4 text-blue-600" />,
-      iconBgColor: "bg-blue-50"
+      icon: <BookOpen className="h-4 w-4 text-blue-600 dark:text-blue-400" />,
+      iconBgColor: "bg-blue-50 dark:bg-blue-950/30"
     },
     {
       title: "Prévus",
       value: examensPrevu,
       subtitle: "Examens à venir",
-      icon: <Calendar className="h-4 w-4 text-orange-600" />,
-      iconBgColor: "bg-orange-50"
+      icon: <Calendar className="h-4 w-4 text-orange-600 dark:text-orange-400" />,
+      iconBgColor: "bg-orange-50 dark:bg-orange-950/30"
     },
     {
       title: "Examens passés",
       value: examensPassés,
       subtitle: "Examens terminés",
-      icon: <CheckCircle className="h-4 w-4 text-green-600" />,
-      iconBgColor: "bg-green-50"
+      icon: <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />,
+      iconBgColor: "bg-green-50 dark:bg-green-950/30"
     }
   ];
 
