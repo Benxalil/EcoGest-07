@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Table,
   TableBody,
@@ -131,26 +132,117 @@ export default function ListeClasses() {
     }
   };
 
-  const handleDownloadPDF = (classe: ClassData) => {
-    const doc = new jsPDF();
-    
-    doc.setFontSize(20);
-    doc.text(`Liste de la classe ${formatClassName(classe)}`, 20, 30);
-    doc.setFontSize(12);
-    doc.text(`Classe: ${classe.name}`, 20, 50);
-    doc.text(`Niveau: ${classe.level}`, 20, 60);
-    doc.text(`Section: ${classe.section || 'N/A'}`, 20, 70);
-    doc.text(`Effectif: ${classe.enrollment_count || 0} élèves`, 20, 80);
-    doc.text(`Date de génération: ${new Date().toLocaleDateString('fr-FR')}`, 20, 90);
-    doc.line(20, 100, 190, 100);
-    doc.setFontSize(14);
-    doc.text('Informations de la classe:', 20, 120);
-    
-    doc.setFontSize(10);
-    doc.text('(Fonctionnalité d\'élèves à implémenter)', 20, 140);
-    
-    doc.save(`liste_classe_${formatClassName(classe).replace(/\s+/g, '_')}.pdf`);
-    toast.success(`Liste PDF de la classe ${formatClassName(classe)} téléchargée`);
+  const handleDownloadPDF = async (classe: ClassData) => {
+    try {
+      // Récupérer les élèves de la classe
+      const { data: students, error } = await supabase
+        .from('students')
+        .select('student_number, first_name, last_name, gender, date_of_birth, place_of_birth')
+        .eq('class_id', classe.id)
+        .eq('is_active', true)
+        .order('student_number');
+
+      if (error) {
+        console.error('Erreur lors de la récupération des élèves:', error);
+        toast.error('Impossible de récupérer la liste des élèves');
+        return;
+      }
+
+      const doc = new jsPDF();
+      
+      // En-tête du document
+      doc.setFontSize(20);
+      doc.text(`Liste de la classe ${formatClassName(classe)}`, 105, 20, { align: 'center' });
+      
+      // Informations de la classe
+      doc.setFontSize(12);
+      doc.text(`Classe: ${classe.name}`, 20, 35);
+      doc.text(`Niveau: ${classe.level}`, 20, 42);
+      doc.text(`Section: ${classe.section || 'N/A'}`, 20, 49);
+      doc.text(`Effectif: ${students?.length || 0} élève${(students?.length || 0) !== 1 ? 's' : ''}`, 20, 56);
+      doc.text(`Date de génération: ${new Date().toLocaleDateString('fr-FR')}`, 20, 63);
+      
+      // Ligne de séparation
+      doc.line(20, 68, 190, 68);
+      
+      // Titre du tableau
+      doc.setFontSize(14);
+      doc.text('Liste des élèves:', 20, 78);
+      
+      if (!students || students.length === 0) {
+        doc.setFontSize(10);
+        doc.text('Aucun élève inscrit dans cette classe.', 20, 90);
+      } else {
+        // En-têtes du tableau
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        let yPosition = 88;
+        
+        doc.text('N°', 20, yPosition);
+        doc.text('Matricule', 35, yPosition);
+        doc.text('Nom et Prénom', 70, yPosition);
+        doc.text('Genre', 130, yPosition);
+        doc.text('Date de naissance', 150, yPosition);
+        
+        // Ligne sous les en-têtes
+        doc.line(20, yPosition + 2, 190, yPosition + 2);
+        
+        // Corps du tableau
+        doc.setFont('helvetica', 'normal');
+        yPosition += 8;
+        
+        students.forEach((student, index) => {
+          // Vérifier si on doit ajouter une nouvelle page
+          if (yPosition > 270) {
+            doc.addPage();
+            yPosition = 20;
+            
+            // Répéter les en-têtes sur la nouvelle page
+            doc.setFont('helvetica', 'bold');
+            doc.text('N°', 20, yPosition);
+            doc.text('Matricule', 35, yPosition);
+            doc.text('Nom et Prénom', 70, yPosition);
+            doc.text('Genre', 130, yPosition);
+            doc.text('Date de naissance', 150, yPosition);
+            doc.line(20, yPosition + 2, 190, yPosition + 2);
+            doc.setFont('helvetica', 'normal');
+            yPosition += 8;
+          }
+          
+          const fullName = `${student.last_name} ${student.first_name}`;
+          const dateOfBirth = student.date_of_birth 
+            ? new Date(student.date_of_birth).toLocaleDateString('fr-FR')
+            : 'N/A';
+          
+          doc.text(`${index + 1}`, 20, yPosition);
+          doc.text(student.student_number || 'N/A', 35, yPosition);
+          doc.text(fullName, 70, yPosition);
+          doc.text(student.gender || 'N/A', 130, yPosition);
+          doc.text(dateOfBirth, 150, yPosition);
+          
+          yPosition += 7;
+        });
+      }
+      
+      // Pied de page
+      const pageCount = doc.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.text(
+          `Page ${i} sur ${pageCount}`,
+          105,
+          290,
+          { align: 'center' }
+        );
+      }
+      
+      doc.save(`liste_classe_${formatClassName(classe).replace(/\s+/g, '_')}.pdf`);
+      toast.success(`Liste PDF de la classe ${formatClassName(classe)} téléchargée`);
+    } catch (error) {
+      console.error('Erreur lors de la génération du PDF:', error);
+      toast.error('Erreur lors de la génération du PDF');
+    }
   };
 
   // Gestion des états de chargement et d'erreur
