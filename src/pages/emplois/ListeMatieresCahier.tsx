@@ -51,7 +51,7 @@ export default function ListeMatieresCahier() {
       <Layout>
         <div className="container mx-auto p-6">
           <div className="text-center">
-            <h1 className="text-2xl font-bold text-gray-900 mb-4">Classe non trouvée</h1>
+            <h1 className="text-2xl font-bold text-foreground mb-4">Classe non trouvée</h1>
             <Button onClick={() => navigate('/emplois-du-temps')}>
               <ArrowLeft className="h-4 w-4 mr-2" />
               Retour aux emplois du temps
@@ -76,10 +76,10 @@ export default function ListeMatieresCahier() {
               Retour
             </Button>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">
+              <h1 className="text-2xl font-bold text-foreground">
                 Matières - {classe.name}
               </h1>
-              <p className="text-gray-600">
+              <p className="text-muted-foreground">
                 Gestion des matières pour cette classe
               </p>
             </div>
@@ -91,10 +91,10 @@ export default function ListeMatieresCahier() {
             <Card className="col-span-full">
               <CardContent className="flex flex-col items-center justify-center py-12">
                 <BookText className="h-12 w-12 text-gray-400 mb-4" />
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                <h3 className="text-lg font-semibold text-foreground mb-2">
                   Aucune matière
                 </h3>
-                <p className="text-gray-500 text-center mb-4">
+                <p className="text-muted-foreground text-center mb-4">
                   Aucune matière n'a été configurée pour cette classe.
                 </p>
                 <Button onClick={() => navigate('/matieres')}>

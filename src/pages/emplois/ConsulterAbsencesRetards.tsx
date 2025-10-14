@@ -165,7 +165,7 @@ export default function ConsulterAbsencesRetards() {
       <Layout>
         <div className="container mx-auto p-6">
           <div className="text-center py-12">
-            <p className="text-gray-500 text-lg">Chargement...</p>
+            <p className="text-muted-foreground text-lg">Chargement...</p>
           </div>
         </div>
       </Layout>
@@ -177,7 +177,7 @@ export default function ConsulterAbsencesRetards() {
       <Layout>
         <div className="container mx-auto p-6">
           <div className="text-center py-12">
-            <p className="text-gray-500 text-lg">Classe non trouvée</p>
+            <p className="text-muted-foreground text-lg">Classe non trouvée</p>
             <Button onClick={() => navigate(-1)} className="mt-4">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Retour
@@ -200,7 +200,7 @@ export default function ConsulterAbsencesRetards() {
               <ArrowLeft className="h-4 w-4 mr-2" />
               Retour
             </Button>
-            <h1 className="text-2xl font-bold text-gray-900">
+            <h1 className="text-2xl font-bold text-foreground">
               {isParent() 
                 ? `Absences & Retards de mes enfants` 
                 : `Absences & Retards - ${formatClassName(classe)}`
@@ -276,7 +276,7 @@ export default function ConsulterAbsencesRetards() {
           <Card>
             <CardContent className="p-4">
               <div className="text-2xl font-bold text-blue-600">{filteredAttendances.length}</div>
-              <div className="text-sm text-gray-600">Total des événements</div>
+              <div className="text-sm text-muted-foreground">Total des événements</div>
             </CardContent>
           </Card>
           <Card>
@@ -284,7 +284,7 @@ export default function ConsulterAbsencesRetards() {
               <div className="text-2xl font-bold text-red-600">
                 {filteredAttendances.filter(r => r.type === "absence").length}
               </div>
-              <div className="text-sm text-gray-600">Absences</div>
+              <div className="text-sm text-muted-foreground">Absences</div>
             </CardContent>
           </Card>
           <Card>
@@ -292,7 +292,7 @@ export default function ConsulterAbsencesRetards() {
               <div className="text-2xl font-bold text-yellow-600">
                 {filteredAttendances.filter(r => r.type === "retard").length}
               </div>
-              <div className="text-sm text-gray-600">Retards</div>
+              <div className="text-sm text-muted-foreground">Retards</div>
             </CardContent>
           </Card>
         </div>
@@ -302,8 +302,8 @@ export default function ConsulterAbsencesRetards() {
           <Card>
             <CardContent className="p-12 text-center">
               <Calendar className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-              <p className="text-gray-500 text-lg mb-2">Aucun enregistrement trouvé</p>
-              <p className="text-gray-400">
+              <p className="text-muted-foreground text-lg mb-2">Aucun enregistrement trouvé</p>
+              <p className="text-muted-foreground/70">
                 {isParent()
                   ? "Aucun de vos enfants n'a été signalé absent ou en retard."
                   : attendances.length === 0 
@@ -352,10 +352,10 @@ export default function ConsulterAbsencesRetards() {
                       </TableHeader>
                       <TableBody>
                         {dateRecords.map((record) => (
-                          <TableRow key={record.id} className="hover:bg-gray-50">
+                          <TableRow key={record.id} className="hover:bg-accent/50">
                             <TableCell>
                               <div className="flex items-center gap-2">
-                                <User className="h-4 w-4 text-gray-400" />
+                                <User className="h-4 w-4 text-muted-foreground" />
                                 {record.students?.first_name} {record.students?.last_name}
                               </div>
                             </TableCell>

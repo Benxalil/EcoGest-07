@@ -282,7 +282,7 @@ export default function EnregistrerAbsenceRetard() {
             <ArrowLeft className="h-4 w-4 mr-2" />
             Retour à l'emploi du temps
           </Button>
-          <h1 className="text-2xl font-bold text-gray-900">Enregistrer Absences & Retards</h1>
+          <h1 className="text-2xl font-bold text-foreground">Enregistrer Absences & Retards</h1>
         </div>
 
         {/* Informations du cours */}
@@ -296,22 +296,22 @@ export default function EnregistrerAbsenceRetard() {
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div>
-                <Label className="text-sm font-medium text-gray-600">Jour</Label>
+                <Label className="text-sm font-medium text-muted-foreground">Jour</Label>
                 <Badge variant="outline" className="mt-1">{day}</Badge>
               </div>
               <div>
-                <Label className="text-sm font-medium text-gray-600">Matière</Label>
+                <Label className="text-sm font-medium text-muted-foreground">Matière</Label>
                 <Badge variant="outline" className="mt-1">{subject}</Badge>
               </div>
               <div>
-                <Label className="text-sm font-medium text-gray-600">Heure de début</Label>
+                <Label className="text-sm font-medium text-muted-foreground">Heure de début</Label>
                 <Badge variant="outline" className="mt-1 flex items-center gap-1">
                   <Clock className="h-3 w-3" />
                   {startTime}
                 </Badge>
               </div>
               <div>
-                <Label className="text-sm font-medium text-gray-600">Heure de fin</Label>
+                <Label className="text-sm font-medium text-muted-foreground">Heure de fin</Label>
                 <Badge variant="outline" className="mt-1 flex items-center gap-1">
                   <Clock className="h-3 w-3" />
                   {endTime}
@@ -353,16 +353,16 @@ export default function EnregistrerAbsenceRetard() {
           </CardHeader>
           <CardContent>
             {studentsLoading ? (
-              <p className="text-gray-500 text-center py-8">Chargement des élèves...</p>
+              <p className="text-muted-foreground text-center py-8">Chargement des élèves...</p>
             ) : eleves.length === 0 ? (
-              <p className="text-gray-500 text-center py-8">Aucun élève trouvé pour cette classe.</p>
+              <p className="text-muted-foreground text-center py-8">Aucun élève trouvé pour cette classe.</p>
             ) : (
               <div className="space-y-3">
                 {eleves.map((eleve) => (
                   <div key={eleve.id} className="flex items-center justify-between p-3 border rounded-lg">
                     <div>
                       <p className="font-medium">{eleve.prenom} {eleve.nom}</p>
-                      <p className="text-sm text-gray-500">ID: {eleve.id}</p>
+                      <p className="text-sm text-muted-foreground">ID: {eleve.id}</p>
                     </div>
                     <div className="flex gap-2">
                       {(["present", "absent", "retard"] as const).map((statut) => (
