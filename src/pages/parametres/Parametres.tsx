@@ -22,6 +22,7 @@ import { useUserRole } from "@/hooks/useUserRole";
 import { TeacherSettings } from "@/components/parametres/TeacherSettings";
 import { StudentSettings } from "@/components/parametres/StudentSettings";
 import { ParentSettings } from "@/components/parametres/ParentSettings";
+import { DangerZoneSection } from "@/components/parametres/DangerZoneSection";
 interface GeneralSettings {
   formatNomUtilisateur: string;
   motDePasseDefaut: string;
@@ -1339,6 +1340,16 @@ export default function Parametres() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Zone de Danger - visible uniquement pour les admins */}
+            {userProfile?.schoolId && schoolData?.name && (
+              <div className="mt-8">
+                <DangerZoneSection
+                  schoolId={userProfile.schoolId}
+                  schoolName={schoolData.name}
+                />
+              </div>
+            )}
             </TabsContent>
           </Tabs>
         </div>
