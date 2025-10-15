@@ -1,11 +1,13 @@
 import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 import { ArrowLeft, Plus } from "lucide-react";
 import { useNavigate, useSearchParams, useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
@@ -16,6 +18,15 @@ import { useSubjects } from "@/hooks/useSubjects";
 import { useTeachers } from "@/hooks/useTeachers";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useTeacherId } from "@/hooks/useTeacherId";
+
+const cahierFormSchema = z.object({
+  topic: z.string().min(1, "Le sujet du cours est requis"),
+  lesson_date: z.string().min(1, "La date du cours est requise"),
+  start_time: z.string().min(1, "L'heure de début est requise"),
+  content: z.string().min(1, "Le contenu du cours est requis"),
+  teacher_id: z.string().min(1, "L'enseignant est requis"),
+  subject_id: z.string().min(1, "La matière est requise"),
+});
 
 interface CahierFormData {
   topic: string;
@@ -45,6 +56,7 @@ export default function CahierDeTexte() {
   const [isEnseignantModalOpen, setIsEnseignantModalOpen] = useState(false);
 
   const form = useForm<CahierFormData>({
+    resolver: zodResolver(cahierFormSchema),
     defaultValues: {
       topic: "",
       lesson_date: new Date().toISOString().split('T')[0],
@@ -168,6 +180,7 @@ export default function CahierDeTexte() {
                               ))}
                             </SelectContent>
                           </Select>
+                          <FormMessage />
                         </FormItem>
                       )}
                     />
@@ -192,6 +205,7 @@ export default function CahierDeTexte() {
                               ))}
                             </SelectContent>
                           </Select>
+                          <FormMessage />
                         </FormItem>
                       )}
                     />
@@ -206,6 +220,7 @@ export default function CahierDeTexte() {
                         <FormControl>
                           <Input {...field} placeholder="Ex: Introduction aux fractions" />
                         </FormControl>
+                        <FormMessage />
                       </FormItem>
                     )}
                   />
@@ -220,6 +235,7 @@ export default function CahierDeTexte() {
                           <FormControl>
                             <Input type="date" {...field} />
                           </FormControl>
+                          <FormMessage />
                         </FormItem>
                       )}
                     />
@@ -233,6 +249,7 @@ export default function CahierDeTexte() {
                           <FormControl>
                             <Input type="time" {...field} />
                           </FormControl>
+                          <FormMessage />
                         </FormItem>
                       )}
                     />
@@ -251,6 +268,7 @@ export default function CahierDeTexte() {
                             rows={6}
                           />
                         </FormControl>
+                        <FormMessage />
                       </FormItem>
                     )}
                   />
