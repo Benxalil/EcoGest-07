@@ -45,11 +45,18 @@ export const useSubjects = (classId?: string, teacherId?: string | null) => {
       
       // Si teacherId est fourni, filtrer par les matières de l'enseignant
       if (teacherId) {
-        const { data: teacherSubjects, error: tsError } = await supabase
+        const teacherSubjectsQuery = supabase
           .from('teacher_subjects')
           .select('subject_id')
           .eq('teacher_id', teacherId)
           .eq('school_id', userProfile.schoolId);
+
+        // Filtrer aussi par class_id si fourni
+        if (classId) {
+          teacherSubjectsQuery.eq('class_id', classId);
+        }
+
+        const { data: teacherSubjects, error: tsError } = await teacherSubjectsQuery;
 
         if (tsError) throw tsError;
 
