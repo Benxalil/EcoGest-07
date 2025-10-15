@@ -1,166 +1,32 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, Calendar, Clock, BookOpen, Megaphone, Award } from "lucide-react";
+import { Users, Calendar, Clock, BookOpen, Megaphone } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useState, useEffect } from "react";
 import { useUserRole } from "@/hooks/useUserRole";
-import { formatClassName } from "@/utils/classNameFormatter";
-import { useAnnouncements } from "@/hooks/useAnnouncements";
-import { useClasses } from "@/hooks/useClasses";
 import { useSchoolData } from "@/hooks/useSchoolData";
-import { filterAnnouncementsByRole } from "@/utils/announcementFilters";
-
-interface TeacherStats {
-  totalClasses: number;
-  totalStudents: number;
-  todaySchedules: any[];
-  announcements: any[];
-}
+import { useTeacherData } from "@/hooks/useTeacherData";
 
 export function TeacherDashboard() {
   const navigate = useNavigate();
   const { userProfile } = useUserRole();
-  const { announcements } = useAnnouncements();
-  const { classes, loading: classesLoading } = useClasses();
   const { schoolData } = useSchoolData();
-  const [isLoadingData, setIsLoadingData] = useState(true);
-  const [stats, setStats] = useState<TeacherStats>({
-    totalClasses: 0,
-    totalStudents: 0,
-    todaySchedules: [],
-    announcements: []
-  });
-
-  useEffect(() => {
-    loadTeacherData();
-  }, [userProfile, classes, announcements]); // ✅ Ajout de 'announcements' pour recharger quand les annonces changent
-
-  const loadTeacherData = () => {
-    if (!userProfile) return;
-
-    try {
-      setIsLoadingData(true);
-      // Récupérer les classes assignées à l'enseignant depuis l'emploi du temps
-      const teacherClasses = getTeacherClasses(userProfile.id);
-      const todaySchedules = getTodayTeacherSchedule(userProfile.id);
-      const totalStudents = getTeacherStudentCount(teacherClasses);
-      const announcements = getTeacherAnnouncements();
-
-      setStats({
-        totalClasses: teacherClasses.length,
-        totalStudents,
-        todaySchedules,
-        announcements: announcements // Déjà limité à 3 dans getTeacherAnnouncements()
-      });
-    } catch (error) {
-      console.error("Erreur lors du chargement des données enseignant:", error);
-    } finally {
-      setIsLoadingData(false);
-    }
-  };
-
-  const getTeacherClasses = (teacherId: string): string[] => {
-    try {
-      const schedules = [];
-      
-      // Parcourir toutes les classes pour trouver celles où l'enseignant enseigne
-      for (const classe of classes) {
-        const scheduleKey = `schedule-${classe.id}`;
-        const savedSchedule = localStorage.getItem(scheduleKey);
-        if (savedSchedule) {
-          const classSchedule = JSON.parse(savedSchedule);
-          const hasTeacher = classSchedule.some((day: any) => 
-            day.courses.some((course: any) => course.teacherId === teacherId)
-          );
-          if (hasTeacher) {
-            schedules.push(formatClassName(classe));
-          }
-        }
-      }
-      
-      return [...new Set(schedules)]; // Supprimer les doublons
-    } catch (error) {
-      console.error("Erreur lors de la récupération des classes:", error);
-      return [];
-    }
-  };
-
-  const getTodayTeacherSchedule = (teacherId: string) => {
-    const today = new Date();
-    const dayName = today.toLocaleDateString('fr-FR', { weekday: 'long' }).toUpperCase();
-    
-    if (dayName === 'DIMANCHE') return [];
-
-    try {
-      const classes = JSON.parse(localStorage.getItem('classes') || '[]');
-      const todaySchedules = [];
-
-      for (const classe of classes) {
-        const scheduleKey = `schedule-${classe.id}`;
-        const savedSchedule = localStorage.getItem(scheduleKey);
-        if (savedSchedule) {
-          const classSchedule = JSON.parse(savedSchedule);
-          const todaySchedule = classSchedule.find((day: any) => day.day === dayName);
-          
-          if (todaySchedule) {
-            const teacherCourses = todaySchedule.courses.filter((course: any) => 
-              course.teacherId === teacherId
-            );
-            
-            if (teacherCourses.length > 0) {
-              todaySchedules.push({
-                className: `${classe.session} ${classe.libelle}`,
-                courses: teacherCourses
-              });
-            }
-          }
-        }
-      }
-
-      return todaySchedules;
-    } catch (error) {
-      console.error("Erreur lors de la récupération de l'emploi du temps:", error);
-      return [];
-    }
-  };
-
-  const getTeacherStudentCount = (teacherClasses: string[]): number => {
-    try {
-      const students = JSON.parse(localStorage.getItem('eleves') || '[]');
-      return students.filter((student: any) => 
-        teacherClasses.includes(student.classe)
-      ).length;
-    } catch (error) {
-      console.error("Erreur lors du calcul des élèves:", error);
-      return 0;
-    }
-  };
-
-  const getTeacherAnnouncements = () => {
-    try {
-      // ✅ Utiliser le filtre centralisé qui respecte la logique globale
-      const filtered = filterAnnouncementsByRole(
-        announcements || [],
-        'teacher', // Rôle de l'utilisateur
-        false // Les enseignants ne sont pas admins
-      );
-      
-      // ✅ Limiter à 3 annonces les plus récentes
-      return filtered
-        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-        .slice(0, 3);
-    } catch (error) {
-      console.error("Erreur lors de la récupération des annonces:", error);
-      return [];
-    }
-  };
+  
+  // ✅ CORRECTION: Utiliser useTeacherData au lieu de localStorage pour la synchronisation en temps réel
+  const { 
+    classes, 
+    totalStudents, 
+    todaySchedules, 
+    announcements, 
+    loading, 
+    error 
+  } = useTeacherData();
 
   const getGreeting = () => {
     const currentHour = new Date().getHours();
     return currentHour < 12 ? "Bonjour" : "Bonsoir";
   };
 
-  if (classesLoading || isLoadingData) {
+  if (loading) {
     return (
       <div className="space-y-6">
         {/* Header skeleton */}
@@ -218,7 +84,7 @@ export function TeacherDashboard() {
                 Mes Classes
               </p>
               <p className="text-2xl sm:text-3xl font-bold text-blue-600">
-                {stats.totalClasses}
+                {classes.length}
               </p>
             </div>
             <BookOpen className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600 flex-shrink-0 ml-2" />
@@ -232,7 +98,7 @@ export function TeacherDashboard() {
                 Mes Élèves
               </p>
               <p className="text-2xl sm:text-3xl font-bold text-green-600">
-                {stats.totalStudents}
+                {totalStudents}
               </p>
             </div>
             <Users className="h-5 w-5 sm:h-6 sm:w-6 text-green-600 flex-shrink-0 ml-2" />
@@ -246,7 +112,7 @@ export function TeacherDashboard() {
                 Cours Aujourd'hui
               </p>
               <p className="text-2xl sm:text-3xl font-bold text-purple-600">
-                {stats.todaySchedules.reduce((acc, schedule) => acc + schedule.courses.length, 0)}
+                {todaySchedules.length}
               </p>
             </div>
             <Clock className="h-5 w-5 sm:h-6 sm:w-6 text-purple-600 flex-shrink-0 ml-2" />
@@ -260,7 +126,7 @@ export function TeacherDashboard() {
                 Annonces
               </p>
               <p className="text-2xl sm:text-3xl font-bold text-orange-600">
-                {stats.announcements.length}
+                {announcements.length}
               </p>
             </div>
             <Megaphone className="h-5 w-5 sm:h-6 sm:w-6 text-orange-600 flex-shrink-0 ml-2" />
@@ -276,22 +142,22 @@ export function TeacherDashboard() {
             <Calendar className="h-5 w-5 text-blue-600" />
             <h3 className="font-semibold">Mon Emploi du Temps Aujourd'hui</h3>
           </div>
-          {stats.todaySchedules.length === 0 ? (
+          {todaySchedules.length === 0 ? (
             <p className="text-center text-muted-foreground py-8">
               {new Date().getDay() === 0 ? "Aucun cours prévu le dimanche" : "Aucun cours prévu aujourd'hui"}
             </p>
           ) : (
             <div className="space-y-3">
-              {stats.todaySchedules.map((schedule, index) => (
-                <div key={index} className="border rounded-lg p-3 bg-blue-50">
-                  <h4 className="font-medium text-blue-800 mb-2">{schedule.className}</h4>
-                  <div className="space-y-1">
-                    {schedule.courses.map((course: any, courseIndex: number) => (
-                      <div key={courseIndex} className="flex items-center justify-between text-sm">
-                        <span className="font-medium">{course.subject}</span>
-                        <span className="text-blue-600">{course.startTime} - {course.endTime}</span>
-                      </div>
-                    ))}
+              {todaySchedules.map((schedule, index) => (
+                <div key={index} className="border rounded-lg p-3 bg-blue-50 dark:bg-blue-950">
+                  <h4 className="font-medium text-blue-800 dark:text-blue-200 mb-2">
+                    {schedule.classes?.name || 'Classe'}
+                  </h4>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-medium">{schedule.subject}</span>
+                    <span className="text-blue-600 dark:text-blue-400">
+                      {schedule.start_time} - {schedule.end_time}
+                    </span>
                   </div>
                 </div>
               ))}
@@ -315,14 +181,14 @@ export function TeacherDashboard() {
             <Megaphone className="h-5 w-5 text-orange-600" />
             <h3 className="font-semibold">Annonces Récentes</h3>
           </div>
-          {stats.announcements.length === 0 ? (
+          {announcements.length === 0 ? (
             <p className="text-center text-muted-foreground py-8">
               Aucune annonce récente
             </p>
           ) : (
             <div className="space-y-3">
-              {stats.announcements.map((announcement: any, index: number) => (
-                <div key={index} className="border rounded-lg p-3 hover:bg-orange-50">
+              {announcements.map((announcement: any, index: number) => (
+                <div key={index} className="border rounded-lg p-3 hover:bg-orange-50 dark:hover:bg-orange-950">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <h4 className="font-medium text-sm">{announcement.title}</h4>
@@ -330,8 +196,8 @@ export function TeacherDashboard() {
                         {announcement.content}
                       </p>
                     </div>
-                    {announcement.isUrgent && (
-                      <span className="bg-red-100 text-red-800 text-xs px-2 py-1 rounded">
+                    {announcement.priority === 'urgent' && (
+                      <span className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 text-xs px-2 py-1 rounded">
                         Urgent
                       </span>
                     )}

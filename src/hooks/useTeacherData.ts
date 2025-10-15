@@ -166,11 +166,12 @@ export const useTeacherData = () => {
     if (!profile?.schoolId) return;
 
     let timeoutId: NodeJS.Timeout;
-    const handleUpdate = () => {
+    const handleUpdate = (table: string) => {
+      console.log('[useTeacherData] Real-time update detected for:', table);
       cache.deleteWithEvent(cacheKey);
-      // Debounce augmenté à 1 seconde pour éviter les refetch multiples
+      // Debounce réduit à 500ms pour une mise à jour plus rapide
       if (timeoutId) clearTimeout(timeoutId);
-      timeoutId = setTimeout(fetchTeacherData, 1000);
+      timeoutId = setTimeout(fetchTeacherData, 500);
     };
 
     const channel = supabase
@@ -180,19 +181,25 @@ export const useTeacherData = () => {
         schema: 'public',
         table: 'schedules',
         filter: `school_id=eq.${profile.schoolId}`
-      }, handleUpdate)
+      }, () => handleUpdate('schedules'))
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
         table: 'students',
         filter: `school_id=eq.${profile.schoolId}`
-      }, handleUpdate)
+      }, () => handleUpdate('students'))
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'classes',
+        filter: `school_id=eq.${profile.schoolId}`
+      }, () => handleUpdate('classes'))
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
         table: 'announcements',
         filter: `school_id=eq.${profile.schoolId}`
-      }, handleUpdate)
+      }, () => handleUpdate('announcements'))
       .subscribe();
 
     return () => {
@@ -200,6 +207,23 @@ export const useTeacherData = () => {
       supabase.removeChannel(channel);
     };
   }, [profile?.schoolId, fetchTeacherData, cache, cacheKey]);
+
+  // Listener global pour les mises à jour d'emploi du temps
+  useEffect(() => {
+    if (!teacherId) return;
+
+    const handleScheduleUpdate = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (customEvent.detail?.teacherId === teacherId) {
+        console.log('[useTeacherData] Schedule update event received for teacher:', teacherId);
+        cache.deleteWithEvent(cacheKey);
+        fetchTeacherData();
+      }
+    };
+
+    window.addEventListener('schedule-updated', handleScheduleUpdate);
+    return () => window.removeEventListener('schedule-updated', handleScheduleUpdate);
+  }, [teacherId, fetchTeacherData, cache, cacheKey]);
 
   return {
     classes: data.classes,

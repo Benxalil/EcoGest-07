@@ -137,6 +137,12 @@ export const useSchedules = (classId?: string) => {
       // Invalider le cache de l'enseignant concerné
       if (courseData.teacher_id) {
         cache.invalidateByPrefixWithEvent(`teacher-dashboard-${courseData.teacher_id}`);
+        cache.deleteWithEvent('teacher-data-*');
+        
+        // Notifier tous les composants via event custom
+        window.dispatchEvent(new CustomEvent('schedule-updated', { 
+          detail: { teacherId: courseData.teacher_id, classId: courseData.class_id }
+        }));
       }
 
       await fetchSchedules();
@@ -202,11 +208,19 @@ export const useSchedules = (classId?: string) => {
       if (error) throw error;
 
       // Invalider les caches des enseignants concernés (ancien et nouveau)
+      cache.deleteWithEvent('teacher-data-*');
+      
       if (existingSchedule?.teacher_id) {
         cache.invalidateByPrefixWithEvent(`teacher-dashboard-${existingSchedule.teacher_id}`);
+        window.dispatchEvent(new CustomEvent('schedule-updated', { 
+          detail: { teacherId: existingSchedule.teacher_id, classId: courseData.class_id }
+        }));
       }
       if (courseData.teacher_id && courseData.teacher_id !== existingSchedule?.teacher_id) {
         cache.invalidateByPrefixWithEvent(`teacher-dashboard-${courseData.teacher_id}`);
+        window.dispatchEvent(new CustomEvent('schedule-updated', { 
+          detail: { teacherId: courseData.teacher_id, classId: courseData.class_id }
+        }));
       }
 
       await fetchSchedules();
@@ -248,8 +262,13 @@ export const useSchedules = (classId?: string) => {
       if (error) throw error;
 
       // Invalider le cache de l'enseignant concerné
+      cache.deleteWithEvent('teacher-data-*');
+      
       if (existingSchedule?.teacher_id) {
         cache.invalidateByPrefixWithEvent(`teacher-dashboard-${existingSchedule.teacher_id}`);
+        window.dispatchEvent(new CustomEvent('schedule-updated', { 
+          detail: { teacherId: existingSchedule.teacher_id }
+        }));
       }
 
       await fetchSchedules();
