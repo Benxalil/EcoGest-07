@@ -53,14 +53,14 @@ export const useStudentDashboardData = () => {
           .eq('school_id', profile.schoolId)
           .maybeSingle(),
         
-        // Récupérer les annonces
+        // Récupérer les annonces les plus récentes
         supabase
           .from('announcements')
-          .select('id, title, content, created_at, priority, is_urgent, target_audience')
+          .select('id, title, content, created_at, priority, is_urgent, target_audience, target_role, target_classes')
           .eq('school_id', profile.schoolId)
           .eq('is_published', true)
           .order('created_at', { ascending: false })
-          .limit(3) // ✅ Harmonisé avec les autres dashboards
+          .limit(10) // Récupérer plus d'annonces pour avoir suffisamment après filtrage
       ]);
 
       if (studentResult.error) throw studentResult.error;
@@ -82,12 +82,12 @@ export const useStudentDashboardData = () => {
         }
       }
 
-      // Filtrer les annonces pour les élèves
+      // Filtrer les annonces pour les élèves et limiter aux 3 plus récentes
       const filteredAnnouncements = filterAnnouncementsByRole(
         announcementsResult.data || [],
         'student',
         false
-      );
+      ).slice(0, 3); // Garder uniquement les 3 premières après filtrage
 
       const result: StudentDashboardData = {
         student: studentResult.data,
