@@ -43,26 +43,39 @@ export const useSubjects = (classId?: string, teacherId?: string | null) => {
     try {
       setLoading(true);
       
+      console.log('🔍 useSubjects - Params:', { classId, teacherId, schoolId: userProfile.schoolId });
+      
       // Si teacherId est fourni, filtrer par les matières de l'enseignant
       if (teacherId) {
-        const teacherSubjectsQuery = supabase
-          .from('teacher_subjects')
+        console.log('👨‍🏫 Filtering by teacher:', teacherId);
+        
+        // Récupérer les matières via les emplois du temps (schedules)
+        const schedulesQuery = supabase
+          .from('schedules')
           .select('subject_id')
           .eq('teacher_id', teacherId)
-          .eq('school_id', userProfile.schoolId);
+          .eq('school_id', userProfile.schoolId)
+          .not('subject_id', 'is', null);
 
-        // Filtrer aussi par class_id si fourni
+        // Filtrer par classe si fourni
         if (classId) {
-          teacherSubjectsQuery.eq('class_id', classId);
+          schedulesQuery.eq('class_id', classId);
+          console.log('🎯 Filtering by class:', classId);
         }
 
-        const { data: teacherSubjects, error: tsError } = await teacherSubjectsQuery;
+        const { data: schedules, error: schedError } = await schedulesQuery;
+        
+        console.log('📅 Schedules found:', schedules);
 
-        if (tsError) throw tsError;
+        if (schedError) throw schedError;
 
-        const subjectIds = teacherSubjects?.map(ts => ts.subject_id) || [];
+        // Extraire les IDs uniques des matières
+        const subjectIds = Array.from(new Set(schedules?.map(s => s.subject_id).filter(Boolean))) || [];
+        
+        console.log('🔑 Subject IDs:', subjectIds);
         
         if (subjectIds.length === 0) {
+          console.log('⚠️ No subjects found for this teacher in this class');
           setSubjects([]);
           setLoading(false);
           return;
@@ -79,6 +92,8 @@ export const useSubjects = (classId?: string, teacherId?: string | null) => {
         }
 
         const { data, error } = await query.order('name');
+        
+        console.log('✅ Final subjects:', data);
         
         if (error) {
           if (error.code === 'PGRST116' || error.message.includes('relation "subjects" does not exist')) {
