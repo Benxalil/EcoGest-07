@@ -188,9 +188,12 @@ export const useResults = (options?: { contextSemester?: string }) => {
                 // Vérifier que c'est bien l'élève
                 if (grade.student_id !== student.id) return false;
                 
-                // Vérifier que la matière appartient à cette classe
-                const gradeSubject = classSubjects.find(s => s.id === grade.subject_id);
-                if (!gradeSubject) return false;
+                // Vérifier que la matière existe (pas besoin de vérifier class_id car les subjects peuvent être partagés)
+                const gradeSubject = subjectsData?.find(s => s.id === grade.subject_id);
+                if (!gradeSubject) {
+                  console.warn(`⚠️ Matière non trouvée pour grade.subject_id:`, grade.subject_id);
+                  return false;
+                }
                 
                 // Pour les examens de Composition : filtrer par semester depuis grades
                 const isCompositionExam = exam.title?.toLowerCase().includes('composition');
