@@ -74,13 +74,18 @@ export default function ResultatsSemestre() {
     : normalizedSemestre && classData?.exams 
       ? classData.exams.find(exam => {
           const isComposition = exam.exam_title?.toLowerCase().includes('composition');
+          
+          // Normaliser AUSSI le semester de l'examen pour la comparaison
+          const normalizedExamSemester = exam.semester ? normalizeSemester(exam.semester) : undefined;
+          
           // Matcher par semester si disponible, sinon accepter toute Composition
-          const matchesSemester = exam.semester 
-            ? exam.semester === normalizedSemestre  // ✅ Comparaison avec semestre normalisé
+          const matchesSemester = normalizedExamSemester 
+            ? normalizedExamSemester === normalizedSemestre  // ✅ Comparaison avec les deux côtés normalisés
             : isComposition; // Si semester est NULL, accepter si c'est une Composition
           
           console.log(`🔍 Vérification examen "${exam.exam_title}":`, {
             examSemester: exam.semester,
+            normalizedExamSemester,
             normalizedSemestre,
             isComposition,
             matchesSemester
