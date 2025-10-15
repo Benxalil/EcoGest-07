@@ -18,10 +18,10 @@ export default function ListeMatieresCahier() {
   const { teacherId } = useTeacherId();
   const { classes: teacherClasses } = useTeacherClasses();
   const { classes, loading: classesLoading } = useClasses();
-  const { subjects, loading: subjectsLoading } = useSubjects(classeId);
   
   // Filtrer par teacherId uniquement si l'utilisateur est enseignant
   const teacherFilter = isTeacher() && !isAdmin() ? teacherId : undefined;
+  const { subjects, loading: subjectsLoading } = useSubjects(classeId, teacherFilter);
   const { lessonLogs, loading: lessonLogsLoading } = useLessonLogs(classeId, teacherFilter);
 
   // Utiliser les classes de l'enseignant si c'est un enseignant

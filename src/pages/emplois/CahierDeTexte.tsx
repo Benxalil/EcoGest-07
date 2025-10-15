@@ -14,6 +14,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useClasses } from "@/hooks/useClasses";
 import { useSubjects } from "@/hooks/useSubjects";
 import { useTeachers } from "@/hooks/useTeachers";
+import { useUserRole } from "@/hooks/useUserRole";
+import { useTeacherId } from "@/hooks/useTeacherId";
 
 interface CahierFormData {
   topic: string;
@@ -28,10 +30,15 @@ export default function CahierDeTexte() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { classeId } = useParams();
+  const { isTeacher, isAdmin } = useUserRole();
+  const { teacherId } = useTeacherId();
   const { createLessonLog, loading } = useLessonLogs();
   const { toast } = useToast();
   const { classes, loading: classesLoading } = useClasses();
-  const { subjects, loading: subjectsLoading } = useSubjects(classeId);
+  
+  // Filtrer par teacherId uniquement si l'utilisateur est enseignant
+  const teacherFilter = isTeacher() && !isAdmin() ? teacherId : undefined;
+  const { subjects, loading: subjectsLoading } = useSubjects(classeId, teacherFilter);
   const { teachers, loading: teachersLoading } = useTeachers();
   
   const [isMatiereModalOpen, setIsMatiereModalOpen] = useState(false);

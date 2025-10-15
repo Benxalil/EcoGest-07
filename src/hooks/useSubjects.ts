@@ -27,7 +27,7 @@ export interface CreateSubjectData {
   max_score?: number;
 }
 
-export const useSubjects = (classId?: string) => {
+export const useSubjects = (classId?: string, teacherId?: string | null) => {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -43,27 +43,69 @@ export const useSubjects = (classId?: string) => {
     try {
       setLoading(true);
       
-      const query = supabase
-        .from('subjects')
-        .select('*')
-        .eq('school_id', userProfile.schoolId);
+      // Si teacherId est fourni, filtrer par les matières de l'enseignant
+      if (teacherId) {
+        const { data: teacherSubjects, error: tsError } = await supabase
+          .from('teacher_subjects')
+          .select('subject_id')
+          .eq('teacher_id', teacherId)
+          .eq('school_id', userProfile.schoolId);
 
-      if (classId) {
-        query.eq('class_id', classId);
-      }
+        if (tsError) throw tsError;
 
-      const { data, error } = await query.order('name');
-
-      if (error) {
-        // Si la table n'existe pas, retourner un tableau vide
-        if (error.code === 'PGRST116' || error.message.includes('relation "subjects" does not exist')) {
+        const subjectIds = teacherSubjects?.map(ts => ts.subject_id) || [];
+        
+        if (subjectIds.length === 0) {
           setSubjects([]);
+          setLoading(false);
           return;
         }
-        throw error;
+
+        const query = supabase
+          .from('subjects')
+          .select('*')
+          .eq('school_id', userProfile.schoolId)
+          .in('id', subjectIds);
+
+        if (classId) {
+          query.eq('class_id', classId);
+        }
+
+        const { data, error } = await query.order('name');
+        
+        if (error) {
+          if (error.code === 'PGRST116' || error.message.includes('relation "subjects" does not exist')) {
+            setSubjects([]);
+            return;
+          }
+          throw error;
+        }
+        
+        setSubjects(data || []);
+      } else {
+        // Requête normale sans filtre enseignant
+        const query = supabase
+          .from('subjects')
+          .select('*')
+          .eq('school_id', userProfile.schoolId);
+
+        if (classId) {
+          query.eq('class_id', classId);
+        }
+
+        const { data, error } = await query.order('name');
+
+        if (error) {
+          // Si la table n'existe pas, retourner un tableau vide
+          if (error.code === 'PGRST116' || error.message.includes('relation "subjects" does not exist')) {
+            setSubjects([]);
+            return;
+          }
+          throw error;
+        }
+        
+        setSubjects(data || []);
       }
-      
-      setSubjects(data || []);
     } catch (err) {
       console.error('Erreur lors de la récupération des matières:', err);
       setError(err instanceof Error ? err.message : 'Erreur lors de la récupération des matières');
@@ -203,7 +245,7 @@ export const useSubjects = (classId?: string) => {
 
   useEffect(() => {
     fetchSubjects();
-  }, [userProfile?.schoolId, classId]);
+  }, [userProfile?.schoolId, classId, teacherId]);
 
   return {
     subjects,
