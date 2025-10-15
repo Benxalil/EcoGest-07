@@ -219,8 +219,8 @@ export default function ListeEmplois() {
                         navigate(`/emplois-du-temps/${classe.id}`);
                       }}
                     >
-                      <Calendar className="h-4 w-4 mr-2" />
-                      Emploi du temps
+                      <Calendar className="h-4 w-4" />
+                      <span className="ml-2 hidden md:inline">Emploi du temps</span>
                     </Button>
                   </TableCell>
                   {userProfile?.role !== 'student' && (
@@ -232,8 +232,8 @@ export default function ListeEmplois() {
                           className="bg-yellow-500 text-white hover:bg-yellow-600"
                           onClick={() => navigate(`/consulter-absences-retards/${classe.id}`)}
                         >
-                          <AlertTriangle className="h-4 w-4 mr-2" />
-                          Absence & retard
+                          <AlertTriangle className="h-4 w-4" />
+                          <span className="ml-2 hidden md:inline">Absence & retard</span>
                         </Button>
                       </TableCell>
                       {!isParent() && (
@@ -244,8 +244,8 @@ export default function ListeEmplois() {
                             className="bg-red-500 text-white hover:bg-red-600"
                             onClick={() => navigate(`/matieres-cahier/${classe.id}`)}
                           >
-                            <FileText className="h-4 w-4 mr-2" />
-                            Cahier de texte
+                            <FileText className="h-4 w-4" />
+                            <span className="ml-2 hidden md:inline">Cahier de texte</span>
                           </Button>
                         </TableCell>
                       )}

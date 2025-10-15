@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useForm } from "react-hook-form";
 import { useState, useEffect } from "react";
-import { BookOpen, UserCheck, Pencil, ArrowLeft, Trash2, AlertTriangle, Loader2 } from "lucide-react";
+import { BookOpen, UserCheck, Pencil, ArrowLeft, Trash2, AlertTriangle, Loader2, Plus } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useClasses } from "@/hooks/useClasses";
 import { formatClassName } from "@/utils/classNameFormatter";
@@ -368,7 +368,8 @@ export default function EmploiDuTemps() {
               <Dialog open={isDialogOpen} onOpenChange={handleDialogClose}>
                 <DialogTrigger asChild>
                   <Button variant="default" className="bg-blue-500 hover:bg-blue-600 text-white w-full sm:w-auto">
-                    Ajouter un cours
+                    <Plus className="h-5 w-5 sm:h-4 sm:w-4" />
+                    <span className="ml-2 hidden md:inline">Ajouter un cours</span>
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="max-w-[95vw] sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
@@ -670,8 +671,8 @@ export default function EmploiDuTemps() {
                 className="bg-yellow-500 hover:bg-yellow-600 text-white w-full sm:w-auto"
                 onClick={handleRetardAbsence}
               >
-                <AlertTriangle className="h-5 w-5 sm:h-4 sm:w-4 mr-2" />
-                Retard & Absence
+                <AlertTriangle className="h-5 w-5 sm:h-4 sm:w-4" />
+                <span className="ml-2 hidden md:inline">Retard & Absence</span>
               </Button>
             )}
           </div>
