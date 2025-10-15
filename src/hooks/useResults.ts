@@ -172,6 +172,17 @@ export const useResults = (options?: { contextSemester?: string }) => {
             
             // Récupérer les élèves avec leurs vraies notes pour cet examen
             students: classStudents.map(student => {
+              // Fonction de normalisation du semester pour matcher différents formats
+              const normalizeGradeSemester = (sem: string | undefined): string | undefined => {
+                if (!sem) return undefined;
+                const cleaned = sem.toLowerCase().trim().replace(/\s+/g, '_');
+                
+                if (cleaned.includes('1') || cleaned.includes('premier')) return '1er_semestre';
+                if (cleaned.includes('2') || cleaned.includes('second') || cleaned.includes('deuxieme')) return '2eme_semestre';
+                
+                return cleaned;
+              };
+
               // Filtrage adapté pour les examens de Composition avec contexte semestre
               const studentGrades = gradesData?.filter(grade => {
                 // Vérifier que c'est bien l'élève
@@ -203,9 +214,11 @@ export const useResults = (options?: { contextSemester?: string }) => {
                     }
                   }
                   
-                  // Filtrer par exam_id ET semester
+                  // Filtrer par exam_id ET semester (avec normalisation bidirectionnelle)
                   if (targetSemester) {
-                    const matches = grade.exam_id === exam.id && grade.semester === targetSemester;
+                    const normalizedGradeSemester = normalizeGradeSemester(grade.semester);
+                    const normalizedTargetSemester = normalizeGradeSemester(targetSemester);
+                    const matches = grade.exam_id === exam.id && normalizedGradeSemester === normalizedTargetSemester;
                     if (matches) {
                       console.log(`✅ Note Composition filtrée: ${grade.id} pour semester=${targetSemester}`);
                     }
