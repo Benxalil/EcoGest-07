@@ -601,7 +601,7 @@ export const generateBulletinPDF = async (
         totalCoeff += coef;
         
         // Utiliser le barème de la matière pour calculer l'appréciation
-        const maxScore = matiere.max_score || 20;
+        const maxScore = parseMaxScoreFromMoyenne(matiere.moyenne);
         appreciation = getAppreciation(moy, maxScore);
       }
     } else if (examData) {
@@ -623,7 +623,7 @@ export const generateBulletinPDF = async (
           totalCoeff += coef;
           
           // Utiliser le barème de la matière pour calculer l'appréciation
-          const maxScore = matiere.max_score || 20;
+          const maxScore = parseMaxScoreFromMoyenne(matiere.moyenne);
           appreciation = getAppreciation(noteValue, maxScore);
         }
       }
