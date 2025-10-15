@@ -1356,6 +1356,7 @@ export type Database = {
           parent_last_name: string | null
           parent_matricule: string | null
           parent_phone: string | null
+          password: string | null
           phone: string | null
           place_of_birth: string | null
           school_id: string
@@ -1380,6 +1381,7 @@ export type Database = {
           parent_last_name?: string | null
           parent_matricule?: string | null
           parent_phone?: string | null
+          password?: string | null
           phone?: string | null
           place_of_birth?: string | null
           school_id: string
@@ -1404,6 +1406,7 @@ export type Database = {
           parent_last_name?: string | null
           parent_matricule?: string | null
           parent_phone?: string | null
+          password?: string | null
           phone?: string | null
           place_of_birth?: string | null
           school_id?: string
@@ -1650,6 +1653,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           last_name: string
+          password: string | null
           phone: string | null
           school_id: string
           specialization: string | null
@@ -1665,6 +1669,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           last_name: string
+          password?: string | null
           phone?: string | null
           school_id: string
           specialization?: string | null
@@ -1680,6 +1685,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           last_name?: string
+          password?: string | null
           phone?: string | null
           school_id?: string
           specialization?: string | null

@@ -50,7 +50,7 @@ export const useUserAccounts = (classId?: string) => {
 
       const studentPassword = schoolData?.default_student_password || 'student123';
       const parentPassword = schoolData?.default_parent_password || 'parent123';
-      // Récupérer les élèves avec leurs classes
+      // Récupérer les élèves avec leurs classes et leurs mots de passe
       let studentsQuery = supabase
         .from('students')
         .select(`
@@ -60,6 +60,7 @@ export const useUserAccounts = (classId?: string) => {
           first_name,
           last_name,
           class_id,
+          password,
           classes (
             id,
             name,
@@ -97,17 +98,18 @@ export const useUserAccounts = (classId?: string) => {
           class_name: student.classes 
             ? `${student.classes.name} ${student.classes.level}${student.classes.section ? ' - ' + student.classes.section : ''}`
             : 'Sans classe',
-          defaultPassword: studentPassword,
-          parentPassword: parentPassword
+          // Utiliser le vrai mot de passe s'il existe, sinon le mot de passe par défaut
+          defaultPassword: student.password || studentPassword,
+          parentPassword: student.password || parentPassword
         };
       });
 
       setStudents(formattedStudents);
 
-      // Récupérer les enseignants
+      // Récupérer les enseignants avec leurs mots de passe
       const { data: teachersData, error: teachersError } = await supabase
         .from('teachers')
-        .select('id, employee_number, first_name, last_name')
+        .select('id, employee_number, first_name, last_name, password')
         .eq('school_id', userProfile.schoolId)
         .eq('is_active', true);
 
@@ -127,7 +129,8 @@ export const useUserAccounts = (classId?: string) => {
         employee_number: teacher.employee_number,
         first_name: teacher.first_name,
         last_name: teacher.last_name,
-        defaultPassword: teacherPassword
+        // Utiliser le vrai mot de passe s'il existe, sinon le mot de passe par défaut
+        defaultPassword: teacher.password || teacherPassword
       }));
 
       setTeachers(formattedTeachers);

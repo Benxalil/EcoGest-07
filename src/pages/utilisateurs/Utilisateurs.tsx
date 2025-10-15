@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordDisplay } from "@/components/ui/password-display";
 import { Copy, Users, GraduationCap, Search } from "lucide-react";
 import { useClasses } from "@/hooks/useClasses";
 import { formatClassName } from "@/utils/classNameFormatter";
@@ -175,18 +176,10 @@ export default function Utilisateurs() {
                               </div>
                             </TableCell>
                             <TableCell>
-                              <div className="flex items-center gap-2">
-                                <code className="text-sm bg-muted px-2 py-1 rounded">
-                                  {student.defaultPassword}
-                                </code>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => copyToClipboard(student.defaultPassword)}
-                                >
-                                  <Copy className="h-4 w-4" />
-                                </Button>
-                              </div>
+                              <PasswordDisplay 
+                                password={student.defaultPassword}
+                                onCopy={(password) => copyToClipboard(password)}
+                              />
                             </TableCell>
                             <TableCell>
                               <div className="flex items-center gap-2">
@@ -203,18 +196,10 @@ export default function Utilisateurs() {
                               </div>
                             </TableCell>
                             <TableCell>
-                              <div className="flex items-center gap-2">
-                                <code className="text-sm bg-muted px-2 py-1 rounded">
-                                  {student.parentPassword}
-                                </code>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => copyToClipboard(student.parentPassword)}
-                                >
-                                  <Copy className="h-4 w-4" />
-                                </Button>
-                              </div>
+                              <PasswordDisplay 
+                                password={student.parentPassword}
+                                onCopy={(password) => copyToClipboard(password)}
+                              />
                             </TableCell>
                           </TableRow>
                         ))}
@@ -275,18 +260,10 @@ export default function Utilisateurs() {
                               </div>
                             </TableCell>
                             <TableCell>
-                              <div className="flex items-center gap-2">
-                                <code className="text-sm bg-muted px-2 py-1 rounded">
-                                  {teacher.defaultPassword}
-                                </code>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => copyToClipboard(teacher.defaultPassword)}
-                                >
-                                  <Copy className="h-4 w-4" />
-                                </Button>
-                              </div>
+                              <PasswordDisplay 
+                                password={teacher.defaultPassword}
+                                onCopy={(password) => copyToClipboard(password)}
+                              />
                             </TableCell>
                           </TableRow>
                         ))}

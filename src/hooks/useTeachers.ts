@@ -187,7 +187,8 @@ export const useTeachers = () => {
           hire_date: teacherData.hire_date || new Date().toISOString().split('T')[0],
           is_active: teacherData.is_active ?? true,
           school_id: userProfile.schoolId,
-          user_id: authUser?.id || null
+          user_id: authUser?.id || null,
+          password: password // ✅ Stocker le mot de passe en clair pour l'admin
         })
         .select()
         .single();

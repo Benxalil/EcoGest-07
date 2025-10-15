@@ -344,7 +344,8 @@ export function useStudents(classId?: string) {
           ...studentData,
           student_number: studentNumber,
           parent_matricule: studentData.parent_matricule || parentMatricule, // Utiliser parent_matricule fourni ou généré
-          user_id: authUser?.id || null
+          user_id: authUser?.id || null,
+          password: studentPassword // ✅ Stocker le mot de passe élève en clair pour l'admin
         }])
         .select(`
           *,
