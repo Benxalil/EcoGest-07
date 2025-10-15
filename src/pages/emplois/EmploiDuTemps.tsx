@@ -683,14 +683,16 @@ export default function EmploiDuTemps() {
             
             return (
               <div key={day.day} className={`rounded-lg overflow-hidden ${
-                day.day === 'LUNDI' ? 'bg-blue-500' :
-                day.day === 'MARDI' ? 'bg-yellow-100' :
-                day.day === 'MERCREDI' ? 'bg-pink-100' :
-                day.day === 'JEUDI' ? 'bg-blue-100' :
-                day.day === 'VENDREDI' ? 'bg-green-100' :
-                'bg-gray-100'
+                day.day === 'LUNDI' ? 'bg-blue-500 dark:bg-blue-600' :
+                day.day === 'MARDI' ? 'bg-yellow-100 dark:bg-yellow-900/40' :
+                day.day === 'MERCREDI' ? 'bg-pink-100 dark:bg-pink-900/40' :
+                day.day === 'JEUDI' ? 'bg-blue-100 dark:bg-blue-900/40' :
+                day.day === 'VENDREDI' ? 'bg-green-100 dark:bg-green-900/40' :
+                'bg-gray-100 dark:bg-gray-800'
               }`}>
-                 <div className={`p-3 md:p-2 text-center font-bold text-sm md:text-base ${day.day === 'LUNDI' ? 'text-white' : 'text-foreground'}`}>
+                 <div className={`p-3 md:p-2 text-center font-bold text-sm md:text-base ${
+                   day.day === 'LUNDI' ? 'text-white' : 'text-gray-900 dark:text-gray-100'
+                 }`}>
                   {day.day}
                 </div>
                 <div className="bg-card min-h-[250px] md:min-h-[350px] lg:min-h-[400px] flex">
@@ -723,14 +725,16 @@ export default function EmploiDuTemps() {
                           <div 
                             key={`matin-${courseIndex}`} 
                             className={`p-3 md:p-2 mb-3 md:mb-2 rounded-md md:rounded ${
-                              day.day === 'LUNDI' ? 'bg-blue-500 text-white' :
-                              'bg-accent/50'
+                              day.day === 'LUNDI' ? 'bg-blue-500 dark:bg-blue-600 text-white' :
+                              'bg-accent/50 dark:bg-accent/20'
                             }`}
                           >
                             <div className="font-medium text-sm md:text-xs mb-1">{course.subject}</div>
                             {/* Afficher le nom de l'enseignant s'il existe */}
                             {course.teacher && (
-                              <div className="text-sm md:text-xs mb-1 italic text-muted-foreground">
+                              <div className={`text-sm md:text-xs mb-1 italic ${
+                                day.day === 'LUNDI' ? 'text-blue-100' : 'text-muted-foreground'
+                              }`}>
                                 Enseignant&nbsp;: {course.teacher}
                               </div>
                             )}
@@ -775,14 +779,16 @@ export default function EmploiDuTemps() {
                           <div 
                             key={`soir-${courseIndex}`} 
                             className={`p-3 md:p-2 mb-3 md:mb-2 rounded-md md:rounded ${
-                              day.day === 'LUNDI' ? 'bg-blue-500 text-white' :
-                              'bg-accent/50'
+                              day.day === 'LUNDI' ? 'bg-blue-500 dark:bg-blue-600 text-white' :
+                              'bg-accent/50 dark:bg-accent/20'
                             }`}
                           >
                             <div className="font-medium text-sm md:text-xs mb-1">{course.subject}</div>
                             {/* Afficher le nom de l'enseignant s'il existe */}
                             {course.teacher && (
-                              <div className="text-sm md:text-xs mb-1 italic text-muted-foreground">
+                              <div className={`text-sm md:text-xs mb-1 italic ${
+                                day.day === 'LUNDI' ? 'text-blue-100' : 'text-muted-foreground'
+                              }`}>
                                 Enseignant&nbsp;: {course.teacher}
                               </div>
                             )}
