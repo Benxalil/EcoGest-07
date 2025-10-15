@@ -324,16 +324,16 @@ export default function EmploiDuTemps() {
     return (
       <Layout>
         <div className="container mx-auto p-6">
-          <div className="flex items-center mb-6">
+          <div className="flex items-center mb-4 md:mb-6">
             <Button
               variant="ghost"
               size="sm"
               onClick={handleBack}
-              className="mr-4 p-2"
+              className="mr-3 md:mr-4 p-2"
             >
-              <ArrowLeft className="h-5 w-5" />
+              <ArrowLeft className="h-6 w-6 md:h-5 w-5" />
             </Button>
-            <h1 className="text-2xl font-bold text-foreground">Accès refusé</h1>
+            <h1 className="text-lg md:text-xl lg:text-2xl font-bold text-foreground">Accès refusé</h1>
           </div>
           <div className="text-center py-12">
             <AlertTriangle className="h-16 w-16 text-yellow-500 mx-auto mb-4" />
@@ -348,30 +348,30 @@ export default function EmploiDuTemps() {
 
   return (
     <Layout>
-      <div className="container mx-auto p-6">
-        <div className="flex justify-between items-center mb-6">
-          <div className="flex items-center">
+      <div className="container mx-auto p-3 md:p-4 lg:p-6">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 md:mb-6 gap-3 md:gap-0">
+          <div className="flex items-center w-full md:w-auto">
             <Button
               variant="ghost"
               size="sm"
               onClick={handleBack}
-              className="mr-4 p-2"
+              className="mr-3 md:mr-4 p-2"
             >
-              <ArrowLeft className="h-5 w-5" />
+              <ArrowLeft className="h-6 w-6 md:h-5 w-5" />
             </Button>
-            <h1 className="text-2xl font-bold text-foreground">
+            <h1 className="text-lg md:text-xl lg:text-2xl font-bold text-foreground">
               Emploi du temps classe de : {className}
             </h1>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4 w-full md:w-auto">
             {isAdmin() && (
               <Dialog open={isDialogOpen} onOpenChange={handleDialogClose}>
                 <DialogTrigger asChild>
-                  <Button variant="default" className="bg-blue-500 hover:bg-blue-600 text-white">
+                  <Button variant="default" className="bg-blue-500 hover:bg-blue-600 text-white w-full sm:w-auto">
                     Ajouter un cours
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-[425px]">
+                <DialogContent className="max-w-[95vw] sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>
                     {editingCourse ? "Modifier le cours" : "Saisir les informations"}
@@ -667,17 +667,17 @@ export default function EmploiDuTemps() {
             {!isParent() && !isStudent() && (
               <Button 
                 variant="default" 
-                className="bg-yellow-500 hover:bg-yellow-600 text-white"
+                className="bg-yellow-500 hover:bg-yellow-600 text-white w-full sm:w-auto"
                 onClick={handleRetardAbsence}
               >
-                <AlertTriangle className="h-4 w-4 mr-2" />
+                <AlertTriangle className="h-5 w-5 sm:h-4 sm:w-4 mr-2" />
                 Retard & Absence
               </Button>
             )}
           </div>
         </div>
 
-        <div className="grid grid-cols-6 gap-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3 md:gap-2">
           {schedules.map((day, dayIndex) => {
             const { matin, soir } = separateCoursesByPeriod(day.courses);
             
@@ -690,19 +690,19 @@ export default function EmploiDuTemps() {
                 day.day === 'VENDREDI' ? 'bg-green-100' :
                 'bg-gray-100'
               }`}>
-                 <div className={`p-2 text-center font-bold ${day.day === 'LUNDI' ? 'text-white' : 'text-foreground'}`}>
+                 <div className={`p-3 md:p-2 text-center font-bold text-sm md:text-base ${day.day === 'LUNDI' ? 'text-white' : 'text-foreground'}`}>
                   {day.day}
                 </div>
-                <div className="bg-card min-h-[400px] flex">
+                <div className="bg-card min-h-[250px] md:min-h-[350px] lg:min-h-[400px] flex">
                   {/* Trait vertical avec labels MATIN et SOIR */}
-                  <div className="w-12 bg-muted/30 border-r-2 border-border flex flex-col">
+                  <div className="w-10 md:w-12 bg-muted/30 border-r-2 border-border flex flex-col">
                     <div className="flex-1 flex items-center justify-center">
-                      <div className="transform -rotate-90 text-xs font-bold text-muted-foreground whitespace-nowrap">
+                      <div className="transform -rotate-90 text-sm md:text-xs font-bold text-muted-foreground whitespace-nowrap">
                         MATIN
                       </div>
                     </div>
                     <div className="flex-1 flex items-center justify-center">
-                      <div className="transform -rotate-90 text-xs font-bold text-muted-foreground whitespace-nowrap">
+                      <div className="transform -rotate-90 text-sm md:text-xs font-bold text-muted-foreground whitespace-nowrap">
                         SOIR
                       </div>
                     </div>
@@ -711,7 +711,7 @@ export default function EmploiDuTemps() {
                   {/* Contenu des cours */}
                   <div className="flex-1 flex flex-col">
                     {/* Section Matin */}
-                    <div className="flex-1 p-2 border-b border-border">
+                    <div className="flex-1 p-3 md:p-2 border-b border-border">
                       {matin.map((course, courseIndex) => {
                         const originalCourseIndex = day.courses.findIndex(c => 
                           c.subject === course.subject && 
@@ -722,37 +722,37 @@ export default function EmploiDuTemps() {
                         return (
                           <div 
                             key={`matin-${courseIndex}`} 
-                            className={`p-2 mb-2 rounded ${
+                            className={`p-3 md:p-2 mb-3 md:mb-2 rounded-md md:rounded ${
                               day.day === 'LUNDI' ? 'bg-blue-500 text-white' :
                               'bg-accent/50'
                             }`}
                           >
-                            <div className="font-medium text-xs mb-1">{course.subject}</div>
+                            <div className="font-medium text-sm md:text-xs mb-1">{course.subject}</div>
                             {/* Afficher le nom de l'enseignant s'il existe */}
                             {course.teacher && (
-                              <div className="text-xs mb-1 italic text-muted-foreground">
+                              <div className="text-sm md:text-xs mb-1 italic text-muted-foreground">
                                 Enseignant&nbsp;: {course.teacher}
                               </div>
                             )}
-                            <div className="text-xs mb-2">
+                            <div className="text-sm md:text-xs mb-2">
                               {course.start_time} à {course.end_time}
                             </div>
-                            <div className="flex justify-center gap-2">
+                            <div className="flex justify-center gap-3 md:gap-2">
                               {canTeacherActOnCourse(course) && (
                                 <>
                                   <BookOpen 
-                                    className="h-3 w-3 cursor-pointer text-blue-600 hover:text-blue-800" 
+                                    className="h-5 w-5 md:h-4 w-4 lg:h-3 lg:w-3 cursor-pointer text-blue-600 hover:text-blue-800" 
                                     onClick={() => handleOpenCahierModal(dayIndex, originalCourseIndex, course)}
                                   />
                                   <UserCheck 
-                                    className="h-3 w-3 cursor-pointer text-green-500 hover:text-green-700" 
+                                    className="h-5 w-5 md:h-4 w-4 lg:h-3 lg:w-3 cursor-pointer text-green-500 hover:text-green-700" 
                                     onClick={() => handleAbsenceRetardForCourse(dayIndex, course)}
                                   />
                                 </>
                               )}
                               {isAdmin() && (
                                 <Pencil 
-                                  className="h-3 w-3 cursor-pointer text-muted-foreground hover:text-foreground" 
+                                  className="h-5 w-5 md:h-4 w-4 lg:h-3 lg:w-3 cursor-pointer text-muted-foreground hover:text-foreground" 
                                   onClick={() => handleEditCourse(dayIndex, originalCourseIndex, course)}
                                 />
                               )}
@@ -763,7 +763,7 @@ export default function EmploiDuTemps() {
                     </div>
                     
                     {/* Section Soir */}
-                    <div className="flex-1 p-2">
+                    <div className="flex-1 p-3 md:p-2">
                       {soir.map((course, courseIndex) => {
                         const originalCourseIndex = day.courses.findIndex(c => 
                           c.subject === course.subject && 
@@ -774,37 +774,37 @@ export default function EmploiDuTemps() {
                         return (
                           <div 
                             key={`soir-${courseIndex}`} 
-                            className={`p-2 mb-2 rounded ${
+                            className={`p-3 md:p-2 mb-3 md:mb-2 rounded-md md:rounded ${
                               day.day === 'LUNDI' ? 'bg-blue-500 text-white' :
                               'bg-accent/50'
                             }`}
                           >
-                            <div className="font-medium text-xs mb-1">{course.subject}</div>
+                            <div className="font-medium text-sm md:text-xs mb-1">{course.subject}</div>
                             {/* Afficher le nom de l'enseignant s'il existe */}
                             {course.teacher && (
-                              <div className="text-xs mb-1 italic text-muted-foreground">
+                              <div className="text-sm md:text-xs mb-1 italic text-muted-foreground">
                                 Enseignant&nbsp;: {course.teacher}
                               </div>
                             )}
-                            <div className="text-xs mb-2">
+                            <div className="text-sm md:text-xs mb-2">
                               {course.start_time} à {course.end_time}
                             </div>
-                            <div className="flex justify-center gap-2">
+                            <div className="flex justify-center gap-3 md:gap-2">
                               {canTeacherActOnCourse(course) && (
                                 <>
                                   <BookOpen 
-                                    className="h-3 w-3 cursor-pointer text-blue-600 hover:text-blue-800" 
+                                    className="h-5 w-5 md:h-4 w-4 lg:h-3 lg:w-3 cursor-pointer text-blue-600 hover:text-blue-800" 
                                     onClick={() => handleOpenCahierModal(dayIndex, originalCourseIndex, course)}
                                   />
                                   <UserCheck 
-                                    className="h-3 w-3 cursor-pointer text-green-500 hover:text-green-700" 
+                                    className="h-5 w-5 md:h-4 w-4 lg:h-3 lg:w-3 cursor-pointer text-green-500 hover:text-green-700" 
                                     onClick={() => handleAbsenceRetardForCourse(dayIndex, course)}
                                   />
                                 </>
                               )}
                               {isAdmin() && (
                                 <Pencil 
-                                  className="h-3 w-3 cursor-pointer text-muted-foreground hover:text-foreground" 
+                                  className="h-5 w-5 md:h-4 w-4 lg:h-3 lg:w-3 cursor-pointer text-muted-foreground hover:text-foreground" 
                                   onClick={() => handleEditCourse(dayIndex, originalCourseIndex, course)}
                                 />
                               )}
