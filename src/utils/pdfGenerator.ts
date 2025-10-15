@@ -87,7 +87,7 @@ export const generateBulletinPDF = async (
   const getSchoolData = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return { nom: 'École Connectée', academic_year: '2024/2025' };
+      if (!user) return { nom: 'École Connectée', academic_year: '2024/2025', id: null };
 
       const { data: profile } = await supabase
         .from('profiles')
@@ -104,13 +104,14 @@ export const generateBulletinPDF = async (
 
         return {
           nom: school?.name || 'École Connectée',
-          academic_year: school?.academic_year || '2024/2025'
+          academic_year: school?.academic_year || '2024/2025',
+          id: profile.school_id
         };
       }
-      return { nom: 'École Connectée', academic_year: '2024/2025' };
+      return { nom: 'École Connectée', academic_year: '2024/2025', id: null };
     } catch (error) {
       console.error('Erreur récupération école:', error);
-      return { nom: 'École Connectée', academic_year: '2024/2025' };
+      return { nom: 'École Connectée', academic_year: '2024/2025', id: null };
     }
   };
 
@@ -215,19 +216,45 @@ export const generateBulletinPDF = async (
     console.error('Erreur récupération matières:', error);
   }
 
-  // Récupérer les notes depuis Supabase
+  // Récupérer les notes depuis Supabase (même requête que useResults)
   const getNotesEleve = async () => {
     try {
-      const { data: grades } = await supabase
+      // Requête sans filtrage par school_id si non disponible
+      let query = supabase
         .from('grades')
         .select(`
-          *,
-          subjects!inner(id, name, coefficient)
+          id,
+          student_id,
+          subject_id,
+          exam_id,
+          grade_value,
+          max_grade,
+          coefficient,
+          semester,
+          exam_type,
+          school_id,
+          created_at
         `)
-        .eq('student_id', eleve.id)
-        .in('subject_id', matieresClasse.map(m => String(m.id)));
+        .eq('student_id', eleve.id);
+      
+      // Ajouter le filtre school_id si disponible
+      if (schoolData.id) {
+        query = query.eq('school_id', schoolData.id);
+      }
 
-      return grades || [];
+      const { data: grades, error } = await query;
+
+      if (error) {
+        console.error('Erreur récupération notes:', error);
+        return [];
+      }
+      
+      // Filtrer par les matières de la classe
+      const filteredGrades = grades?.filter(g => 
+        matieresClasse.some(m => String(m.id) === String(g.subject_id))
+      ) || [];
+      
+      return filteredGrades;
     } catch (error) {
       console.error('Erreur récupération notes:', error);
       return [];
