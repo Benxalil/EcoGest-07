@@ -9,6 +9,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useUserRole } from "@/hooks/useUserRole";
 import { Layout } from "@/components/layout/Layout";
 import { User, LogOut, Phone, MapPin, Calendar } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { clearAllCacheOnLogout } from "@/utils/securityCleanup";
 
 interface StudentProfile {
   firstName: string;
@@ -25,6 +27,7 @@ interface StudentProfile {
 
 export const StudentSettings = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const { userProfile } = useUserRole();
   const [profile, setProfile] = useState<StudentProfile>({
     firstName: '',
@@ -94,16 +97,15 @@ export const StudentSettings = () => {
 
   const handleLogout = async () => {
     try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-      window.location.href = '/auth';
+      await clearAllCacheOnLogout();
+      toast({
+        title: "Déconnexion réussie",
+        description: "À bientôt !",
+      });
+      navigate('/auth');
     } catch (error) {
       console.error('Erreur lors de la déconnexion:', error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de se déconnecter",
-        variant: "destructive"
-      });
+      navigate('/auth');
     }
   };
 

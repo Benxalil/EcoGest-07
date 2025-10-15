@@ -17,6 +17,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
+import { clearAllCacheOnLogout } from "@/utils/securityCleanup";
 
 interface DangerZoneSectionProps {
   schoolId: string;
@@ -62,8 +63,8 @@ export function DangerZoneSection({ schoolId, schoolName }: DangerZoneSectionPro
         throw new Error(data.error);
       }
 
-      // Déconnecter l'utilisateur
-      await supabase.auth.signOut();
+      // Déconnecter l'utilisateur et nettoyer le cache
+      await clearAllCacheOnLogout();
 
       toast({
         title: "✅ École supprimée",

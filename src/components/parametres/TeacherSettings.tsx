@@ -10,6 +10,8 @@ import { User, LogOut, Phone, MapPin, Lock } from "lucide-react";
 import { useUserRole } from "@/hooks/useUserRole";
 import { supabase } from "@/integrations/supabase/client";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useNavigate } from "react-router-dom";
+import { clearAllCacheOnLogout } from "@/utils/securityCleanup";
 
 interface TeacherProfile {
   firstName: string;
@@ -23,6 +25,7 @@ interface TeacherProfile {
 
 export function TeacherSettings() {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const { userProfile } = useUserRole();
   const [profile, setProfile] = useState<TeacherProfile>({
     firstName: '',
@@ -83,18 +86,15 @@ export function TeacherSettings() {
 
   const handleLogout = async () => {
     try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-      
-      // Rediriger vers la page de connexion
-      window.location.href = '/';
+      await clearAllCacheOnLogout();
+      toast({
+        title: "Déconnexion réussie",
+        description: "À bientôt !",
+      });
+      navigate('/auth');
     } catch (error) {
       console.error('Erreur lors de la déconnexion:', error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de vous déconnecter",
-        variant: "destructive"
-      });
+      navigate('/auth');
     }
   };
 

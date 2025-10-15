@@ -9,10 +9,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { useUnifiedUserData } from "@/hooks/useUnifiedUserData";
+import { clearAllCacheOnLogout } from "@/utils/securityCleanup";
 
 interface UserProfileProps {
   userPhoto?: string;
@@ -34,30 +34,17 @@ export function UserProfile({
 
   const handleLogout = async () => {
     try {
-      // Utiliser scope local pour éviter les erreurs 403
-      const { error } = await supabase.auth.signOut({ scope: 'local' });
+      await clearAllCacheOnLogout();
       
-      // Même en cas d'erreur (session invalide), on redirige vers la page de connexion
-      if (error) {
-        console.warn('Erreur de déconnexion (ignorée):', error.message);
-      }
-      
-      // Nettoyer le localStorage
-      localStorage.clear();
-      
-      // Toujours rediriger vers la page de connexion
       toast({
         title: "Déconnexion réussie",
         description: "À bientôt !",
       });
       
-      // Rediriger et forcer le rechargement pour nettoyer l'état
-      window.location.href = "/auth";
+      navigate("/auth");
     } catch (error) {
-      console.error('Erreur inattendue lors de la déconnexion:', error);
-      // Même en cas d'erreur, on déconnecte localement
-      localStorage.clear();
-      window.location.href = "/auth";
+      console.error('Erreur lors de la déconnexion:', error);
+      navigate("/auth");
     }
   };
 

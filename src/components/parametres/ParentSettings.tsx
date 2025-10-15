@@ -6,8 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useParentInfo } from "@/hooks/useParentInfo";
-import { supabase } from "@/integrations/supabase/client";
 import { LogOut, User, Mail, Phone, Hash } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { clearAllCacheOnLogout } from "@/utils/securityCleanup";
 
 interface ParentProfile {
   firstName: string;
@@ -20,6 +21,7 @@ interface ParentProfile {
 
 export function ParentSettings() {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const { parentInfo, loading } = useParentInfo();
   const [profile, setProfile] = useState<ParentProfile>({
     firstName: "",
@@ -45,15 +47,15 @@ export function ParentSettings() {
 
   const handleLogout = async () => {
     try {
-      await supabase.auth.signOut();
-      window.location.href = "/auth";
+      await clearAllCacheOnLogout();
+      toast({
+        title: "Déconnexion réussie",
+        description: "À bientôt !",
+      });
+      navigate("/auth");
     } catch (error) {
       console.error("Erreur lors de la déconnexion:", error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de se déconnecter",
-        variant: "destructive"
-      });
+      navigate("/auth");
     }
   };
 
