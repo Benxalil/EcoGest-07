@@ -90,15 +90,9 @@ export default function CahierDeTexte() {
     });
 
     if (success) {
-      toast({
-        title: "Succès",
-        description: "Cahier de texte enregistré avec succès 🎉"
-      });
-      
-      // Rediriger vers la page de consultation des cahiers de cette matière
-      setTimeout(() => {
-        navigate(`/emplois/cahier/${classeId}/${data.subject_id}`);
-      }, 1000);
+      // Le toast est déjà affiché dans useLessonLogs
+      // Rediriger immédiatement vers la page de consultation des cahiers
+      navigate(`/emplois/cahier/${classeId}/${data.subject_id}`);
     }
   };
 
