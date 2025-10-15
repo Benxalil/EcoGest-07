@@ -7,8 +7,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { useState, useEffect } from "react";
 import { BookOpen, UserCheck, Pencil, ArrowLeft, Trash2, AlertTriangle, Loader2 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -42,15 +40,6 @@ interface CahierFormData {
   subject_id: string;
 }
 
-// Schéma de validation pour le formulaire cahier de texte
-const cahierFormSchema = z.object({
-  topic: z.string().min(1, "Le sujet de la séance est obligatoire"),
-  lesson_date: z.string().min(1, "La date de la séance est obligatoire"),
-  start_time: z.string().min(1, "L'heure de début est obligatoire"),
-  content: z.string().min(1, "Le contenu de la séance est obligatoire"),
-  teacher_id: z.string().min(1, "L'enseignant est obligatoire"),
-  subject_id: z.string().min(1, "La matière est obligatoire")
-});
 
 // Les interfaces et données initiales sont maintenant gérées par le hook useSchedules
 
@@ -96,7 +85,6 @@ export default function EmploiDuTemps() {
   });
 
   const cahierForm = useForm<CahierFormData>({
-    resolver: zodResolver(cahierFormSchema),
     defaultValues: {
       topic: "",
       lesson_date: new Date().toISOString().split('T')[0],
