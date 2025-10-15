@@ -202,47 +202,6 @@ const TeacherDashboard = memo(() => {
         </Card>
       </div>
 
-      {/* Actions rapides pour l'enseignant */}
-      <Card className="p-6">
-        <h3 className="font-semibold mb-4 flex items-center gap-2">
-          <Award className="h-5 w-5" />
-          Actions Rapides
-        </h3>
-        <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-          <Button 
-            variant="outline" 
-            onClick={navigateToSchedules}
-            className="justify-start"
-          >
-            <Calendar className="h-4 w-4 mr-2" />
-            Cahier de Texte
-          </Button>
-          <Button 
-            variant="outline" 
-            onClick={navigateToNotes}
-            className="justify-start"
-          >
-            <Award className="h-4 w-4 mr-2" />
-            Saisir des Notes
-          </Button>
-          <Button 
-            variant="outline" 
-            onClick={navigateToSchedules}
-            className="justify-start"
-          >
-            <Users className="h-4 w-4 mr-2" />
-            Prendre les Présences
-          </Button>
-          <Button 
-            variant="outline" 
-            onClick={navigateToStudents}
-            className="justify-start"
-          >
-            <BookOpen className="h-4 w-4 mr-2" />
-            Voir mes Élèves
-          </Button>
-        </div>
-      </Card>
     </div>
   );
 });

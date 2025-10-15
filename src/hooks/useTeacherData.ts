@@ -66,14 +66,14 @@ export const useTeacherData = () => {
               .limit(50) // Limite raisonnable
           : Promise.resolve({ data: [], error: null }),
 
-        // Announcements (limité à 5)
+        // Announcements (limité à 3)
         supabase
           .from('announcements')
           .select('*')
           .eq('school_id', profile.schoolId)
           .eq('is_published', true)
           .order('published_at', { ascending: false })
-          .limit(5)
+          .limit(3)
       ]);
 
       const schedulesData = schedulesResult.data || [];
