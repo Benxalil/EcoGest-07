@@ -580,9 +580,16 @@ export const generateBulletinPDF = async (
     // Récupérer les notes depuis notesEleve (déjà chargées depuis Supabase)
     if (isCompositionExam) {
       // Pour les compositions, chercher les notes de type "Devoir" et "Composition"
+      // Déterminer le format du semestre pour la recherche
+      const semestreFormats = [
+        semestre === "1" ? "1er_semestre" : "2eme_semestre",
+        semestre === "1" ? "semestre1" : "semestre2",
+        semestre
+      ];
+      
       const notesMatiere = notesEleve.filter(n => 
         n.subject_id === matiere.id && 
-        n.semester === (semestre === "1" ? "1er_semestre" : "2eme_semestre")
+        (semestreFormats.includes(n.semester) || !n.semester)
       );
       
       const devoirNote = notesMatiere.find(n => n.exam_type?.toLowerCase() === 'devoir');
@@ -594,7 +601,8 @@ export const generateBulletinPDF = async (
       if (devoirValue !== null && !isNaN(devoirValue)) devoir = devoirValue.toFixed(1);
       if (compositionValue !== null && !isNaN(compositionValue)) composition = compositionValue.toFixed(1);
       
-      if (devoirValue !== null && compositionValue !== null && !isNaN(devoirValue) && !isNaN(compositionValue)) {
+      // Calculer la moyenne même si une seule note est présente
+      if (devoirValue !== null && !isNaN(devoirValue) && compositionValue !== null && !isNaN(compositionValue)) {
         const moy = (devoirValue + compositionValue) / 2;
         moyenne = moy.toFixed(1);
         const coef = parseFloat(String(matiere.coefficient)) || 1;
@@ -605,6 +613,32 @@ export const generateBulletinPDF = async (
         totalCoeff += coef;
         
         // Utiliser le barème de la matière pour calculer l'appréciation
+        const maxScore = matiere.maxScore || 20;
+        appreciation = getAppreciation(moy, maxScore);
+      } else if (devoirValue !== null && !isNaN(devoirValue)) {
+        // Si seulement le devoir est présent
+        const moy = devoirValue;
+        moyenne = moy.toFixed(1);
+        const coef = parseFloat(String(matiere.coefficient)) || 1;
+        const moyCoef = moy * coef;
+        moyenneCoef = moyCoef.toFixed(1);
+        
+        totalPoints += moyCoef;
+        totalCoeff += coef;
+        
+        const maxScore = matiere.maxScore || 20;
+        appreciation = getAppreciation(moy, maxScore);
+      } else if (compositionValue !== null && !isNaN(compositionValue)) {
+        // Si seulement la composition est présente
+        const moy = compositionValue;
+        moyenne = moy.toFixed(1);
+        const coef = parseFloat(String(matiere.coefficient)) || 1;
+        const moyCoef = moy * coef;
+        moyenneCoef = moyCoef.toFixed(1);
+        
+        totalPoints += moyCoef;
+        totalCoeff += coef;
+        
         const maxScore = matiere.maxScore || 20;
         appreciation = getAppreciation(moy, maxScore);
       }
