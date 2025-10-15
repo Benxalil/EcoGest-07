@@ -196,6 +196,8 @@ export default function ElevesParClasse() {
   const {
     classes: classesData
   } = useClasses();
+  const { userProfile, isAdmin } = useUserRole();
+  const isTeacher = userProfile?.role === 'teacher';
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -380,20 +382,22 @@ export default function ElevesParClasse() {
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <h1 className="text-3xl font-bold">Élèves de la classe {decodeURIComponent(className || '')}</h1>
-          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="flex items-center gap-2 ml-auto">
-                <UserPlus className="h-4 w-4" />
-                Ajouter un élève
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Ajouter un élève</DialogTitle>
-              </DialogHeader>
-              <AjoutEleveForm onSuccess={handleAddSuccess} classId={currentClass?.id} className={currentClass ? `${currentClass.name} ${currentClass.level}${currentClass.section ? ` - ${currentClass.section}` : ''}` : undefined} />
-            </DialogContent>
-          </Dialog>
+          {!isTeacher && (
+            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="flex items-center gap-2 ml-auto">
+                  <UserPlus className="h-4 w-4" />
+                  Ajouter un élève
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Ajouter un élève</DialogTitle>
+                </DialogHeader>
+                <AjoutEleveForm onSuccess={handleAddSuccess} classId={currentClass?.id} className={currentClass ? `${currentClass.name} ${currentClass.level}${currentClass.section ? ` - ${currentClass.section}` : ''}` : undefined} />
+              </DialogContent>
+            </Dialog>
+          )}
         </div>
 
         {/* Statistiques */}
@@ -470,31 +474,35 @@ export default function ElevesParClasse() {
                       <Button variant="ghost" size="icon" onClick={() => handleViewStudent(student)} className="h-8 w-8">
                         <Eye className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleModifierEleve(student)} className="h-8 w-8">
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-red-600 hover:text-red-800">
-                            <Trash2 className="h-4 w-4" />
+                      {!isTeacher && (
+                        <>
+                          <Button variant="ghost" size="icon" onClick={() => handleModifierEleve(student)} className="h-8 w-8">
+                            <Edit className="h-4 w-4" />
                           </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Supprimer l'élève</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Êtes-vous sûr de vouloir supprimer l'élève {student.first_name} {student.last_name} ? 
-                              Cette action est irréversible.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Annuler</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => handleSupprimerEleve(student.id)} className="bg-red-600 hover:bg-red-700">
-                              Supprimer
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-red-600 hover:text-red-800">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Supprimer l'élève</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Êtes-vous sûr de vouloir supprimer l'élève {student.first_name} {student.last_name} ? 
+                                  Cette action est irréversible.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Annuler</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleSupprimerEleve(student.id)} className="bg-red-600 hover:bg-red-700">
+                                  Supprimer
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </>
+                      )}
                     </div>
                   </div>
                 </CardContent>
@@ -518,11 +526,13 @@ export default function ElevesParClasse() {
                           <p className="text-xs">Aucune photo</p>
                         </div>}
                     </div>
-                    {/* Bouton pour changer la photo */}
-                    <label className="absolute -bottom-1 -right-1 bg-blue-600 text-white rounded-full p-1 cursor-pointer hover:bg-blue-700 transition-colors" title="Changer la photo">
-                      <input type="file" accept="image/*" onChange={e => handleFileUpload(e, 'photo')} className="hidden" />
-                      <Edit className="h-3 w-3" />
-                    </label>
+                    {/* Bouton pour changer la photo - uniquement pour admin */}
+                    {!isTeacher && (
+                      <label className="absolute -bottom-1 -right-1 bg-blue-600 text-white rounded-full p-1 cursor-pointer hover:bg-blue-700 transition-colors" title="Changer la photo">
+                        <input type="file" accept="image/*" onChange={e => handleFileUpload(e, 'photo')} className="hidden" />
+                        <Edit className="h-3 w-3" />
+                      </label>
+                    )}
                   </div>
                   
                   {/* Informations principales */}
@@ -652,15 +662,17 @@ export default function ElevesParClasse() {
           </DialogContent>
         </Dialog>
 
-        {/* Dialog pour modifier l'élève */}
-        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Modifier l'élève</DialogTitle>
-            </DialogHeader>
-            {studentToEdit && <AjoutEleveForm onSuccess={handleEditSuccess} initialData={studentToEdit} isEditing={true} classId={currentClass?.id} className={currentClass ? `${currentClass.name} ${currentClass.level}${currentClass.section ? ` - ${currentClass.section}` : ''}` : undefined} />}
-          </DialogContent>
-        </Dialog>
+        {/* Dialog pour modifier l'élève - uniquement pour admin */}
+        {!isTeacher && (
+          <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Modifier l'élève</DialogTitle>
+              </DialogHeader>
+              {studentToEdit && <AjoutEleveForm onSuccess={handleEditSuccess} initialData={studentToEdit} isEditing={true} classId={currentClass?.id} className={currentClass ? `${currentClass.name} ${currentClass.level}${currentClass.section ? ` - ${currentClass.section}` : ''}` : undefined} />}
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
     </Layout>;
 }

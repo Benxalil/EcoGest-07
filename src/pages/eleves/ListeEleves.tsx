@@ -839,21 +839,23 @@ export default function ListeEleves() {
           </DialogContent>
         </Dialog>
 
-        {/* Modal pour modifier un élève */}
-        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Modifier l'élève</DialogTitle>
-            </DialogHeader>
-            {studentToEdit && (
-              <AjoutEleveForm 
-                onSuccess={handleEditSuccess} 
-                initialData={studentToEdit}
-                isEditing={true}
-              />
-            )}
-          </DialogContent>
-        </Dialog>
+        {/* Modal pour modifier un élève - uniquement pour admin */}
+        {!isTeacher() && (
+          <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Modifier l'élève</DialogTitle>
+              </DialogHeader>
+              {studentToEdit && (
+                <AjoutEleveForm 
+                  onSuccess={handleEditSuccess} 
+                  initialData={studentToEdit}
+                  isEditing={true}
+                />
+              )}
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
     </Layout>
   );
