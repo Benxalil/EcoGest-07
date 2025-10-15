@@ -35,10 +35,24 @@ export default function PaiementsEnfant() {
   const [loading, setLoading] = useState(true);
   const { children, selectedChild, setSelectedChildId, loading: childrenLoading } = useParentChildren();
 
-  // Récupérer les mois académiques depuis les vraies dates des paramètres système
+  // Récupérer les mois académiques avec fallback si pas de dates configurées
   const academicMonths = useMemo(() => {
-    if (!academicYearDates) return [];
-    return getAcademicMonths(academicYearDates.startDate, academicYearDates.endDate);
+    if (academicYearDates) {
+      return getAcademicMonths(academicYearDates.startDate, academicYearDates.endDate);
+    }
+    
+    // Fallback: générer l'année académique par défaut (Septembre → Juin)
+    const currentYear = new Date().getFullYear();
+    const currentMonth = new Date().getMonth();
+    
+    // Si on est avant septembre, l'année académique a commencé l'année dernière
+    const startYear = currentMonth < 8 ? currentYear - 1 : currentYear;
+    const endYear = startYear + 1;
+    
+    return getAcademicMonths(
+      `${startYear}-09-01`, // 1er septembre
+      `${endYear}-06-30`     // 30 juin
+    );
   }, [academicYearDates]);
 
   useEffect(() => {
@@ -253,7 +267,7 @@ export default function PaiementsEnfant() {
       <div className="container mx-auto py-8 space-y-8">
         <div className="flex items-center gap-4">
           <CreditCard className="h-8 w-8 text-blue-600" />
-          <h1 className="text-3xl font-bold text-gray-900">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
             Paiements - {selectedChild.first_name} {selectedChild.last_name}
           </h1>
         </div>
@@ -275,7 +289,7 @@ export default function PaiementsEnfant() {
                 <CheckCircle className="h-8 w-8 text-green-600" />
                 <div>
                   <p className="text-2xl font-bold text-green-600">{paidCount}</p>
-                  <p className="text-sm text-gray-500">Mois payés</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Mois payés</p>
                 </div>
               </div>
             </CardContent>
@@ -287,7 +301,7 @@ export default function PaiementsEnfant() {
                 <XCircle className="h-8 w-8 text-red-600" />
                 <div>
                   <p className="text-2xl font-bold text-red-600">{overdueCount}</p>
-                  <p className="text-sm text-gray-500">En retard</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">En retard</p>
                 </div>
               </div>
             </CardContent>
@@ -297,7 +311,14 @@ export default function PaiementsEnfant() {
         {/* Liste des paiements par mois */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {paymentMonths.map((paymentMonth) => (
-            <Card key={paymentMonth.id} className="hover:shadow-md transition-shadow">
+            <Card 
+              key={paymentMonth.id} 
+              className={`hover:shadow-md transition-all ${
+                paymentMonth.status === 'paid' ? 'border-l-4 border-green-500' :
+                paymentMonth.status === 'overdue' ? 'border-l-4 border-red-500' :
+                'border-l-4 border-yellow-500'
+              }`}
+            >
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-lg">{paymentMonth.month}</CardTitle>
@@ -308,26 +329,26 @@ export default function PaiementsEnfant() {
                 <div className="space-y-3">
                   {paymentMonth.payment && (
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-500">Montant:</span>
+                      <span className="text-sm text-gray-500 dark:text-gray-400">Montant:</span>
                       <span className="font-semibold">{formatAmount(paymentMonth.amount)}</span>
                     </div>
                   )}
                   
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-500">Échéance:</span>
+                    <span className="text-sm text-gray-500 dark:text-gray-400">Échéance:</span>
                     <span className="text-sm">{new Date(paymentMonth.dueDate).toLocaleDateString('fr-FR')}</span>
                   </div>
                   
                   {paymentMonth.paidDate && (
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-500">Payé le:</span>
+                      <span className="text-sm text-gray-500 dark:text-gray-400">Payé le:</span>
                       <span className="text-sm text-green-600">{new Date(paymentMonth.paidDate).toLocaleDateString('fr-FR')}</span>
                     </div>
                   )}
                   
                   {paymentMonth.payment?.payment_method && (
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-500">Méthode:</span>
+                      <span className="text-sm text-gray-500 dark:text-gray-400">Méthode:</span>
                       <span className="text-sm">{paymentMonth.payment.payment_method}</span>
                     </div>
                   )}
@@ -342,7 +363,7 @@ export default function PaiementsEnfant() {
         </div>
 
         {/* Légende */}
-        <Card>
+        <Card className="dark:bg-card dark:border-border">
           <CardHeader>
             <CardTitle className="text-lg">Légende des statuts</CardTitle>
           </CardHeader>
@@ -352,7 +373,7 @@ export default function PaiementsEnfant() {
                 <CheckCircle className="h-5 w-5 text-green-600" />
                 <div>
                   <p className="font-medium text-green-600">Payé</p>
-                  <p className="text-sm text-gray-500">Mois déjà payé</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Mois déjà payé</p>
                 </div>
               </div>
               
@@ -360,7 +381,7 @@ export default function PaiementsEnfant() {
                 <Clock className="h-5 w-5 text-yellow-600" />
                 <div>
                   <p className="font-medium text-yellow-600">En attente</p>
-                  <p className="text-sm text-gray-500">Mois en cours ou pas encore arrivé</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Mois en cours ou pas encore arrivé</p>
                 </div>
               </div>
               
@@ -368,7 +389,7 @@ export default function PaiementsEnfant() {
                 <XCircle className="h-5 w-5 text-red-600" />
                 <div>
                   <p className="font-medium text-red-600">En retard</p>
-                  <p className="text-sm text-gray-500">Mois dépassé et non payé</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Mois dépassé et non payé</p>
                 </div>
               </div>
             </div>
