@@ -268,14 +268,18 @@ export default function EmploiDuTemps() {
   };
 
   const onCahierSubmit = async (data: CahierFormData) => {
-    if (!classeId) {
-      toast({
-        title: "Erreur",
-        description: "ID de classe manquant",
-        variant: "destructive"
-      });
+    if (!classeId || isSubmitting) {
+      if (!classeId) {
+        toast({
+          title: "Erreur",
+          description: "ID de classe manquant",
+          variant: "destructive"
+        });
+      }
       return;
     }
+
+    setIsSubmitting(true);
 
     const success = await createLessonLog({
       class_id: classeId,
@@ -287,8 +291,9 @@ export default function EmploiDuTemps() {
       start_time: data.start_time
     });
 
+    setIsSubmitting(false);
+
     if (success) {
-      // Le toast est déjà affiché dans useLessonLogs
       cahierForm.reset();
       setIsCahierDialogOpen(false);
     }
