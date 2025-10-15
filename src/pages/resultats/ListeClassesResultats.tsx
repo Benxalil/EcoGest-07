@@ -40,8 +40,35 @@ export default function ListeClassesResultats() {
   const [schoolSystem, setSchoolSystem] = useState<string>("semestre");
   const navigate = useNavigate();
 
+  // Fonction pour normaliser le niveau (gérer les variations d'écriture)
+  const normalizeLevel = (level: string): string => {
+    if (!level) return '';
+    // Enlever les espaces et mettre en majuscules pour la comparaison
+    const normalized = level.trim().toUpperCase();
+    
+    // Mapper les variations vers le format standard
+    const levelMap: { [key: string]: string } = {
+      'CI': 'CI', 'CP': 'CP', 
+      'CE1': 'CE1', 'CE 1': 'CE1',
+      'CE2': 'CE2', 'CE 2': 'CE2',
+      'CM1': 'CM1', 'CM 1': 'CM1',
+      'CM2': 'CM2', 'CM 2': 'CM2',
+      '6EME': '6ème', '6ÈME': '6ème', '6': '6ème',
+      '5EME': '5ème', '5ÈME': '5ème', '5': '5ème',
+      '4EME': '4ème', '4ÈME': '4ème', '4': '4ème',
+      '3EME': '3ème', '3ÈME': '3ème', '3': '3ème',
+      '2NDE': '2nde', 'SECONDE': '2nde', '2': '2nde',
+      '1ERE': '1ère', '1ÈRE': '1ère', 'PREMIERE': '1ère', '1': '1ère',
+      'TERMINALE': 'Terminale', 'TERM': 'Terminale', 'TLE': 'Terminale'
+    };
+    
+    return levelMap[normalized] || level;
+  };
+
   // Fonction pour définir l'ordre académique des classes
   const getClassOrder = (level: string, section?: string): number => {
+    const normalizedLevel = normalizeLevel(level);
+    
     const levelOrder: { [key: string]: number } = {
       'CI': 1, 'CP': 2, 'CE1': 3, 'CE2': 4, 'CM1': 5, 'CM2': 6,
       '6ème': 7, '5ème': 8, '4ème': 9, '3ème': 10,
@@ -52,8 +79,8 @@ export default function ListeClassesResultats() {
       'A': 1, 'B': 2, 'C': 3, 'D': 4, 'E': 5, 'F': 6, 'G': 7, 'H': 8, 'I': 9, 'J': 10
     };
     
-    const levelNum = levelOrder[level] || 999;
-    const sectionNum = sectionOrder[section || ''] || 999;
+    const levelNum = levelOrder[normalizedLevel] || 999;
+    const sectionNum = section ? (sectionOrder[section.toUpperCase()] || 999) : 0;
     
     return levelNum * 100 + sectionNum;
   };
@@ -61,13 +88,13 @@ export default function ListeClassesResultats() {
   // Fonction pour trier les classes dans l'ordre académique
   const sortClassesAcademically = (classes: any[]): any[] => {
     return [...classes].sort((a, b) => {
-      console.log('Tri des classes - Classe A:', { level: a.level, section: a.section, name: a.name });
-      console.log('Tri des classes - Classe B:', { level: b.level, section: b.section, name: b.name });
-      
       const orderA = getClassOrder(a.level, a.section);
       const orderB = getClassOrder(b.level, b.section);
       
-      console.log('Ordre A:', orderA, 'Ordre B:', orderB);
+      // Si les ordres sont égaux, trier par nom comme fallback
+      if (orderA === orderB) {
+        return (a.name || '').localeCompare(b.name || '');
+      }
       
       return orderA - orderB;
     });
