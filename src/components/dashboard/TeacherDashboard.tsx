@@ -33,7 +33,7 @@ export function TeacherDashboard() {
 
   useEffect(() => {
     loadTeacherData();
-  }, [userProfile, classes]);
+  }, [userProfile, classes, announcements]); // ✅ Ajout de 'announcements' pour recharger quand les annonces changent
 
   const loadTeacherData = () => {
     if (!userProfile) return;
