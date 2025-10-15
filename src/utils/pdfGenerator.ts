@@ -3,6 +3,7 @@ import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
 import { supabase } from '@/integrations/supabase/client';
 import { parseMaxScoreFromMoyenne, parseCoefficient, getAppreciation } from './gradeUtils';
+import { formatClassName } from './classNameFormatter';
 
 // Fonction pour obtenir l'année académique de l'école
 const getSchoolAcademicYear = async (): Promise<string> => {
@@ -138,7 +139,7 @@ export const generateBulletinPDF = async (
       console.error('Erreur récupération données élève:', error);
     }
     
-    // Récupérer la série de la classe depuis Supabase
+    // Récupérer la série et les données de la classe depuis Supabase
     try {
       const { data: classData } = await supabase
         .from('classes')
@@ -146,8 +147,11 @@ export const generateBulletinPDF = async (
         .eq('id', classe.id)
         .single();
         
-      // Récupérer la série séparément si elle existe
+      // Stocker le nom formaté de la classe
       if (classData) {
+        eleveComplet.classe = formatClassName({ name: classData.name, section: classData.section });
+        
+        // Récupérer la série séparément si elle existe
         const { data: seriesData } = await supabase
           .from('series')
           .select('name, code')
@@ -506,7 +510,7 @@ export const generateBulletinPDF = async (
   infoY -= rowSpacing;
   // Third row - strictly aligned  
   page.drawText(`Matricule : ${eleveInfo.matricule || eleveInfo.numeroPerso || '_______'}`, { x: leftColX, y: infoY, size: 8, font });
-  page.drawText(`Classe : ${classe.session} ${classe.libelle}`, { x: rightColX, y: infoY, size: 8, font });
+  page.drawText(`Classe : ${eleveInfo.classe}`, { x: rightColX, y: infoY, size: 8, font });
 
   infoY -= rowSpacing;
   // Fourth row - strictly aligned

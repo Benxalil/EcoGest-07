@@ -313,7 +313,7 @@ export default function DetailsResultatEleve() {
           </div>
           
           {/* Dark Bar */}
-          <div className="bg-secondary text-secondary-foreground text-center py-2">
+          <div className="bg-muted text-muted-foreground text-center py-2">
             <span className="text-sm font-medium">Tous les bulletins</span>
           </div>
           
@@ -421,7 +421,7 @@ export default function DetailsResultatEleve() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="text-primary hover:text-primary/80"
+                    className="text-primary hover:bg-accent hover:text-accent-foreground transition-colors"
                   >
                     <Eye className="h-4 w-4" />
                   </Button>
