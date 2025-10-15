@@ -66,8 +66,11 @@ interface EleveNote {
 export const generateBulletinPDF = async (
   eleve: Student,
   classe: Classe,
-  semestre: string
+  semestre: string,
+  examData?: { exam_id: string; exam_title: string; exam_date: string; semester?: string }
 ) => {
+  // Déterminer si c'est un examen de composition
+  const isCompositionExam = examData?.exam_title?.toLowerCase().includes('composition') || false;
   const academicYear = await getSchoolAcademicYear();
   const pdfDoc = await PDFDocument.create();
   pdfDoc.registerFontkit(fontkit);
@@ -367,7 +370,15 @@ export const generateBulletinPDF = async (
     }
   };
 
-  const semestreLabel = semestre === "1" ? "PREMIER SEMESTRE" : "DEUXIÈME SEMESTRE";
+  // Adapter le titre selon le type d'examen
+  let semestreLabel: string;
+  if (examData && !isCompositionExam) {
+    // Pour les examens normaux, afficher juste le nom de l'examen
+    semestreLabel = examData.exam_title.toUpperCase();
+  } else {
+    // Pour les compositions, afficher le semestre
+    semestreLabel = semestre === "1" ? "PREMIER SEMESTRE" : "DEUXIÈME SEMESTRE";
+  }
   const moyenneSemestre1 = getMoyenneSemestre("1");
   const moyenneSemestre2 = getMoyenneSemestre("2");
   let moyenneGeneraleAnnuelle = null;
@@ -507,8 +518,10 @@ export const generateBulletinPDF = async (
   const gradesTableY = yPos;
   const gradesTableWidth = 555;
   
-  // Table configuration - 7 columns matching Canva model exactly
-  const columnWidths = [130, 60, 60, 50, 45, 85, 125]; // Total = 555
+  // Table configuration - adapter selon le type d'examen
+  const columnWidths = isCompositionExam 
+    ? [130, 60, 60, 50, 45, 85, 125] // Composition: MATIÈRES, DEVOIR, COMPO, MOY, COEF, MOY×COEF, APPRÉCIATION
+    : [180, 80, 60, 90, 145]; // Examen normal: MATIÈRES, NOTE, COEF, MOY×COEF, APPRÉCIATION
   const numRows = matieresClasse.length + 2; // +1 for header, +1 for total
   const gradeRowHeight = 18;
 
@@ -538,8 +551,10 @@ export const generateBulletinPDF = async (
     color: rgb(0.9, 0.9, 0.9)
   });
 
-  // Header texts - exact positioning
-  const headers = ['MATIÈRES', 'DEVOIR', 'COMPO', 'MOY', 'COEF', 'MOY×COEF', 'APPRÉ-CIATION'];
+  // Header texts - adapter selon le type d'examen
+  const headers = isCompositionExam 
+    ? ['MATIÈRES', 'DEVOIR', 'COMPO', 'MOY', 'COEF', 'MOY×COEF', 'APPRÉ-CIATION']
+    : ['MATIÈRES', 'NOTE', 'COEF', 'MOY×COEF', 'APPRÉ-CIATION'];
   let headerX = gradesTableX;
   headers.forEach((header, index) => {
     const textWidth = boldFont.widthOfTextAtSize(header, 7);
@@ -554,47 +569,75 @@ export const generateBulletinPDF = async (
 
   matieresClasse.forEach((matiere) => {
     dataY -= gradeRowHeight;
-    const notesKey = `notes_${classe.id}_${matiere.id}`;
-    const savedNotes = localStorage.getItem(notesKey);
     
-    let devoir = '-', composition = '-', moyenne = '-', moyenneCoef = '-', appreciation = '-';
+    let devoir = '-', composition = '-', note = '-', moyenne = '-', moyenneCoef = '-', appreciation = '-';
     
-    if (savedNotes) {
-      const notes = JSON.parse(savedNotes);
-      const eleveNote = notes.find((note: EleveNote) => note.eleveId === eleve.id);
-      if (eleveNote) {
-        const semestreKey = semestre === "1" ? "semestre1" : "semestre2";
-        const notesSemestre = eleveNote[semestreKey as keyof typeof eleveNote];
+    // Récupérer les notes depuis notesEleve (déjà chargées depuis Supabase)
+    if (isCompositionExam) {
+      // Pour les compositions, chercher les notes de type "Devoir" et "Composition"
+      const notesMatiere = notesEleve.filter(n => 
+        n.subject_id === matiere.id && 
+        n.semester === (semestre === "1" ? "1er_semestre" : "2eme_semestre")
+      );
+      
+      const devoirNote = notesMatiere.find(n => n.exam_type?.toLowerCase() === 'devoir');
+      const compoNote = notesMatiere.find(n => n.exam_type?.toLowerCase() === 'composition');
+      
+      const devoirValue = devoirNote ? parseFloat(String(devoirNote.grade_value)) : null;
+      const compositionValue = compoNote ? parseFloat(String(compoNote.grade_value)) : null;
+      
+      if (devoirValue !== null && !isNaN(devoirValue)) devoir = devoirValue.toFixed(1);
+      if (compositionValue !== null && !isNaN(compositionValue)) composition = compositionValue.toFixed(1);
+      
+      if (devoirValue !== null && compositionValue !== null && !isNaN(devoirValue) && !isNaN(compositionValue)) {
+        const moy = (devoirValue + compositionValue) / 2;
+        moyenne = moy.toFixed(1);
+        const coef = parseFloat(String(matiere.coefficient)) || 1;
+        const moyCoef = moy * coef;
+        moyenneCoef = moyCoef.toFixed(1);
         
-        if (notesSemestre && typeof notesSemestre === 'object' && 'devoir' in notesSemestre && 'composition' in notesSemestre) {
-          const devoirValue = typeof notesSemestre.devoir === 'string' ? parseFloat(notesSemestre.devoir) : notesSemestre.devoir;
-          const compositionValue = typeof notesSemestre.composition === 'string' ? parseFloat(notesSemestre.composition) : notesSemestre.composition;
+        totalPoints += moyCoef;
+        totalCoeff += coef;
+        
+        if (moy >= 16) appreciation = 'Très Bien';
+        else if (moy >= 14) appreciation = 'Bien';
+        else if (moy >= 12) appreciation = 'Assez Bien';
+        else if (moy >= 10) appreciation = 'Passable';
+        else appreciation = 'Insuffisant';
+      }
+    } else if (examData) {
+      // Pour les examens normaux, chercher la note de cet examen spécifique
+      const noteExamen = notesEleve.find(n => 
+        n.subject_id === matiere.id && 
+        n.exam_id === examData.exam_id
+      );
+      
+      if (noteExamen) {
+        const noteValue = parseFloat(String(noteExamen.grade_value));
+        if (!isNaN(noteValue)) {
+          note = noteValue.toFixed(1);
+          const coef = parseFloat(String(matiere.coefficient)) || 1;
+          const moyCoef = noteValue * coef;
+          moyenneCoef = moyCoef.toFixed(1);
           
-          if (devoirValue !== -1 && !isNaN(devoirValue)) devoir = devoirValue.toFixed(1);
-          if (compositionValue !== -1 && !isNaN(compositionValue)) composition = compositionValue.toFixed(1);
+          totalPoints += moyCoef;
+          totalCoeff += coef;
           
-          if (devoirValue !== -1 && compositionValue !== -1 && !isNaN(devoirValue) && !isNaN(compositionValue)) {
-            const moy = (devoirValue + compositionValue) / 2;
-            moyenne = moy.toFixed(1);
-            const coef = parseFloat(matiere.coefficient) || 1; // Utiliser le coefficient de la matière
-            const moyCoef = moy * coef;
-            moyenneCoef = moyCoef.toFixed(1);
-            
-            totalPoints += moyCoef;
-            totalCoeff += coef;
-            
-            if (moy >= 16) appreciation = 'Très Bien';
-            else if (moy >= 14) appreciation = 'Bien';
-            else if (moy >= 12) appreciation = 'Assez Bien';
-            else if (moy >= 10) appreciation = 'Passable';
-            else appreciation = 'Insuffisant';
-          }
+          if (noteValue >= 16) appreciation = 'Très Bien';
+          else if (noteValue >= 14) appreciation = 'Bien';
+          else if (noteValue >= 12) appreciation = 'Assez Bien';
+          else if (noteValue >= 10) appreciation = 'Passable';
+          else appreciation = 'Insuffisant';
         }
       }
     }
 
-    // Draw data row
-    const rowData = [matiere.nom, devoir, composition, moyenne, '2', moyenneCoef, appreciation];
+    // Draw data row - adapter selon le type d'examen
+    const coefStr = String(parseFloat(String(matiere.coefficient)) || 1);
+    const rowData = isCompositionExam 
+      ? [matiere.nom, devoir, composition, moyenne, coefStr, moyenneCoef, appreciation]
+      : [matiere.nom, note, coefStr, moyenneCoef, appreciation];
+    
     let cellX = gradesTableX;
     rowData.forEach((data, index) => {
       const textWidth = font.widthOfTextAtSize(data, 7);
@@ -613,7 +656,10 @@ export const generateBulletinPDF = async (
   });
 
   const totalMoyenne = totalCoeff > 0 ? (totalPoints / totalCoeff) : 0;
-  const totalRowData = ['TOTAL', '', '', totalMoyenne.toFixed(1), totalCoeff.toString(), totalPoints.toFixed(1), ''];
+  const totalRowData = isCompositionExam
+    ? ['TOTAL', '', '', totalMoyenne.toFixed(1), totalCoeff.toString(), totalPoints.toFixed(1), '']
+    : ['TOTAL', '', totalCoeff.toString(), totalPoints.toFixed(1), ''];
+  
   let totalCellX = gradesTableX;
   totalRowData.forEach((data, index) => {
     if (data !== '') {

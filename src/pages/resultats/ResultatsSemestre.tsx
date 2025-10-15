@@ -277,8 +277,16 @@ export default function ResultatsSemestre() {
         effectif: classe.effectif
       };
       
+      // Préparer les données de l'examen si disponibles
+      const examDataForPDF = activeExamData ? {
+        exam_id: activeExamData.exam_id,
+        exam_title: activeExamData.exam_title,
+        exam_date: activeExamData.exam_date,
+        semester: activeExamData.semester
+      } : undefined;
+      
       // Générer le PDF pour l'élève spécifique
-      await generateBulletinPDF(eleve, classeForPDF, getSemestreLabel());
+      await generateBulletinPDF(eleve, classeForPDF, getSemestreLabel(), examDataForPDF);
     } catch (error) {
       console.error("Erreur lors de la génération du PDF:", error);
     }
