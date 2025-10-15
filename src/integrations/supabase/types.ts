@@ -766,87 +766,6 @@ export type Database = {
           },
         ]
       }
-      payment_config: {
-        Row: {
-          created_at: string | null
-          encrypted_api_key: string
-          encrypted_secret_key: string
-          environment: string
-          id: string
-          is_active: boolean | null
-          updated_at: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          encrypted_api_key: string
-          encrypted_secret_key: string
-          environment?: string
-          id?: string
-          is_active?: boolean | null
-          updated_at?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          encrypted_api_key?: string
-          encrypted_secret_key?: string
-          environment?: string
-          id?: string
-          is_active?: boolean | null
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
-      payment_transactions: {
-        Row: {
-          amount: number
-          created_at: string | null
-          currency: string | null
-          gateway_response: Json | null
-          id: string
-          paytech_transaction_id: string | null
-          school_id: string
-          status: string
-          subscription_id: string | null
-        }
-        Insert: {
-          amount: number
-          created_at?: string | null
-          currency?: string | null
-          gateway_response?: Json | null
-          id?: string
-          paytech_transaction_id?: string | null
-          school_id: string
-          status: string
-          subscription_id?: string | null
-        }
-        Update: {
-          amount?: number
-          created_at?: string | null
-          currency?: string | null
-          gateway_response?: Json | null
-          id?: string
-          paytech_transaction_id?: string | null
-          school_id?: string
-          status?: string
-          subscription_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "payment_transactions_school_id_fkey"
-            columns: ["school_id"]
-            isOneToOne: false
-            referencedRelation: "schools"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "payment_transactions_subscription_id_fkey"
-            columns: ["subscription_id"]
-            isOneToOne: false
-            referencedRelation: "subscriptions"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       payments: {
         Row: {
           amount: number
@@ -1537,7 +1456,6 @@ export type Database = {
           currency: string | null
           end_date: string | null
           id: string
-          paytech_transaction_id: string | null
           plan_id: string
           school_id: string
           start_date: string | null
@@ -1550,7 +1468,6 @@ export type Database = {
           currency?: string | null
           end_date?: string | null
           id?: string
-          paytech_transaction_id?: string | null
           plan_id: string
           school_id: string
           start_date?: string | null
@@ -1563,7 +1480,6 @@ export type Database = {
           currency?: string | null
           end_date?: string | null
           id?: string
-          paytech_transaction_id?: string | null
           plan_id?: string
           school_id?: string
           start_date?: string | null

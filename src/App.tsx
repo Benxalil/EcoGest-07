@@ -49,7 +49,6 @@ import ResultatsEnfant from "./pages/resultats/ResultatsEnfant";
 import ListeAnnonces from "./pages/annonces/ListeAnnonces";
 
 import Abonnement from "@/pages/abonnement/Abonnement";
-import PayTechConfig from "@/pages/admin/PayTechConfig";
 import Parametres from "./pages/parametres/Parametres";
 import AuthPage from "./pages/auth/AuthPage";
 import SchoolRegistrationPage from "./pages/auth/SchoolRegistrationPage";
@@ -128,7 +127,6 @@ function App() {
           <Route path="/auth/pending-confirmation" element={<PendingConfirmation />} />
           <Route path="/complete-registration" element={<CompleteRegistration />} />
           <Route path="/abonnement" element={<Abonnement />} />
-          <Route path="/admin/paytech-config" element={<PayTechConfig />} />
           <Route path="/admin/user-migration" element={<UserMigration />} />
           <Route path="/utilisateurs" element={<Utilisateurs />} />
             </Routes>

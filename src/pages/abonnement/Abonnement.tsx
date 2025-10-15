@@ -32,46 +32,6 @@ const Abonnement = () => {
     loadActiveSubscription();
   }, []);
 
-  // Gérer les retours de PayTech
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const isSuccess = urlParams.get('success');
-    const isCancelled = urlParams.get('cancelled');
-    const failureReason = urlParams.get('reason');
-
-    if (isSuccess === 'true') {
-      toast({
-        title: "✅ Votre abonnement a été activé avec succès !",
-        description: "Redirection vers votre tableau de bord...",
-        duration: 3000
-      });
-      
-      window.history.replaceState({}, '', '/abonnement');
-      
-      setTimeout(() => {
-        window.location.href = '/';
-      }, 2000);
-    }
-
-    if (isCancelled === 'true') {
-      const message = failureReason === 'payment_failed' 
-        ? "❌ Échec du paiement. Veuillez vérifier vos informations et réessayer."
-        : "❌ Paiement annulé";
-      
-      const description = failureReason === 'payment_failed'
-        ? "Une erreur s'est produite lors du traitement de votre paiement. Contactez le support si le problème persiste."
-        : "Vous avez annulé le paiement. Aucun montant n'a été débité.";
-      
-      toast({
-        title: message,
-        description,
-        variant: "destructive",
-        duration: 5000
-      });
-      
-      window.history.replaceState({}, '', '/abonnement');
-    }
-  }, [toast, getActiveSubscription]);
 
   // Fonction pour déterminer si un plan est actif
   const isActivePlan = (planId: string) => {
@@ -79,60 +39,12 @@ const Abonnement = () => {
     return currentPlan === `${planId}_${planType}`;
   };
 
-  // Fonction pour créer une session de checkout
-  const handleChoosePlan = async (planId: string) => {
-    if (!userProfile?.schoolId) {
-      toast({
-        title: "Erreur",
-        description: "Impossible de déterminer votre école",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    const planCode = `${planId}_${isAnnual ? 'annual' : 'monthly'}`;
-    setIsCreatingCheckout(planId);
-
-    try {
-      const { data, error } = await supabase.functions.invoke('create-checkout', {
-        body: {
-          plan_code: planCode,
-          school_id: userProfile.schoolId
-        }
-      });
-
-      if (error) {
-        console.error('Erreur lors de la création du checkout:', error);
-        toast({
-          title: "Erreur",
-          description: "Impossible de créer la session de paiement. Veuillez réessayer.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      console.log('Réponse create-checkout:', data);
-
-      if (data?.checkout_url) {
-        console.log('Redirection vers PayTech:', data.checkout_url);
-        window.location.href = data.checkout_url;
-      } else {
-        toast({
-          title: "Erreur",
-          description: "URL de paiement non reçue. Veuillez réessayer.",
-          variant: "destructive",
-        });
-      }
-    } catch (err) {
-      console.error('Erreur inattendue:', err);
-      toast({
-        title: "Erreur",
-        description: "Une erreur inattendue est survenue. Veuillez réessayer.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsCreatingCheckout(null);
-    }
+  // Fonction pour afficher les informations du plan
+  const handleChoosePlan = (planId: string) => {
+    toast({
+      title: "Contactez-nous",
+      description: "Pour souscrire à ce plan, veuillez contacter notre équipe commerciale.",
+    });
   };
 
   if (plansLoading) {
@@ -416,16 +328,12 @@ const Abonnement = () => {
 
                   <Button 
                     onClick={() => handleChoosePlan(plan.id)}
-                    disabled={
-                      isCreatingCheckout === plan.id || 
-                      isPlanDisabled || 
-                      !!activeSubscription
-                    }
+                    disabled={isPlanDisabled || !!activeSubscription}
                     className={`w-full font-semibold py-3 rounded-lg ${
                       activeSubscription
                         ? 'bg-gray-300 text-gray-600 cursor-not-allowed opacity-60' 
                         : isPlanDisabled 
-                        ? 'bg-gray-400 text-gray-600 cursor-not-allowed' 
+                        ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
                         : 'bg-blue-600 hover:bg-blue-700 text-white'
                     }`}
                   >
