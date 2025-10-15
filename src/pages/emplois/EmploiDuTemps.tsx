@@ -287,10 +287,7 @@ export default function EmploiDuTemps() {
     });
 
     if (success) {
-      toast({
-        title: "Succès",
-        description: "Cahier de texte enregistré avec succès"
-      });
+      // Le toast est déjà affiché dans useLessonLogs
       cahierForm.reset();
       setIsCahierDialogOpen(false);
     }
