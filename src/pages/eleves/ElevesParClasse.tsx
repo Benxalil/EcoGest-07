@@ -537,16 +537,16 @@ export default function ElevesParClasse() {
                   
                   {/* Informations principales */}
                   <div className="flex-1">
-                    <h2 className="text-2xl font-bold text-blue-600 mb-2">
+                    <h2 className="text-2xl font-bold text-primary mb-2">
                       {selectedStudent.first_name} {selectedStudent.last_name}
                     </h2>
-                    <p className="text-gray-600 mb-1">
+                    <p className="text-foreground mb-1">
                       <span className="font-medium">Matricule:</span> {selectedStudent.student_number}
                     </p>
-                    <p className="text-gray-600 mb-1">
+                    <p className="text-foreground mb-1">
                       <span className="font-medium">Classe:</span> {selectedStudent.classes ? `${selectedStudent.classes.name} ${selectedStudent.classes.level}${selectedStudent.classes.section ? ` - ${selectedStudent.classes.section}` : ''}` : currentClass ? `${currentClass.name} ${currentClass.level}${currentClass.section ? ` - ${currentClass.section}` : ''}` : 'Non assignée'}
                     </p>
-                    <p className="text-gray-600">
+                    <p className="text-foreground">
                       {selectedStudent.gender === 'M' ? 'Masculin' : selectedStudent.gender === 'F' ? 'Féminin' : 'Non renseigné'} • {selectedStudent.date_of_birth ? `Né(e) le ${new Date(selectedStudent.date_of_birth).toLocaleDateString('fr-FR')}` : 'Date de naissance non renseignée'}
                     </p>
                   </div>
@@ -558,30 +558,30 @@ export default function ElevesParClasse() {
                   <div className="space-y-8">
                     {/* Informations personnelles */}
                     <div>
-                      <h3 className="text-lg font-semibold mb-4 text-orange-600">Informations personnelles</h3>
+                      <h3 className="text-lg font-semibold mb-4 text-accent-foreground">Informations personnelles</h3>
                       <div className="space-y-3">
                         <div>
-                          <p className="text-sm font-medium text-gray-700">Lieu de naissance:</p>
-                          <p className="text-gray-900">{selectedStudent.place_of_birth || 'Non renseigné'}</p>
+                          <p className="text-sm font-medium text-muted-foreground">Lieu de naissance:</p>
+                          <p className="text-foreground">{selectedStudent.place_of_birth || 'Non renseigné'}</p>
                         </div>
                         <div>
-                          <p className="text-sm font-medium text-gray-700">Adresse:</p>
-                          <p className="text-gray-900">{selectedStudent.address || 'Non renseignée'}</p>
+                          <p className="text-sm font-medium text-muted-foreground">Adresse:</p>
+                          <p className="text-foreground">{selectedStudent.address || 'Non renseignée'}</p>
                         </div>
                         <div>
-                          <p className="text-sm font-medium text-gray-700">Téléphone:</p>
-                          <p className="text-gray-900">{selectedStudent.phone || 'Non renseigné'}</p>
+                          <p className="text-sm font-medium text-muted-foreground">Téléphone:</p>
+                          <p className="text-foreground">{selectedStudent.phone || 'Non renseigné'}</p>
                         </div>
                         <div>
-                          <p className="text-sm font-medium text-gray-700">Email:</p>
-                          <p className="text-gray-900">{selectedStudent.parent_email || 'Non renseigné'}</p>
+                          <p className="text-sm font-medium text-muted-foreground">Email:</p>
+                          <p className="text-foreground">{selectedStudent.parent_email || 'Non renseigné'}</p>
                         </div>
                       </div>
                     </div>
 
                     {/* Informations du père */}
                     <div>
-                      <h3 className="text-lg font-semibold mb-4 text-orange-600">Informations du père</h3>
+                      <h3 className="text-lg font-semibold mb-4 text-accent-foreground">Informations du père</h3>
                       <div className="space-y-3">
                         {(() => {
                       const emergencyParts = selectedStudent.emergency_contact?.split(' - ') || [];
@@ -589,16 +589,16 @@ export default function ElevesParClasse() {
                       const fatherPhone = emergencyParts[1] || '';
                       return <>
                               <div>
-                                <p className="text-sm font-medium text-gray-700">Nom:</p>
-                                <p className="text-gray-900">{fatherName || 'Non renseigné'}</p>
+                                <p className="text-sm font-medium text-muted-foreground">Nom:</p>
+                                <p className="text-foreground">{fatherName || 'Non renseigné'}</p>
                               </div>
                               <div>
-                                <p className="text-sm font-medium text-gray-700">Adresse:</p>
-                                <p className="text-gray-900">{selectedStudent.address || 'Non renseignée'}</p>
+                                <p className="text-sm font-medium text-muted-foreground">Adresse:</p>
+                                <p className="text-foreground">{selectedStudent.address || 'Non renseignée'}</p>
                               </div>
                               <div>
-                                <p className="text-sm font-medium text-gray-700">Téléphone:</p>
-                                <p className="text-gray-900">{selectedStudent.parent_phone || fatherPhone || 'Non renseigné'}</p>
+                                <p className="text-sm font-medium text-muted-foreground">Téléphone:</p>
+                                <p className="text-foreground">{selectedStudent.parent_phone || fatherPhone || 'Non renseigné'}</p>
                               </div>
                             </>;
                     })()}
@@ -610,7 +610,7 @@ export default function ElevesParClasse() {
                   <div className="space-y-8">
                     {/* Contact d'urgence */}
                     <div>
-                      <h3 className="text-lg font-semibold mb-4 text-orange-600">Contact d'urgence</h3>
+                      <h3 className="text-lg font-semibold mb-4 text-accent-foreground">Contact d'urgence</h3>
                       <div className="space-y-3">
                         {(() => {
                       const emergencyParts = selectedStudent.emergency_contact?.split(' - ') || [];
@@ -619,16 +619,16 @@ export default function ElevesParClasse() {
                       const contactRelation = emergencyParts[2]?.replace(/[()]/g, '') || '';
                       return <>
                               <div>
-                                <p className="text-sm font-medium text-gray-700">Nom:</p>
-                                <p className="text-gray-900">{contactName || 'Non renseigné'}</p>
+                                <p className="text-sm font-medium text-muted-foreground">Nom:</p>
+                                <p className="text-foreground">{contactName || 'Non renseigné'}</p>
                               </div>
                               <div>
-                                <p className="text-sm font-medium text-gray-700">Téléphone:</p>
-                                <p className="text-gray-900">{contactPhone || 'Non renseigné'}</p>
+                                <p className="text-sm font-medium text-muted-foreground">Téléphone:</p>
+                                <p className="text-foreground">{contactPhone || 'Non renseigné'}</p>
                               </div>
                               <div>
-                                <p className="text-sm font-medium text-gray-700">Relation:</p>
-                                <p className="text-gray-900">{contactRelation || 'Non renseigné'}</p>
+                                <p className="text-sm font-medium text-muted-foreground">Relation:</p>
+                                <p className="text-foreground">{contactRelation || 'Non renseigné'}</p>
                               </div>
                             </>;
                     })()}
@@ -637,19 +637,19 @@ export default function ElevesParClasse() {
 
                     {/* Informations de la mère */}
                     <div>
-                      <h3 className="text-lg font-semibold mb-4 text-orange-600">Informations de la mère</h3>
+                      <h3 className="text-lg font-semibold mb-4 text-accent-foreground">Informations de la mère</h3>
                       <div className="space-y-3">
                         <div>
-                          <p className="text-sm font-medium text-gray-700">Nom:</p>
-                          <p className="text-gray-900">Non renseigné</p>
+                          <p className="text-sm font-medium text-muted-foreground">Nom:</p>
+                          <p className="text-foreground">Non renseigné</p>
                         </div>
                         <div>
-                          <p className="text-sm font-medium text-gray-700">Adresse:</p>
-                          <p className="text-gray-900">Non renseigné</p>
+                          <p className="text-sm font-medium text-muted-foreground">Adresse:</p>
+                          <p className="text-foreground">Non renseigné</p>
                         </div>
                         <div>
-                          <p className="text-sm font-medium text-gray-700">Téléphone:</p>
-                          <p className="text-gray-900">Non renseigné</p>
+                          <p className="text-sm font-medium text-muted-foreground">Téléphone:</p>
+                          <p className="text-foreground">Non renseigné</p>
                         </div>
                       </div>
                     </div>
