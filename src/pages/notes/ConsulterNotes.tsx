@@ -212,8 +212,15 @@ export default function ConsulterNotes() {
       
       // Si sauvegarde réussie
       if (result && 'success' in result) {
-        console.log('ConsulterNotes: Notes sauvegardées avec succès');
+        console.log('ConsulterNotes: Notes sauvegardées avec succès - Rafraîchissement en cours');
+        
+        // Forcer un rafraîchissement immédiat
+        await refreshNotes();
+        
+        // Passer en mode lecture
         setIsEditMode(false);
+        
+        console.log('ConsulterNotes: Interface mise à jour avec les nouvelles notes');
       }
     } catch (error) {
       console.error('ConsulterNotes: Erreur lors de la sauvegarde des notes:', error);
@@ -230,8 +237,14 @@ export default function ConsulterNotes() {
     
     try {
       // Sauvegarder en skippant la confirmation
-      await saveAllNotes(true);
+      const result = await saveAllNotes(true);
       console.log('ConsulterNotes: Notes sauvegardées avec suppressions confirmées');
+      
+      // Forcer un rafraîchissement immédiat
+      if (result && 'success' in result) {
+        await refreshNotes();
+      }
+      
       setIsEditMode(false);
       setPendingDeletion(null);
     } catch (error) {

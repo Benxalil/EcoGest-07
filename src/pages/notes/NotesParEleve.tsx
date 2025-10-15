@@ -328,7 +328,10 @@ export default function NotesParEleve() {
       
       // Si sauvegarde réussie
       if (result && 'success' in result) {
-        // Forcer un re-render pour afficher immédiatement les notes sauvegardées
+        // Forcer un rafraîchissement immédiat des données
+        await refreshNotes();
+        
+        // Recalculer les moyennes avec les nouvelles données
         calculateAndUpdateAverage();
         
         toast({
@@ -340,7 +343,7 @@ export default function NotesParEleve() {
       console.error('Erreur lors de la sauvegarde:', error);
       toast({
         title: "Erreur",
-        description: "Erreur lors de la sauvegarde des notes.",
+        description: "Une erreur est survenue lors de la sauvegarde des notes.",
         variant: "destructive"
       });
     }
@@ -351,7 +354,13 @@ export default function NotesParEleve() {
     
     try {
       // Sauvegarder en skippant la confirmation
-      await saveAllNotes(true);
+      const result = await saveAllNotes(true);
+      
+      // Forcer un rafraîchissement immédiat
+      if (result && 'success' in result) {
+        await refreshNotes();
+      }
+      
       calculateAndUpdateAverage();
       
       toast({

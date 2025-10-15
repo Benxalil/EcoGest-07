@@ -146,10 +146,14 @@ export const useNotesSync = ({ classeId, matiereId, examId, studentId, isComposi
           table: 'grades',
           filter: `exam_id=eq.${examId}`
         },
-        (payload) => {
+        async (payload) => {
           console.log('useNotesSync: Changement détecté dans la base de données:', payload);
-          // Recharger les notes depuis la base
-          refetchGrades();
+          // Recharger immédiatement les notes depuis la base
+          await refetchGrades();
+          // Attendre que les grades soient mis à jour puis recharger
+          setTimeout(() => {
+            loadNotesFromDatabase();
+          }, 100);
         }
       )
       .subscribe();
@@ -158,7 +162,7 @@ export const useNotesSync = ({ classeId, matiereId, examId, studentId, isComposi
       console.log('useNotesSync: Arrêt de l\'écoute en temps réel');
       supabase.removeChannel(channel);
     };
-  }, [examId, refetchGrades]);
+  }, [examId, refetchGrades, loadNotesFromDatabase]);
 
   // Obtenir une note pour un élève et une matière spécifiques
   const getNote = useCallback((eleveId: string, matiereId: string): UnifiedNote | null => {
@@ -361,9 +365,14 @@ export const useNotesSync = ({ classeId, matiereId, examId, studentId, isComposi
       
       console.log('useNotesSync: Sauvegarde terminée avec succès');
       
-      // 3. Recharger les données
+      // 3. Recharger les données IMMÉDIATEMENT
+      console.log('useNotesSync: Rechargement des notes après sauvegarde...');
       await refetchGrades();
-      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Attendre que les données soient bien chargées
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      // Recharger explicitement les notes locales
       loadNotesFromDatabase();
       
       setHasUnsavedChanges(false);
@@ -374,6 +383,8 @@ export const useNotesSync = ({ classeId, matiereId, examId, studentId, isComposi
           ? `Notes sauvegardées avec succès. ${notesToDelete.length} note(s) supprimée(s).`
           : "Toutes les notes ont été sauvegardées avec succès.",
       });
+      
+      console.log('useNotesSync: Notes rechargées et affichage mis à jour');
       
       return { success: true };
       
