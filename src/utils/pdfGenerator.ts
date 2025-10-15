@@ -530,9 +530,9 @@ export const generateBulletinPDF = async (
   const gradesTableY = yPos;
   const gradesTableWidth = 555;
   
-  // Table configuration - adapter selon le type d'examen
+  // Table configuration - adapter selon le type d'examen (largeurs ajustées selon modèle Canva)
   const columnWidths = isCompositionExam 
-    ? [130, 60, 60, 50, 45, 85, 125] // Composition: MATIÈRES, DEVOIR, COMPO, MOY, COEF, MOY×COEF, APPRÉCIATION
+    ? [150, 50, 50, 45, 40, 75, 145] // Composition: MATIÈRES, DEVOIR, COMPO, MOY, COEF, MOY×COEF, APPRÉCIATION
     : [180, 80, 60, 90, 145]; // Examen normal: MATIÈRES, NOTE, COEF, MOY×COEF, APPRÉCIATION
   const numRows = matieresClasse.length + 2; // +1 for header, +1 for total
   const gradeRowHeight = 18;
@@ -721,15 +721,14 @@ export const generateBulletinPDF = async (
   const colWidth = (contentWidth - colGap) / 2; // Two columns
   const leftX = contentX;
   const rightX = contentX + colWidth + colGap;
-  const boxHeight = 75;
-  const rowGap = 15;
+  const boxHeight = 90; // Augmenté pour mieux correspondre au modèle
 
-  // Row 1: SEMESTRES (left) + DÉCISION (right)
-  const row1Y = yPos;
+  // SEMESTRES (left) + DÉCISION DU CONSEIL (right) - une seule ligne comme dans le modèle
+  const rowY = yPos;
 
   // SEMESTRES - Two side-by-side blocks
-  page.drawRectangle({ x: leftX, y: row1Y - boxHeight, width: colWidth, height: boxHeight, borderColor: rgb(0, 0, 0), borderWidth: 1 });
-  page.drawText('SEMESTRES', { x: leftX + 8, y: row1Y - 15, size: 8, font: boldFont });
+  page.drawRectangle({ x: leftX, y: rowY - boxHeight, width: colWidth, height: boxHeight, borderColor: rgb(0, 0, 0), borderWidth: 1 });
+  page.drawText('SEMESTRES', { x: leftX + 8, y: rowY - 15, size: 8, font: boldFont });
   
   // Two blocks side by side within the rectangle
   const semestreBlockWidth = (colWidth - 24) / 2; // Divide available width
@@ -741,18 +740,19 @@ export const generateBulletinPDF = async (
   const rangSemestre2 = await getRangSemestre("2");
 
   // Semestre 1 block - always show
-  page.drawText('Semestre 1:', { x: leftBlockX, y: row1Y - 28, size: 7, font: boldFont });
-  page.drawText(`Moy: ${moyenneSemestre1 !== null ? moyenneSemestre1.toFixed(2) : '___'}`, { x: leftBlockX, y: row1Y - 40, size: 7, font });
-  page.drawText(`Rang: ${rangSemestre1.rang !== null ? `${rangSemestre1.rang}/${rangSemestre1.total}` : '___/___'}`, { x: leftBlockX, y: row1Y - 52, size: 7, font });
+  page.drawText('Semestre 1:', { x: leftBlockX, y: rowY - 30, size: 8, font: boldFont });
+  page.drawText(`Moy: ${moyenneSemestre1 !== null ? moyenneSemestre1.toFixed(2) : '___'}`, { x: leftBlockX, y: rowY - 44, size: 8, font });
+  page.drawText(`Rang: ${rangSemestre1.rang !== null ? `${rangSemestre1.rang}/${rangSemestre1.total}` : '___/___'}`, { x: leftBlockX, y: rowY - 58, size: 8, font });
   
   // Semestre 2 block - only show if current semester is 2
-  page.drawText('Semestre 2:', { x: rightBlockX, y: row1Y - 28, size: 7, font: boldFont });
+  page.drawText('Semestre 2:', { x: rightBlockX, y: rowY - 30, size: 8, font: boldFont });
   if (semestre === "2") {
-    page.drawText(`Moy: ${moyenneSemestre2 !== null ? moyenneSemestre2.toFixed(2) : '___'}`, { x: rightBlockX, y: row1Y - 40, size: 7, font });
-    page.drawText(`Rang: ${rangSemestre2.rang !== null ? `${rangSemestre2.rang}/${rangSemestre2.total}` : '___/___'}`, { x: rightBlockX, y: row1Y - 52, size: 7, font }); } else {
+    page.drawText(`Moy: ${moyenneSemestre2 !== null ? moyenneSemestre2.toFixed(2) : '___'}`, { x: rightBlockX, y: rowY - 44, size: 8, font });
+    page.drawText(`Rang: ${rangSemestre2.rang !== null ? `${rangSemestre2.rang}/${rangSemestre2.total}` : '___/___'}`, { x: rightBlockX, y: rowY - 58, size: 8, font });
+  } else {
     // Semestre 1 - leave empty
-    page.drawText('Moy: ___', { x: rightBlockX, y: row1Y - 40, size: 7, font });
-    page.drawText('Rang: ___/___', { x: rightBlockX, y: row1Y - 52, size: 7, font });
+    page.drawText('Moy: ___', { x: rightBlockX, y: rowY - 44, size: 8, font });
+    page.drawText('Rang: ___/___', { x: rightBlockX, y: rowY - 58, size: 8, font });
   }
   
   // Moyenne générale - only show if both semesters are available (semester 2)
@@ -760,42 +760,28 @@ export const generateBulletinPDF = async (
   if (semestre === "2" && moyenneGeneraleAnnuelle !== null) {
     moyGenText = `Moyenne générale : ${moyenneGeneraleAnnuelle.toFixed(2)}`;
   } else if (semestre === "1") {
-    moyGenText = 'Moyenne générale : ___'; } else {
+    moyGenText = 'Moyenne générale : ___';
+  } else {
     moyGenText = `Moyenne générale : ${moyenneGeneraleAnnuelle !== null ? moyenneGeneraleAnnuelle.toFixed(2) : '___'}`;
   }
-  const moyGenWidth = font.widthOfTextAtSize(moyGenText, 7);
-  page.drawText(moyGenText, { x: leftX + (colWidth - moyGenWidth) / 2, y: row1Y - 67, size: 7, font: boldFont });
+  const moyGenWidth = font.widthOfTextAtSize(moyGenText, 8);
+  page.drawText(moyGenText, { x: leftX + (colWidth - moyGenWidth) / 2, y: rowY - 75, size: 8, font: boldFont });
 
   // DÉCISION DU CONSEIL
-  page.drawRectangle({ x: rightX, y: row1Y - boxHeight, width: colWidth, height: boxHeight, borderColor: rgb(0, 0, 0), borderWidth: 1 });
-  page.drawText('DÉCISION DU CONSEIL', { x: rightX + 8, y: row1Y - 15, size: 8, font: boldFont });
-  let decY = row1Y - 28;
-  page.drawText('Admis(e)', { x: rightX + 12, y: decY, size: 7, font });
-  drawCheckbox(rightX + 60, decY - 2, decision.admis);
-  decY -= 12;
-  page.drawText('Redouble', { x: rightX + 12, y: decY, size: 7, font });
-  drawCheckbox(rightX + 60, decY - 2, decision.redouble);
-  decY -= 12;
-  page.drawText('Exclusion', { x: rightX + 12, y: decY, size: 7, font });
-  drawCheckbox(rightX + 60, decY - 2, decision.exclusion);
-
-  // Row 2: ABSENCES (left) + OBSERVATIONS (right)
-  const row2Y = row1Y - boxHeight - rowGap;
-
-  // ABSENCES & RETARDS
-  page.drawRectangle({ x: leftX, y: row2Y - boxHeight, width: colWidth, height: boxHeight, borderColor: rgb(0, 0, 0), borderWidth: 1 });
-  page.drawText('ABSENCES & RETARDS', { x: leftX + 8, y: row2Y - 15, size: 8, font: boldFont });
-  page.drawText(`Retards: ${absencesData.retards}h`, { x: leftX + 8, y: row2Y - 30, size: 7, font });
-  page.drawText(`Abs. just.: ${absencesData.absJustifiees}`, { x: leftX + 8, y: row2Y - 42, size: 7, font });
-  page.drawText(`Abs. non just.: ${absencesData.absNonJustifiees}`, { x: leftX + 8, y: row2Y - 54, size: 7, font });
-
-  // OBSERVATIONS DU CONSEIL DES PROFESSEURS
-  page.drawRectangle({ x: rightX, y: row2Y - boxHeight, width: colWidth, height: boxHeight, borderColor: rgb(0, 0, 0), borderWidth: 1 });
-  page.drawText('OBSERVATIONS DU CONSEIL', { x: rightX + 8, y: row2Y - 15, size: 8, font: boldFont });
-  page.drawText('DES PROFESSEURS', { x: rightX + 8, y: row2Y - 27, size: 8, font: boldFont });
+  page.drawRectangle({ x: rightX, y: rowY - boxHeight, width: colWidth, height: boxHeight, borderColor: rgb(0, 0, 0), borderWidth: 1 });
+  page.drawText('DÉCISION DU CONSEIL', { x: rightX + 8, y: rowY - 15, size: 8, font: boldFont });
+  let decY = rowY - 35;
+  page.drawText('Admis(e)', { x: rightX + 15, y: decY, size: 8, font });
+  drawCheckbox(rightX + 70, decY - 2, decision.admis);
+  decY -= 18;
+  page.drawText('Redouble', { x: rightX + 15, y: decY, size: 8, font });
+  drawCheckbox(rightX + 70, decY - 2, decision.redouble);
+  decY -= 18;
+  page.drawText('Exclusion', { x: rightX + 15, y: decY, size: 8, font });
+  drawCheckbox(rightX + 70, decY - 2, decision.exclusion);
 
   // Prepare Y for signature section
-  yPos = row2Y - boxHeight - 20;
+  yPos = rowY - boxHeight - 20;
 
   // =============== SIGNATURE AND DATE ===============
   yPos -= 80;
