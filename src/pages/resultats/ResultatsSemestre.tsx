@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { ArrowLeft, FileText, Printer, Calculator, Eye, EyeOff, Loader2, Lock, CheckCircle } from "lucide-react";
+import { ArrowLeft, FileText, Printer, Calculator, Eye, EyeOff, Loader2 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useNavigate, useParams } from "react-router-dom";
 import { generateBulletinPDF } from "@/utils/pdfGenerator";
@@ -387,25 +387,6 @@ export default function ResultatsSemestre() {
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
-                
-                {(() => {
-                  const exam = exams.find(e => e.id === activeExamData.exam_id);
-                  return exam && (
-                    <Badge variant={exam.is_published ? "default" : "secondary"} className="self-center">
-                      {exam.is_published ? (
-                        <>
-                          <CheckCircle className="h-3 w-3 mr-1" />
-                          Publié
-                        </>
-                      ) : (
-                        <>
-                          <Lock className="h-3 w-3 mr-1" />
-                          Non publié
-                        </>
-                      )}
-                    </Badge>
-                  );
-                })()}
               </>
             )}
             
