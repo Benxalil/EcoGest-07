@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, BookOpen, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useClasses } from "@/hooks/useClasses";
-import { useSubjects } from "@/hooks/useSubjects";
+import { useSubjectsOptimized as useSubjects } from "@/hooks/useSubjectsOptimized";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useTeacherId } from "@/hooks/useTeacherId";
 import { formatClassName } from "@/utils/classNameFormatter";

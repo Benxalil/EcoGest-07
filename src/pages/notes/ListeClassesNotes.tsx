@@ -7,7 +7,7 @@ import { ArrowLeft, Users, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useClasses } from "@/hooks/useClasses";
 import { useUserRole } from "@/hooks/useUserRole";
-import { useTeacherData } from "@/hooks/useTeacherData";
+import { useTeacherDataOptimized as useTeacherData } from "@/hooks/useTeacherDataOptimized";
 import { formatClassName } from "@/utils/classNameFormatter";
 
 // Helper function to define academic order
@@ -79,15 +79,32 @@ export default function ListeClassesNotes() {
   // Trier les classes dans l'ordre académique
   const sortedClasses = sortClassesAcademically(classesFiltered);
 
+  // ✅ Skeleton amélioré pour meilleure UX
   if (loading || teacherDataLoading) {
     return (
       <Layout>
-        <div className="container mx-auto py-8">
-          <div className="flex items-center justify-center min-h-[400px]">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-              <p>Chargement des classes...</p>
-            </div>
+        <div className="container mx-auto p-6">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="h-9 w-24 bg-muted animate-pulse rounded-md"></div>
+            <div className="h-8 w-48 bg-muted animate-pulse rounded-md"></div>
+          </div>
+          <div className="mb-6">
+            <div className="h-4 w-96 bg-muted animate-pulse rounded mb-4"></div>
+            <div className="h-10 w-full max-w-md bg-muted animate-pulse rounded"></div>
+          </div>
+          <div className="space-y-2">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="flex items-center justify-between p-4 bg-card rounded-lg border">
+                <div className="flex items-center gap-4 flex-1">
+                  <div className="h-5 w-5 bg-muted animate-pulse rounded"></div>
+                  <div className="space-y-2 flex-1">
+                    <div className="h-5 w-48 bg-muted animate-pulse rounded"></div>
+                    <div className="h-4 w-32 bg-muted animate-pulse rounded"></div>
+                  </div>
+                </div>
+                <div className="h-9 w-32 bg-muted animate-pulse rounded-md"></div>
+              </div>
+            ))}
           </div>
         </div>
       </Layout>

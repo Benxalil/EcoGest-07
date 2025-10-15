@@ -70,9 +70,13 @@ export const QueryKeys = {
   teacher: (teacherId: string) => ['teacher', teacherId],
   
   // Subjects
-  subjects: (schoolId?: string, classId?: string) => 
-    ['subjects', schoolId, classId].filter(Boolean),
+  subjects: (schoolId?: string, classId?: string, teacherId?: string | null) => 
+    ['subjects', schoolId, classId, teacherId].filter(Boolean),
   subject: (subjectId: string) => ['subject', subjectId],
+  
+  // Teacher Data
+  teacherData: (teacherId?: string | null) => 
+    ['teacher-data', teacherId].filter(Boolean),
   
   // Exams
   exams: (schoolId?: string, classId?: string) => 

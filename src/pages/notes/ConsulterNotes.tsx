@@ -9,7 +9,7 @@ import { ArrowLeft, BookOpen, Users, Save, Edit3 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useClasses } from "@/hooks/useClasses";
 import { useStudents } from "@/hooks/useStudents";
-import { useSubjects } from "@/hooks/useSubjects";
+import { useSubjectsOptimized as useSubjects } from "@/hooks/useSubjectsOptimized";
 import { useExams } from "@/hooks/useExams";
 import { useNotesSync, UnifiedNote } from "@/hooks/useNotesSync";
 import { formatClassName } from "@/utils/classNameFormatter";
