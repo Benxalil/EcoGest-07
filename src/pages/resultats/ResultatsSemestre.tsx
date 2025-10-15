@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { ArrowLeft, FileText, Printer, Calculator, Eye, Loader2, RefreshCw } from "lucide-react";
+import { ArrowLeft, FileText, Printer, Calculator, Eye, Loader2, Lock, CheckCircle } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { generateBulletinPDF } from "@/utils/pdfGenerator";
 import { BulletinClasse } from "@/components/resultats/BulletinClasse";
+import { PublierResultatsModal } from "@/components/examens/PublierResultatsModal";
 import { useResults } from "@/hooks/useResults";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useExams } from "@/hooks/useExams";
 import { formatClassName } from "@/utils/classNameFormatter";
 
 interface Student {
@@ -32,6 +35,7 @@ export default function ResultatsSemestre() {
   const [showCalculatedRank, setShowCalculatedRank] = useState(false);
   const [showBulletinClasse, setShowBulletinClasse] = useState(false);
   const [examInfo, setExamInfo] = useState<any>(null);
+  const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
   const navigate = useNavigate();
   const { classeId, semestre, examId } = useParams();
   
@@ -57,6 +61,7 @@ export default function ResultatsSemestre() {
     contextSemester: normalizedSemestre // Passer le semestre NORMALISÉ pour filtrer les notes de Composition
   });
   const { userProfile } = useUserRole();
+  const { exams, updateExam } = useExams(classeId);
   
   // Récupérer les données de la classe et de l'examen
   const classData = getClassResults(classeId || '');
@@ -354,18 +359,50 @@ export default function ResultatsSemestre() {
             </div>
           </div>
           
-          <div className="flex space-x-2">
-            <Button
-              variant="outline"
-              onClick={() => {
-                console.log('🔄 Rafraîchissement manuel déclenché par l\'utilisateur');
-                refetch();
-              }}
-              className="flex items-center bg-green-500 hover:bg-green-600 text-white"
-            >
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Actualiser
-            </Button>
+          <div className="flex flex-wrap gap-2">
+            {activeExamData?.exam_id && (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsPublishModalOpen(true)}
+                  className="flex items-center bg-primary hover:bg-primary/90 text-primary-foreground"
+                >
+                  {(() => {
+                    const exam = exams.find(e => e.id === activeExamData.exam_id);
+                    return exam?.is_published ? (
+                      <>
+                        <CheckCircle className="h-4 w-4 mr-2" />
+                        Gérer Publication
+                      </>
+                    ) : (
+                      <>
+                        <Lock className="h-4 w-4 mr-2" />
+                        Gérer Publication
+                      </>
+                    );
+                  })()}
+                </Button>
+                
+                {(() => {
+                  const exam = exams.find(e => e.id === activeExamData.exam_id);
+                  return exam && (
+                    <Badge variant={exam.is_published ? "default" : "secondary"} className="self-center">
+                      {exam.is_published ? (
+                        <>
+                          <CheckCircle className="h-3 w-3 mr-1" />
+                          Publié
+                        </>
+                      ) : (
+                        <>
+                          <Lock className="h-3 w-3 mr-1" />
+                          Non publié
+                        </>
+                      )}
+                    </Badge>
+                  );
+                })()}
+              </>
+            )}
             
             <Button
               variant="outline"
@@ -717,6 +754,31 @@ export default function ResultatsSemestre() {
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* Modal de gestion de publication */}
+      {activeExamData?.exam_id && (
+        <PublierResultatsModal
+          isOpen={isPublishModalOpen}
+          onClose={() => setIsPublishModalOpen(false)}
+          examen={(() => {
+            const exam = exams.find(e => e.id === activeExamData.exam_id);
+            if (!exam) return null;
+            
+            return {
+              id: exam.id,
+              titre: exam.title,
+              type: exam.semester || '',
+              semestre: exam.semester || '',
+              dateExamen: exam.exam_date || '',
+              classes: exam.classes ? [exam.classes.name] : [],
+              isPublished: exam.is_published
+            };
+          })()}
+          onUpdate={() => {
+            refetch();
+          }}
+        />
+      )}
     </Layout>
   );
 }

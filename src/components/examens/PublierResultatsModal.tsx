@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle, XCircle, Eye, EyeOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Examen {
   id: string;
@@ -37,9 +38,13 @@ export const PublierResultatsModal = ({
     setIsLoading(true);
     
     try {
-      // TODO: Implémenter la logique de publication via useExams hook
-      // Pour l'instant, on simule la publication
-      console.log('Publication des résultats pour l\'examen:', examen.id);
+      // Mettre à jour le statut de publication dans la base de données
+      const { error } = await supabase
+        .from('exams')
+        .update({ is_published: !examen.isPublished })
+        .eq('id', examen.id);
+
+      if (error) throw error;
       
       toast({
         title: "Succès",
