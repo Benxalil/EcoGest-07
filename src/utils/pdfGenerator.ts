@@ -237,14 +237,21 @@ export const generateBulletinPDF = async (
   const notesEleve = await getNotesEleve();
 
   const getMoyenneSemestre = (semestreNum: string) => {
+    // Normaliser les formats de semestre pour la recherche
+    const semestreFormats = [
+      semestreNum === "1" ? "1er_semestre" : "2eme_semestre",
+      semestreNum === "1" ? "semestre1" : "semestre2",
+      semestreNum
+    ];
+    
     let totalPoints = 0;
     let totalCoef = 0;
     
     matieresClasse.forEach((matiere) => {
-    // Trouver les notes de cette matière pour l'élève
+    // Trouver les notes de cette matière pour l'élève avec normalisation du semestre
     const notesMatiere = notesEleve.filter(note => 
       note.subject_id === matiere.id && 
-      note.semester === semestreNum
+      (semestreFormats.includes(note.semester) || !note.semester)
     );
       
       if (notesMatiere.length > 0) {

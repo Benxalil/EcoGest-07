@@ -464,7 +464,12 @@ export default function ResultatsSemestre() {
           <BulletinClasse
             classe={classe}
             eleves={getElevesWithRank()}
-            semestre={getSemestreLabel()}
+            matieresClasse={matieresClasse}
+            semestre={semestre || "1"}
+            schoolSystem={schoolSystem}
+            classeId={classeId}
+            examId={examId}
+            examData={examData}
             onClose={() => setShowBulletinClasse(false)}
           />
         )}

@@ -151,37 +151,73 @@ export const generateBulletinClassePDF = async (
       return notesParMatiere;
     };
 
-    const getEleveStatistics = (eleveId: string) => {
-      const notesParMatiere = getEleveNotesForAllMatieres(eleveId);
-      const semestreKey = semestre === "1" ? "semestre1" : "semestre2";
+    const getEleveStatistics = async (eleveId: string) => {
+      // Récupérer les notes depuis Supabase avec la normalisation du semestre
+      const semestreFormats = [
+        semestre === "1" ? "1er_semestre" : "2eme_semestre",
+        semestre === "1" ? "semestre1" : "semestre2",
+        semestre
+      ];
       
-      let totalNotesDevoir = 0;
-      let totalNotesComposition = 0;
-      let countDevoir = 0;
-      let countComposition = 0;
-      
-      Object.values(notesParMatiere).forEach((notes) => {
-        const notesSemestre = notes[semestreKey as keyof typeof notes];
-        if (notesSemestre && typeof notesSemestre === 'object' && 'devoir' in notesSemestre && 'composition' in notesSemestre) {
-          const devoirValue = typeof notesSemestre.devoir === 'string' ? parseFloat(notesSemestre.devoir) : notesSemestre.devoir;
-          const compositionValue = typeof notesSemestre.composition === 'string' ? parseFloat(notesSemestre.composition) : notesSemestre.composition;
-          
-          if (devoirValue !== -1 && !isNaN(devoirValue)) {
-            totalNotesDevoir += devoirValue;
+      try {
+        // Récupérer les notes de l'élève depuis Supabase
+        const { data: grades } = await supabase
+          .from('grades')
+          .select(`
+            *,
+            subjects!inner(id, name, coefficient)
+          `)
+          .eq('student_id', eleveId)
+          .in('subject_id', matieresClasse.map(m => String(m.id)));
+        
+        if (!grades || grades.length === 0) {
+          return { moyenneDevoir: 0, moyenneComposition: 0, moyenneGenerale: 0 };
+        }
+        
+        // Filtrer les notes pour le semestre actuel
+        const gradesForSemester = grades.filter(g => 
+          semestreFormats.includes(g.semester) || !g.semester
+        );
+        
+        // Séparer les notes par type (devoir / composition)
+        const devoirGrades = gradesForSemester.filter(g => 
+          g.exam_type?.toLowerCase() === 'devoir'
+        );
+        const compositionGrades = gradesForSemester.filter(g => 
+          g.exam_type?.toLowerCase() === 'composition'
+        );
+        
+        // Calculer les moyennes
+        let totalDevoir = 0, countDevoir = 0;
+        let totalComposition = 0, countComposition = 0;
+        
+        devoirGrades.forEach(grade => {
+          const value = parseFloat(String(grade.grade_value));
+          if (!isNaN(value)) {
+            totalDevoir += value;
             countDevoir++;
           }
-          if (compositionValue !== -1 && !isNaN(compositionValue)) {
-            totalNotesComposition += compositionValue;
+        });
+        
+        compositionGrades.forEach(grade => {
+          const value = parseFloat(String(grade.grade_value));
+          if (!isNaN(value)) {
+            totalComposition += value;
             countComposition++;
           }
-        }
-      });
-      
-      const moyenneDevoir = countDevoir > 0 ? totalNotesDevoir / countDevoir : 0;
-      const moyenneComposition = countComposition > 0 ? totalNotesComposition / countComposition : 0;
-      const moyenneGenerale = (countDevoir > 0 && countComposition > 0) ? (moyenneDevoir + moyenneComposition) / 2 : 0;
-      
-      return { moyenneDevoir, moyenneComposition, moyenneGenerale };
+        });
+        
+        const moyenneDevoir = countDevoir > 0 ? totalDevoir / countDevoir : 0;
+        const moyenneComposition = countComposition > 0 ? totalComposition / countComposition : 0;
+        const moyenneGenerale = (countDevoir > 0 && countComposition > 0) 
+          ? (moyenneDevoir + moyenneComposition) / 2 
+          : (countDevoir > 0 ? moyenneDevoir : (countComposition > 0 ? moyenneComposition : 0));
+        
+        return { moyenneDevoir, moyenneComposition, moyenneGenerale };
+      } catch (error) {
+        console.error('Erreur récupération notes:', error);
+        return { moyenneDevoir: 0, moyenneComposition: 0, moyenneGenerale: 0 };
+      }
     };
 
     const getDateNaissance = async (eleveId: string): Promise<string> => {
@@ -274,7 +310,7 @@ export const generateBulletinClassePDF = async (
     const elevesWithStats: StudentWithStats[] = [];
     
     for (const eleve of eleves) {
-      const stats = getEleveStatistics(eleve.id);
+      const stats = await getEleveStatistics(eleve.id);
       const dateNaissance = await getDateNaissance(eleve.id);
       const lieuNaissance = await getLieuNaissance(eleve.id);
       // Pour la moyenne générale, on utilise toujours la base 20 (standard académique)
