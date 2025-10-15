@@ -14,6 +14,8 @@ import { useExams } from "@/hooks/useExams";
 import { useNotesSync, UnifiedNote } from "@/hooks/useNotesSync";
 import { formatClassName } from "@/utils/classNameFormatter";
 import { ConfirmDeleteNotesDialog } from "@/components/notes/ConfirmDeleteNotesDialog";
+import { useUserRole } from "@/hooks/useUserRole";
+import { useTeacherId } from "@/hooks/useTeacherId";
 interface Student {
   id: string;
   nom: string;
@@ -63,10 +65,16 @@ export default function ConsulterNotes() {
     students,
     loading: studentsLoading
   } = useStudents();
+  
+  // ✅ Obtenir l'ID de l'enseignant et son rôle
+  const { isTeacher } = useUserRole();
+  const { teacherId } = useTeacherId();
+  
+  // ✅ Filtrer les matières selon le rôle (enseignant ou admin)
   const {
     subjects,
     loading: subjectsLoading
-  } = useSubjects(classeId || '');
+  } = useSubjects(classeId || '', isTeacher() ? teacherId : undefined);
   const {
     exams,
     loading: examsLoading
@@ -331,7 +339,11 @@ export default function ConsulterNotes() {
           </div>
 
           {subjects.length === 0 && <div className="text-center py-12">
-              <p className="text-muted-foreground">Aucune matière disponible pour cette classe.</p>
+              <p className="text-muted-foreground">
+                {isTeacher() 
+                  ? "Vous n'enseignez aucune matière dans cette classe."
+                  : "Aucune matière disponible pour cette classe."}
+              </p>
             </div>}
         </div>
       </Layout>;

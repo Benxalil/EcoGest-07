@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { useClasses } from "@/hooks/useClasses";
 import { useSubjects } from "@/hooks/useSubjects";
 import { useUserRole } from "@/hooks/useUserRole";
-import { useTeacherData } from "@/hooks/useTeacherData";
+import { useTeacherId } from "@/hooks/useTeacherId";
 import { formatClassName } from "@/utils/classNameFormatter";
 
 interface Classe {
@@ -35,23 +35,13 @@ export default function ListeMatieres() {
   const navigate = useNavigate();
   const { classeId } = useParams();
   const { classes } = useClasses();
-  const { subjects } = useSubjects(classeId);
   const { isTeacher } = useUserRole();
   
-  // ✅ Utiliser useTeacherData pour obtenir les classes et matières de l'enseignant
-  const { classes: teacherClasses } = useTeacherData();
+  // ✅ Obtenir l'ID de l'enseignant pour filtrer ses matières
+  const { teacherId } = useTeacherId();
   
-  // Extraire les IDs des matières que l'enseignant enseigne via schedules
-  const [teacherSubjectIds, setTeacherSubjectIds] = useState<string[]>([]);
-  
-  useEffect(() => {
-    if (isTeacher() && teacherClasses.length > 0 && subjects) {
-      // Les enseignants n'ont accès qu'aux matières des classes qu'ils enseignent
-      const classIds = teacherClasses.map(c => c.id);
-      const teacherSubjects = subjects.filter((s: any) => classIds.includes(s.class_id));
-      setTeacherSubjectIds(teacherSubjects.map((s: any) => s.id));
-    }
-  }, [isTeacher, teacherClasses, subjects]);
+  // ✅ useSubjects filtre automatiquement selon teacherId
+  const { subjects } = useSubjects(classeId, isTeacher() ? teacherId : undefined);
 
   useEffect(() => {
     // Récupérer les informations de la classe
@@ -67,9 +57,9 @@ export default function ListeMatieres() {
       }
     }
 
-    // Récupérer les matières spécifiques à cette classe
+    // ✅ Récupérer les matières (déjà filtrées par useSubjects)
     if (subjects) {
-      let matieresForClasse = subjects.map((s: any) => ({
+      const matieresForClasse = subjects.map((s: any) => ({
         id: s.id,
         nom: s.name,
         abreviation: s.abbreviation || '',
@@ -79,14 +69,9 @@ export default function ListeMatieres() {
         maxScore: s.hours_per_week || 20
       }));
 
-      // Filtrer pour les enseignants - seulement leurs matières
-      if (isTeacher() && teacherSubjectIds.length > 0) {
-        matieresForClasse = matieresForClasse.filter(m => teacherSubjectIds.includes(m.id));
-      }
-
       setMatieres(matieresForClasse);
     }
-  }, [classeId, classes, subjects, isTeacher, teacherSubjectIds]);
+  }, [classeId, classes, subjects]);
 
   const matieresFiltered = matieres.filter((matiere) =>
     matiere.nom.toLowerCase().includes(searchTerm.toLowerCase())
@@ -182,7 +167,11 @@ export default function ListeMatieres() {
         {matieresFiltered.length === 0 && (
           <div className="text-center py-12">
             <p className="text-muted-foreground">
-              {searchTerm ? "Aucune matière trouvée pour cette recherche." : "Aucune matière disponible."}
+              {searchTerm 
+                ? "Aucune matière trouvée pour cette recherche." 
+                : isTeacher()
+                  ? "Vous n'enseignez aucune matière dans cette classe."
+                  : "Aucune matière disponible pour cette classe."}
             </p>
           </div>
         )}
