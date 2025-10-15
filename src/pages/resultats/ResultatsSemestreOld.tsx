@@ -402,37 +402,37 @@ export default function ResultatsSemestre() {
       <div className="container mx-auto p-6">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate('/resultats')} className="hover:bg-gray-100">
+            <Button variant="ghost" size="icon" onClick={() => navigate('/resultats')} className="hover:bg-accent">
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div>
-              <h1 className="text-xl font-bold text-blue-600">
+              <h1 className="text-xl font-bold text-primary">
                 Liste des élèves pour cette classe (Nombre d'élèves : {eleves.length})
               </h1>
             </div>
           </div>
           
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" className="bg-orange-500 text-white hover:bg-orange-600 border-orange-500" onClick={handleBulletinClasse}>
+            <Button variant="outline" size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90 border-primary" onClick={handleBulletinClasse}>
               Bulletin du Classe
             </Button>
-            <Button variant="outline" size="sm" className="bg-blue-500 text-white hover:bg-blue-600 border-blue-500" onClick={handleCalculRang}>
+            <Button variant="outline" size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90 border-primary" onClick={handleCalculRang}>
               Calcul du Rang
             </Button>
           </div>
         </div>
 
         {/* En-tête du semestre */}
-        <div className="bg-blue-600 text-white p-4 rounded-t-lg">
+        <div className="bg-primary text-primary-foreground p-4 rounded-t-lg">
           <h2 className="text-lg font-bold text-center">{getSemestreLabel()}</h2>
         </div>
 
         {/* Section "Tous les bulletins" */}
-        <div className="bg-black text-white p-3 flex justify-end">
+        <div className="bg-secondary text-secondary-foreground p-3 flex justify-end">
           <span className="text-sm font-medium px-[87px] mx-[206px]">Tous les bulletins</span>
         </div>
 
-        <div className="border rounded-b-lg bg-white shadow">
+        <div className="border rounded-b-lg bg-card shadow">
           <Table>
             <TableHeader>
               <TableRow>
@@ -440,15 +440,15 @@ export default function ResultatsSemestre() {
                 {showCalculatedRank && <TableHead className="w-16">Rang</TableHead>}
                 <TableHead>Nom et Prénom</TableHead>
                 {(isExamView && examInfo?.type !== "Composition") ? (
-                  <TableHead colSpan={2} className="text-center bg-green-50">
+                  <TableHead colSpan={2} className="text-center bg-green-100 dark:bg-green-900/30">
                     Note
                   </TableHead>
                 ) : (
                   <>
-                    <TableHead colSpan={2} className="text-center bg-blue-50">
+                    <TableHead colSpan={2} className="text-center bg-blue-100 dark:bg-blue-900/30">
                       Devoir
                     </TableHead>
-                    <TableHead colSpan={2} className="text-center bg-green-50">
+                    <TableHead colSpan={2} className="text-center bg-green-100 dark:bg-green-900/30">
                       Composition
                     </TableHead>
                   </>
@@ -462,15 +462,15 @@ export default function ResultatsSemestre() {
                 <TableHead></TableHead>
                 {(isExamView && examInfo?.type !== "Composition") ? (
                   <>
-                    <TableHead className="text-center bg-green-50 text-xs">Notes</TableHead>
-                    <TableHead className="text-center bg-green-50 text-xs">Moyenne</TableHead>
+                    <TableHead className="text-center bg-green-100 dark:bg-green-900/30 text-xs">Notes</TableHead>
+                    <TableHead className="text-center bg-green-100 dark:bg-green-900/30 text-xs">Moyenne</TableHead>
                   </>
                 ) : (
                   <>
-                    <TableHead className="text-center bg-blue-50 text-xs">Notes</TableHead>
-                    <TableHead className="text-center bg-blue-50 text-xs">Moyenne</TableHead>
-                    <TableHead className="text-center bg-green-50 text-xs">Notes</TableHead>
-                    <TableHead className="text-center bg-green-50 text-xs">Moyenne</TableHead>
+                    <TableHead className="text-center bg-blue-100 dark:bg-blue-900/30 text-xs">Notes</TableHead>
+                    <TableHead className="text-center bg-blue-100 dark:bg-blue-900/30 text-xs">Moyenne</TableHead>
+                    <TableHead className="text-center bg-green-100 dark:bg-green-900/30 text-xs">Notes</TableHead>
+                    <TableHead className="text-center bg-green-100 dark:bg-green-900/30 text-xs">Moyenne</TableHead>
                   </>
                 )}
                 <TableHead></TableHead>

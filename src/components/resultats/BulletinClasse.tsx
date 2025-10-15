@@ -5,6 +5,7 @@ import { Download } from "lucide-react";
 import { generateBulletinClassePDF } from "@/utils/pdfGeneratorClasse";
 import { useResults } from "@/hooks/useResults";
 import { supabase } from "@/integrations/supabase/client";
+import { formatClassName } from "@/utils/classNameFormatter";
 
 interface Student {
   id: string;
@@ -68,27 +69,41 @@ export const BulletinClasse: React.FC<BulletinClasseProps> = ({
   examData
 }) => {
   const [studentsData, setStudentsData] = useState<any[]>([]);
+  const [classData, setClassData] = useState<any>(null);
   const { getStudentExamStats } = useResults();
 
-  // Récupérer les données des élèves depuis la base de données
+  // Récupérer les données des élèves et de la classe depuis la base de données
   useEffect(() => {
-    const fetchStudentsData = async () => {
+    const fetchData = async () => {
       if (!classeId) return;
       
-      const { data, error } = await supabase
+      // Récupérer les élèves
+      const { data: studentsData, error: studentsError } = await supabase
         .from('students')
         .select('id, first_name, last_name, date_of_birth, student_number')
         .eq('class_id', classeId);
       
-      if (error) {
-        console.error('Erreur lors de la récupération des élèves:', error);
-        return;
+      if (studentsError) {
+        console.error('Erreur lors de la récupération des élèves:', studentsError);
+      } else {
+        setStudentsData(studentsData || []);
       }
       
-      setStudentsData(data || []);
+      // Récupérer les données de la classe
+      const { data: classInfo, error: classError } = await supabase
+        .from('classes')
+        .select('id, name, section, level')
+        .eq('id', classeId)
+        .single();
+      
+      if (classError) {
+        console.error('Erreur lors de la récupération de la classe:', classError);
+      } else {
+        setClassData(classInfo);
+      }
     };
 
-    fetchStudentsData();
+    fetchData();
   }, [classeId]);
 
   // Fonction pour récupérer les statistiques d'un élève via le hook useResults
@@ -184,7 +199,7 @@ export const BulletinClasse: React.FC<BulletinClasseProps> = ({
         <div className="text-center space-y-2">
           <h2 className="text-2xl font-bold text-primary">BULLETIN COLLECTIF DE LA CLASSE</h2>
           <div className="text-lg font-semibold text-primary/90">
-            {classe.session} {classe.libelle}
+            {formatClassName({ name: classData?.class_name || classe.session, section: classData?.class_section || classe.libelle })}
           </div>
           <div className="text-base text-primary/80">
             {getExamLabel()} - Effectif: {eleves.length} élèves

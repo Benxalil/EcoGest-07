@@ -181,8 +181,8 @@ export default function ResultatsEnfant() {
 
         {/* Affichage du nom de l'enfant sélectionné */}
         {selectedChild && (
-          <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <div className="flex items-center gap-2 text-blue-700">
+          <div className="mb-4 p-4 bg-primary/10 dark:bg-primary/20 border border-primary/20 rounded-lg">
+            <div className="flex items-center gap-2 text-primary">
               <Book className="h-4 w-4" />
               <span className="font-medium">
                 Consultation des résultats de {selectedChild.first_name} {selectedChild.last_name}
@@ -208,7 +208,7 @@ export default function ResultatsEnfant() {
               }}>
                 <DialogTrigger asChild>
                   <div
-                    className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer group"
+                    className="flex items-center justify-between p-4 bg-card border border-border rounded-lg hover:bg-accent transition-colors cursor-pointer group"
                     onClick={() => handleClasseClick(classe)}
                   >
                     <div className="flex items-center gap-3">
@@ -243,20 +243,20 @@ export default function ResultatsEnfant() {
                       </div>
                     ) : (
                       <div className="space-y-3 max-h-96 overflow-y-auto">
-                        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                          <div className="flex items-center gap-2 text-blue-700">
+                        <div className="mb-4 p-3 bg-primary/10 dark:bg-primary/20 border border-primary/20 rounded-lg">
+                          <div className="flex items-center gap-2 text-primary">
                             <Book className="h-4 w-4" />
                             <span className="font-medium text-sm">
                               {classExamens.length} examen{classExamens.length > 1 ? 's' : ''} disponible{classExamens.length > 1 ? 's' : ''}
                             </span>
                           </div>
-                          <p className="text-blue-600 text-xs mt-1">
+                          <p className="text-primary/80 text-xs mt-1">
                             Cliquez sur un examen pour consulter les résultats
                           </p>
                         </div>
                         
                         {classExamens.map((examen) => (
-                          <div key={examen.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                          <div key={examen.id} className="border border-border rounded-lg p-4 hover:bg-accent transition-colors">
                             <div className="flex items-start justify-between">
                               <div className="flex items-start gap-3 flex-1">
                                 {getExamenIcon(examen.type)}
@@ -267,20 +267,20 @@ export default function ResultatsEnfant() {
                                       {examen.type}
                                     </span>
                                   </div>
-                                  <div className="flex items-center gap-4 text-sm text-gray-600">
-                                    <div className="flex items-center gap-1">
-                                      <Calendar className="h-3 w-3" />
-                                      {format(new Date(examen.dateExamen), 'dd MMMM yyyy', { locale: fr })}
-                                    </div>
-                                    <span className="text-gray-400">•</span>
-                                    <span>{examen.anneeAcademique}</span>
-                                  </div>
+                                 <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                   <div className="flex items-center gap-1">
+                                     <Calendar className="h-3 w-3" />
+                                     {format(new Date(examen.dateExamen), 'dd MMMM yyyy', { locale: fr })}
+                                   </div>
+                                   <span className="text-muted-foreground">•</span>
+                                   <span>{examen.anneeAcademique}</span>
+                                 </div>
                                 </div>
                               </div>
-                              <div className="ml-4">
+                               <div className="ml-4">
                                 <Button 
                                   size="sm"
-                                  className="bg-blue-500 hover:bg-blue-600 text-white"
+                                  className="bg-primary hover:bg-primary/90 text-primary-foreground"
                                   onClick={() => handleConsulterExamen(examen)}
                                 >
                                   Consulter les notes

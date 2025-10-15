@@ -214,11 +214,11 @@ export default function ResultatsSemestre() {
   };
 
   const getGradeColor = (note: number) => {
-    if (note >= 16) return "text-green-600 font-semibold";
-    if (note >= 14) return "text-blue-600 font-semibold";
-    if (note >= 12) return "text-yellow-600 font-semibold";
-    if (note >= 10) return "text-orange-600 font-semibold";
-    return "text-red-600 font-semibold";
+    if (note >= 16) return "text-green-600 dark:text-green-400 font-semibold";
+    if (note >= 14) return "text-blue-600 dark:text-blue-400 font-semibold";
+    if (note >= 12) return "text-yellow-600 dark:text-yellow-400 font-semibold";
+    if (note >= 10) return "text-orange-600 dark:text-orange-400 font-semibold";
+    return "text-red-600 dark:text-red-400 font-semibold";
   };
 
   // Affichage de chargement
@@ -278,8 +278,8 @@ export default function ResultatsSemestre() {
             </Button>
             <div>
               <h1 className="text-2xl font-bold">{getSemestreLabel()}</h1>
-              <p className="text-gray-600">
-                {classe.session} {classe.libelle} - {classe.effectif} élèves
+              <p className="text-muted-foreground">
+                {formatClassName({ name: classData?.class_name || '', section: classData?.class_section || '' })} - {classe.effectif} élèves
               </p>
               {isExamView && examData && (
                 <p className="text-sm text-gray-500">
@@ -319,7 +319,7 @@ export default function ResultatsSemestre() {
         </div>
 
         {/* Tableau des résultats */}
-        <div className="bg-white rounded-lg shadow">
+        <div className="bg-card rounded-lg shadow border">
           <Table>
             <TableHeader>
               <TableRow>

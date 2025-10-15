@@ -94,6 +94,7 @@ export default function ResultatsSemestre() {
     id: classData.class_id,
     session: classData.class_level,
     libelle: classData.class_section,
+    name: classData.class_name,
     effectif: classData.effectif
   } : null;
   
@@ -278,11 +279,11 @@ export default function ResultatsSemestre() {
   };
 
   const getGradeColor = (note: number) => {
-    if (note >= 16) return "text-green-600 font-semibold";
-    if (note >= 14) return "text-blue-600 font-semibold";
-    if (note >= 12) return "text-yellow-600 font-semibold";
-    if (note >= 10) return "text-orange-600 font-semibold";
-    return "text-red-600 font-semibold";
+    if (note >= 16) return "text-green-600 dark:text-green-400 font-semibold";
+    if (note >= 14) return "text-blue-600 dark:text-blue-400 font-semibold";
+    if (note >= 12) return "text-yellow-600 dark:text-yellow-400 font-semibold";
+    if (note >= 10) return "text-orange-600 dark:text-orange-400 font-semibold";
+    return "text-red-600 dark:text-red-400 font-semibold";
   };
 
   // Affichage de chargement
@@ -341,7 +342,7 @@ export default function ResultatsSemestre() {
               Retour
             </Button>
             <div>
-              <h1 className="text-2xl font-bold">{formatClassName({ name: classe.session, section: classe.libelle })}</h1>
+              <h1 className="text-2xl font-bold">{formatClassName({ name: classe.name || classe.session, section: classe.libelle })}</h1>
               <p className="text-muted-foreground">
                 Liste des élèves pour cette classe (Nombre d'élèves : {eleves.length})
               </p>
@@ -472,10 +473,10 @@ export default function ResultatsSemestre() {
                     {isCompositionView ? (
                       <>
                         {/* Colonne Devoir */}
-                        <TableCell className="text-center bg-blue-50 border-r-2 border-gray-300">
+                        <TableCell className="text-center bg-blue-100 dark:bg-blue-900/30 border-r-2 border-border">
                           <div className="grid grid-cols-2 gap-2">
                             {/* Total des notes devoir */}
-                            <div className="text-sm font-semibold text-gray-700">
+                            <div className="text-sm font-semibold text-foreground">
                               {(() => {
                                 const devoirNotesSum = stats.notesList
                                   .filter(note => note.devoirNote && note.devoirNote > 0)
@@ -485,17 +486,17 @@ export default function ResultatsSemestre() {
                               })()}
                             </div>
                             {/* Moyenne devoir */}
-                            <div className={`text-sm font-bold ${stats.moyenneDevoir > 0 ? getGradeColor(stats.moyenneDevoir) : "text-gray-400"}`}>
+                            <div className={`text-sm font-bold ${stats.moyenneDevoir > 0 ? getGradeColor(stats.moyenneDevoir) : "text-muted-foreground"}`}>
                               {stats.moyenneDevoir > 0 ? `${stats.moyenneDevoir.toFixed(2)} / 20` : "-"}
                             </div>
                           </div>
                         </TableCell>
                         
                         {/* Colonne Composition */}
-                        <TableCell className="text-center bg-green-50">
+                        <TableCell className="text-center bg-green-100 dark:bg-green-900/30">
                           <div className="grid grid-cols-2 gap-2">
                             {/* Total des notes composition */}
-                            <div className="text-sm font-semibold text-gray-700">
+                            <div className="text-sm font-semibold text-foreground">
                               {(() => {
                                 const compositionNotesSum = stats.notesList
                                   .filter(note => note.compositionNote && note.compositionNote > 0)
@@ -505,7 +506,7 @@ export default function ResultatsSemestre() {
                               })()}
                             </div>
                             {/* Moyenne composition */}
-                            <div className={`text-sm font-bold ${stats.moyenneComposition > 0 ? getGradeColor(stats.moyenneComposition) : "text-gray-400"}`}>
+                            <div className={`text-sm font-bold ${stats.moyenneComposition > 0 ? getGradeColor(stats.moyenneComposition) : "text-muted-foreground"}`}>
                               {stats.moyenneComposition > 0 ? `${stats.moyenneComposition.toFixed(2)} / 20` : "-"}
                             </div>
                           </div>
@@ -520,12 +521,12 @@ export default function ResultatsSemestre() {
                               <span className={`text-lg font-bold ${getGradeColor(stats.moyenneGenerale)}`}>
                                 {stats.moyenneGenerale.toFixed(2)} / 20
                               </span>
-                              <span className="text-xs text-gray-500 mt-1">
+                              <span className="text-xs text-muted-foreground mt-1">
                                 ({stats.notesList.length} matière{stats.notesList.length > 1 ? 's' : ''})
                               </span>
                             </div>
                           ) : (
-                            <span className="text-gray-400 italic">Aucune note</span>
+                            <span className="text-muted-foreground italic">Aucune note</span>
                           )}
                         </TableCell>
                       </>
