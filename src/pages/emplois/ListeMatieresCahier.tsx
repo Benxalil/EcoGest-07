@@ -106,7 +106,9 @@ export default function ListeMatieresCahier() {
                   Aucune matière
                 </h3>
                 <p className="text-muted-foreground text-center mb-4">
-                  Aucune matière n'a été configurée pour cette classe.
+                  {isTeacher() && !isAdmin() 
+                    ? "Vous n'enseignez aucune matière dans cette classe."
+                    : "Aucune matière n'a été configurée pour cette classe."}
                 </p>
                 <Button onClick={() => navigate('/matieres')}>
                   Gérer les matières

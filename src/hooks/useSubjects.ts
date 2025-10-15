@@ -49,46 +49,66 @@ export const useSubjects = (classId?: string, teacherId?: string | null) => {
       if (teacherId) {
         console.log('👨‍🏫 Filtering by teacher:', teacherId);
         
+        // TOUJOURS filtrer par classe pour un enseignant
+        if (!classId) {
+          console.log('⚠️ classId is required when filtering by teacher');
+          setSubjects([]);
+          setLoading(false);
+          return;
+        }
+        
         // Récupérer les matières via les emplois du temps (schedules)
-        const schedulesQuery = supabase
+        // Utiliser à la fois subject (nom) et subject_id
+        const { data: schedules, error: schedError } = await supabase
           .from('schedules')
-          .select('subject_id')
+          .select('subject, subject_id')
           .eq('teacher_id', teacherId)
           .eq('school_id', userProfile.schoolId)
-          .not('subject_id', 'is', null);
-
-        // Filtrer par classe si fourni
-        if (classId) {
-          schedulesQuery.eq('class_id', classId);
-          console.log('🎯 Filtering by class:', classId);
-        }
-
-        const { data: schedules, error: schedError } = await schedulesQuery;
+          .eq('class_id', classId);  // TOUJOURS filtrer par classe
         
         console.log('📅 Schedules found:', schedules);
 
         if (schedError) throw schedError;
 
-        // Extraire les IDs uniques des matières
-        const subjectIds = Array.from(new Set(schedules?.map(s => s.subject_id).filter(Boolean))) || [];
+        // Extraire les IDs uniques ET les noms de matières
+        const subjectIds = Array.from(
+          new Set(schedules?.map(s => s.subject_id).filter(Boolean))
+        ) || [];
+        const subjectNames = Array.from(
+          new Set(schedules?.map(s => s.subject).filter(Boolean))
+        ) || [];
         
         console.log('🔑 Subject IDs:', subjectIds);
+        console.log('📝 Subject Names:', subjectNames);
         
-        if (subjectIds.length === 0) {
+        if (subjectIds.length === 0 && subjectNames.length === 0) {
           console.log('⚠️ No subjects found for this teacher in this class');
           setSubjects([]);
           setLoading(false);
           return;
         }
 
-        const query = supabase
+        // Construire la requête combinée pour chercher par ID OU par nom
+        let query = supabase
           .from('subjects')
           .select('*')
           .eq('school_id', userProfile.schoolId)
-          .in('id', subjectIds);
+          .eq('class_id', classId);
 
-        if (classId) {
-          query.eq('class_id', classId);
+        // Construire la clause OR pour chercher soit par ID soit par nom
+        const orConditions: string[] = [];
+        
+        if (subjectIds.length > 0) {
+          orConditions.push(`id.in.(${subjectIds.join(',')})`);
+        }
+        
+        if (subjectNames.length > 0) {
+          const escapedNames = subjectNames.map(name => `"${name}"`);
+          orConditions.push(`name.in.(${escapedNames.join(',')})`);
+        }
+        
+        if (orConditions.length > 0) {
+          query = query.or(orConditions.join(','));
         }
 
         const { data, error } = await query.order('name');
