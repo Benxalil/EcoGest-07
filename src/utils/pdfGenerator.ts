@@ -225,7 +225,7 @@ export const generateBulletinPDF = async (
           subjects!inner(id, name, coefficient)
         `)
         .eq('student_id', eleve.id)
-        .in('subject_id', matieresClasse.map(m => m.id));
+        .in('subject_id', matieresClasse.map(m => String(m.id)));
 
       return grades || [];
     } catch (error) {
@@ -235,6 +235,20 @@ export const generateBulletinPDF = async (
   };
 
   const notesEleve = await getNotesEleve();
+  
+  // Debug logs
+  console.log('=== DEBUG NOTES PDF ===');
+  console.log('Élève ID:', eleve.id);
+  console.log('Matières classe:', matieresClasse.map(m => ({ id: m.id, nom: m.nom })));
+  console.log('Notes récupérées:', notesEleve.length);
+  console.log('Détail notes:', notesEleve.map(n => ({
+    subject_id: n.subject_id,
+    exam_type: n.exam_type,
+    semester: n.semester,
+    grade_value: n.grade_value
+  })));
+  console.log('Semestre recherché:', semestre);
+  console.log('=== FIN DEBUG ===');
 
   const getMoyenneSemestre = (semestreNum: string) => {
     // Normaliser les formats de semestre pour la recherche
@@ -607,10 +621,22 @@ export const generateBulletinPDF = async (
         semestre
       ];
       
-      const notesMatiere = notesEleve.filter(n => 
-        n.subject_id === matiere.id && 
-        (semestreFormats.includes(n.semester) || !n.semester)
-      );
+      const notesMatiere = notesEleve.filter(n => {
+        const subjectMatch = String(n.subject_id) === String(matiere.id);
+        const semesterMatch = semestreFormats.includes(n.semester) || !n.semester;
+        
+        // Log de debug
+        if (subjectMatch) {
+          console.log(`Note trouvée pour ${matiere.nom}:`, {
+            exam_type: n.exam_type,
+            semester: n.semester,
+            grade_value: n.grade_value,
+            semesterMatch
+          });
+        }
+        
+        return subjectMatch && semesterMatch;
+      });
       
       const devoirNote = notesMatiere.find(n => n.exam_type?.toLowerCase() === 'devoir');
       const compoNote = notesMatiere.find(n => n.exam_type?.toLowerCase() === 'composition');
@@ -664,10 +690,11 @@ export const generateBulletinPDF = async (
       }
     } else if (examData) {
       // Pour les examens normaux, chercher la note de cet examen spécifique
-      const noteExamen = notesEleve.find(n => 
-        n.subject_id === matiere.id && 
-        n.exam_id === examData.exam_id
-      );
+      const noteExamen = notesEleve.find(n => {
+        const subjectMatch = String(n.subject_id) === String(matiere.id);
+        const examMatch = String(n.exam_id) === String(examData.exam_id);
+        return subjectMatch && examMatch;
+      });
       
       if (noteExamen) {
         const noteValue = parseFloat(String(noteExamen.grade_value));
