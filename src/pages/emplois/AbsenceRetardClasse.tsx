@@ -7,6 +7,8 @@ import { ArrowLeft, UserCheck, UserX, Clock } from "lucide-react";
 import { useClasses } from "@/hooks/useClasses";
 import { useStudents } from "@/hooks/useStudents";
 import { useTeachers } from "@/hooks/useTeachers";
+import { useUserRole } from "@/hooks/useUserRole";
+import { useTeacherClasses } from "@/hooks/useTeacherClasses";
 
 interface Classe {
   id: string;
@@ -27,14 +29,19 @@ const AbsenceRetardClasse: React.FC = () => {
   const { classes } = useClasses();
   const { students } = useStudents();
   const { teachers } = useTeachers();
+  const { isTeacher, isAdmin } = useUserRole();
+  const { classes: teacherClasses } = useTeacherClasses();
 
   const [classe, setClasse] = useState<Classe | null>(null);
   const [eleves, setEleves] = useState<Eleve[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Utiliser les classes de l'enseignant si c'est un enseignant
+  const availableClasses = isTeacher() && !isAdmin() ? teacherClasses : classes;
+
   // Fonction pour récupérer une classe par son ID
   const getClasseById = (id: string) => {
-    return classes.find(c => c.id === id);
+    return availableClasses.find(c => c.id === id);
   };
 
   // Fonction pour récupérer les élèves d'une classe
@@ -73,7 +80,7 @@ const AbsenceRetardClasse: React.FC = () => {
     };
 
     loadData();
-  }, [classeId, classes, students]);
+  }, [classeId, availableClasses, students]);
 
   const handlePresenceChange = (eleveId: string, newPresence: string) => {
     setEleves(prevEleves =>

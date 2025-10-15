@@ -19,6 +19,8 @@ import { useClasses } from "@/hooks/useClasses";
 import { useParentChildren } from "@/hooks/useParentChildren";
 import { useUserRole } from "@/hooks/useUserRole";
 import { supabase } from "@/integrations/supabase/client";
+import { useTeacherId } from "@/hooks/useTeacherId";
+import { useTeacherClasses } from "@/hooks/useTeacherClasses";
 
 interface AttendanceRecord {
   id: string;
@@ -42,8 +44,10 @@ export default function ConsulterAbsencesRetards() {
   const { classeId } = useParams<{ classeId: string }>();
   const navigate = useNavigate();
   const { classes } = useClasses();
-  const { isParent } = useUserRole();
+  const { isParent, isTeacher, isAdmin } = useUserRole();
   const { children, loading: childrenLoading } = useParentChildren();
+  const { teacherId } = useTeacherId();
+  const { classes: teacherClasses } = useTeacherClasses();
   
   const [attendances, setAttendances] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -54,7 +58,9 @@ export default function ConsulterAbsencesRetards() {
   // Récupérer les IDs des enfants du parent
   const childrenIds = isParent() ? children.map(child => child.id) : [];
 
-  const classe = classes.find(c => c.id === classeId);
+  // Utiliser les classes de l'enseignant si c'est un enseignant
+  const availableClasses = isTeacher() && !isAdmin() ? teacherClasses : classes;
+  const classe = availableClasses.find(c => c.id === classeId);
 
   useEffect(() => {
     const fetchAttendances = async () => {
@@ -62,7 +68,7 @@ export default function ConsulterAbsencesRetards() {
       
       setLoading(true);
       try {
-        const { data, error } = await supabase
+        let query = supabase
           .from('attendances')
           .select(`
             id,
@@ -72,6 +78,7 @@ export default function ConsulterAbsencesRetards() {
             reason,
             period,
             recorded_by,
+            teacher_id,
             students!inner (
               first_name,
               last_name
@@ -81,8 +88,16 @@ export default function ConsulterAbsencesRetards() {
               last_name
             )
           `)
-          .eq('class_id', classeId)
-          .order('date', { ascending: false });
+          .eq('class_id', classeId);
+
+        // Filtrer par teacher_id si l'utilisateur est enseignant
+        if (isTeacher() && !isAdmin() && teacherId) {
+          query = query.eq('teacher_id', teacherId);
+        }
+
+        query = query.order('date', { ascending: false });
+
+        const { data, error } = await query;
 
         if (error) {
           console.error('Erreur lors du chargement des présences:', error);
@@ -104,7 +119,7 @@ export default function ConsulterAbsencesRetards() {
     };
 
     fetchAttendances();
-  }, [classeId]);
+  }, [classeId, isTeacher, isAdmin, teacherId]);
 
   const filteredAttendances = attendances.filter(record => {
     // Si parent, filtrer uniquement ses enfants

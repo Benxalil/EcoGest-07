@@ -7,6 +7,8 @@ import { useSubjects } from "@/hooks/useSubjects";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Plus, Calendar, Clock, User, BookOpen } from "lucide-react";
+import { useUserRole } from "@/hooks/useUserRole";
+import { useTeacherId } from "@/hooks/useTeacherId";
 
 interface Teacher {
   id: string;
@@ -22,7 +24,12 @@ interface Subject {
 export default function ListeCahiersClasse() {
   const { classeId } = useParams();
   const navigate = useNavigate();
-  const { lessonLogs, loading } = useLessonLogs(classeId);
+  const { isTeacher, isAdmin } = useUserRole();
+  const { teacherId } = useTeacherId();
+  
+  // Filtrer par teacherId uniquement si l'utilisateur est enseignant
+  const teacherFilter = isTeacher() && !isAdmin() ? teacherId : undefined;
+  const { lessonLogs, loading } = useLessonLogs(classeId, teacherFilter);
   const { teachers } = useTeachers();
   const { subjects } = useSubjects(classeId);
   const [className, setClassName] = useState<string>('');

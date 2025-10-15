@@ -20,7 +20,7 @@ export interface LessonLogData {
 // Alias for backwards compatibility
 export type LessonLog = LessonLogData;
 
-export const useLessonLogs = (classId?: string) => {
+export const useLessonLogs = (classId?: string, teacherId?: string | null) => {
   const [lessonLogs, setLessonLogs] = useState<LessonLogData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -44,6 +44,11 @@ export const useLessonLogs = (classId?: string) => {
 
       if (classId) {
         query = query.eq('class_id', classId);
+      }
+
+      // Filtrer par enseignant si teacherId est fourni
+      if (teacherId) {
+        query = query.eq('teacher_id', teacherId);
       }
 
       const { data, error } = await query;
@@ -140,7 +145,7 @@ export const useLessonLogs = (classId?: string) => {
 
   useEffect(() => {
     fetchLessonLogs();
-  }, [userProfile?.schoolId, classId]);
+  }, [userProfile?.schoolId, classId, teacherId]);
 
   return {
     lessonLogs,

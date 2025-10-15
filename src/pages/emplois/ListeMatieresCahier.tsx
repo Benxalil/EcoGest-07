@@ -7,15 +7,26 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useSubjects } from "@/hooks/useSubjects";
 import { useClasses } from "@/hooks/useClasses";
 import { useLessonLogs } from "@/hooks/useLessonLogs";
+import { useUserRole } from "@/hooks/useUserRole";
+import { useTeacherId } from "@/hooks/useTeacherId";
+import { useTeacherClasses } from "@/hooks/useTeacherClasses";
 
 export default function ListeMatieresCahier() {
   const navigate = useNavigate();
   const { classeId } = useParams();
+  const { isTeacher, isAdmin } = useUserRole();
+  const { teacherId } = useTeacherId();
+  const { classes: teacherClasses } = useTeacherClasses();
   const { classes, loading: classesLoading } = useClasses();
   const { subjects, loading: subjectsLoading } = useSubjects(classeId);
-  const { lessonLogs, loading: lessonLogsLoading } = useLessonLogs(classeId);
+  
+  // Filtrer par teacherId uniquement si l'utilisateur est enseignant
+  const teacherFilter = isTeacher() && !isAdmin() ? teacherId : undefined;
+  const { lessonLogs, loading: lessonLogsLoading } = useLessonLogs(classeId, teacherFilter);
 
-  const classe = classes.find(c => c.id === classeId);
+  // Utiliser les classes de l'enseignant si c'est un enseignant
+  const availableClasses = isTeacher() && !isAdmin() ? teacherClasses : classes;
+  const classe = availableClasses.find(c => c.id === classeId);
 
   // Fonction pour obtenir les lesson logs d'une matière
   const getSubjectLessonLogs = (subjectId: string) => {
