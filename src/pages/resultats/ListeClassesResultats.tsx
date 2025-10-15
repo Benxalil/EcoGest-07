@@ -87,7 +87,15 @@ export default function ListeClassesResultats() {
     };
     
     const levelNum = levelOrder[normalizedLevel] || 999;
-    const sectionNum = section ? (sectionOrder[section.toUpperCase()] || 999) : 0;
+    
+    // Extraire la dernière lettre de la section (LA -> A, GB -> B, L1B -> B, L2E -> E)
+    let sectionNum = 0;
+    if (section) {
+      const trimmedSection = section.trim();
+      // Extraire la dernière lettre majuscule de la section
+      const lastLetter = trimmedSection.charAt(trimmedSection.length - 1).toUpperCase();
+      sectionNum = sectionOrder[lastLetter] || 999;
+    }
     
     return levelNum * 100 + sectionNum;
   };
