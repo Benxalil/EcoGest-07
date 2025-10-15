@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { ArrowLeft, FileText, Printer, Calculator, Eye, Loader2, Lock, CheckCircle } from "lucide-react";
+import { ArrowLeft, FileText, Printer, Calculator, Eye, EyeOff, Loader2, Lock, CheckCircle } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useNavigate, useParams } from "react-router-dom";
 import { generateBulletinPDF } from "@/utils/pdfGenerator";
 import { BulletinClasse } from "@/components/resultats/BulletinClasse";
@@ -362,26 +363,30 @@ export default function ResultatsSemestre() {
           <div className="flex flex-wrap gap-2">
             {activeExamData?.exam_id && (
               <>
-                <Button
-                  variant="outline"
-                  onClick={() => setIsPublishModalOpen(true)}
-                  className="flex items-center bg-primary hover:bg-primary/90 text-primary-foreground"
-                >
-                  {(() => {
-                    const exam = exams.find(e => e.id === activeExamData.exam_id);
-                    return exam?.is_published ? (
-                      <>
-                        <CheckCircle className="h-4 w-4 mr-2" />
-                        Gérer Publication
-                      </>
-                    ) : (
-                      <>
-                        <Lock className="h-4 w-4 mr-2" />
-                        Gérer Publication
-                      </>
-                    );
-                  })()}
-                </Button>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => setIsPublishModalOpen(true)}
+                        className="h-9 w-9"
+                      >
+                        {(() => {
+                          const exam = exams.find(e => e.id === activeExamData.exam_id);
+                          return exam?.is_published ? (
+                            <Eye className="h-4 w-4" />
+                          ) : (
+                            <EyeOff className="h-4 w-4" />
+                          );
+                        })()}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Gérer la publication des notes</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
                 
                 {(() => {
                   const exam = exams.find(e => e.id === activeExamData.exam_id);
