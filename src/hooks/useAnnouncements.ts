@@ -50,7 +50,8 @@ export const useAnnouncements = () => {
         .from('announcements')
         .select('*')
         .eq('school_id', userProfile.schoolId)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(10); // ✅ Limite globale pour optimiser
 
       if (error) throw error;
       

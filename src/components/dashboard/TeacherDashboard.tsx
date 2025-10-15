@@ -8,6 +8,7 @@ import { formatClassName } from "@/utils/classNameFormatter";
 import { useAnnouncements } from "@/hooks/useAnnouncements";
 import { useClasses } from "@/hooks/useClasses";
 import { useSchoolData } from "@/hooks/useSchoolData";
+import { filterAnnouncementsByRole } from "@/utils/announcementFilters";
 
 interface TeacherStats {
   totalClasses: number;
@@ -49,7 +50,7 @@ export function TeacherDashboard() {
         totalClasses: teacherClasses.length,
         totalStudents,
         todaySchedules,
-        announcements: announcements.slice(0, 3)
+        announcements: announcements // Déjà limité à 3 dans getTeacherAnnouncements()
       });
     } catch (error) {
       console.error("Erreur lors du chargement des données enseignant:", error);
@@ -137,12 +138,17 @@ export function TeacherDashboard() {
 
   const getTeacherAnnouncements = () => {
     try {
-      // Filtrer les annonces qui ciblent les enseignants ou sont générales
-      return announcements.filter((ann: any) => 
-        !ann.target_audience || 
-        ann.target_audience.includes('teacher') || 
-        ann.target_audience.includes('tous')
+      // ✅ Utiliser le filtre centralisé qui respecte la logique globale
+      const filtered = filterAnnouncementsByRole(
+        announcements || [],
+        'teacher', // Rôle de l'utilisateur
+        false // Les enseignants ne sont pas admins
       );
+      
+      // ✅ Limiter à 3 annonces les plus récentes
+      return filtered
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+        .slice(0, 3);
     } catch (error) {
       console.error("Erreur lors de la récupération des annonces:", error);
       return [];

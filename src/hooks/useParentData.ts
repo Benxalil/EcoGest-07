@@ -122,7 +122,7 @@ export const useParentData = (selectedChildId?: string | null) => {
           .eq('school_id', profile.schoolId)
           .eq('is_published', true)
           .order('created_at', { ascending: false })
-          .limit(5)
+          .limit(3) // ✅ Harmonisé avec les autres dashboards
       ]);
 
       // Formater les enfants

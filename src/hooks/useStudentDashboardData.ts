@@ -60,7 +60,7 @@ export const useStudentDashboardData = () => {
           .eq('school_id', profile.schoolId)
           .eq('is_published', true)
           .order('created_at', { ascending: false })
-          .limit(5)
+          .limit(3) // ✅ Harmonisé avec les autres dashboards
       ]);
 
       if (studentResult.error) throw studentResult.error;
