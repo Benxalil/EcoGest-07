@@ -62,7 +62,7 @@ export default function ResultatsSemestre() {
     contextSemester: normalizedSemestre // Passer le semestre NORMALISÉ pour filtrer les notes de Composition
   });
   const { userProfile } = useUserRole();
-  const { exams, updateExam } = useExams(classeId);
+  const { exams, updateExam, refreshExams } = useExams(classeId);
   
   // Récupérer les données de la classe et de l'examen
   const classData = getClassResults(classeId || '');
@@ -768,8 +768,9 @@ export default function ResultatsSemestre() {
               isPublished: exam.is_published
             };
           })()}
-          onUpdate={() => {
-            refetch();
+          onUpdate={async () => {
+            await refreshExams(); // Rafraîchir les examens pour mettre à jour l'icône
+            refetch(); // Rafraîchir les résultats
           }}
         />
       )}

@@ -53,7 +53,7 @@ export const PublierResultatsModal = ({
           : "Les résultats ont été publiés. Les élèves et parents peuvent maintenant les voir.",
       });
       
-      onUpdate();
+      await onUpdate(); // Attendre la mise à jour avant de fermer
       onClose();
       
     } catch (error) {
