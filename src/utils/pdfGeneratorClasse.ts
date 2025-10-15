@@ -287,15 +287,27 @@ export const generateBulletinClassePDF = async (
     const getExamLabel = () => {
       // Si l'examen est de type Composition, afficher le semestre
       if (examData?.title?.toLowerCase().includes('composition') || examData?.exam_title?.toLowerCase().includes('composition')) {
+        // Déterminer le semestre depuis examData en priorité
+        let semestreNum = semestre;
+        
+        if (examData?.semester) {
+          // Normaliser le format: "1er semestre" -> "1", "2eme semestre" -> "2"
+          if (examData.semester.includes('1') || examData.semester.toLowerCase().includes('premier')) {
+            semestreNum = "1";
+          } else if (examData.semester.includes('2') || examData.semester.toLowerCase().includes('deuxième') || examData.semester.toLowerCase().includes('deuxieme')) {
+            semestreNum = "2";
+          }
+        }
+        
         if (schoolSystem === 'trimestre') {
-          switch(semestre) {
+          switch(semestreNum) {
             case "1": return "1er TRIMESTRE";
-            case "2": return "2e TRIMESTRE"; 
+            case "2": return "2e TRIMESTRE";
             case "3": return "3e TRIMESTRE";
             default: return "1er TRIMESTRE";
           }
         } else {
-          switch(semestre) {
+          switch(semestreNum) {
             case "1": return "1er SEMESTRE";
             case "2": return "2e SEMESTRE";
             default: return "1er SEMESTRE";

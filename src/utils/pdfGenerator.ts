@@ -385,11 +385,24 @@ export const generateBulletinPDF = async (
   // Adapter le titre selon le type d'examen
   let semestreLabel: string;
   if (examData && !isCompositionExam) {
-    // Pour les examens normaux, afficher juste le nom de l'examen
+    // Pour les examens normaux (Devoir, Contrôle, etc.), afficher juste le nom de l'examen
     semestreLabel = examData.exam_title.toUpperCase();
   } else {
-    // Pour les compositions, afficher le semestre
-    semestreLabel = semestre === "1" ? "PREMIER SEMESTRE" : "DEUXIÈME SEMESTRE";
+    // Pour les compositions, déterminer le semestre depuis examData en priorité
+    let semestreNum = semestre; // Par défaut, utiliser le paramètre
+    
+    // Si examData contient le semester, l'utiliser en priorité
+    if (examData?.semester) {
+      // Normaliser le format: "1er semestre" -> "1", "2eme semestre" -> "2"
+      if (examData.semester.includes('1') || examData.semester.toLowerCase().includes('premier')) {
+        semestreNum = "1";
+      } else if (examData.semester.includes('2') || examData.semester.toLowerCase().includes('deuxième') || examData.semester.toLowerCase().includes('deuxieme')) {
+        semestreNum = "2";
+      }
+    }
+    
+    // Générer le label final
+    semestreLabel = semestreNum === "1" ? "PREMIER SEMESTRE" : "DEUXIÈME SEMESTRE";
   }
   const moyenneSemestre1 = getMoyenneSemestre("1");
   const moyenneSemestre2 = getMoyenneSemestre("2");
