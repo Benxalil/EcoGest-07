@@ -41,10 +41,16 @@ export default function ListeClassesResultats() {
   const navigate = useNavigate();
 
   // Fonction pour normaliser le niveau (gérer les variations d'écriture)
-  const normalizeLevel = (level: string): string => {
-    if (!level) return '';
+  // Extrait le niveau de base du nom de la classe (enlève la section)
+  const normalizeLevel = (name: string): string => {
+    if (!name) return '';
+    
+    // Extraire uniquement le niveau sans la section (par exemple "CE2 B" -> "CE2")
+    const nameParts = name.trim().split(/\s+/);
+    const levelPart = nameParts[0]; // Prendre la première partie (le niveau)
+    
     // Enlever les espaces et mettre en majuscules pour la comparaison
-    const normalized = level.trim().toUpperCase();
+    const normalized = levelPart.toUpperCase();
     
     // Mapper les variations vers le format standard
     const levelMap: { [key: string]: string } = {
@@ -62,12 +68,13 @@ export default function ListeClassesResultats() {
       'TERMINALE': 'Terminale', 'TERM': 'Terminale', 'TLE': 'Terminale'
     };
     
-    return levelMap[normalized] || level;
+    return levelMap[normalized] || levelPart;
   };
 
   // Fonction pour définir l'ordre académique des classes
-  const getClassOrder = (level: string, section?: string): number => {
-    const normalizedLevel = normalizeLevel(level);
+  // Utilise le nom de la classe (pas le level qui contient "Primaire", "Collège", etc.)
+  const getClassOrder = (name: string, section?: string): number => {
+    const normalizedLevel = normalizeLevel(name);
     
     const levelOrder: { [key: string]: number } = {
       'CI': 1, 'CP': 2, 'CE1': 3, 'CE2': 4, 'CM1': 5, 'CM2': 6,
@@ -88,8 +95,13 @@ export default function ListeClassesResultats() {
   // Fonction pour trier les classes dans l'ordre académique
   const sortClassesAcademically = (classes: any[]): any[] => {
     return [...classes].sort((a, b) => {
-      const orderA = getClassOrder(a.level, a.section);
-      const orderB = getClassOrder(b.level, b.section);
+      // Utiliser a.name et b.name qui contiennent le vrai niveau (CI, CP, CE2, etc.)
+      // et non a.level qui contient "Primaire", "Collège", "Lycée"
+      const orderA = getClassOrder(a.name, a.section);
+      const orderB = getClassOrder(b.name, b.section);
+      
+      console.log('Tri classe:', a.name, '(section:', a.section, ') -> ordre:', orderA);
+      console.log('Tri classe:', b.name, '(section:', b.section, ') -> ordre:', orderB);
       
       // Si les ordres sont égaux, trier par nom comme fallback
       if (orderA === orderB) {
