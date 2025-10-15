@@ -6,6 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { useOptimizedUserData } from "@/hooks/useOptimizedUserData";
 import { useStudentDashboardData } from "@/hooks/useStudentDashboardData";
 import { LoadingSkeleton } from "@/components/ui/loading-skeleton";
+import { formatClassName } from "@/utils/classNameFormatter";
 
 const StudentDashboard = memo(() => {
   const navigate = useNavigate();
@@ -60,7 +61,7 @@ const StudentDashboard = memo(() => {
           Bienvenue sur votre tableau de bord étudiant.
           {classInfo && (
             <span className="block mt-1">
-              Classe : <span className="font-semibold">{classInfo.name} {classInfo.level}</span>
+              Classe : <span className="font-semibold">{formatClassName(classInfo)}</span>
             </span>
           )}
         </p>
