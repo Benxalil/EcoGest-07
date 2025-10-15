@@ -1,6 +1,7 @@
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
 import { supabase } from '@/integrations/supabase/client';
+import { getAppreciation } from './gradeUtils';
 
 // Fonction pour obtenir l'année académique de l'école
 const getSchoolAcademicYear = async (): Promise<string> => {
@@ -183,14 +184,6 @@ export const generateBulletinClassePDF = async (
       return { moyenneDevoir, moyenneComposition, moyenneGenerale };
     };
 
-    const getAppreciation = (moyenne: number): string => {
-      if (moyenne >= 16) return "Très Bien";
-      if (moyenne >= 14) return "Bien";
-      if (moyenne >= 12) return "Assez Bien";
-      if (moyenne >= 10) return "Passable";
-      return "Insuffisant";
-    };
-
     const getDateNaissance = async (eleveId: string): Promise<string> => {
       // First check localStorage
       const savedEleves = null; // Temporaire - remplacer par useStudents
@@ -284,7 +277,8 @@ export const generateBulletinClassePDF = async (
       const stats = getEleveStatistics(eleve.id);
       const dateNaissance = await getDateNaissance(eleve.id);
       const lieuNaissance = await getLieuNaissance(eleve.id);
-      const appreciation = getAppreciation(stats.moyenneGenerale);
+      // Pour la moyenne générale, on utilise toujours la base 20 (standard académique)
+      const appreciation = getAppreciation(stats.moyenneGenerale, 20);
       
       elevesWithStats.push({
         ...eleve,

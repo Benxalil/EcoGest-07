@@ -6,6 +6,7 @@ import { generateBulletinClassePDF } from "@/utils/pdfGeneratorClasse";
 import { useResults } from "@/hooks/useResults";
 import { supabase } from "@/integrations/supabase/client";
 import { formatClassName } from "@/utils/classNameFormatter";
+import { getAppreciation } from "@/utils/gradeUtils";
 
 interface Student {
   id: string;
@@ -124,15 +125,7 @@ export const BulletinClasse: React.FC<BulletinClasseProps> = ({
     };
   };
 
-  // Fonction pour générer l'appréciation basée sur la moyenne
-  const getAppreciation = (moyenne: number) => {
-    if (moyenne >= 16) return "Très Bien";
-    if (moyenne >= 14) return "Bien";
-    if (moyenne >= 12) return "Assez Bien";
-    if (moyenne >= 10) return "Passable";
-    if (moyenne >= 8) return "Insuffisant";
-    return "Médiocre";
-  };
+  // Note: getAppreciation est maintenant importé de gradeUtils et utilise le max_score dynamique
 
   // Fonction pour obtenir la date de naissance d'un élève depuis la base de données
   const getDateNaissance = (eleveId: string) => {
@@ -244,7 +237,8 @@ export const BulletinClasse: React.FC<BulletinClasseProps> = ({
             {elevesClasses.map((eleve, index) => {
               const stats = getEleveStatistics(eleve.id);
               const dateNaissance = getDateNaissance(eleve.id);
-              const appreciation = getAppreciation(stats.moyenneGenerale);
+              // Pour la moyenne générale, on utilise toujours la base 20 (standard académique)
+              const appreciation = getAppreciation(stats.moyenneGenerale, 20);
               
               return (
                 <TableRow key={eleve.id} className={index % 2 === 0 ? "bg-muted/50" : "bg-card"}>

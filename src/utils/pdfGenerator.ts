@@ -2,6 +2,7 @@
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
 import { supabase } from '@/integrations/supabase/client';
+import { parseMaxScoreFromMoyenne, parseCoefficient, getAppreciation } from './gradeUtils';
 
 // Fonction pour obtenir l'année académique de l'école
 const getSchoolAcademicYear = async (): Promise<string> => {
@@ -599,11 +600,9 @@ export const generateBulletinPDF = async (
         totalPoints += moyCoef;
         totalCoeff += coef;
         
-        if (moy >= 16) appreciation = 'Très Bien';
-        else if (moy >= 14) appreciation = 'Bien';
-        else if (moy >= 12) appreciation = 'Assez Bien';
-        else if (moy >= 10) appreciation = 'Passable';
-        else appreciation = 'Insuffisant';
+        // Utiliser le barème de la matière pour calculer l'appréciation
+        const maxScore = matiere.max_score || 20;
+        appreciation = getAppreciation(moy, maxScore);
       }
     } else if (examData) {
       // Pour les examens normaux, chercher la note de cet examen spécifique
@@ -623,11 +622,9 @@ export const generateBulletinPDF = async (
           totalPoints += moyCoef;
           totalCoeff += coef;
           
-          if (noteValue >= 16) appreciation = 'Très Bien';
-          else if (noteValue >= 14) appreciation = 'Bien';
-          else if (noteValue >= 12) appreciation = 'Assez Bien';
-          else if (noteValue >= 10) appreciation = 'Passable';
-          else appreciation = 'Insuffisant';
+          // Utiliser le barème de la matière pour calculer l'appréciation
+          const maxScore = matiere.max_score || 20;
+          appreciation = getAppreciation(noteValue, maxScore);
         }
       }
     }

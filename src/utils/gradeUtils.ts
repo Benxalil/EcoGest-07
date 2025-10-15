@@ -179,3 +179,35 @@ export const formatGrade = (value: number, decimals: number = 2): string => {
   if (isNaN(value) || value < 0) return '';
   return value.toFixed(decimals);
 };
+
+/**
+ * Get appreciation based on percentage of grade relative to max score
+ * This ensures that appreciation is dynamic and adapts to the subject's grading scale
+ * 
+ * @param grade - The actual grade obtained
+ * @param maxScore - The maximum possible score for this subject
+ * @returns Appreciation text (Excellent/Très Bien, Bien, Assez Bien, Passable, Insuffisant, Médiocre)
+ * 
+ * @example
+ * getAppreciation(9, 10) // Returns "Excellent" (90%)
+ * getAppreciation(9, 20) // Returns "Insuffisant" (45%)
+ * getAppreciation(3, 5) // Returns "Assez Bien" (60%)
+ * getAppreciation(45, 50) // Returns "Excellent" (90%)
+ */
+export const getAppreciation = (grade: number, maxScore: number = 20): string => {
+  if (isNaN(grade) || isNaN(maxScore) || maxScore <= 0) {
+    return 'N/A';
+  }
+  
+  // Calculate percentage: (grade / maxScore) * 100
+  const percentage = (grade / maxScore) * 100;
+  
+  // Determine appreciation based on percentage thresholds
+  if (percentage >= 80) return 'Excellent';
+  if (percentage >= 70) return 'Très Bien';
+  if (percentage >= 60) return 'Bien';
+  if (percentage >= 50) return 'Assez Bien';
+  if (percentage >= 40) return 'Passable';
+  if (percentage >= 30) return 'Insuffisant';
+  return 'Médiocre';
+};
