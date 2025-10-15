@@ -276,7 +276,7 @@ export const ListeExamens: React.FC<ListeExamensProps> = ({
           exam_date: newDate,
           start_time: firstExam?.start_time,
           total_marks: firstExam?.total_marks,
-          is_published: firstExam?.is_published ?? false
+          is_published: false // TOUJOURS dépublié par défaut
         });
       }
       setEditOpen(false);

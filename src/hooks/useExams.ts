@@ -119,7 +119,7 @@ export const useExams = (classId?: string) => {
           start_time: examData.start_time,
           duration_minutes: examData.total_marks ? examData.total_marks * 6 : 120,
           total_points: examData.total_marks,
-          is_published: examData.is_published ?? false,
+          is_published: false, // TOUJOURS dépublié par défaut lors de la création
           semester: examData.semester,
           school_id: userProfile.schoolId
         })
