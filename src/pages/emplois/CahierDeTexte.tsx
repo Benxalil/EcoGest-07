@@ -92,9 +92,13 @@ export default function CahierDeTexte() {
     if (success) {
       toast({
         title: "Succès",
-        description: "Cahier de texte enregistré avec succès"
+        description: "Cahier de texte enregistré avec succès 🎉"
       });
-      form.reset();
+      
+      // Rediriger vers la page de consultation des cahiers de cette matière
+      setTimeout(() => {
+        navigate(`/emplois/cahier/${classeId}/${data.subject_id}`);
+      }, 1000);
     }
   };
 
