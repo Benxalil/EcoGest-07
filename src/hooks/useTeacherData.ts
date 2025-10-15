@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useOptimizedUserData } from './useOptimizedUserData';
 import { useOptimizedCache } from './useOptimizedCache';
+import { filterAnnouncementsByRole } from '@/utils/announcementFilters';
 import type { ClassData } from './useClasses';
 
 export interface TeacherData {
@@ -66,14 +67,14 @@ export const useTeacherData = () => {
               .limit(50) // Limite raisonnable
           : Promise.resolve({ data: [], error: null }),
 
-        // Announcements (limité à 3)
+        // Announcements (récupérer plus pour pouvoir filtrer par rôle ensuite)
         supabase
           .from('announcements')
           .select('*')
           .eq('school_id', profile.schoolId)
           .eq('is_published', true)
           .order('published_at', { ascending: false })
-          .limit(3)
+          .limit(20) // Récupérer plus pour avoir suffisamment après filtrage
       ]);
 
       const schedulesData = schedulesResult.data || [];
@@ -121,11 +122,18 @@ export const useTeacherData = () => {
       // Compter le total d'élèves
       const totalStudents = Array.from(enrollmentMap.values()).reduce((sum, count) => sum + count, 0);
 
+      // Filtrer les annonces pour les enseignants et limiter à 3
+      const filteredAnnouncements = filterAnnouncementsByRole(
+        announcementsResult.data || [],
+        'teacher',
+        false // Les enseignants ne sont pas admins
+      ).slice(0, 3); // Limiter à 3 après le filtrage
+
       const teacherData: TeacherData = {
         classes: classesWithEnrollment,
         totalStudents,
         todaySchedules,
-        announcements: announcementsResult.data || [],
+        announcements: filteredAnnouncements,
         loading: false,
         error: null
       };
