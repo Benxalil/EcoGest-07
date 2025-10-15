@@ -9,6 +9,7 @@ import { generateBulletinPDF } from "@/utils/pdfGenerator";
 import { BulletinClasse } from "@/components/resultats/BulletinClasse";
 import { useResults } from "@/hooks/useResults";
 import { useUserRole } from "@/hooks/useUserRole";
+import { formatClassName } from "@/utils/classNameFormatter";
 
 interface Classe {
   id: string;
@@ -82,7 +83,7 @@ export default function ResultatsSemestre() {
     id: student.student_id,
     nom: student.last_name,
     prenom: student.first_name,
-    classe: `${student.class_level} ${student.class_section}`,
+    classe: formatClassName({ name: student.class_name, section: student.class_section }),
     numero: student.numero || '0'
   })) : [];
   

@@ -14,6 +14,7 @@ import { fr } from "date-fns/locale";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useStudents } from "@/hooks/useStudents";
 import { supabase } from "@/integrations/supabase/client";
+import { formatClassName } from "@/utils/classNameFormatter";
 
 interface Examen {
   id: string;
@@ -222,7 +223,7 @@ export default function MesResultats() {
               <div className="flex items-center gap-3">
                 <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
                 <span className="text-lg font-medium text-gray-700">
-                  {studentClass.name} {studentClass.level}{studentClass.section ? ` - ${studentClass.section}` : ''}
+                  {formatClassName({ name: studentClass.name, section: studentClass.section })}
                 </span>
               </div>
               <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-blue-500 transition-colors" />
@@ -231,7 +232,7 @@ export default function MesResultats() {
             <DialogContent className="sm:max-w-2xl">
               <DialogHeader>
                 <DialogTitle className="text-center">
-                  Examens disponibles - {studentClass.name} {studentClass.level}{studentClass.section ? ` - ${studentClass.section}` : ''}
+                  Examens disponibles - {formatClassName({ name: studentClass.name, section: studentClass.section })}
                 </DialogTitle>
               </DialogHeader>
               <div className="py-4">

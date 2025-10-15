@@ -101,7 +101,7 @@ export default function ResultatsSemestre() {
     id: student.student_id,
     nom: student.last_name,
     prenom: student.first_name,
-    classe: `${student.class_level} ${student.class_section}`,
+    classe: formatClassName({ name: student.class_name, section: student.class_section }),
     numero: typeof student.numero === 'number' ? student.numero : 0,
     matricule: student.student_number || 'N/A'
   })) : [];

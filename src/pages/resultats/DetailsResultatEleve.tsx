@@ -6,13 +6,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ArrowLeft, Loader2, Eye, AlertCircle } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { formatClassName } from "@/utils/classNameFormatter";
 
 interface ExamDetails {
   id: string;
   title: string;
   exam_date: string;
   is_published: boolean;
-  class_level: string;
+  class_name: string;
   class_section: string;
 }
 
@@ -63,6 +64,7 @@ export default function DetailsResultatEleve() {
           exam_date, 
           is_published,
           classes (
+            name,
             level,
             section
           )
@@ -74,7 +76,7 @@ export default function DetailsResultatEleve() {
       
       setExamDetails({
         ...examData,
-        class_level: examData.classes?.level || "",
+        class_name: examData.classes?.name || "",
         class_section: examData.classes?.section || ""
       });
 
@@ -292,7 +294,7 @@ export default function DetailsResultatEleve() {
             </Button>
             <div>
               <h1 className="text-2xl font-bold">
-                {examDetails.class_level} {examDetails.class_section}
+                {formatClassName({ name: examDetails.class_name, section: examDetails.class_section })}
               </h1>
               {examDetails && (
                 <p className="text-sm text-gray-500">

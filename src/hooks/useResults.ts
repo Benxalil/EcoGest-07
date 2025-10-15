@@ -10,6 +10,7 @@ export interface StudentResult {
   last_name: string;
   numero?: string;
   student_number?: string;
+  class_name: string;
   class_level: string;
   class_section: string;
   grades: Array<{
@@ -226,6 +227,7 @@ export const useResults = (options?: { contextSemester?: string }) => {
                 last_name: student.last_name,
                 numero: student.student_number,
                 student_number: student.student_number,
+                class_name: classe.name,
                 class_level: classe.level,
                 class_section: classe.section || '',
                 grades: studentGrades.map(grade => {
