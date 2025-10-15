@@ -44,10 +44,15 @@ export default function ConsulterAbsencesRetards() {
   const { classeId } = useParams<{ classeId: string }>();
   const navigate = useNavigate();
   const { classes } = useClasses();
-  const { isParent, isTeacher, isAdmin } = useUserRole();
+  const { isParent, isTeacher, isAdmin, userProfile } = useUserRole();
   const { children, loading: childrenLoading } = useParentChildren();
   const { teacherId } = useTeacherId();
   const { classes: teacherClasses } = useTeacherClasses();
+  
+  // Mémoriser les valeurs booléennes pour éviter la boucle infinie
+  const isTeacherUser = isTeacher();
+  const isAdminUser = isAdmin();
+  const isParentUser = isParent();
   
   const [attendances, setAttendances] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -56,10 +61,10 @@ export default function ConsulterAbsencesRetards() {
   const [typeFilter, setTypeFilter] = useState("all");
   
   // Récupérer les IDs des enfants du parent
-  const childrenIds = isParent() ? children.map(child => child.id) : [];
+  const childrenIds = isParentUser ? children.map(child => child.id) : [];
 
   // Utiliser les classes de l'enseignant si c'est un enseignant
-  const availableClasses = isTeacher() && !isAdmin() ? teacherClasses : classes;
+  const availableClasses = isTeacherUser && !isAdminUser ? teacherClasses : classes;
   const classe = availableClasses.find(c => c.id === classeId);
 
   useEffect(() => {
@@ -91,7 +96,7 @@ export default function ConsulterAbsencesRetards() {
           .eq('class_id', classeId);
 
         // Filtrer par teacher_id si l'utilisateur est enseignant
-        if (isTeacher() && !isAdmin() && teacherId) {
+        if (isTeacherUser && !isAdminUser && teacherId) {
           query = query.eq('teacher_id', teacherId);
         }
 
@@ -102,7 +107,6 @@ export default function ConsulterAbsencesRetards() {
         if (error) {
           console.error('Erreur lors du chargement des présences:', error);
         } else {
-          console.log('Données récupérées:', data);
           // Trier les données par nom d'élève
           const sortedData = (data || []).sort((a, b) => {
             const nameA = `${a.students?.last_name} ${a.students?.first_name}`.toLowerCase();
@@ -119,11 +123,11 @@ export default function ConsulterAbsencesRetards() {
     };
 
     fetchAttendances();
-  }, [classeId, isTeacher, isAdmin, teacherId]);
+  }, [classeId, isTeacherUser, isAdminUser, teacherId]);
 
   const filteredAttendances = attendances.filter(record => {
     // Si parent, filtrer uniquement ses enfants
-    if (isParent() && childrenIds.length > 0 && !childrenIds.includes(record.student_id)) {
+    if (isParentUser && childrenIds.length > 0 && !childrenIds.includes(record.student_id)) {
       return false;
     }
     
@@ -236,7 +240,7 @@ export default function ConsulterAbsencesRetards() {
               Retour
             </Button>
             <h1 className="text-2xl font-bold text-foreground">
-              {isParent() 
+              {isParentUser 
                 ? `Absences & Retards de mes enfants` 
                 : `Absences & Retards - ${formatClassName(classe)}`
               }
@@ -339,7 +343,7 @@ export default function ConsulterAbsencesRetards() {
               <Calendar className="h-12 w-12 mx-auto text-gray-400 mb-4" />
               <p className="text-muted-foreground text-lg mb-2">Aucun enregistrement trouvé</p>
               <p className="text-muted-foreground/70">
-                {isParent()
+                {isParentUser
                   ? "Aucun de vos enfants n'a été signalé absent ou en retard."
                   : attendances.length === 0 
                     ? "Aucune donnée de présence n'a encore été enregistrée pour cette classe."
