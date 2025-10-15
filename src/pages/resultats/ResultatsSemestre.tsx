@@ -46,10 +46,26 @@ export default function ResultatsSemestre() {
   // Fonction utilitaire pour normaliser le semestre de l'URL au format DB
   const normalizeSemester = (sem: string | undefined): string | undefined => {
     if (!sem) return undefined;
-    // Convertir vers le format utilisé dans la DB: '1er_semestre' ou '2eme_semestre'
-    if (sem === '1' || sem === 'semestre1' || sem === '1er_semestre') return '1er_semestre';
-    if (sem === '2' || sem === 'semestre2' || sem === '2eme_semestre') return '2eme_semestre';
-    return sem;
+    
+    // Nettoyer la chaîne : minuscules et remplacer espaces par underscores
+    const cleaned = sem.toLowerCase().trim().replace(/\s+/g, '_');
+    
+    // Gérer tous les formats possibles pour le 1er semestre
+    if (cleaned.includes('1') || cleaned.includes('premier')) {
+      return '1er_semestre';
+    }
+    
+    // Gérer tous les formats possibles pour le 2ème semestre
+    if (cleaned.includes('2') || cleaned.includes('second') || cleaned.includes('deuxieme')) {
+      return '2eme_semestre';
+    }
+    
+    // Si déjà au bon format, retourner tel quel
+    if (cleaned === '1er_semestre' || cleaned === '2eme_semestre') {
+      return cleaned;
+    }
+    
+    return sem; // Fallback
   };
 
   // Normaliser le semestre depuis l'URL
