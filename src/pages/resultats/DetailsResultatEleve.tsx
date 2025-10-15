@@ -196,11 +196,11 @@ export default function DetailsResultatEleve() {
   };
 
   const getGradeColor = (note: number) => {
-    if (note >= 16) return "text-green-600 font-semibold";
-    if (note >= 14) return "text-blue-600 font-semibold";
-    if (note >= 12) return "text-yellow-600 font-semibold";
-    if (note >= 10) return "text-orange-600 font-semibold";
-    return "text-red-600 font-semibold";
+    if (note >= 16) return "text-green-600 dark:text-green-400 font-semibold";
+    if (note >= 14) return "text-blue-600 dark:text-blue-400 font-semibold";
+    if (note >= 12) return "text-yellow-600 dark:text-yellow-400 font-semibold";
+    if (note >= 10) return "text-orange-600 dark:text-orange-400 font-semibold";
+    return "text-red-600 dark:text-red-400 font-semibold";
   };
 
   const handleGeneratePDF = () => {
@@ -304,14 +304,14 @@ export default function DetailsResultatEleve() {
         </div>
 
         {/* Results Table with Exact Admin Format */}
-        <div className="bg-white rounded-lg shadow">
+        <div className="bg-card rounded-lg shadow border">
           {/* Blue Bar with Exam Title */}
-          <div className="bg-blue-600 text-white text-center py-3 rounded-t-lg">
+          <div className="bg-primary text-primary-foreground text-center py-3 rounded-t-lg">
             <h2 className="text-lg font-semibold">{examDetails.title}</h2>
           </div>
           
-          {/* Black Bar */}
-          <div className="bg-black text-white text-center py-2">
+          {/* Dark Bar */}
+          <div className="bg-secondary text-secondary-foreground text-center py-2">
             <span className="text-sm font-medium">Tous les bulletins</span>
           </div>
           
@@ -323,8 +323,8 @@ export default function DetailsResultatEleve() {
                 <TableHead>Nom et Prénom</TableHead>
                 {isComposition ? (
                   <>
-                    <TableHead className="w-40 text-center bg-blue-50 border-r">Devoir</TableHead>
-                    <TableHead className="w-40 text-center bg-green-50">Composition</TableHead>
+                    <TableHead className="w-40 text-center bg-blue-100 dark:bg-blue-900/30 border-r">Devoir</TableHead>
+                    <TableHead className="w-40 text-center bg-green-100 dark:bg-green-900/30">Composition</TableHead>
                   </>
                 ) : (
                   <>
@@ -335,17 +335,17 @@ export default function DetailsResultatEleve() {
                 <TableHead className="w-20 text-center">Action</TableHead>
               </TableRow>
               {isComposition && (
-                <TableRow className="bg-gray-50">
+                <TableRow className="bg-muted/50">
                   <TableHead></TableHead>
                   {showCalculatedRank && <TableHead></TableHead>}
                   <TableHead></TableHead>
-                  <TableHead className="text-center text-sm bg-blue-50 border-r">
+                  <TableHead className="text-center text-sm bg-blue-100 dark:bg-blue-900/30 border-r">
                     <div className="grid grid-cols-2 gap-2 text-xs">
                       <span className="font-medium">Notes</span>
                       <span className="font-medium">Moyenne</span>
                     </div>
                   </TableHead>
-                  <TableHead className="text-center text-sm bg-green-50">
+                  <TableHead className="text-center text-sm bg-green-100 dark:bg-green-900/30">
                     <div className="grid grid-cols-2 gap-2 text-xs">
                       <span className="font-medium">Notes</span>
                       <span className="font-medium">Moyenne</span>
@@ -368,14 +368,14 @@ export default function DetailsResultatEleve() {
                 {isComposition ? (
                   <>
                     {/* Devoir Column with Separator */}
-                    <TableCell className="text-center bg-blue-50 border-r">
+                    <TableCell className="text-center bg-blue-100 dark:bg-blue-900/30 border-r">
                       <div className="grid grid-cols-2 gap-2">
-                        <div className="text-sm font-medium text-gray-700">
+                        <div className="text-sm font-medium text-foreground">
                           {studentStats.total_devoir_notes && studentStats.total_devoir_notes > 0 
                             ? studentStats.total_devoir_notes.toFixed(1) 
                             : "-"}
                         </div>
-                        <div className={`text-sm font-bold ${studentStats.devoir_average && studentStats.devoir_average > 0 ? getGradeColor(studentStats.devoir_average) : "text-gray-400"}`}>
+                        <div className={`text-sm font-bold ${studentStats.devoir_average && studentStats.devoir_average > 0 ? getGradeColor(studentStats.devoir_average) : "text-muted-foreground"}`}>
                           {studentStats.devoir_average && studentStats.devoir_average > 0 
                             ? studentStats.devoir_average.toFixed(2) 
                             : "-"}
@@ -384,14 +384,14 @@ export default function DetailsResultatEleve() {
                     </TableCell>
                     
                     {/* Composition Column */}
-                    <TableCell className="text-center bg-green-50">
+                    <TableCell className="text-center bg-green-100 dark:bg-green-900/30">
                       <div className="grid grid-cols-2 gap-2">
-                        <div className="text-sm font-medium text-gray-700">
+                        <div className="text-sm font-medium text-foreground">
                           {studentStats.total_composition_notes && studentStats.total_composition_notes > 0 
                             ? studentStats.total_composition_notes.toFixed(1) 
                             : "-"}
                         </div>
-                        <div className={`text-sm font-bold ${studentStats.composition_average && studentStats.composition_average > 0 ? getGradeColor(studentStats.composition_average) : "text-gray-400"}`}>
+                        <div className={`text-sm font-bold ${studentStats.composition_average && studentStats.composition_average > 0 ? getGradeColor(studentStats.composition_average) : "text-muted-foreground"}`}>
                           {studentStats.composition_average && studentStats.composition_average > 0 
                             ? studentStats.composition_average.toFixed(2) 
                             : "-"}

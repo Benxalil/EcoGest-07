@@ -180,13 +180,13 @@ export const BulletinClasse: React.FC<BulletinClasseProps> = ({
   return (
     <div className="space-y-6">
       {/* En-tête avec informations de la classe */}
-      <div className="bg-blue-50 p-6 rounded-lg border">
+      <div className="bg-primary/10 dark:bg-primary/20 p-6 rounded-lg border border-primary/20">
         <div className="text-center space-y-2">
-          <h2 className="text-2xl font-bold text-blue-800">BULLETIN COLLECTIF DE LA CLASSE</h2>
-          <div className="text-lg font-semibold text-blue-700">
+          <h2 className="text-2xl font-bold text-primary">BULLETIN COLLECTIF DE LA CLASSE</h2>
+          <div className="text-lg font-semibold text-primary/90">
             {classe.session} {classe.libelle}
           </div>
-          <div className="text-base text-blue-600">
+          <div className="text-base text-primary/80">
             {getExamLabel()} - Effectif: {eleves.length} élèves
           </div>
         </div>
@@ -204,25 +204,25 @@ export const BulletinClasse: React.FC<BulletinClasseProps> = ({
       </div>
 
       {/* Tableau des élèves avec classement */}
-      <div className="border rounded-lg bg-white shadow-sm">
+      <div className="border rounded-lg bg-card shadow-sm">
         <Table>
           <TableHeader>
-            <TableRow className="bg-blue-600 text-white">
-              <TableHead className="text-white font-bold text-center w-16">Rang</TableHead>
-              <TableHead className="text-white font-bold">Prénom & Nom</TableHead>
-              <TableHead className="text-white font-bold text-center">Date de Naissance</TableHead>
+            <TableRow className="bg-primary text-primary-foreground">
+              <TableHead className="text-primary-foreground font-bold text-center w-16">Rang</TableHead>
+              <TableHead className="text-primary-foreground font-bold">Prénom & Nom</TableHead>
+              <TableHead className="text-primary-foreground font-bold text-center">Date de Naissance</TableHead>
               {/* Affichage conditionnel selon le type d'examen */}
               {(examData?.exam_title?.toLowerCase().includes('composition') || examData?.title?.toLowerCase().includes('composition')) ? (
                 <>
-                  <TableHead className="text-white font-bold text-center">Moyenne Devoir</TableHead>
-                  <TableHead className="text-white font-bold text-center">Moyenne Composition</TableHead>
+                  <TableHead className="text-primary-foreground font-bold text-center">Moyenne Devoir</TableHead>
+                  <TableHead className="text-primary-foreground font-bold text-center">Moyenne Composition</TableHead>
                 </>
               ) : (
-                <TableHead className="text-white font-bold text-center">
+                <TableHead className="text-primary-foreground font-bold text-center">
                   {examData?.exam_title || examData?.title || 'Moyenne'}
                 </TableHead>
               )}
-              <TableHead className="text-white font-bold text-center">Appréciation</TableHead>
+              <TableHead className="text-primary-foreground font-bold text-center">Appréciation</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -232,8 +232,8 @@ export const BulletinClasse: React.FC<BulletinClasseProps> = ({
               const appreciation = getAppreciation(stats.moyenneGenerale);
               
               return (
-                <TableRow key={eleve.id} className={index % 2 === 0 ? "bg-gray-50" : "bg-white"}>
-                  <TableCell className="text-center font-bold text-blue-600">
+                <TableRow key={eleve.id} className={index % 2 === 0 ? "bg-muted/50" : "bg-card"}>
+                  <TableCell className="text-center font-bold text-primary">
                     {eleve.rang}
                   </TableCell>
                   <TableCell className="font-medium">
@@ -257,7 +257,7 @@ export const BulletinClasse: React.FC<BulletinClasseProps> = ({
                       {stats.moyenneGenerale > 0 ? stats.moyenneGenerale.toFixed(2) : "-"}
                     </TableCell>
                   )}
-                  <TableCell className="text-center font-bold text-green-600">
+                  <TableCell className="text-center font-bold text-green-600 dark:text-green-400">
                     {appreciation}
                   </TableCell>
                 </TableRow>
@@ -268,7 +268,7 @@ export const BulletinClasse: React.FC<BulletinClasseProps> = ({
       </div>
 
       {/* Légende */}
-      <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded">
+      <div className="text-sm text-muted-foreground bg-muted p-3 rounded">
         <strong>Légende:</strong> Les élèves sont classés par ordre décroissant de moyenne générale. 
         <br />
         <strong>Appréciations:</strong> Très Bien (≥16), Bien (≥14), Assez Bien (≥12), Passable (≥10), Insuffisant (≥8), Médiocre (&lt;8).
