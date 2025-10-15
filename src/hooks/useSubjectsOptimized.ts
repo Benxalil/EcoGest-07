@@ -38,35 +38,49 @@ const fetchSubjects = async (
 
   console.log('🔍 fetchSubjects - Params:', { classId, teacherId, schoolId });
 
-  // ✅ OPTIMISATION: Si teacherId fourni, une seule requête avec JOIN
+  // ✅ OPTIMISATION: Requête en deux temps pour plus de robustesse
   if (teacherId && classId) {
-    console.log('👨‍🏫 Filtering by teacher with optimized query');
+    console.log('👨‍🏫 Filtering by teacher - Params:', { teacherId, classId, schoolId });
 
-    // Une seule requête avec JOIN au lieu de 2 requêtes séquentielles
+    // Étape 1: Récupérer les subject_id depuis schedules
+    const { data: scheduleData, error: scheduleError } = await supabase
+      .from('schedules')
+      .select('subject_id')
+      .eq('teacher_id', teacherId)
+      .eq('class_id', classId)
+      .not('subject_id', 'is', null);
+
+    if (scheduleError) {
+      console.error('❌ Error fetching schedules:', scheduleError);
+      throw scheduleError;
+    }
+
+    const subjectIds = scheduleData?.map(s => s.subject_id).filter(Boolean) || [];
+    console.log('📚 Subject IDs from schedules:', subjectIds);
+
+    if (subjectIds.length === 0) {
+      console.log('⚠️ No subjects found in schedules for this teacher/class');
+      return [];
+    }
+
+    // Étape 2: Récupérer les matières depuis subjects
     const { data, error } = await supabase
       .from('subjects')
-      .select(`
-        *,
-        schedules!inner(teacher_id, subject_id, subject)
-      `)
+      .select('*')
       .eq('school_id', schoolId)
       .eq('class_id', classId)
-      .eq('schedules.teacher_id', teacherId);
+      .in('id', subjectIds);
 
     if (error) {
+      console.error('❌ Error fetching subjects:', error);
       if (error.code === 'PGRST116' || error.message.includes('relation "subjects" does not exist')) {
         return [];
       }
       throw error;
     }
 
-    // Dédupliquer les matières (car JOIN peut créer des doublons)
-    const uniqueSubjects = Array.from(
-      new Map(data?.map(item => [item.id, item]) || []).values()
-    );
-
-    console.log('✅ Optimized subjects:', uniqueSubjects);
-    return uniqueSubjects.map(({ schedules, ...subject }) => subject);
+    console.log('✅ Subjects found:', data?.length || 0, data);
+    return data || [];
   }
 
   // Requête normale pour admin
