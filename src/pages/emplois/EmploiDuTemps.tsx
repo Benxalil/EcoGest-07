@@ -19,6 +19,7 @@ import { useSubjects } from "@/hooks/useSubjects";
 import { useLessonLogs } from "@/hooks/useLessonLogs";
 import { useToast } from "@/hooks/use-toast";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useTeacherId } from "@/hooks/useTeacherId";
 
 // Les interfaces Course et DaySchedule sont maintenant importées du hook useSchedules
 
@@ -44,6 +45,7 @@ interface CahierFormData {
 export default function EmploiDuTemps() {
   const navigate = useNavigate();
   const { isAdmin, isTeacher, isParent, isStudent } = useUserRole();
+  const { teacherId } = useTeacherId();
   
   // Utiliser le hook approprié selon le rôle
   const adminData = useClasses();
@@ -121,6 +123,18 @@ export default function EmploiDuTemps() {
     const matin = courses.filter((course: Course) => getPeriod(course.start_time) === 'matin');
     const soir = courses.filter((course: Course) => getPeriod(course.start_time) === 'soir');
     return { matin, soir };
+  };
+
+  // Fonction pour vérifier si l'enseignant connecté peut agir sur ce cours
+  const canTeacherActOnCourse = (course: Course): boolean => {
+    if (isAdmin()) return true;
+    if (!isTeacher()) return false;
+    
+    // Trouver l'enseignant correspondant au cours
+    const courseTeacher = teachers.find(t => `${t.first_name} ${t.last_name}` === course.teacher);
+    
+    // Vérifier si c'est l'enseignant connecté
+    return courseTeacher?.id === teacherId;
   };
 
   const handleEditCourse = (dayIndex: number, courseIndex: number, course: Course) => {
@@ -714,7 +728,7 @@ export default function EmploiDuTemps() {
                               {course.start_time} à {course.end_time}
                             </div>
                             <div className="flex justify-center gap-2">
-                              {(isAdmin() || isTeacher()) && (
+                              {canTeacherActOnCourse(course) && (
                                 <>
                                   <BookOpen 
                                     className="h-3 w-3 cursor-pointer text-blue-600 hover:text-blue-800" 
@@ -766,7 +780,7 @@ export default function EmploiDuTemps() {
                               {course.start_time} à {course.end_time}
                             </div>
                             <div className="flex justify-center gap-2">
-                              {(isAdmin() || isTeacher()) && (
+                              {canTeacherActOnCourse(course) && (
                                 <>
                                   <BookOpen 
                                     className="h-3 w-3 cursor-pointer text-blue-600 hover:text-blue-800" 
