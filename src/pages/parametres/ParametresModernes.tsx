@@ -386,6 +386,24 @@ export default function ParametresModernes() {
   };
 
   const saveAllSettings = async () => {
+    console.log('🔍 [saveAllSettings] Début de la sauvegarde');
+    console.log('🔍 [saveAllSettings] schoolSettings:', schoolSettings);
+    console.log('🔍 [saveAllSettings] settingsLoading:', settingsLoading);
+    console.log('🔍 [saveAllSettings] studentSettings:', studentSettings);
+    console.log('🔍 [saveAllSettings] parentSettings:', parentSettings);
+    console.log('🔍 [saveAllSettings] teacherSettings:', teacherSettings);
+    
+    // Attendre que les paramètres soient complètement chargés
+    if (settingsLoading || !schoolSettings) {
+      console.warn('⚠️ [saveAllSettings] Paramètres pas encore chargés, attente...');
+      toast({
+        title: "Chargement en cours",
+        description: "Veuillez patienter pendant le chargement des paramètres",
+        duration: 2000,
+      });
+      return;
+    }
+    
     // Vérifier si des formats de matricule ou mots de passe ont été modifiés
     const hasStudentChanges = schoolSettings && (
       studentSettings.matriculeFormat !== schoolSettings.studentMatriculeFormat ||
@@ -393,11 +411,31 @@ export default function ParametresModernes() {
       studentSettings.autoGenerateMatricule !== schoolSettings.autoGenerateStudentMatricule
     );
     
+    console.log('🔍 [saveAllSettings] hasStudentChanges:', hasStudentChanges);
+    console.log('🔍 [saveAllSettings] Comparaison élèves:', {
+      current: studentSettings,
+      saved: {
+        matriculeFormat: schoolSettings?.studentMatriculeFormat,
+        password: schoolSettings?.defaultStudentPassword,
+        autoGen: schoolSettings?.autoGenerateStudentMatricule
+      }
+    });
+    
     const hasParentChanges = schoolSettings && (
       parentSettings.matriculeFormat !== schoolSettings.parentMatriculeFormat ||
       parentSettings.defaultParentPassword !== schoolSettings.defaultParentPassword ||
       parentSettings.autoGenerateMatricule !== schoolSettings.autoGenerateParentMatricule
     );
+    
+    console.log('🔍 [saveAllSettings] hasParentChanges:', hasParentChanges);
+    console.log('🔍 [saveAllSettings] Comparaison parents:', {
+      current: parentSettings,
+      saved: {
+        matriculeFormat: schoolSettings?.parentMatriculeFormat,
+        password: schoolSettings?.defaultParentPassword,
+        autoGen: schoolSettings?.autoGenerateParentMatricule
+      }
+    });
     
     const hasTeacherChanges = schoolSettings && (
       teacherSettings.teacherPrefix !== schoolSettings.teacherMatriculeFormat ||
@@ -405,21 +443,40 @@ export default function ParametresModernes() {
       teacherSettings.autoGenerateUsername !== schoolSettings.autoGenerateTeacherMatricule
     );
     
+    console.log('🔍 [saveAllSettings] hasTeacherChanges:', hasTeacherChanges);
+    console.log('🔍 [saveAllSettings] Comparaison enseignants:', {
+      current: teacherSettings,
+      saved: {
+        teacherPrefix: schoolSettings?.teacherMatriculeFormat,
+        password: schoolSettings?.defaultTeacherPassword,
+        autoGen: schoolSettings?.autoGenerateTeacherMatricule
+      }
+    });
+    
     // Si des modifications ont été détectées, afficher le dialog de confirmation
     if (hasStudentChanges || hasParentChanges || hasTeacherChanges) {
+      console.log('✅ [saveAllSettings] Modifications détectées, affichage du dialog');
+      
       const changedTypes = [];
       if (hasStudentChanges) changedTypes.push('élèves');
       if (hasParentChanges) changedTypes.push('parents');
       if (hasTeacherChanges) changedTypes.push('enseignants');
       
+      console.log('✅ [saveAllSettings] Types modifiés:', changedTypes);
+      
       const message = `⚠️ Attention ! Si vous validez cette modification, les nouveaux ${changedTypes.join(', ')} enregistrés utiliseront ce nouveau format de matricule et de mot de passe.\n\nLes anciens membres conserveront leurs identifiants actuels.`;
       
+      console.log('✅ [saveAllSettings] Message du dialog:', message);
+      
       setConfirmDialogMessage(message);
-      setPendingSaveAction(() => performSave);
+      setPendingSaveAction(() => async () => await performSave());
       setShowConfirmDialog(true);
+      
+      console.log('✅ [saveAllSettings] Dialog affiché, showConfirmDialog:', true);
       return;
     }
     
+    console.log('ℹ️ [saveAllSettings] Aucune modification des formats, sauvegarde directe');
     // Si aucune modification des formats, sauvegarder directement
     await performSave();
   };
@@ -938,15 +995,19 @@ export default function ParametresModernes() {
       
       {/* Dialog de confirmation pour les changements de format */}
       <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
-        <AlertDialogContent>
+        <AlertDialogContent className="max-w-md">
           <AlertDialogHeader>
-            <AlertDialogTitle>⚠️ Confirmation de modification</AlertDialogTitle>
-            <AlertDialogDescription className="whitespace-pre-line">
+            <AlertDialogTitle className="flex items-center gap-2 text-orange-600">
+              <Shield className="w-5 h-5" />
+              Confirmation de modification
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-base whitespace-pre-line">
               {confirmDialogMessage}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => {
+              console.log('❌ [Dialog] Annulation cliquée');
               setShowConfirmDialog(false);
               setPendingSaveAction(null);
               toast({
@@ -958,10 +1019,14 @@ export default function ParametresModernes() {
               ❌ Annuler
             </AlertDialogCancel>
             <AlertDialogAction onClick={async () => {
+              console.log('✅ [Dialog] Confirmation cliquée');
               setShowConfirmDialog(false);
               if (pendingSaveAction) {
+                console.log('✅ [Dialog] Exécution de pendingSaveAction');
                 await pendingSaveAction();
                 setPendingSaveAction(null);
+              } else {
+                console.error('❌ [Dialog] pendingSaveAction est null !');
               }
             }}>
               ✅ Confirmer
