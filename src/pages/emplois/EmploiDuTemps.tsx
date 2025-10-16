@@ -262,20 +262,23 @@ export default function EmploiDuTemps() {
   };
 
   const onCahierSubmit = async (data: CahierFormData) => {
-    if (!classeId || isSubmitting) {
-      if (!classeId) {
-        toast({
-          title: "Erreur",
-          description: "ID de classe manquant",
-          variant: "destructive"
-        });
-      }
+    if (!classeId) {
+      toast({
+        title: "Erreur",
+        description: "ID de classe manquant",
+        variant: "destructive"
+      });
       return;
     }
 
-    setIsSubmitting(true);
+    // 1️⃣ Réinitialiser le formulaire IMMÉDIATEMENT
+    cahierForm.reset();
+    
+    // 2️⃣ Fermer le modal IMMÉDIATEMENT
+    setIsCahierDialogOpen(false);
 
-    const success = await createLessonLog({
+    // 3️⃣ Créer l'entrée en arrière-plan (les toasts sont gérés dans useLessonLogs)
+    createLessonLog({
       class_id: classeId,
       subject_id: data.subject_id,
       teacher_id: data.teacher_id,
@@ -284,13 +287,6 @@ export default function EmploiDuTemps() {
       lesson_date: data.lesson_date,
       start_time: data.start_time
     });
-
-    setIsSubmitting(false);
-
-    if (success) {
-      cahierForm.reset();
-      setIsCahierDialogOpen(false);
-    }
   };
 
   const handleRetardAbsence = () => {
