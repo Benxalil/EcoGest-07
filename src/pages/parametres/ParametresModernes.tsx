@@ -500,6 +500,14 @@ export default function ParametresModernes() {
   };
 
   const performSave = async () => {
+    console.log('🚀 [performSave] DÉBUT de la sauvegarde');
+    console.log('🚀 [performSave] Paramètres à sauvegarder:', {
+      studentMatricule: studentSettings?.matriculeFormat,
+      parentMatricule: parentSettings?.matriculeFormat,
+      teacherMatricule: teacherSettings?.teacherPrefix,
+      studentPassword: studentSettings?.defaultStudentPassword
+    });
+    
     try {
       // Sauvegarder l'année académique en base de données
       const success = await updateAcademicYear(generalSettings.anneeScolaire);
@@ -563,6 +571,18 @@ export default function ParametresModernes() {
       }
 
       // Sauvegarder les formats de matricule dans la base de données via useSchoolSettings
+      console.log('💾 [performSave] Appel de updateSchoolSettings avec:', {
+        studentMatriculeFormat: studentSettings?.matriculeFormat,
+        parentMatriculeFormat: parentSettings?.matriculeFormat,
+        teacherMatriculeFormat: teacherSettings?.teacherPrefix,
+        defaultStudentPassword: studentSettings?.defaultStudentPassword,
+        defaultParentPassword: parentSettings?.defaultParentPassword,
+        defaultTeacherPassword: teacherSettings?.defaultTeacherPassword,
+        autoGenerateStudentMatricule: studentSettings?.autoGenerateMatricule,
+        autoGenerateParentMatricule: parentSettings?.autoGenerateMatricule,
+        autoGenerateTeacherMatricule: teacherSettings?.autoGenerateUsername,
+      });
+      
       const settingsSuccess = await updateSchoolSettings({
         studentMatriculeFormat: studentSettings.matriculeFormat,
         parentMatriculeFormat: parentSettings.matriculeFormat,
@@ -576,8 +596,11 @@ export default function ParametresModernes() {
       });
 
       if (!settingsSuccess) {
+        console.error('❌ [performSave] updateSchoolSettings a retourné false !');
         throw new Error("Échec de la mise à jour des paramètres de matricules");
       }
+
+      console.log('✅ [performSave] updateSchoolSettings a réussi !');
 
       // Sauvegarder les autres paramètres en localStorage (notifications, sécurité, sauvegarde)
       localStorage.setItem('settings', JSON.stringify(generalSettings));
@@ -675,7 +698,19 @@ export default function ParametresModernes() {
               className={!hasUnsavedChanges ? "opacity-50 cursor-not-allowed" : ""}
             >
               <Save className="w-4 h-4 mr-2" />
-              Sauvegarder
+              Enregistrer {hasUnsavedChanges && '*'}
+            </Button>
+            <Button 
+              onClick={async () => {
+                console.log('🔧 [DEBUG] Sauvegarde DIRECTE (bypass dialog)');
+                await performSave();
+              }}
+              size="sm"
+              variant="outline"
+              className="gap-2 border-orange-500 text-orange-600 hover:bg-orange-50"
+            >
+              <TestTube className="w-4 h-4" />
+              Debug Save
             </Button>
           </div>
         </div>
@@ -1043,13 +1078,24 @@ export default function ParametresModernes() {
             </AlertDialogCancel>
             <AlertDialogAction onClick={async () => {
               console.log('✅ [Dialog] Confirmation cliquée');
+              console.log('✅ [Dialog] pendingSaveAction existe:', !!pendingSaveAction);
+              
               setShowConfirmDialog(false);
+              
               if (pendingSaveAction) {
-                console.log('✅ [Dialog] Exécution de pendingSaveAction');
-                await pendingSaveAction();
-                setPendingSaveAction(null);
+                console.log('✅ [Dialog] Exécution de pendingSaveAction...');
+                try {
+                  await pendingSaveAction();
+                  console.log('✅ [Dialog] pendingSaveAction exécutée avec succès');
+                } catch (error) {
+                  console.error('❌ [Dialog] Erreur lors de l\'exécution de pendingSaveAction:', error);
+                } finally {
+                  setPendingSaveAction(null);
+                }
               } else {
-                console.error('❌ [Dialog] pendingSaveAction est null !');
+                console.error('❌ [Dialog] pendingSaveAction est null ! Sauvegarde directe...');
+                // Fallback : sauvegarder directement si pendingSaveAction est null
+                await performSave();
               }
             }}>
               ✅ Confirmer
