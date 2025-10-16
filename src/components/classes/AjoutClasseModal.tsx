@@ -74,31 +74,44 @@ export function AjoutClasseModal({ open, onOpenChange, onSuccess }: AjoutClasseM
         }
       }
 
-      // ✅ Fermer le modal IMMÉDIATEMENT
-      form.reset();
-      if (onOpenChange) {
-        onOpenChange(false);
-      }
-      if (onSuccess) {
-        onSuccess();
-      }
-
-      // ✅ Créer la classe en arrière-plan (mutation optimiste gère l'affichage)
+      // ✅ Préparer les données
       const series = data.series && data.series !== "none" ? data.series : "";
       const label = data.label && data.label !== "none" ? data.label : "";
       
-      await createClass({
+      console.log('📝 Tentative de création de classe:', {
+        name: data.name,
+        level: data.level,
+        section: series && label ? `${series}${label}` : (series || label || ""),
+      });
+
+      // ✅ Créer la classe et ATTENDRE le résultat
+      const success = await createClass({
         name: data.name,
         level: data.level,
         section: series && label 
           ? `${series}${label}` 
           : (series || label || ""),
       });
+
+      // ✅ Si succès, fermer le modal
+      if (success) {
+        console.log('✅ Classe créée, fermeture du modal');
+        form.reset();
+        if (onOpenChange) {
+          onOpenChange(false);
+        }
+        if (onSuccess) {
+          onSuccess();
+        }
+      } else {
+        // ❌ Si échec, afficher une erreur
+        console.error('❌ Échec de la création de classe');
+      }
     } catch (error) {
-      console.error("Form submission error:", error);
+      console.error("❌ Erreur dans onSubmit:", error);
       toast({
         title: "Erreur lors de la création",
-        description: "Une erreur est survenue lors de la création de la classe.",
+        description: error instanceof Error ? error.message : "Une erreur est survenue lors de la création de la classe.",
         variant: "destructive",
       });
     }
@@ -109,32 +122,42 @@ export function AjoutClasseModal({ open, onOpenChange, onSuccess }: AjoutClasseM
       await markAsNotStarterCompatible();
       setShowStarterWarning(false);
       
-      // ✅ Fermer le modal IMMÉDIATEMENT
-      form.reset();
-      if (onOpenChange) {
-        onOpenChange(false);
-      }
-      if (onSuccess) {
-        onSuccess();
-      }
-
-      // ✅ Créer la classe en arrière-plan
-      const data = form.getValues();
-      const series = data.series && data.series !== "none" ? data.series : "";
-      const label = data.label && data.label !== "none" ? data.label : "";
+      // ✅ Récupérer les valeurs du formulaire
+      const formValues = form.getValues();
+      const series = formValues.series && formValues.series !== "none" ? formValues.series : "";
+      const label = formValues.label && formValues.label !== "none" ? formValues.label : "";
       
-      await createClass({
-        name: data.name,
-        level: data.level,
+      console.log('📝 Création après avertissement Starter:', {
+        name: formValues.name,
+        level: formValues.level,
+        section: series && label ? `${series}${label}` : (series || label || ""),
+      });
+
+      // ✅ Créer la classe et ATTENDRE
+      const success = await createClass({
+        name: formValues.name,
+        level: formValues.level,
         section: series && label 
           ? `${series}${label}` 
           : (series || label || ""),
       });
+
+      // ✅ Fermer uniquement si succès
+      if (success) {
+        console.log('✅ Classe créée après avertissement');
+        form.reset();
+        if (onOpenChange) {
+          onOpenChange(false);
+        }
+        if (onSuccess) {
+          onSuccess();
+        }
+      }
     } catch (error) {
-      console.error("Error during starter warning confirm:", error);
+      console.error("❌ Erreur dans handleStarterWarningConfirm:", error);
       toast({
-        title: "Erreur lors de la création",
-        description: "Une erreur est survenue lors de la création de la classe.",
+        title: "Erreur",
+        description: error instanceof Error ? error.message : "Une erreur est survenue",
         variant: "destructive",
       });
     }

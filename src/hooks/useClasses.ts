@@ -73,16 +73,44 @@ export const useClasses = () => {
   // ✅ Mutation optimiste pour createClass
   const createClassMutation = useMutation({
     mutationFn: async (classData: CreateClassData) => {
-      const { data: academicYears, error: academicError } = await supabase
+      // 1️⃣ Chercher l'année académique active
+      let { data: academicYears, error: academicError } = await supabase
         .from('academic_years')
-        .select('id')
+        .select('id, name')
         .eq('school_id', userProfile!.schoolId)
         .eq('is_current', true)
-        .single();
+        .maybeSingle();
 
-      if (academicError) throw academicError;
+      // 2️⃣ Si aucune année académique active, la créer automatiquement
+      if (!academicYears) {
+        console.log('⚠️ Aucune année académique active trouvée, création automatique...');
+        
+        const currentYear = new Date().getFullYear();
+        const nextYear = currentYear + 1;
+        const academicYearName = `${currentYear}/${nextYear}`;
+        
+        const { data: newAcademicYear, error: createError } = await supabase
+          .from('academic_years')
+          .insert({
+            school_id: userProfile!.schoolId,
+            name: academicYearName,
+            start_date: `${currentYear}-09-01`,
+            end_date: `${nextYear}-07-31`,
+            is_current: true
+          })
+          .select('id, name')
+          .single();
 
-      // Vérifier si une classe avec le même nom ET section existe déjà
+        if (createError) {
+          console.error('❌ Erreur création année académique:', createError);
+          throw new Error(`Impossible de créer l'année académique : ${createError.message}`);
+        }
+
+        academicYears = newAcademicYear;
+        console.log('✅ Année académique créée:', academicYears);
+      }
+
+      // 3️⃣ Vérifier si une classe identique existe déjà
       const { data: existingClass } = await supabase
         .from('classes')
         .select('name, section')
@@ -98,6 +126,7 @@ export const useClasses = () => {
         throw new Error(`Une classe "${classData.name}${label}" existe déjà pour cette année académique.`);
       }
 
+      // 4️⃣ Insérer la classe
       const { data, error } = await supabase
         .from('classes')
         .insert({
@@ -108,7 +137,12 @@ export const useClasses = () => {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Erreur insertion classe:', error);
+        throw error;
+      }
+
+      console.log('✅ Classe créée avec succès:', data);
       return data;
     },
     onMutate: async (classData) => {
