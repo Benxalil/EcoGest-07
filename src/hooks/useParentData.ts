@@ -66,15 +66,37 @@ export const useParentData = (selectedChildId?: string | null) => {
   const isFetchingRef = useRef(false);
   
   // ✅ Utiliser des refs pour éviter les re-renders
-  const cacheKeyRef = useRef(`parent-data-${profile?.id}`);
+  const cacheKeyRef = useRef(`parent-data-${profile?.id}-${selectedChildId || 'default'}`);
   const cacheRef = useRef(cache);
   const lastLogTime = useRef<number>(0);
 
   // Mettre à jour les refs sans déclencher de re-render
   useEffect(() => {
-    cacheKeyRef.current = `parent-data-${profile?.id}`;
+    cacheKeyRef.current = `parent-data-${profile?.id}-${selectedChildId || 'default'}`;
     cacheRef.current = cache;
-  }, [profile?.id, cache]);
+  }, [profile?.id, cache, selectedChildId]);
+
+  // ✅ Détecter les changements de selectedChildId et invalider le cache
+  const prevSelectedChildRef = useRef(selectedChildId);
+  useEffect(() => {
+    if (prevSelectedChildRef.current !== selectedChildId) {
+      console.log('[useParentData] ⚡ Changement d\'enfant détecté:', {
+        ancien: prevSelectedChildRef.current,
+        nouveau: selectedChildId
+      });
+      
+      // Invalider le cache de l'ancien enfant pour forcer un refresh
+      const oldCacheKey = `parent-data-${profile?.id}-${prevSelectedChildRef.current || 'default'}`;
+      cacheRef.current.delete(oldCacheKey);
+      
+      // Déclencher un nouveau fetch pour le nouvel enfant
+      if (profile?.email && profile?.schoolId) {
+        fetchRef.current();
+      }
+      
+      prevSelectedChildRef.current = selectedChildId;
+    }
+  }, [selectedChildId, profile?.email, profile?.schoolId, profile?.id]);
 
   // Fonction de debounce pour les logs
   const shouldLog = () => {
@@ -125,8 +147,19 @@ export const useParentData = (selectedChildId?: string | null) => {
     // ✅ Vérifier le cache EN PREMIER
     const cachedData = cacheRef.current.get(cacheKeyRef.current) as ParentData | null;
     if (cachedData) {
-      setData({ ...cachedData, loading: false, error: null });
-      return;
+      // ✅ Vérifier que le cache correspond bien à l'enfant sélectionné
+      const cacheMatchesSelection = 
+        !selectedChildId || 
+        cachedData.selectedChild?.id === selectedChildId;
+      
+      if (cacheMatchesSelection) {
+        console.log('[useParentData] ✅ Cache valide pour:', selectedChildId || 'premier enfant');
+        setData({ ...cachedData, loading: false, error: null });
+        return;
+      } else {
+        console.log('[useParentData] ⚠️ Cache invalide (enfant différent), re-fetch nécessaire');
+        // Continuer avec le fetch
+      }
     }
 
     // Éviter les requêtes parallèles
@@ -245,6 +278,13 @@ export const useParentData = (selectedChildId?: string | null) => {
         ? formattedChildren.find((c: Child) => c.id === selectedChildId) || formattedChildren[0] || null
         : formattedChildren[0] || null;
 
+      // ✅ Log pour confirmer la sélection
+      console.log('[useParentData] 🎯 Enfant sélectionné:', {
+        selectedChildId,
+        selectedChild: selectedChild ? `${selectedChild.first_name} ${selectedChild.last_name}` : null,
+        totalChildren: formattedChildren.length
+      });
+
       // Récupérer les schedules de l'enfant sélectionné
       let todaySchedules: any[] = [];
       if (selectedChild?.class_id) {
@@ -359,7 +399,7 @@ export const useParentData = (selectedChildId?: string | null) => {
     if (profile?.email && profile?.schoolId) {
       fetchRef.current();
     }
-  }, [profile?.email, profile?.schoolId]); // ✅ Dépendances stables uniquement
+  }, [profile?.email, profile?.schoolId, selectedChildId]); // ✅ Réagir aux changements d'enfant
 
   // ✅ Callback stable pour les mises à jour real-time
   const handleUpdate = useCallback(() => {
