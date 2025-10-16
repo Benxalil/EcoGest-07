@@ -21,7 +21,7 @@ import { TeacherSettings } from "@/components/parametres/TeacherSettings";
 import { SchoolPrefixManager } from "@/components/admin/SchoolPrefixManager";
 import { Database as DatabaseType } from "@/integrations/supabase/types";
 import { supabase } from "@/integrations/supabase/client";
-import { useSchoolSettings } from '@/hooks/useSchoolSettings';
+import { useMatriculeSettings } from '@/hooks/useMatriculeSettings';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 interface GeneralSettings {
@@ -83,7 +83,7 @@ export default function ParametresModernes() {
   const { subscriptionStatus, simulateSubscriptionState } = useSubscription();
   const { isTeacher, loading, userProfile, simulateRole, resetRoleSimulation, isSimulating } = useUserRole();
   const { schoolData, updateSchoolData, loading: schoolLoading } = useSchoolData();
-  const { settings: schoolSettings, loading: settingsLoading, updateSettings: updateSchoolSettings } = useSchoolSettings();
+  const { settings: matriculeSettings, loading: matriculeLoading, updateSettings: updateMatriculeSettings } = useMatriculeSettings();
   
   const [showPasswords, setShowPasswords] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -205,55 +205,29 @@ export default function ParametresModernes() {
     }
   }, [schoolData, academicYear, schoolLoading]);
 
-  // Synchroniser les paramètres élèves/parents avec la base de données
+  // Charger les settings depuis la base de données uniquement
   useEffect(() => {
-    console.log('🔍 [ParametresModernes] Synchronisation avec schoolSettings:', {
-      settingsLoading,
-      schoolSettings,
-      currentStudentSettings: studentSettings,
-      currentParentSettings: parentSettings,
-      currentTeacherSettings: teacherSettings
-    });
-    
-    if (!settingsLoading && schoolSettings) {
-      console.log('✅ [ParametresModernes] REMPLACEMENT COMPLET des états avec les vraies valeurs de la base');
-      
-      // ✅ Remplacement COMPLET (pas de merge avec prev)
+    if (matriculeSettings && !matriculeLoading) {
       setStudentSettings({
-        autoGenerateMatricule: schoolSettings.autoGenerateStudentMatricule,
-        matriculeFormat: schoolSettings.studentMatriculeFormat,
-        defaultStudentPassword: schoolSettings.defaultStudentPassword,
-        parentNotifications: true // Valeur par défaut UI uniquement
+        matriculeFormat: matriculeSettings.studentMatriculeFormat,
+        defaultStudentPassword: matriculeSettings.defaultStudentPassword,
+        autoGenerateMatricule: matriculeSettings.autoGenerateStudentMatricule,
+        parentNotifications: true,
       });
       
       setParentSettings({
-        autoGenerateMatricule: schoolSettings.autoGenerateParentMatricule,
-        matriculeFormat: schoolSettings.parentMatriculeFormat,
-        defaultParentPassword: schoolSettings.defaultParentPassword
+        matriculeFormat: matriculeSettings.parentMatriculeFormat,
+        defaultParentPassword: matriculeSettings.defaultParentPassword,
+        autoGenerateMatricule: matriculeSettings.autoGenerateParentMatricule,
       });
       
       setTeacherSettings({
-        teacherPrefix: schoolSettings.teacherMatriculeFormat,
-        defaultTeacherPassword: schoolSettings.defaultTeacherPassword,
-        autoGenerateUsername: schoolSettings.autoGenerateTeacherMatricule
-      });
-      
-      console.log('✅ [ParametresModernes] États remplacés avec:', {
-        studentSettings: {
-          matriculeFormat: schoolSettings.studentMatriculeFormat,
-          defaultStudentPassword: schoolSettings.defaultStudentPassword
-        },
-        parentSettings: {
-          matriculeFormat: schoolSettings.parentMatriculeFormat,
-          defaultParentPassword: schoolSettings.defaultParentPassword
-        },
-        teacherSettings: {
-          teacherPrefix: schoolSettings.teacherMatriculeFormat,
-          defaultTeacherPassword: schoolSettings.defaultTeacherPassword
-        }
+        teacherPrefix: matriculeSettings.teacherMatriculeFormat,
+        defaultTeacherPassword: matriculeSettings.defaultTeacherPassword,
+        autoGenerateUsername: matriculeSettings.autoGenerateTeacherMatricule,
       });
     }
-  }, [schoolSettings, settingsLoading]);
+  }, [matriculeSettings, matriculeLoading]);
 
   // Charger les dates de l'année académique depuis la base de données
   useEffect(() => {
@@ -292,46 +266,7 @@ export default function ParametresModernes() {
     loadAcademicYearDates();
   }, []);
 
-  // Écouter les changements de paramètres en temps réel (pour synchroniser entre fenêtres)
-  useEffect(() => {
-    const handleSettingsUpdate = () => {
-      console.log('🔄 [ParametresModernes] Événement schoolSettingsUpdated reçu (Realtime)');
-      
-      // Forcer la re-synchronisation depuis useSchoolSettings avec REMPLACEMENT COMPLET
-      if (schoolSettings) {
-        setStudentSettings({
-          autoGenerateMatricule: schoolSettings.autoGenerateStudentMatricule,
-          matriculeFormat: schoolSettings.studentMatriculeFormat,
-          defaultStudentPassword: schoolSettings.defaultStudentPassword,
-          parentNotifications: studentSettings?.parentNotifications ?? true
-        });
-        
-        setParentSettings({
-          autoGenerateMatricule: schoolSettings.autoGenerateParentMatricule,
-          matriculeFormat: schoolSettings.parentMatriculeFormat,
-          defaultParentPassword: schoolSettings.defaultParentPassword
-        });
-        
-        setTeacherSettings({
-          teacherPrefix: schoolSettings.teacherMatriculeFormat,
-          defaultTeacherPassword: schoolSettings.defaultTeacherPassword,
-          autoGenerateUsername: schoolSettings.autoGenerateTeacherMatricule
-        });
-        
-        console.log('✅ [ParametresModernes] États locaux synchronisés via Realtime avec:', {
-          studentMatricule: schoolSettings.studentMatriculeFormat,
-          parentMatricule: schoolSettings.parentMatriculeFormat,
-          teacherMatricule: schoolSettings.teacherMatriculeFormat
-        });
-      }
-    };
-    
-    window.addEventListener('schoolSettingsUpdated', handleSettingsUpdate);
-    
-    return () => {
-      window.removeEventListener('schoolSettingsUpdated', handleSettingsUpdate);
-    };
-  }, [schoolSettings]);
+  // Le hook useMatriculeSettings gère déjà le realtime, pas besoin de listener supplémentaire
 
   const loadAllSettings = () => {
     try {
@@ -400,8 +335,8 @@ export default function ParametresModernes() {
   const saveAllSettings = async () => {
     console.log('🔍 [saveAllSettings] Début de la sauvegarde');
     console.log('🔍 [saveAllSettings] userProfile:', userProfile);
-    console.log('🔍 [saveAllSettings] schoolSettings:', schoolSettings);
-    console.log('🔍 [saveAllSettings] settingsLoading:', settingsLoading);
+    console.log('🔍 [saveAllSettings] matriculeSettings:', matriculeSettings);
+    console.log('🔍 [saveAllSettings] matriculeLoading:', matriculeLoading);
     console.log('🔍 [saveAllSettings] studentSettings:', studentSettings);
     console.log('🔍 [saveAllSettings] parentSettings:', parentSettings);
     console.log('🔍 [saveAllSettings] teacherSettings:', teacherSettings);
@@ -421,24 +356,23 @@ export default function ParametresModernes() {
       const changedTypes = [];
       
       // Vérifier les changements par rapport aux valeurs en base (si disponibles)
-      if (schoolSettings) {
-        if (studentSettings?.matriculeFormat !== schoolSettings.studentMatriculeFormat ||
-            studentSettings?.defaultStudentPassword !== schoolSettings.defaultStudentPassword) {
+      if (matriculeSettings) {
+        if (studentSettings?.matriculeFormat !== matriculeSettings.studentMatriculeFormat ||
+            studentSettings?.defaultStudentPassword !== matriculeSettings.defaultStudentPassword) {
           changedTypes.push('élèves');
         }
         
-        if (parentSettings?.matriculeFormat !== schoolSettings.parentMatriculeFormat ||
-            parentSettings?.defaultParentPassword !== schoolSettings.defaultParentPassword) {
+        if (parentSettings?.matriculeFormat !== matriculeSettings.parentMatriculeFormat ||
+            parentSettings?.defaultParentPassword !== matriculeSettings.defaultParentPassword) {
           changedTypes.push('parents');
         }
         
-        if (teacherSettings?.teacherPrefix !== schoolSettings.teacherMatriculeFormat ||
-            teacherSettings?.defaultTeacherPassword !== schoolSettings.defaultTeacherPassword) {
+        if (teacherSettings?.teacherPrefix !== matriculeSettings.teacherMatriculeFormat ||
+            teacherSettings?.defaultTeacherPassword !== matriculeSettings.defaultTeacherPassword) {
           changedTypes.push('enseignants');
         }
       } else {
-        // Si schoolSettings n'est pas chargé, considérer que tout peut changer
-        console.log('⚠️ [saveAllSettings] schoolSettings non chargé, on affiche le dialog par précaution');
+        console.log('⚠️ [saveAllSettings] matriculeSettings non chargé, on affiche le dialog par précaution');
         changedTypes.push('utilisateurs');
       }
       
@@ -536,48 +470,7 @@ export default function ParametresModernes() {
         throw new Error("Échec de la mise à jour des données de l'école");
       }
 
-      // Sauvegarder les formats de matricule dans la base de données via useSchoolSettings
-      
-      // ✅ ÉTAPE 1 : Vérifier que les settings sont bien chargés
-      if (!studentSettings || !parentSettings || !teacherSettings) {
-        console.error('❌ [performSave] Impossible de sauvegarder : settings non chargés', {
-          studentSettings,
-          parentSettings,
-          teacherSettings
-        });
-        throw new Error("Les paramètres utilisateurs ne sont pas encore chargés. Veuillez attendre et réessayer.");
-      }
-      
-      console.log('💾 [performSave] Appel de updateSchoolSettings avec:', {
-        studentMatriculeFormat: studentSettings.matriculeFormat,
-        parentMatriculeFormat: parentSettings.matriculeFormat,
-        teacherMatriculeFormat: teacherSettings.teacherPrefix,
-        defaultStudentPassword: studentSettings.defaultStudentPassword,
-        defaultParentPassword: parentSettings.defaultParentPassword,
-        defaultTeacherPassword: teacherSettings.defaultTeacherPassword,
-        autoGenerateStudentMatricule: studentSettings.autoGenerateMatricule,
-        autoGenerateParentMatricule: parentSettings.autoGenerateMatricule,
-        autoGenerateTeacherMatricule: teacherSettings.autoGenerateUsername,
-      });
-      
-      const settingsSuccess = await updateSchoolSettings({
-        studentMatriculeFormat: studentSettings.matriculeFormat,
-        parentMatriculeFormat: parentSettings.matriculeFormat,
-        teacherMatriculeFormat: teacherSettings.teacherPrefix,
-        defaultStudentPassword: studentSettings.defaultStudentPassword,
-        defaultParentPassword: parentSettings.defaultParentPassword,
-        defaultTeacherPassword: teacherSettings.defaultTeacherPassword,
-        autoGenerateStudentMatricule: studentSettings.autoGenerateMatricule,
-        autoGenerateParentMatricule: parentSettings.autoGenerateMatricule,
-        autoGenerateTeacherMatricule: teacherSettings.autoGenerateUsername,
-      });
-
-      if (!settingsSuccess) {
-        console.error('❌ [performSave] updateSchoolSettings a retourné false !');
-        throw new Error("Échec de la mise à jour des paramètres de matricules");
-      }
-
-      console.log('✅ [performSave] updateSchoolSettings a réussi !');
+      // Les settings matricule sont maintenant gérés par performSave()
 
       // Sauvegarder les autres paramètres en localStorage (notifications, sécurité, sauvegarde)
       localStorage.setItem('settings', JSON.stringify(generalSettings));
@@ -642,7 +535,7 @@ export default function ParametresModernes() {
   }
 
   // Afficher un loader pendant le chargement des paramètres
-  if (loading || schoolLoading || settingsLoading || !studentSettings || !parentSettings || !teacherSettings) {
+  if (loading || schoolLoading || matriculeLoading || !studentSettings || !parentSettings || !teacherSettings) {
     return (
       <Layout>
         <div className="flex items-center justify-center min-h-screen">
@@ -672,13 +565,13 @@ export default function ParametresModernes() {
                 Ce bouton teste directement la sauvegarde en base de données avec des valeurs de test.
               </p>
             </div>
-            <Button 
-              onClick={async () => {
-                console.log('🧪 [DEBUG] Test direct de updateSchoolSettings');
-                console.log('🧪 [DEBUG] userProfile:', userProfile);
-                console.log('🧪 [DEBUG] studentSettings:', studentSettings);
-                
-                const result = await updateSchoolSettings({
+          <Button 
+            onClick={async () => {
+              console.log('🧪 [DEBUG] Test direct de updateMatriculeSettings');
+              console.log('🧪 [DEBUG] userProfile:', userProfile);
+              console.log('🧪 [DEBUG] studentSettings:', studentSettings);
+              
+              const result = await updateMatriculeSettings({
                   studentMatriculeFormat: 'TEST_DEBUG_001',
                   parentMatriculeFormat: 'PARENT_DEBUG_001',
                   teacherMatriculeFormat: 'PROF_DEBUG_001',
@@ -961,7 +854,7 @@ export default function ParametresModernes() {
                 
                 <Separator />
                 
-                {settingsLoading ? (
+                {matriculeLoading ? (
                   <div className="flex items-center justify-center py-8">
                     <div className="text-sm text-muted-foreground">
                       Chargement des formats de matricule...

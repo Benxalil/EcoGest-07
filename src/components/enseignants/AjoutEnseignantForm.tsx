@@ -24,7 +24,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useTeachers } from "@/hooks/useTeachers";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useSubjects } from "@/hooks/useSubjects";
-import { useSchoolSettings } from "@/hooks/useSchoolSettings";
+import { useMatriculeSettings } from "@/hooks/useMatriculeSettings";
 import { supabase } from "@/integrations/supabase/client";
 import { Plus, Trash2 } from "lucide-react";
 
@@ -78,7 +78,7 @@ export function AjoutEnseignantForm({ onSuccess }: AjoutEnseignantFormProps) {
   const { createTeacher } = useTeachers();
   const { userProfile } = useUserRole();
   const { subjects: allMatieres } = useSubjects();
-  const { settings: schoolSettings, loading: settingsLoading } = useSchoolSettings();
+  const { settings: schoolSettings, loading: settingsLoading } = useMatriculeSettings();
   
   // Dédupliquer les matières par nom pour éviter les doublons entre classes
   const matieres = useMemo(() => {

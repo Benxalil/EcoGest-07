@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserRole } from './useUserRole';
-import { useSchoolSettings } from './useSchoolSettings';
+import { useMatriculeSettings } from './useMatriculeSettings';
 import { useToast } from '@/hooks/use-toast';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
@@ -41,7 +41,7 @@ export function useStudents(classId?: string) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { userProfile } = useUserRole();
-  const { settings: schoolSettings } = useSchoolSettings();
+  const { settings: schoolSettings } = useMatriculeSettings();
   const { toast } = useToast();
 
   const fetchStudents = useCallback(async (

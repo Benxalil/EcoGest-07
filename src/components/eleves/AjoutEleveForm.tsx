@@ -6,7 +6,7 @@ import { useClasses } from "@/hooks/useClasses";
 import { useStudents } from "@/hooks/useStudents";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useStudentDocuments } from "@/hooks/useStudentDocuments";
-import { useSchoolSettings } from "@/hooks/useSchoolSettings";
+import { useMatriculeSettings } from "@/hooks/useMatriculeSettings";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -266,7 +266,7 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
   const { addStudent, updateStudent } = useStudents();
   const { userProfile } = useUserRole();
   const { uploadDocument } = useStudentDocuments();
-  const { settings: schoolSettings, loading: settingsLoading } = useSchoolSettings();
+  const { settings: schoolSettings, loading: settingsLoading } = useMatriculeSettings();
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [documents, setDocuments] = useState<DocumentData[]>([]);
