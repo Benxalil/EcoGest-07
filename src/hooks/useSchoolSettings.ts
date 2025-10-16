@@ -85,6 +85,7 @@ export const useSchoolSettings = () => {
         },
         (payload) => {
           console.log('🔔 [useSchoolSettings] Mise à jour temps réel détectée', payload);
+          console.log('🔔 [useSchoolSettings] Anciennes valeurs:', settings);
           
           const newData = payload.new;
           const updatedSettings = {
@@ -98,6 +99,8 @@ export const useSchoolSettings = () => {
             autoGenerateParentMatricule: newData.auto_generate_parent_matricule ?? DEFAULT_SETTINGS.autoGenerateParentMatricule,
             autoGenerateTeacherMatricule: newData.auto_generate_teacher_matricule ?? DEFAULT_SETTINGS.autoGenerateTeacherMatricule,
           };
+          
+          console.log('🔔 [useSchoolSettings] Nouvelles valeurs:', updatedSettings);
           
           setSettings(updatedSettings);
           

@@ -270,6 +270,45 @@ export default function ParametresModernes() {
     loadAcademicYearDates();
   }, []);
 
+  // Écouter les changements de paramètres en temps réel (pour synchroniser entre fenêtres)
+  useEffect(() => {
+    const handleSettingsUpdate = () => {
+      console.log('🔄 [ParametresModernes] Événement schoolSettingsUpdated reçu');
+      
+      // Forcer la re-synchronisation depuis useSchoolSettings
+      if (schoolSettings) {
+        setStudentSettings(prev => ({
+          ...prev,
+          matriculeFormat: schoolSettings.studentMatriculeFormat,
+          defaultStudentPassword: schoolSettings.defaultStudentPassword,
+          autoGenerateMatricule: schoolSettings.autoGenerateStudentMatricule,
+        }));
+        
+        setParentSettings(prev => ({
+          ...prev,
+          matriculeFormat: schoolSettings.parentMatriculeFormat,
+          defaultParentPassword: schoolSettings.defaultParentPassword,
+          autoGenerateMatricule: schoolSettings.autoGenerateParentMatricule,
+        }));
+        
+        setTeacherSettings(prev => ({
+          ...prev,
+          teacherPrefix: schoolSettings.teacherMatriculeFormat,
+          defaultTeacherPassword: schoolSettings.defaultTeacherPassword,
+          autoGenerateUsername: schoolSettings.autoGenerateTeacherMatricule,
+        }));
+        
+        console.log('✅ [ParametresModernes] États locaux synchronisés avec les nouveaux paramètres');
+      }
+    };
+    
+    window.addEventListener('schoolSettingsUpdated', handleSettingsUpdate);
+    
+    return () => {
+      window.removeEventListener('schoolSettingsUpdated', handleSettingsUpdate);
+    };
+  }, [schoolSettings]);
+
   const loadAllSettings = () => {
     try {
       // Paramètres généraux

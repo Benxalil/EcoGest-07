@@ -51,8 +51,34 @@ export const useSchoolData = () => {
 
     fetchSchoolData();
 
+    // 🔔 Ajouter une souscription Realtime pour synchroniser entre fenêtres
+    const channel = supabase
+      .channel('school-data-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'schools',
+          filter: `id=eq.${userProfile.schoolId}`
+        },
+        (payload) => {
+          console.log('🔔 [useSchoolData] Mise à jour Realtime détectée', payload);
+          
+          if (isMounted) {
+            setSchoolData(payload.new);
+            window.dispatchEvent(new CustomEvent('schoolSettingsUpdated'));
+          }
+        }
+      )
+      .subscribe((status) => {
+        console.log('📡 [useSchoolData] Statut souscription Realtime:', status);
+      });
+
     return () => {
       isMounted = false;
+      supabase.removeChannel(channel);
+      console.log('🔌 [useSchoolData] Désouscription Realtime');
     };
   }, [userProfile?.schoolId]);
 
