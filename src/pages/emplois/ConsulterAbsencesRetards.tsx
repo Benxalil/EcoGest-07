@@ -248,67 +248,69 @@ export default function ConsulterAbsencesRetards() {
           </div>
         </div>
 
-        {/* Filtres */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="text-lg">Filtres</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Date</label>
-                <Input
-                  type="date"
-                  value={dateFilter}
-                  onChange={(e) => setDateFilter(e.target.value)}
-                  placeholder="jj/mm/aaaa"
-                />
+        {/* Filtres - Uniquement pour admins et enseignants */}
+        {!isParentUser && (
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle className="text-lg">Filtres</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Date</label>
+                  <Input
+                    type="date"
+                    value={dateFilter}
+                    onChange={(e) => setDateFilter(e.target.value)}
+                    placeholder="jj/mm/aaaa"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Élève</label>
+                  <Select value={eleveFilter} onValueChange={setEleveFilter}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Tous les élèves" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Tous les élèves</SelectItem>
+                      {getUniqueEleves().map((eleve) => (
+                        <SelectItem key={eleve} value={eleve}>
+                          {eleve}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Type</label>
+                  <Select value={typeFilter} onValueChange={setTypeFilter}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Tous les types" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Tous les types</SelectItem>
+                      <SelectItem value="absence">Absence</SelectItem>
+                      <SelectItem value="retard">Retard</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-end">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => {
+                      setDateFilter("");
+                      setEleveFilter("all");
+                      setTypeFilter("all");
+                    }}
+                    className="w-full"
+                  >
+                    Réinitialiser
+                  </Button>
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Élève</label>
-                <Select value={eleveFilter} onValueChange={setEleveFilter}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Tous les élèves" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Tous les élèves</SelectItem>
-                    {getUniqueEleves().map((eleve) => (
-                      <SelectItem key={eleve} value={eleve}>
-                        {eleve}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Type</label>
-                <Select value={typeFilter} onValueChange={setTypeFilter}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Tous les types" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Tous les types</SelectItem>
-                    <SelectItem value="absence">Absence</SelectItem>
-                    <SelectItem value="retard">Retard</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex items-end">
-                <Button 
-                  variant="outline" 
-                  onClick={() => {
-                    setDateFilter("");
-                    setEleveFilter("all");
-                    setTypeFilter("all");
-                  }}
-                  className="w-full"
-                >
-                  Réinitialiser
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Statistiques */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
