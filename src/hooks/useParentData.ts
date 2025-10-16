@@ -361,15 +361,15 @@ export const useParentData = (selectedChildId?: string | null) => {
     }
   }, [profile?.email, profile?.schoolId]); // ✅ Dépendances stables uniquement
 
+  // ✅ Callback stable pour les mises à jour real-time
+  const handleUpdate = useCallback(() => {
+    cacheRef.current.deleteWithEvent(cacheKeyRef.current);
+    setTimeout(() => fetchRef.current(), 300);
+  }, []); // ✅ Pas de dépendances
+
   // Realtime - UN SEUL CHANNEL pour tout
   useEffect(() => {
     if (!profile?.schoolId) return;
-
-    // ✅ Callback stable sans dépendances
-    const handleUpdate = useCallback(() => {
-      cacheRef.current.deleteWithEvent(cacheKeyRef.current);
-      setTimeout(() => fetchRef.current(), 300);
-    }, []); // ✅ Pas de dépendances
 
     const channel = supabase
       .channel('parent-all-updates')
