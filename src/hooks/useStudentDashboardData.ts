@@ -2,13 +2,46 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUnifiedUserData } from './useUnifiedUserData';
 import { multiLevelCache, CacheTTL, CacheKeys } from '@/utils/multiLevelCache';
-import { filterAnnouncementsByRole } from '@/utils/announcementFilters';
+import { filterAnnouncementsByRole, type Announcement } from '@/utils/announcementFilters';
+
+// Interfaces pour typage précis
+interface ClassInfo {
+  id: string;
+  name: string;
+  level: string;
+  section: string | null;
+}
+
+interface StudentData {
+  id: string;
+  first_name: string;
+  last_name: string;
+  student_number: string;
+  class_id: string | null;
+  classes?: ClassInfo;
+}
+
+interface SubjectInfo {
+  name: string;
+  color: string | null;
+}
+
+interface ScheduleData {
+  id: string;
+  start_time: string;
+  end_time: string;
+  room: string | null;
+  subject_id: string | null;
+  activity_name: string | null;
+  subject: string;
+  subjects?: SubjectInfo;
+}
 
 interface StudentDashboardData {
-  student: any;
-  classInfo: any;
-  todaySchedules: any[];
-  announcements: any[];
+  student: StudentData | null;
+  classInfo: ClassInfo | null;
+  todaySchedules: ScheduleData[];
+  announcements: Announcement[];
   loading: boolean;
   error: string | null;
 }
@@ -65,7 +98,7 @@ export const useStudentDashboardData = () => {
 
       if (studentResult.error) throw studentResult.error;
 
-      let schedules: any[] = [];
+      let schedules: ScheduleData[] = [];
       
       // Si l'élève a une classe, récupérer l'emploi du temps du jour
       if (studentResult.data?.class_id) {
@@ -87,7 +120,7 @@ export const useStudentDashboardData = () => {
         announcementsResult.data || [],
         'student',
         false
-      ).slice(0, 3); // Garder uniquement les 3 premières après filtrage
+      ).slice(0, 3) as Announcement[]; // Garder uniquement les 3 premières après filtrage
 
       const result: StudentDashboardData = {
         student: studentResult.data,
