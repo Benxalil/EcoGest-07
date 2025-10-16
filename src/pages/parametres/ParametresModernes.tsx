@@ -11,7 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { School, Users, GraduationCap, Calendar, Bell, Shield, Database, Settings, Save, Upload, Download, Trash2, Eye, EyeOff, TestTube } from "lucide-react";
+import { School, Users, GraduationCap, Calendar, Bell, Shield, Database, Settings, Save, Upload, Download, Trash2, Eye, EyeOff, TestTube, AlertTriangle } from "lucide-react";
 import { useSchoolData } from "@/hooks/useSchoolData";
 import { useAcademicYear } from "@/hooks/useAcademicYear";
 import { useSubscription } from "@/hooks/useSubscription";
@@ -693,11 +693,22 @@ export default function ParametresModernes() {
             <p className="text-gray-600">Configurez tous les paramètres de votre établissement scolaire</p>
           </div>
           <div className="flex items-center space-x-2">
+            {/* Avertissement si pas admin */}
+            {userProfile?.role !== 'school_admin' && (
+              <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg">
+                <AlertTriangle className="w-4 h-4 text-amber-600" />
+                <span className="text-sm text-amber-800">
+                  Seuls les administrateurs peuvent modifier ces paramètres
+                </span>
+              </div>
+            )}
+            
             <Button 
               onClick={saveAllSettings} 
               size="sm" 
-              disabled={!hasUnsavedChanges}
+              disabled={!hasUnsavedChanges || userProfile?.role !== 'school_admin'}
               className={!hasUnsavedChanges ? "opacity-50 cursor-not-allowed" : ""}
+              title={userProfile?.role !== 'school_admin' ? 'Seuls les administrateurs peuvent sauvegarder' : ''}
             >
               <Save className="w-4 h-4 mr-2" />
               Enregistrer {hasUnsavedChanges && '*'}

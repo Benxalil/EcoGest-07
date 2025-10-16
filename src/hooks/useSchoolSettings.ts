@@ -148,7 +148,10 @@ export const useSchoolSettings = () => {
 
     // 5️⃣ Mise à jour de la base de données en arrière-plan
     try {
-      const { error } = await supabase
+      console.log('💾 [useSchoolSettings] Tentative UPDATE sur schools avec schoolId:', userProfile.schoolId);
+      console.log('💾 [useSchoolSettings] Rôle utilisateur:', userProfile.role);
+      
+      const { data, error } = await supabase
         .from('schools')
         .update({
           student_matricule_format: newSettings.studentMatriculeFormat,
@@ -161,9 +164,24 @@ export const useSchoolSettings = () => {
           auto_generate_parent_matricule: newSettings.autoGenerateParentMatricule,
           auto_generate_teacher_matricule: newSettings.autoGenerateTeacherMatricule,
         })
-        .eq('id', userProfile.schoolId);
+        .eq('id', userProfile.schoolId)
+        .select(); // ⚠️ IMPORTANT : Ajouter .select() pour forcer la récupération
 
-      if (error) throw error;
+      console.log('💾 [useSchoolSettings] Résultat UPDATE:', { data, error });
+
+      if (error) {
+        // Détecter spécifiquement les erreurs RLS
+        if (error.code === '42501' || error.message?.includes('policy')) {
+          throw new Error(`❌ ACCÈS REFUSÉ : Vous devez être connecté en tant qu'administrateur (school_admin) pour modifier ces paramètres. Rôle actuel: ${userProfile.role}`);
+        }
+        throw error;
+      }
+
+      // Vérifier si l'UPDATE a effectivement modifié des lignes
+      if (!data || data.length === 0) {
+        console.warn('⚠️ [useSchoolSettings] UPDATE exécuté mais AUCUNE LIGNE modifiée (probablement bloqué par RLS)');
+        throw new Error(`❌ ACCÈS REFUSÉ : La politique de sécurité empêche cette modification. Vous devez être administrateur (school_admin). Rôle actuel: ${userProfile.role}`);
+      }
 
       console.log('✅ [useSchoolSettings] Paramètres sauvegardés en base de données');
       return true;
@@ -176,8 +194,9 @@ export const useSchoolSettings = () => {
       
       toast({
         title: "❌ Erreur de sauvegarde",
-        description: "Impossible de sauvegarder les paramètres. Modifications annulées.",
+        description: error instanceof Error ? error.message : "Impossible de sauvegarder les paramètres. Modifications annulées.",
         variant: "destructive",
+        duration: 5000, // Plus long pour lire le message d'erreur
       });
       
       return false;
