@@ -64,7 +64,27 @@ export const useParentData = (selectedChildId?: string | null) => {
   const { profile } = useOptimizedUserData();
   const cache = useOptimizedCache();
   const isFetchingRef = useRef(false);
-  const cacheKey = `parent-data-${profile?.id}`;
+  
+  // ✅ Utiliser des refs pour éviter les re-renders
+  const cacheKeyRef = useRef(`parent-data-${profile?.id}`);
+  const cacheRef = useRef(cache);
+  const lastLogTime = useRef<number>(0);
+
+  // Mettre à jour les refs sans déclencher de re-render
+  useEffect(() => {
+    cacheKeyRef.current = `parent-data-${profile?.id}`;
+    cacheRef.current = cache;
+  }, [profile?.id, cache]);
+
+  // Fonction de debounce pour les logs
+  const shouldLog = () => {
+    const now = Date.now();
+    if (now - lastLogTime.current > 2000) { // Max 1 log toutes les 2 secondes
+      lastLogTime.current = now;
+      return true;
+    }
+    return false;
+  };
 
   // 🔧 Fonction pour extraire toutes les variantes de matricule parent
   const extractParentMatricule = (email: string): string[] => {
@@ -98,14 +118,19 @@ export const useParentData = (selectedChildId?: string | null) => {
   };
 
   const fetchParentData = useCallback(async () => {
-    if (isFetchingRef.current || !profile?.email || !profile?.schoolId) {
+    if (!profile?.email || !profile?.schoolId) {
       return;
     }
 
-    // Vérifier le cache
-    const cachedData = cache.get(cacheKey) as ParentData | null;
+    // ✅ Vérifier le cache EN PREMIER
+    const cachedData = cacheRef.current.get(cacheKeyRef.current) as ParentData | null;
     if (cachedData) {
       setData({ ...cachedData, loading: false, error: null });
+      return;
+    }
+
+    // Éviter les requêtes parallèles
+    if (isFetchingRef.current) {
       return;
     }
 
@@ -126,11 +151,13 @@ export const useParentData = (selectedChildId?: string | null) => {
         orClauses.push(`parent_matricule.ilike.${variant}`);
       });
 
-      console.log('[useParentData] Recherche avec:', {
-        email: profile.email,
-        matriculeVariants,
-        schoolId: profile.schoolId
-      });
+      if (shouldLog()) {
+        console.log('[useParentData] Recherche avec:', {
+          email: profile.email,
+          matriculeVariants,
+          schoolId: profile.schoolId
+        });
+      }
 
       // 🚀 Récupérer TOUTES les données en parallèle avec Promise.all
       const [childrenResult, parentInfoResult, announcementsResult] = await Promise.all([
@@ -202,7 +229,9 @@ export const useParentData = (selectedChildId?: string | null) => {
         }
       }
 
-      console.log('[useParentData] Enfants trouvés:', childrenData.length);
+      if (shouldLog()) {
+        console.log('[useParentData] Enfants trouvés:', childrenData.length);
+      }
 
       // Formater les enfants
       const formattedChildren = childrenData.map((child: any) => ({
@@ -306,7 +335,7 @@ export const useParentData = (selectedChildId?: string | null) => {
       };
 
       // Mettre en cache pour 30 secondes
-      cache.set(cacheKey, parentData, 30 * 1000);
+      cacheRef.current.set(cacheKeyRef.current, parentData, 30 * 1000);
       setData(parentData);
 
     } catch (err: any) {
@@ -319,23 +348,28 @@ export const useParentData = (selectedChildId?: string | null) => {
     } finally {
       isFetchingRef.current = false;
     }
-  }, [profile?.email, profile?.schoolId, profile?.firstName, profile?.lastName, profile?.phone, selectedChildId, cache, cacheKey]);
+  }, [profile?.email, profile?.schoolId, profile?.firstName, profile?.lastName, selectedChildId]); // ✅ Dépendances stables uniquement
+
+  // ✅ Ref stable pour fetchParentData
+  const fetchRef = useRef(fetchParentData);
+  fetchRef.current = fetchParentData;
 
   // Fetch initial
   useEffect(() => {
     if (profile?.email && profile?.schoolId) {
-      fetchParentData();
+      fetchRef.current();
     }
-  }, [profile?.email, profile?.schoolId, fetchParentData]);
+  }, [profile?.email, profile?.schoolId]); // ✅ Dépendances stables uniquement
 
   // Realtime - UN SEUL CHANNEL pour tout
   useEffect(() => {
     if (!profile?.schoolId) return;
 
-    const handleUpdate = () => {
-      cache.deleteWithEvent(cacheKey);
-      setTimeout(fetchParentData, 300);
-    };
+    // ✅ Callback stable sans dépendances
+    const handleUpdate = useCallback(() => {
+      cacheRef.current.deleteWithEvent(cacheKeyRef.current);
+      setTimeout(() => fetchRef.current(), 300);
+    }, []); // ✅ Pas de dépendances
 
     const channel = supabase
       .channel('parent-all-updates')
@@ -362,7 +396,7 @@ export const useParentData = (selectedChildId?: string | null) => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [profile?.schoolId, fetchParentData, cache, cacheKey]);
+  }, [profile?.schoolId]); // ✅ Une seule dépendance stable
 
   return {
     children: data.children,
