@@ -66,6 +66,37 @@ export const useParentData = (selectedChildId?: string | null) => {
   const isFetchingRef = useRef(false);
   const cacheKey = `parent-data-${profile?.id}`;
 
+  // 🔧 Fonction pour extraire toutes les variantes de matricule parent
+  const extractParentMatricule = (email: string): string[] => {
+    const variants: string[] = [];
+    
+    // Format 1 : ParentXXX@... → PARENT001, Parent001, PARENTXXX, ParentXXX
+    const match1 = email.match(/Parent(\d+)@/i);
+    if (match1) {
+      const num = match1[1];
+      variants.push(`PARENT${num.padStart(3, '0')}`); // PARENT001
+      variants.push(`Parent${num.padStart(3, '0')}`); // Parent001
+      variants.push(`PARENT${num}`);                   // PARENT1
+      variants.push(`Parent${num}`);                   // Parent1
+    }
+    
+    // Format 2 : PAREleveXXX@... → PAREleveXXX, PAReleveXXX
+    const match2 = email.match(/PAR[Ee]leve([A-Z0-9]+)@/i);
+    if (match2) {
+      variants.push(`PAREleveALG${match2[1]}`);
+      variants.push(`PAReleveALG${match2[1]}`);
+      variants.push(email.split('@')[0]); // Format exact
+    }
+    
+    // Format 3 : Tout préfixe avant @
+    const prefix = email.split('@')[0];
+    if (prefix && !variants.includes(prefix)) {
+      variants.push(prefix);
+    }
+    
+    return variants;
+  };
+
   const fetchParentData = useCallback(async () => {
     if (isFetchingRef.current || !profile?.email || !profile?.schoolId) {
       return;
@@ -82,13 +113,28 @@ export const useParentData = (selectedChildId?: string | null) => {
     setData(prev => ({ ...prev, loading: true, error: null }));
 
     try {
-      // Extraire le matricule parent depuis l'email
-      const emailMatch = profile.email.match(/Parent(\d+)@/i);
-      const parentMatricule = emailMatch ? `PARENT${emailMatch[1].padStart(3, '0')}` : null;
+      // 🚀 Extraire toutes les variantes de matricule
+      const matriculeVariants = extractParentMatricule(profile.email);
+      
+      // 🔍 Construire les clauses OR pour recherche flexible
+      const orClauses: string[] = [
+        `parent_email.ilike.${profile.email}` // Email exact (case-insensitive)
+      ];
+      
+      // Ajouter toutes les variantes de matricule
+      matriculeVariants.forEach(variant => {
+        orClauses.push(`parent_matricule.ilike.${variant}`);
+      });
+
+      console.log('[useParentData] Recherche avec:', {
+        email: profile.email,
+        matriculeVariants,
+        schoolId: profile.schoolId
+      });
 
       // 🚀 Récupérer TOUTES les données en parallèle avec Promise.all
       const [childrenResult, parentInfoResult, announcementsResult] = await Promise.all([
-        // 1. Enfants
+        // 1. Enfants avec requête flexible
         supabase
           .from('students')
           .select(`
@@ -103,15 +149,15 @@ export const useParentData = (selectedChildId?: string | null) => {
               avatar_url
             )
           `)
-          .or(`parent_email.eq.${profile.email}${parentMatricule ? `,parent_matricule.eq.${parentMatricule}` : ''}`)
+          .or(orClauses.join(','))
           .eq('is_active', true)
           .order('first_name', { ascending: true }),
 
-        // 2. Info parent (depuis le premier enfant)
+        // 2. Info parent (depuis le premier enfant) avec mêmes conditions
         supabase
           .from('students')
           .select('parent_first_name, parent_last_name, parent_phone, parent_email, parent_matricule, emergency_contact')
-          .or(`parent_email.ilike.${profile.email}${parentMatricule ? `,parent_matricule.ilike.${parentMatricule}` : ''}`)
+          .or(orClauses.join(','))
           .limit(1)
           .maybeSingle(),
 
@@ -122,11 +168,44 @@ export const useParentData = (selectedChildId?: string | null) => {
           .eq('school_id', profile.schoolId)
           .eq('is_published', true)
           .order('created_at', { ascending: false })
-          .limit(3) // ✅ Harmonisé avec les autres dashboards
+          .limit(3)
       ]);
 
+      let childrenData = childrenResult.data || [];
+
+      // 🆘 Fallback : Si aucun enfant trouvé, chercher par nom dans la même école
+      if (childrenData.length === 0 && profile.firstName && profile.lastName) {
+        console.warn('[useParentData] Aucun enfant trouvé par email/matricule, tentative par nom...');
+        
+        const { data: fallbackChildren } = await supabase
+          .from('students')
+          .select(`
+            *,
+            classes:class_id (
+              id,
+              name,
+              level,
+              section
+            ),
+            profiles:user_id (
+              avatar_url
+            )
+          `)
+          .eq('school_id', profile.schoolId)
+          .eq('is_active', true)
+          .or(`parent_first_name.ilike.${profile.firstName},parent_last_name.ilike.${profile.lastName}`)
+          .order('first_name', { ascending: true });
+        
+        if (fallbackChildren && fallbackChildren.length > 0) {
+          console.log('[useParentData] ✅ Enfants trouvés par correspondance de nom:', fallbackChildren.length);
+          childrenData = fallbackChildren;
+        }
+      }
+
+      console.log('[useParentData] Enfants trouvés:', childrenData.length);
+
       // Formater les enfants
-      const formattedChildren = (childrenResult.data || []).map((child: any) => ({
+      const formattedChildren = childrenData.map((child: any) => ({
         ...child,
         classes: Array.isArray(child.classes) ? child.classes[0] : child.classes,
         profiles: Array.isArray(child.profiles) ? child.profiles[0] : child.profiles
@@ -178,7 +257,7 @@ export const useParentData = (selectedChildId?: string | null) => {
           lastName: lastName || profile.lastName || '',
           email: studentData.parent_email || profile.email || '',
           phone: studentData.parent_phone || profile.phone || '',
-          matricule: studentData.parent_matricule || parentMatricule || profile.email || ''
+          matricule: studentData.parent_matricule || matriculeVariants[0] || profile.email || ''
         };
       } else {
         // Fallback sur le profil
@@ -187,7 +266,7 @@ export const useParentData = (selectedChildId?: string | null) => {
           lastName: profile.lastName || '',
           email: profile.email || '',
           phone: profile.phone || '',
-          matricule: parentMatricule || profile.email || ''
+          matricule: matriculeVariants[0] || profile.email || ''
         };
       }
 
