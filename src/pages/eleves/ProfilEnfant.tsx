@@ -1,14 +1,16 @@
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { Layout } from "@/components/layout/Layout";
-import { useParentChildren } from "@/hooks/useParentChildren";
+import { useParentData } from "@/hooks/useParentData";
 import { ParentChildSelector } from "@/components/parent/ParentChildSelector";
 import { User, Phone, Mail, MapPin, Calendar, School } from "lucide-react";
 
 export default function ProfilEnfant() {
-  const { children, selectedChild, setSelectedChildId, loading } = useParentChildren();
+  const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
+  const { children, selectedChild, loading } = useParentData(selectedChildId);
 
   if (loading) {
     return (
@@ -68,7 +70,7 @@ export default function ProfilEnfant() {
         {/* Sélecteur d'enfant */}
         <ParentChildSelector 
           children={children}
-          selectedChildId={selectedChild.id}
+          selectedChildId={selectedChildId || selectedChild.id}
           onChildSelect={setSelectedChildId}
         />
 

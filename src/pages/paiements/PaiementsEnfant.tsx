@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Layout } from "@/components/layout/Layout";
 import { supabase } from "@/integrations/supabase/client";
-import { useParentChildren } from "@/hooks/useParentChildren";
+import { useParentData } from "@/hooks/useParentData";
 import { ParentChildSelector } from "@/components/parent/ParentChildSelector";
 import { useSubscriptionPlan } from "@/hooks/useSubscriptionPlan";
 import { CreditCard, CheckCircle, Clock, XCircle, Lock, Crown } from "lucide-react";
@@ -33,7 +33,8 @@ export default function PaiementsEnfant() {
   const { dates: academicYearDates } = useAcademicYearDates();
   const [paymentMonths, setPaymentMonths] = useState<PaymentMonth[]>([]);
   const [loading, setLoading] = useState(true);
-  const { children, selectedChild, setSelectedChildId, loading: childrenLoading } = useParentChildren();
+  const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
+  const { children, selectedChild, loading: childrenLoading } = useParentData(selectedChildId);
 
   // Récupérer les mois académiques avec fallback si pas de dates configurées
   const academicMonths = useMemo(() => {
@@ -276,7 +277,7 @@ export default function PaiementsEnfant() {
         {children.length > 1 && (
           <ParentChildSelector 
             children={children}
-            selectedChildId={selectedChild.id}
+            selectedChildId={selectedChildId || selectedChild.id}
             onChildSelect={setSelectedChildId}
           />
         )}
