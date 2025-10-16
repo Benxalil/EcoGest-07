@@ -31,7 +31,7 @@ interface AjoutClasseModalProps {
 
 export function AjoutClasseModal({ open, onOpenChange, onSuccess }: AjoutClasseModalProps) {
   const { toast } = useToast();
-  const { currentPlan, isFeatureLimited, getFeatureLimit, checkStarterLimits, markAsNotStarterCompatible } = useSubscriptionPlan();
+  const { currentPlan, isFeatureLimited, getFeatureLimit, checkStarterLimits, markAsNotStarterCompatible, starterCompatible } = useSubscriptionPlan();
   const { classes, createClass } = useClasses();
   const [showStarterWarning, setShowStarterWarning] = useState(false);
   
@@ -65,7 +65,8 @@ export function AjoutClasseModal({ open, onOpenChange, onSuccess }: AjoutClasseM
       }
 
       // Pour la période d'essai, vérifier les limites Starter et afficher un avertissement
-      if (currentPlan === 'trial') {
+      // ✅ N'afficher l'alerte qu'une seule fois : au premier dépassement du palier
+      if (currentPlan === 'trial' && starterCompatible) {
         const starterLimits = checkStarterLimits('classes', currentClassCount);
         
         if (starterLimits.exceedsStarter) {
