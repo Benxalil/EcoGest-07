@@ -405,99 +405,69 @@ export default function ParametresModernes() {
 
   const saveAllSettings = async () => {
     console.log('🔍 [saveAllSettings] Début de la sauvegarde');
+    console.log('🔍 [saveAllSettings] userProfile:', userProfile);
     console.log('🔍 [saveAllSettings] schoolSettings:', schoolSettings);
     console.log('🔍 [saveAllSettings] settingsLoading:', settingsLoading);
     console.log('🔍 [saveAllSettings] studentSettings:', studentSettings);
     console.log('🔍 [saveAllSettings] parentSettings:', parentSettings);
     console.log('🔍 [saveAllSettings] teacherSettings:', teacherSettings);
     
-    // Attendre que les paramètres soient complètement chargés
-    if (settingsLoading || !schoolSettings) {
-      console.warn('⚠️ [saveAllSettings] Paramètres pas encore chargés, attente...');
-      toast({
-        title: "Chargement en cours",
-        description: "Veuillez patienter pendant le chargement des paramètres",
-        duration: 2000,
-      });
-      return;
-    }
+    // ✅ SIMPLIFICATION : On ne vérifie plus settingsLoading, on utilise les valeurs actuelles des champs
+    // Si les champs sont affichés, c'est que les données sont chargées (voir condition ligne 668)
     
-    // Vérifier si des formats de matricule ou mots de passe ont été modifiés
-    const hasStudentChanges = schoolSettings && (
-      studentSettings.matriculeFormat !== schoolSettings.studentMatriculeFormat ||
-      studentSettings.defaultStudentPassword !== schoolSettings.defaultStudentPassword ||
-      studentSettings.autoGenerateMatricule !== schoolSettings.autoGenerateStudentMatricule
-    );
+    // ✅ AMÉLIORATION : Toujours afficher le dialog de confirmation pour les changements critiques
+    // On affiche le dialog si l'utilisateur a modifié quelque chose (hasUnsavedChanges)
     
-    console.log('🔍 [saveAllSettings] hasStudentChanges:', hasStudentChanges);
-    console.log('🔍 [saveAllSettings] Comparaison élèves:', {
-      current: studentSettings,
-      saved: {
-        matriculeFormat: schoolSettings?.studentMatriculeFormat,
-        password: schoolSettings?.defaultStudentPassword,
-        autoGen: schoolSettings?.autoGenerateStudentMatricule
-      }
-    });
+    console.log('🔍 [saveAllSettings] hasUnsavedChanges:', hasUnsavedChanges);
     
-    const hasParentChanges = schoolSettings && (
-      parentSettings.matriculeFormat !== schoolSettings.parentMatriculeFormat ||
-      parentSettings.defaultParentPassword !== schoolSettings.defaultParentPassword ||
-      parentSettings.autoGenerateMatricule !== schoolSettings.autoGenerateParentMatricule
-    );
-    
-    console.log('🔍 [saveAllSettings] hasParentChanges:', hasParentChanges);
-    console.log('🔍 [saveAllSettings] Comparaison parents:', {
-      current: parentSettings,
-      saved: {
-        matriculeFormat: schoolSettings?.parentMatriculeFormat,
-        password: schoolSettings?.defaultParentPassword,
-        autoGen: schoolSettings?.autoGenerateParentMatricule
-      }
-    });
-    
-    const hasTeacherChanges = schoolSettings && (
-      teacherSettings.teacherPrefix !== schoolSettings.teacherMatriculeFormat ||
-      teacherSettings.defaultTeacherPassword !== schoolSettings.defaultTeacherPassword ||
-      teacherSettings.autoGenerateUsername !== schoolSettings.autoGenerateTeacherMatricule
-    );
-    
-    console.log('🔍 [saveAllSettings] hasTeacherChanges:', hasTeacherChanges);
-    console.log('🔍 [saveAllSettings] Comparaison enseignants:', {
-      current: teacherSettings,
-      saved: {
-        teacherPrefix: schoolSettings?.teacherMatriculeFormat,
-        password: schoolSettings?.defaultTeacherPassword,
-        autoGen: schoolSettings?.autoGenerateTeacherMatricule
-      }
-    });
-    
-    // Si des modifications ont été détectées, afficher le dialog de confirmation
-    if (hasStudentChanges || hasParentChanges || hasTeacherChanges) {
-      console.log('✅ [saveAllSettings] Modifications détectées, affichage du dialog');
+    // ✅ Si des modifications ont été faites et que ce sont des formats/mots de passe, afficher le dialog
+    if (hasUnsavedChanges && (studentSettings || parentSettings || teacherSettings)) {
+      console.log('✅ [saveAllSettings] Modifications détectées, affichage du dialog de confirmation');
       
       const changedTypes = [];
-      if (hasStudentChanges) changedTypes.push('élèves');
-      if (hasParentChanges) changedTypes.push('parents');
-      if (hasTeacherChanges) changedTypes.push('enseignants');
       
-      console.log('✅ [saveAllSettings] Types modifiés:', changedTypes);
+      // Vérifier les changements par rapport aux valeurs en base (si disponibles)
+      if (schoolSettings) {
+        if (studentSettings?.matriculeFormat !== schoolSettings.studentMatriculeFormat ||
+            studentSettings?.defaultStudentPassword !== schoolSettings.defaultStudentPassword) {
+          changedTypes.push('élèves');
+        }
+        
+        if (parentSettings?.matriculeFormat !== schoolSettings.parentMatriculeFormat ||
+            parentSettings?.defaultParentPassword !== schoolSettings.defaultParentPassword) {
+          changedTypes.push('parents');
+        }
+        
+        if (teacherSettings?.teacherPrefix !== schoolSettings.teacherMatriculeFormat ||
+            teacherSettings?.defaultTeacherPassword !== schoolSettings.defaultTeacherPassword) {
+          changedTypes.push('enseignants');
+        }
+      } else {
+        // Si schoolSettings n'est pas chargé, considérer que tout peut changer
+        console.log('⚠️ [saveAllSettings] schoolSettings non chargé, on affiche le dialog par précaution');
+        changedTypes.push('utilisateurs');
+      }
       
-      const message = `⚠️ Attention ! Si vous validez cette modification, les nouveaux ${changedTypes.join(', ')} enregistrés utiliseront ce nouveau format de matricule et de mot de passe.\n\nLes anciens membres conserveront leurs identifiants actuels.`;
+      console.log('✅ [saveAllSettings] Types potentiellement modifiés:', changedTypes);
+      
+      // Afficher le dialog de confirmation
+      const message = changedTypes.length > 0 
+        ? `⚠️ Attention ! Si vous validez cette modification, les nouveaux ${changedTypes.join(', ')} enregistrés utiliseront ces nouveaux formats de matricule et mots de passe.\n\nLes anciens membres conserveront leurs identifiants actuels.`
+        : `⚠️ Vous êtes sur le point de sauvegarder les paramètres de l'école.\n\nÊtes-vous sûr de vouloir continuer ?`;
       
       console.log('✅ [saveAllSettings] Message du dialog:', message);
       
       setConfirmDialogMessage(message);
       setPendingSaveAction(() => performSave);
       console.log('✅ [saveAllSettings] pendingSaveAction configurée');
-      console.log('✅ [saveAllSettings] Type de pendingSaveAction:', typeof (() => performSave));
       setShowConfirmDialog(true);
       
       console.log('✅ [saveAllSettings] Dialog affiché, showConfirmDialog:', true);
       return;
     }
     
-    console.log('ℹ️ [saveAllSettings] Aucune modification des formats, sauvegarde directe');
-    // Si aucune modification des formats, sauvegarder directement
+    console.log('ℹ️ [saveAllSettings] Aucune modification détectée OU pas de changements critiques, sauvegarde directe');
+    // Si aucune modification, sauvegarder directement
     await performSave();
   };
 
