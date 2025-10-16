@@ -3,6 +3,56 @@ import { supabase } from '@/integrations/supabase/client';
 import { useUserRole } from './useUserRole';
 import { useToast } from '@/hooks/use-toast';
 
+// Interfaces pour les données brutes de Supabase
+interface RawClassData {
+  id: string;
+  name: string;
+  level: string;
+  section: string | null;
+  academic_year_id: string;
+}
+
+interface RawExamData {
+  id: string;
+  title: string;
+  description: string | null;
+  exam_date: string;
+  class_id: string;
+  is_published: boolean;
+  semester: string | null;
+}
+
+interface RawSubjectData {
+  id: string;
+  name: string;
+  abbreviation: string | null;
+  coefficient: number;
+  class_id: string;
+  max_score: number | null;
+}
+
+interface RawStudentData {
+  id: string;
+  first_name: string;
+  last_name: string;
+  student_number: string;
+  class_id: string | null;
+}
+
+interface RawGradeData {
+  id: string;
+  student_id: string;
+  subject_id: string;
+  exam_id: string | null;
+  grade_value: number;
+  max_grade: number;
+  coefficient: number;
+  semester: string | null;
+  exam_type: string;
+  school_id: string;
+  created_at: string;
+}
+
 // Interface simplifiée pour les résultats d'élèves
 export interface StudentResult {
   student_id: string;
@@ -87,7 +137,8 @@ export const useResults = (options?: { contextSemester?: string }) => {
         .order('created_at', { ascending: false });
 
       if (classesError) throw classesError;
-      console.log(`✅ [${timestamp}] Classes récupérées:`, classesData?.length || 0);
+      const typedClassesData = (classesData as RawClassData[]) || [];
+      console.log(`✅ [${timestamp}] Classes récupérées:`, typedClassesData.length);
 
       // 2. Récupérer les examens avec ordre pour éviter cache
       const { data: examsData, error: examsError } = await supabase
@@ -97,7 +148,8 @@ export const useResults = (options?: { contextSemester?: string }) => {
         .order('exam_date', { ascending: false });
 
       if (examsError) throw examsError;
-      console.log(`✅ [${timestamp}] Examens récupérés:`, examsData?.length || 0);
+      const typedExamsData = (examsData as RawExamData[]) || [];
+      console.log(`✅ [${timestamp}] Examens récupérés:`, typedExamsData.length);
 
       // 3. Récupérer les matières avec ordre pour éviter cache
       const { data: subjectsData, error: subjectsError } = await supabase
@@ -107,7 +159,8 @@ export const useResults = (options?: { contextSemester?: string }) => {
         .order('name', { ascending: true });
 
       if (subjectsError) throw subjectsError;
-      console.log(`✅ [${timestamp}] Matières récupérées:`, subjectsData?.length || 0);
+      const typedSubjectsData = (subjectsData as RawSubjectData[]) || [];
+      console.log(`✅ [${timestamp}] Matières récupérées:`, typedSubjectsData.length);
 
       // 4. Récupérer les élèves avec ordre pour éviter cache
       const { data: studentsData, error: studentsError } = await supabase
@@ -117,7 +170,8 @@ export const useResults = (options?: { contextSemester?: string }) => {
         .order('last_name', { ascending: true });
 
       if (studentsError) throw studentsError;
-      console.log(`✅ [${timestamp}] Élèves récupérés:`, studentsData?.length || 0);
+      const typedStudentsData = (studentsData as RawStudentData[]) || [];
+      console.log(`✅ [${timestamp}] Élèves récupérés:`, typedStudentsData.length);
 
       // 5. Récupérer TOUTES les notes FRAÎCHES depuis la table grades
       const { data: gradesData, error: gradesError } = await supabase
@@ -139,22 +193,23 @@ export const useResults = (options?: { contextSemester?: string }) => {
         .order('created_at', { ascending: false });
 
       if (gradesError) throw gradesError;
-      console.log(`✅ [${timestamp}] Notes récupérées:`, gradesData?.length || 0);
-      console.log(`📝 [${timestamp}] Échantillon de notes:`, gradesData?.slice(0, 3));
+      const typedGradesData = (gradesData as RawGradeData[]) || [];
+      console.log(`✅ [${timestamp}] Notes récupérées:`, typedGradesData.length);
+      console.log(`📝 [${timestamp}] Échantillon de notes:`, typedGradesData.slice(0, 3));
 
       console.log(`📊 [${timestamp}] RÉSUMÉ des données récupérées:`, {
-        classes: classesData?.length || 0,
-        exams: examsData?.length || 0,
-        subjects: subjectsData?.length || 0,
-        students: studentsData?.length || 0,
-        grades: gradesData?.length || 0
+        classes: typedClassesData.length,
+        exams: typedExamsData.length,
+        subjects: typedSubjectsData.length,
+        students: typedStudentsData.length,
+        grades: typedGradesData.length
       });
 
       // Construire les résultats avec les VRAIES notes
-      const resultsData: ClassResults[] = classesData?.map(classe => {
-        const classExams = examsData?.filter(exam => exam.class_id === classe.id) || [];
-        const classStudents = studentsData?.filter(student => student.class_id === classe.id) || [];
-        const classSubjects = subjectsData?.filter(subject => subject.class_id === classe.id) || [];
+      const resultsData: ClassResults[] = typedClassesData.map(classe => {
+        const classExams = typedExamsData.filter(exam => exam.class_id === classe.id);
+        const classStudents = typedStudentsData.filter(student => student.class_id === classe.id);
+        const classSubjects = typedSubjectsData.filter(subject => subject.class_id === classe.id);
         
         return {
           class_id: classe.id,
@@ -184,12 +239,12 @@ export const useResults = (options?: { contextSemester?: string }) => {
               };
 
               // Filtrage adapté pour les examens de Composition avec contexte semestre
-              const studentGrades = gradesData?.filter(grade => {
+              const studentGrades = typedGradesData.filter(grade => {
                 // Vérifier que c'est bien l'élève
                 if (grade.student_id !== student.id) return false;
                 
                 // Vérifier que la matière existe (pas besoin de vérifier class_id car les subjects peuvent être partagés)
-                const gradeSubject = subjectsData?.find(s => s.id === grade.subject_id);
+                const gradeSubject = typedSubjectsData.find(s => s.id === grade.subject_id);
                 if (!gradeSubject) {
                   console.warn(`⚠️ Matière non trouvée pour grade.subject_id:`, grade.subject_id);
                   return false;
@@ -235,7 +290,7 @@ export const useResults = (options?: { contextSemester?: string }) => {
                 
                 // Pour les autres types d'examens : matcher uniquement par exam_id
                 return grade.exam_id === exam.id;
-              }) || [];
+              });
 
               return {
                 student_id: student.id,
@@ -276,9 +331,9 @@ export const useResults = (options?: { contextSemester?: string }) => {
               coefficient: subject.coefficient || 1,
               max_score: subject.max_score || 20
             }))
-          }))
-        };
-      }) || [];
+            }))
+          };
+        });
 
       console.log('useResults: Données finales structurées avec VRAIES notes:', resultsData);
       setResults(resultsData);
