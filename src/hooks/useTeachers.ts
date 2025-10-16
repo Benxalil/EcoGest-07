@@ -3,7 +3,17 @@ import { supabase } from '@/integrations/supabase/client';
 import { useUserRole } from './useUserRole';
 import { useToast } from '@/hooks/use-toast';
 import { debounce } from '@/utils/debounce';
-import type { RealtimeChannel } from '@supabase/supabase-js';
+import type { RealtimeChannel, RealtimePostgresChangesPayload } from '@supabase/supabase-js';
+
+// Interface pour la réponse de l'Edge Function create-user-account
+interface CreateUserAccountResponse {
+  user: {
+    id: string;
+    email: string;
+    role: string;
+  } | null;
+  error?: string;
+}
 
 export interface TeacherData {
   id: string;
@@ -51,7 +61,7 @@ export const useTeachers = () => {
       // L'Edge Function va construire l'email valide pour Supabase
       
       // Créer le compte via Edge Function
-      const { data, error } = await supabase.functions.invoke('create-user-account', {
+      const { data, error } = await supabase.functions.invoke<CreateUserAccountResponse>('create-user-account', {
         body: { 
           email: employeeNumber, // Juste le matricule (ex: Prof03)
           password: password, 
@@ -68,7 +78,7 @@ export const useTeachers = () => {
         return null;
       }
 
-      return data.user;
+      return data?.user || null;
     } catch (error) {
       console.error('Erreur lors de la création du compte auth:', error);
       return null;
@@ -91,7 +101,7 @@ export const useTeachers = () => {
 
       if (error) throw error;
       
-      setTeachers(data || []);
+      setTeachers((data as TeacherData[]) || []);
     } catch (err) {
       console.error('Erreur lors de la récupération des enseignants:', err);
       setError(err instanceof Error ? err.message : 'Erreur inconnue');
@@ -196,7 +206,8 @@ export const useTeachers = () => {
       if (error) throw error;
 
       // Remplacer l'élément optimiste par le réel
-      setTeachers(prev => prev.map(t => t.id === tempId ? data : t));
+      const newTeacher = data as TeacherData;
+      setTeachers(prev => prev.map(t => t.id === tempId ? newTeacher : t));
       
       if (authUser) {
         toast({
@@ -312,18 +323,20 @@ export const useTeachers = () => {
     if (!userProfile?.schoolId) return;
 
     // Debounce les mises à jour pour éviter trop de re-renders
-    const debouncedUpdate = debounce((payload: any) => {
+    const debouncedUpdate = debounce((payload: RealtimePostgresChangesPayload<TeacherData>) => {
       if (payload.eventType === 'INSERT') {
+        const newTeacher = payload.new as TeacherData;
         setTeachers(prev => {
-          const exists = prev.some(t => t.id === payload.new.id);
+          const exists = prev.some(t => t.id === newTeacher.id);
           if (exists) return prev;
-          return [...prev, payload.new as TeacherData].sort((a, b) => 
+          return [...prev, newTeacher].sort((a, b) => 
             a.last_name.localeCompare(b.last_name)
           );
         });
       } else if (payload.eventType === 'UPDATE') {
+        const updatedTeacher = payload.new as TeacherData;
         setTeachers(prev => prev.map(t => 
-          t.id === payload.new.id ? payload.new as TeacherData : t
+          t.id === updatedTeacher.id ? updatedTeacher : t
         ));
       } else if (payload.eventType === 'DELETE') {
         setTeachers(prev => prev.filter(t => t.id !== payload.old.id));
