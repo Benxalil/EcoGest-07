@@ -51,7 +51,13 @@ export const useSchoolData = () => {
 
     fetchSchoolData();
 
-    // 🔔 Ajouter une souscription Realtime pour synchroniser entre fenêtres
+    // 🔔 Ajouter une souscription Realtime seulement si schoolId existe
+    if (!userProfile?.schoolId) {
+      return () => {
+        isMounted = false;
+      };
+    }
+
     const channel = supabase
       .channel('school-data-changes')
       .on(

@@ -81,7 +81,13 @@ export const useMatriculeSettings = () => {
 
     loadSettings();
 
-    // 🔔 Realtime pour synchroniser entre fenêtres
+    // 🔔 Realtime pour synchroniser entre fenêtres (seulement si schoolId existe)
+    if (!userProfile?.schoolId) {
+      return () => {
+        isMounted = false;
+      };
+    }
+
     const channel = supabase
       .channel('matricule-settings-changes')
       .on(
