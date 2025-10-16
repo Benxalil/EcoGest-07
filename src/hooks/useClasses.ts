@@ -28,6 +28,22 @@ export interface CreateClassData {
   capacity?: number;
 }
 
+// Interface pour les données brutes de Supabase (avec relation students)
+interface RawClassDataFromSupabase {
+  id: string;
+  name: string;
+  level: string;
+  section: string | null;
+  capacity: number | null;
+  school_id: string;
+  academic_year_id: string;
+  created_at: string;
+  updated_at: string;
+  series_id?: string | null;
+  label_id?: string | null;
+  students?: Array<{ count: number }>;
+}
+
 // Fonction de fetch séparée pour React Query
 const fetchClassesFromSupabase = async (schoolId: string): Promise<ClassData[]> => {
   const { data: classesData, error } = await supabase
@@ -42,8 +58,12 @@ const fetchClassesFromSupabase = async (schoolId: string): Promise<ClassData[]> 
   if (error) throw error;
   
   // Transformer les données pour inclure enrollment_count
-  return (classesData || []).map((classe: any) => ({
+  return (classesData || []).map((classe: RawClassDataFromSupabase) => ({
     ...classe,
+    section: classe.section || undefined,
+    capacity: classe.capacity || undefined,
+    series_id: classe.series_id || undefined,
+    label_id: classe.label_id || undefined,
     enrollment_count: classe.students?.[0]?.count || 0,
     students: undefined
   }));
