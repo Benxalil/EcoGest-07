@@ -487,7 +487,9 @@ export default function ParametresModernes() {
       console.log('✅ [saveAllSettings] Message du dialog:', message);
       
       setConfirmDialogMessage(message);
-      setPendingSaveAction(() => async () => await performSave());
+      setPendingSaveAction(() => performSave);
+      console.log('✅ [saveAllSettings] pendingSaveAction configurée');
+      console.log('✅ [saveAllSettings] Type de pendingSaveAction:', typeof (() => performSave));
       setShowConfirmDialog(true);
       
       console.log('✅ [saveAllSettings] Dialog affiché, showConfirmDialog:', true);
