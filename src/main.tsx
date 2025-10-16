@@ -1,3 +1,7 @@
+// 🔄 Build forcé - Version 2025.10.16-22:00
+// Ce timestamp force la reconstruction complète après modifications
+// Dernière mise à jour : Déblocage du cache de compilation
+
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { QueryClientProvider } from '@tanstack/react-query'

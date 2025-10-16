@@ -1,8 +1,9 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "@/components/theme-provider";
+import { useToast } from "@/hooks/use-toast";
 import { StudentRouteHandler } from "@/components/navigation/StudentRouteHandler";
 import { ParentRouteHandler } from "@/components/navigation/ParentRouteHandler";
 import AuthenticatedLayout from "@/components/layout/AuthenticatedLayout";
@@ -68,6 +69,38 @@ const queryClient = new QueryClient({
 });
 
 function App() {
+  const { toast } = useToast();
+  
+  // 🔄 Système de détection de nouvelle version et nettoyage automatique des caches
+  useEffect(() => {
+    const currentVersion = '2025.10.16-22:00';
+    const lastVersion = localStorage.getItem('app_version');
+    
+    if (lastVersion !== currentVersion) {
+      console.log('🔄 Nouvelle version détectée, vidage du cache...');
+      
+      // Vider les caches React Query
+      queryClient.clear();
+      
+      // Vider les caches personnalisés (cache_, optimized_, etc.)
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('cache_') || key.startsWith('optimized_') || key.startsWith('prefetch_')) {
+          localStorage.removeItem(key);
+          console.log(`🗑️ Cache supprimé: ${key}`);
+        }
+      });
+      
+      // Mettre à jour la version
+      localStorage.setItem('app_version', currentVersion);
+      
+      toast({
+        title: "🔄 Mise à jour appliquée",
+        description: "L'application a été mise à jour avec les dernières modifications",
+        duration: 3000,
+      });
+    }
+  }, [toast]);
+  
   return (
     <ThemeProvider defaultTheme="system" storageKey="ecogest-ui-theme">
       <QueryClientProvider client={queryClient}>

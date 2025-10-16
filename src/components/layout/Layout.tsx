@@ -89,6 +89,13 @@ export function Layout({ children }: LayoutProps) {
         {children}
       </main>
 
+      {/* Badge de version visible pour confirmer le build */}
+      <div className="fixed bottom-2 right-2 bg-background/90 backdrop-blur-sm border border-border px-3 py-1.5 rounded-md shadow-sm z-50">
+        <span className="text-xs text-muted-foreground font-mono">
+          v2025.10.16-22:00
+        </span>
+      </div>
+
       {/* Système de blocage quand l'abonnement expire */}
       {subscriptionStatus.isExpired && <SubscriptionBlocker />}
     </div>
