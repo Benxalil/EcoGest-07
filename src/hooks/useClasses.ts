@@ -145,37 +145,6 @@ export const useClasses = () => {
       console.log('✅ Classe créée avec succès:', data);
       return data;
     },
-    onMutate: async (classData) => {
-      await queryClient.cancelQueries({ queryKey: QueryKeys.classes(userProfile?.schoolId) });
-      const previousClasses = queryClient.getQueryData(QueryKeys.classes(userProfile?.schoolId));
-      
-      queryClient.setQueryData<ClassData[]>(
-        QueryKeys.classes(userProfile?.schoolId),
-        (old = []) => [...old, {
-          ...classData,
-          id: `temp-${Date.now()}`,
-          school_id: userProfile!.schoolId,
-          academic_year_id: '',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          enrollment_count: 0
-        }]
-      );
-      
-      return { previousClasses };
-    },
-    onError: (err, _, context) => {
-      queryClient.setQueryData(QueryKeys.classes(userProfile?.schoolId), context?.previousClasses);
-      
-      if (err instanceof Error && err.message.includes('existe déjà')) {
-        toast({ title: 'Classe existante', description: err.message, variant: 'destructive' });
-      } else {
-        toast({ title: 'Erreur', description: err instanceof Error ? err.message : 'Erreur inconnue', variant: 'destructive' });
-      }
-    },
-    onSuccess: () => {
-      toast({ title: 'Succès', description: 'Classe créée avec succès' });
-    },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: QueryKeys.classes(userProfile?.schoolId) });
     }
@@ -183,13 +152,56 @@ export const useClasses = () => {
 
   const createClass = useCallback(async (classData: CreateClassData) => {
     if (!userProfile?.schoolId) return false;
+
+    // 1️⃣ Créer un objet classe temporaire avec ID local
+    const tempId = `temp-${Date.now()}`;
+    const tempClass: ClassData = {
+      ...classData,
+      id: tempId,
+      school_id: userProfile.schoolId,
+      academic_year_id: '', // Sera rempli après
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      enrollment_count: 0
+    };
+
+    // 2️⃣ Mise à jour optimiste IMMÉDIATE du cache React Query
+    queryClient.setQueryData<ClassData[]>(
+      QueryKeys.classes(userProfile.schoolId),
+      (old = []) => [...old, tempClass]
+    );
+
+    // 3️⃣ Afficher le toast de succès IMMÉDIATEMENT
+    toast({ 
+      title: 'Succès', 
+      description: 'Classe créée avec succès' 
+    });
+
     try {
+      // 4️⃣ Insertion réelle en base EN ARRIÈRE-PLAN
       await createClassMutation.mutateAsync(classData);
       return true;
-    } catch {
+    } catch (error) {
+      // 5️⃣ ROLLBACK : Supprimer la classe temporaire
+      queryClient.setQueryData<ClassData[]>(
+        QueryKeys.classes(userProfile.schoolId),
+        (old = []) => old.filter(c => c.id !== tempId)
+      );
+
+      // 6️⃣ Afficher l'erreur
+      const errorMessage = error instanceof Error && error.message.includes('existe déjà')
+        ? error.message
+        : 'Erreur lors de la création de la classe';
+
+      toast({ 
+        title: 'Erreur', 
+        description: errorMessage, 
+        variant: 'destructive' 
+      });
+      
       return false;
     }
-  }, [userProfile?.schoolId, createClassMutation]);
+  }, [userProfile?.schoolId, createClassMutation, queryClient, toast]);
 
   // ✅ Mutation pour updateClass
   const updateClassMutation = useMutation({

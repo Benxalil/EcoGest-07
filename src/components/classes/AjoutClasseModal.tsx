@@ -77,15 +77,9 @@ export function AjoutClasseModal({ open, onOpenChange, onSuccess }: AjoutClasseM
       // ✅ Préparer les données
       const series = data.series && data.series !== "none" ? data.series : "";
       const label = data.label && data.label !== "none" ? data.label : "";
-      
-      console.log('📝 Tentative de création de classe:', {
-        name: data.name,
-        level: data.level,
-        section: series && label ? `${series}${label}` : (series || label || ""),
-      });
 
-      // ✅ Créer la classe et ATTENDRE le résultat
-      const success = await createClass({
+      // ✅ Lancer la création en arrière-plan (sans attendre)
+      createClass({
         name: data.name,
         level: data.level,
         section: series && label 
@@ -93,19 +87,13 @@ export function AjoutClasseModal({ open, onOpenChange, onSuccess }: AjoutClasseM
           : (series || label || ""),
       });
 
-      // ✅ Si succès, fermer le modal
-      if (success) {
-        console.log('✅ Classe créée, fermeture du modal');
-        form.reset();
-        if (onOpenChange) {
-          onOpenChange(false);
-        }
-        if (onSuccess) {
-          onSuccess();
-        }
-      } else {
-        // ❌ Si échec, afficher une erreur
-        console.error('❌ Échec de la création de classe');
+      // ✅ Fermer le modal IMMÉDIATEMENT
+      form.reset();
+      if (onOpenChange) {
+        onOpenChange(false);
+      }
+      if (onSuccess) {
+        onSuccess();
       }
     } catch (error) {
       console.error("❌ Erreur dans onSubmit:", error);
@@ -122,37 +110,28 @@ export function AjoutClasseModal({ open, onOpenChange, onSuccess }: AjoutClasseM
       await markAsNotStarterCompatible();
       setShowStarterWarning(false);
       
-      // ✅ Récupérer les valeurs du formulaire
-      const formValues = form.getValues();
-      const series = formValues.series && formValues.series !== "none" ? formValues.series : "";
-      const label = formValues.label && formValues.label !== "none" ? formValues.label : "";
-      
-      console.log('📝 Création après avertissement Starter:', {
-        name: formValues.name,
-        level: formValues.level,
-        section: series && label ? `${series}${label}` : (series || label || ""),
-      });
+    // ✅ Récupérer les valeurs du formulaire
+    const formValues = form.getValues();
+    const series = formValues.series && formValues.series !== "none" ? formValues.series : "";
+    const label = formValues.label && formValues.label !== "none" ? formValues.label : "";
 
-      // ✅ Créer la classe et ATTENDRE
-      const success = await createClass({
-        name: formValues.name,
-        level: formValues.level,
-        section: series && label 
-          ? `${series}${label}` 
-          : (series || label || ""),
-      });
+    // ✅ Lancer la création en arrière-plan (sans attendre)
+    createClass({
+      name: formValues.name,
+      level: formValues.level,
+      section: series && label 
+        ? `${series}${label}` 
+        : (series || label || ""),
+    });
 
-      // ✅ Fermer uniquement si succès
-      if (success) {
-        console.log('✅ Classe créée après avertissement');
-        form.reset();
-        if (onOpenChange) {
-          onOpenChange(false);
-        }
-        if (onSuccess) {
-          onSuccess();
-        }
-      }
+    // ✅ Fermer le modal IMMÉDIATEMENT
+    form.reset();
+    if (onOpenChange) {
+      onOpenChange(false);
+    }
+    if (onSuccess) {
+      onSuccess();
+    }
     } catch (error) {
       console.error("❌ Erreur dans handleStarterWarningConfirm:", error);
       toast({
