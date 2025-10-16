@@ -367,7 +367,7 @@ export const useSchedules = (classId?: string) => {
   };
 
   useEffect(() => {
-    fetchSchedules();
+    void fetchSchedules();
   }, [fetchSchedules]);
 
   return {

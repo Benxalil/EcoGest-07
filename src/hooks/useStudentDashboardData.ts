@@ -117,7 +117,7 @@ export const useStudentDashboardData = () => {
 
   useEffect(() => {
     if (profile) {
-      fetchDashboardData();
+      void fetchDashboardData();
     }
   }, [profile, fetchDashboardData]);
 

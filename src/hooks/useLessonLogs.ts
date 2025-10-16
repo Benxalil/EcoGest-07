@@ -200,7 +200,7 @@ export const useLessonLogs = (classId?: string, teacherId?: string | null) => {
   };
 
   useEffect(() => {
-    fetchLessonLogs();
+    void fetchLessonLogs();
   }, [userProfile?.schoolId, classId, teacherId]);
 
   return {

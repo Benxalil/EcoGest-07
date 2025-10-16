@@ -286,7 +286,7 @@ export const useSubjects = (classId?: string, teacherId?: string | null) => {
   };
 
   useEffect(() => {
-    fetchSubjects();
+    void fetchSubjects();
   }, [userProfile?.schoolId, classId, teacherId]);
 
   return {

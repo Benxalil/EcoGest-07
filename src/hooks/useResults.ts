@@ -299,20 +299,20 @@ export const useResults = (options?: { contextSemester?: string }) => {
   }, [userProfile?.schoolId, toast]);
 
   useEffect(() => {
-    fetchResults();
+    void fetchResults();
     
     // Écouter les changements dans la section Matières pour synchroniser
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'matieresUpdated' || e.key === 'coefficientsUpdated' || e.key === 'notesUpdated') {
         console.log('useResults: Détection de changements, rechargement...');
-        fetchResults();
+        void fetchResults();
       }
     };
     
     // Écouter les événements personnalisés pour la synchronisation
     const handleDataUpdate = () => {
       console.log('useResults: Données mises à jour, rechargement des résultats...');
-      fetchResults();
+      void fetchResults();
     };
     
     window.addEventListener('storage', handleStorageChange);
@@ -339,7 +339,7 @@ export const useResults = (options?: { contextSemester?: string }) => {
             console.log('   - Type:', payload.eventType);
             console.log('   - Données:', payload.new || payload.old);
             // Recharger automatiquement les résultats
-            fetchResults();
+            void fetchResults();
           }
         )
         .subscribe((status) => {

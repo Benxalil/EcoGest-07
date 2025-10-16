@@ -185,7 +185,7 @@ export const useAnnouncements = () => {
   };
 
   useEffect(() => {
-    fetchAnnouncements();
+    void fetchAnnouncements();
   }, [userProfile?.schoolId]);
 
   // Filtrer les annonces en fonction du rôle de l'utilisateur

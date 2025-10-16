@@ -304,7 +304,7 @@ export const useTeachers = () => {
   };
 
   useEffect(() => {
-    fetchTeachers();
+    void fetchTeachers();
   }, [fetchTeachers]);
 
   // Realtime synchronization avec debounce

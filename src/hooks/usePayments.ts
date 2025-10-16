@@ -183,7 +183,7 @@ export const usePayments = () => {
   };
 
   useEffect(() => {
-    fetchPayments();
+    void fetchPayments();
   }, [userProfile?.schoolId]);
 
   const hasStudentPaid = (studentId: string, paymentType: string, month?: string): boolean => {

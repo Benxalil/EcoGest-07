@@ -157,7 +157,7 @@ export const useTeacherData = () => {
   // Fetch initial
   useEffect(() => {
     if (!profileLoading && profile?.schoolId) {
-      fetchTeacherData();
+      void fetchTeacherData();
     }
   }, [profileLoading, profile?.schoolId, fetchTeacherData]);
 
