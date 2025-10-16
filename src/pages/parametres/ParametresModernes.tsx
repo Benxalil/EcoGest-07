@@ -118,24 +118,9 @@ export default function ParametresModernes() {
     nombreTrimestres: 3
   });
 
-  const [teacherSettings, setTeacherSettings] = useState<TeacherSettings>({
-    teacherPrefix: 'Prof',
-    defaultTeacherPassword: 'teacher123',
-    autoGenerateUsername: true
-  });
-
-  const [studentSettings, setStudentSettings] = useState<StudentSettings>({
-    autoGenerateMatricule: true,
-    matriculeFormat: 'ELEVE',
-    defaultStudentPassword: 'student123',
-    parentNotifications: true
-  });
-
-  const [parentSettings, setParentSettings] = useState<ParentSettings>({
-    autoGenerateMatricule: true,
-    matriculeFormat: 'PAR',
-    defaultParentPassword: 'parent123'
-  });
+  const [teacherSettings, setTeacherSettings] = useState<TeacherSettings | null>(null);
+  const [studentSettings, setStudentSettings] = useState<StudentSettings | null>(null);
+  const [parentSettings, setParentSettings] = useState<ParentSettings | null>(null);
 
   const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>({
     emailNotifications: true,
@@ -222,20 +207,51 @@ export default function ParametresModernes() {
 
   // Synchroniser les paramètres élèves/parents avec la base de données
   useEffect(() => {
+    console.log('🔍 [ParametresModernes] Synchronisation avec schoolSettings:', {
+      settingsLoading,
+      schoolSettings,
+      currentStudentSettings: studentSettings,
+      currentParentSettings: parentSettings,
+      currentTeacherSettings: teacherSettings
+    });
+    
     if (!settingsLoading && schoolSettings) {
-      setStudentSettings(prev => ({
-        ...prev,
+      console.log('✅ [ParametresModernes] REMPLACEMENT COMPLET des états avec les vraies valeurs de la base');
+      
+      // ✅ Remplacement COMPLET (pas de merge avec prev)
+      setStudentSettings({
+        autoGenerateMatricule: schoolSettings.autoGenerateStudentMatricule,
         matriculeFormat: schoolSettings.studentMatriculeFormat,
         defaultStudentPassword: schoolSettings.defaultStudentPassword,
-        autoGenerateMatricule: schoolSettings.autoGenerateStudentMatricule,
-      }));
+        parentNotifications: true // Valeur par défaut UI uniquement
+      });
       
-      setParentSettings(prev => ({
-        ...prev,
-        matriculeFormat: schoolSettings.parentMatriculeFormat,
-        defaultParentPassword: schoolSettings.defaultParentPassword,
+      setParentSettings({
         autoGenerateMatricule: schoolSettings.autoGenerateParentMatricule,
-      }));
+        matriculeFormat: schoolSettings.parentMatriculeFormat,
+        defaultParentPassword: schoolSettings.defaultParentPassword
+      });
+      
+      setTeacherSettings({
+        teacherPrefix: schoolSettings.teacherMatriculeFormat,
+        defaultTeacherPassword: schoolSettings.defaultTeacherPassword,
+        autoGenerateUsername: schoolSettings.autoGenerateTeacherMatricule
+      });
+      
+      console.log('✅ [ParametresModernes] États remplacés avec:', {
+        studentSettings: {
+          matriculeFormat: schoolSettings.studentMatriculeFormat,
+          defaultStudentPassword: schoolSettings.defaultStudentPassword
+        },
+        parentSettings: {
+          matriculeFormat: schoolSettings.parentMatriculeFormat,
+          defaultParentPassword: schoolSettings.defaultParentPassword
+        },
+        teacherSettings: {
+          teacherPrefix: schoolSettings.teacherMatriculeFormat,
+          defaultTeacherPassword: schoolSettings.defaultTeacherPassword
+        }
+      });
     }
   }, [schoolSettings, settingsLoading]);
 
@@ -279,32 +295,34 @@ export default function ParametresModernes() {
   // Écouter les changements de paramètres en temps réel (pour synchroniser entre fenêtres)
   useEffect(() => {
     const handleSettingsUpdate = () => {
-      console.log('🔄 [ParametresModernes] Événement schoolSettingsUpdated reçu');
+      console.log('🔄 [ParametresModernes] Événement schoolSettingsUpdated reçu (Realtime)');
       
-      // Forcer la re-synchronisation depuis useSchoolSettings
+      // Forcer la re-synchronisation depuis useSchoolSettings avec REMPLACEMENT COMPLET
       if (schoolSettings) {
-        setStudentSettings(prev => ({
-          ...prev,
+        setStudentSettings({
+          autoGenerateMatricule: schoolSettings.autoGenerateStudentMatricule,
           matriculeFormat: schoolSettings.studentMatriculeFormat,
           defaultStudentPassword: schoolSettings.defaultStudentPassword,
-          autoGenerateMatricule: schoolSettings.autoGenerateStudentMatricule,
-        }));
+          parentNotifications: studentSettings?.parentNotifications ?? true
+        });
         
-        setParentSettings(prev => ({
-          ...prev,
-          matriculeFormat: schoolSettings.parentMatriculeFormat,
-          defaultParentPassword: schoolSettings.defaultParentPassword,
+        setParentSettings({
           autoGenerateMatricule: schoolSettings.autoGenerateParentMatricule,
-        }));
+          matriculeFormat: schoolSettings.parentMatriculeFormat,
+          defaultParentPassword: schoolSettings.defaultParentPassword
+        });
         
-        setTeacherSettings(prev => ({
-          ...prev,
+        setTeacherSettings({
           teacherPrefix: schoolSettings.teacherMatriculeFormat,
           defaultTeacherPassword: schoolSettings.defaultTeacherPassword,
-          autoGenerateUsername: schoolSettings.autoGenerateTeacherMatricule,
-        }));
+          autoGenerateUsername: schoolSettings.autoGenerateTeacherMatricule
+        });
         
-        console.log('✅ [ParametresModernes] États locaux synchronisés avec les nouveaux paramètres');
+        console.log('✅ [ParametresModernes] États locaux synchronisés via Realtime avec:', {
+          studentMatricule: schoolSettings.studentMatriculeFormat,
+          parentMatricule: schoolSettings.parentMatriculeFormat,
+          teacherMatricule: schoolSettings.teacherMatriculeFormat
+        });
       }
     };
     
@@ -621,11 +639,16 @@ export default function ParametresModernes() {
     );
   }
 
-  if (loading || schoolLoading) {
+  // Afficher un loader pendant le chargement des paramètres
+  if (loading || schoolLoading || settingsLoading || !studentSettings || !parentSettings || !teacherSettings) {
     return (
       <Layout>
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-primary mx-auto mb-6"></div>
+            <p className="text-lg font-semibold text-foreground mb-2">Chargement des paramètres...</p>
+            <p className="text-sm text-muted-foreground">Récupération des données depuis la base de données</p>
+          </div>
         </div>
       </Layout>
     );
