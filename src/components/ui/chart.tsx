@@ -74,25 +74,38 @@ const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
     return null
   }
 
-  return (
-    <style
-      dangerouslySetInnerHTML={{
-        __html: Object.entries(THEMES)
-          .map(
-            ([theme, prefix]) => `
-${prefix} [data-chart=${id}] {
+  // Sécurité : Validation et sanitization du CSS généré
+  // L'ID est généré par React.useId() donc sécurisé
+  // Les couleurs proviennent de la config contrôlée, pas d'entrées utilisateur
+  const sanitizedId = id.replace(/[^a-zA-Z0-9-_]/g, '');
+  
+  const cssContent = Object.entries(THEMES)
+    .map(
+      ([theme, prefix]) => `
+${prefix} [data-chart=${sanitizedId}] {
 ${colorConfig
   .map(([key, itemConfig]) => {
     const color =
       itemConfig.theme?.[theme as keyof typeof itemConfig.theme] ||
       itemConfig.color
-    return color ? `  --color-${key}: ${color};` : null
+    // Validation: Assurer que la couleur est une valeur CSS valide
+    if (!color || typeof color !== 'string') return null;
+    // Sanitize: Supprimer les caractères potentiellement dangereux
+    const sanitizedColor = color.replace(/[<>{}]/g, '');
+    const sanitizedKey = key.replace(/[^a-zA-Z0-9-_]/g, '');
+    return `  --color-${sanitizedKey}: ${sanitizedColor};`
   })
+  .filter(Boolean)
   .join("\n")}
 }
 `
-          )
-          .join("\n"),
+    )
+    .join("\n");
+
+  return (
+    <style
+      dangerouslySetInnerHTML={{
+        __html: cssContent,
       }}
     />
   )

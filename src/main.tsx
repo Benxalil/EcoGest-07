@@ -1,6 +1,6 @@
-// 🔄 Build forcé - Version 2025.10.16-22:00
+// 🔄 Build forcé - Version 2025.10.16-22:15 - Corrections de sécurité appliquées
 // Ce timestamp force la reconstruction complète après modifications
-// Dernière mise à jour : Déblocage du cache de compilation
+// Dernière mise à jour : Sécurisation JWT, CSS et setTimeout
 
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'

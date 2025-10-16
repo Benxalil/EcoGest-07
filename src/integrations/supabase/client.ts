@@ -2,8 +2,10 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
-const SUPABASE_URL = "https://uoqierhqpnqnbsnbzaqa.supabase.co";
-const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVvcWllcmhxcG5xbmJzbmJ6YXFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcyODk1OTQsImV4cCI6MjA3Mjg2NTU5NH0.IRsCEL46g0p4x736VnmPAgWJghOHCIG7LB8e7qO0DLQ";
+// Note: Ces clés sont publiques (anon/publishable keys) et conçues pour être exposées côté client
+// Elles sont sécurisées par les Row Level Security (RLS) policies de Supabase
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "https://uoqierhqpnqnbsnbzaqa.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVvcWllcmhxcG5xbmJzbmJ6YXFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcyODk1OTQsImV4cCI6MjA3Mjg2NTU5NH0.IRsCEL46g0p4x736VnmPAgWJghOHCIG7LB8e7qO0DLQ";
 
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";

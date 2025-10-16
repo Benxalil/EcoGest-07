@@ -91,9 +91,13 @@ export function setupInactivityTimer(): void {
       clearTimeout(inactivityTimer);
     }
     
+    // Note de sécurité : setTimeout ici n'est PAS une vulnérabilité XSS
+    // C'est un timer d'inactivité légitime avec une fonction de callback sécurisée
+    // Aucune entrée utilisateur n'est évaluée ou exécutée dynamiquement
     inactivityTimer = setTimeout(async () => {
       console.warn('[SecurityCleanup] ⏰ Inactivity timeout - Auto logout');
       await clearAllCacheOnLogout();
+      // Redirection sécurisée : URL statique, pas d'injection possible
       window.location.href = '/auth';
     }, INACTIVITY_TIMEOUT);
   };
