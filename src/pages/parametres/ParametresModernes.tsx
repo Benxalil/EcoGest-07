@@ -288,8 +288,8 @@ export default function ParametresModernes() {
         setTeacherSettings(JSON.parse(teachers));
       }
 
-      // Note: studentSettings et parentSettings viennent maintenant de la base de données via useSchoolSettings
-      // Ne plus les charger depuis localStorage
+      // ✅ studentSettings et parentSettings viennent de la base de données via useSchoolSettings
+      // Plus de localStorage pour éviter les conflits
 
       const notifications = localStorage.getItem('notificationSettings');
       if (notifications) {
@@ -423,8 +423,8 @@ export default function ParametresModernes() {
       // Sauvegarder les autres paramètres en localStorage (notifications, sécurité, sauvegarde)
       localStorage.setItem('settings', JSON.stringify(generalSettings));
       localStorage.setItem('teacherSettings', JSON.stringify(teacherSettings));
-      localStorage.setItem('studentSettings', JSON.stringify(studentSettings));
-      localStorage.setItem('parentSettings', JSON.stringify(parentSettings));
+      // ✅ NE PLUS sauvegarder studentSettings et parentSettings en localStorage
+      // Ils sont maintenant uniquement en base de données
       localStorage.setItem('notificationSettings', JSON.stringify(notificationSettings));
       localStorage.setItem('securitySettings', JSON.stringify(securitySettings));
       localStorage.setItem('backupSettings', JSON.stringify(backupSettings));
@@ -457,7 +457,7 @@ export default function ParametresModernes() {
     if (confirm('Êtes-vous sûr de vouloir réinitialiser tous les paramètres ?')) {
       localStorage.removeItem('settings');
       localStorage.removeItem('teacherSettings');
-      // Note: studentSettings et parentSettings sont maintenant en base de données
+      // ✅ studentSettings et parentSettings sont en base de données uniquement
       localStorage.removeItem('notificationSettings');
       localStorage.removeItem('securitySettings');
       localStorage.removeItem('backupSettings');
