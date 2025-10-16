@@ -2,14 +2,51 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useUnifiedUserData } from './useUnifiedUserData';
 import { supabase } from '@/integrations/supabase/client';
 import { multiLevelCache, CacheTTL, CacheKeys } from '@/utils/multiLevelCache';
-import { filterAnnouncementsByRole } from '@/utils/announcementFilters';
+import { filterAnnouncementsByRole, type Announcement } from '@/utils/announcementFilters';
+
+// Interfaces pour typage précis (préfixées pour éviter conflits)
+interface DashboardClassData {
+  id: string;
+  name: string;
+  level: string;
+  section: string | null;
+  effectif: number | null;
+}
+
+interface DashboardClassInfo {
+  name: string;
+}
+
+interface DashboardStudentData {
+  id: string;
+  first_name: string;
+  last_name: string;
+  class_id: string | null;
+  is_active: boolean;
+  created_at?: string;
+  classes?: DashboardClassInfo;
+}
+
+interface DashboardTeacherData {
+  id: string;
+  first_name: string;
+  last_name: string;
+  is_active: boolean;
+}
+
+interface DashboardSchoolData {
+  id: string;
+  name: string;
+  logo_url: string | null;
+  slogan: string | null;
+}
 
 export interface DashboardData {
-  classes: any[];
-  students: any[];
-  teachers: any[];
-  schoolData: any;
-  announcements: any[];
+  classes: DashboardClassData[];
+  students: DashboardStudentData[];
+  teachers: DashboardTeacherData[];
+  schoolData: DashboardSchoolData | null;
+  announcements: Announcement[];
   academicYear: string;
   loading: boolean;
   error: string | null;
@@ -22,7 +59,7 @@ export const useDashboardData = () => {
     classes: [],
     students: [],
     teachers: [],
-    schoolData: {},
+    schoolData: null,
     announcements: [],
     academicYear: '2024/2025',
     loading: false,
@@ -61,7 +98,7 @@ export const useDashboardData = () => {
         { data: academicYears, error: academicError }
       ] = await Promise.all([
         supabase.from('classes').select('id, name, level, section, effectif').eq('school_id', profile.schoolId).order('name'),
-        supabase.from('students').select('id, first_name, last_name, class_id, is_active').eq('school_id', profile.schoolId).eq('is_active', true),
+        supabase.from('students').select('id, first_name, last_name, class_id, is_active, created_at, classes:class_id(name)').eq('school_id', profile.schoolId).eq('is_active', true),
         supabase.from('teachers').select('id, first_name, last_name, is_active').eq('school_id', profile.schoolId).eq('is_active', true),
         supabase.from('schools').select('id, name, logo_url, slogan').eq('id', profile.schoolId).single(),
         supabase.from('announcements').select('id, title, content, created_at, priority, is_urgent, target_audience').eq('school_id', profile.schoolId).eq('is_published', true).order('created_at', { ascending: false }).limit(10),
@@ -85,7 +122,7 @@ export const useDashboardData = () => {
         classes: classes || [],
         students: students || [],
         teachers: teachers || [],
-        schoolData: schoolData || {},
+        schoolData: schoolData || null,
         announcements: filteredAnnouncements,
         academicYear: academicYears?.[0]?.name || '2024/2025'
       };
