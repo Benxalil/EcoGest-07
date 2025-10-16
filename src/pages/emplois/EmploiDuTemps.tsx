@@ -232,23 +232,17 @@ export default function EmploiDuTemps() {
       class_id: classeId
     };
 
-    let success = false;
-
-    if (editingCourse && editingCourse.course.id) {
-      // Mode édition - mettre à jour le cours existant
-      success = await updateCourse(editingCourse.course.id, courseData);
-    } else {
-      // Mode ajout - créer un nouveau cours
-      success = await createCourse(courseData);
-    }
-
+    // 1️⃣ Fermer le modal IMMÉDIATEMENT (ne pas attendre le serveur)
+    form.reset();
+    setEditingCourse(null);
+    setIsDialogOpen(false);
     setIsSubmitting(false);
 
-    // Ne fermer le modal que si l'opération a réussi
-    if (success) {
-      form.reset();
-      setEditingCourse(null);
-      setIsDialogOpen(false);
+    // 2️⃣ Faire l'opération en arrière-plan (les toasts sont gérés dans le hook)
+    if (editingCourse && editingCourse.course.id) {
+      updateCourse(editingCourse.course.id, courseData);
+    } else {
+      createCourse(courseData);
     }
   };
 
