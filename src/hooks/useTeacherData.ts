@@ -2,14 +2,45 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useOptimizedUserData } from './useOptimizedUserData';
 import { useOptimizedCache } from './useOptimizedCache';
-import { filterAnnouncementsByRole } from '@/utils/announcementFilters';
+import { filterAnnouncementsByRole, type Announcement } from '@/utils/announcementFilters';
 import type { ClassData } from './useClasses';
+
+// Interfaces pour typage précis
+interface ScheduleStudent {
+  id: string;
+  class_id: string | null;
+  is_active: boolean;
+}
+
+interface ScheduleClass extends ClassData {
+  students?: ScheduleStudent[];
+}
+
+interface TeacherSchedule {
+  id: string;
+  school_id: string;
+  teacher_id: string | null;
+  class_id: string;
+  subject_id: string | null;
+  day: string;
+  day_of_week: number;
+  start_time: string;
+  end_time: string;
+  subject: string;
+  teacher?: string | null;
+  room?: string | null;
+  activity_name?: string | null;
+  description?: string | null;
+  created_at?: string;
+  updated_at?: string;
+  classes?: ScheduleClass;
+}
 
 export interface TeacherData {
   classes: ClassData[];
   totalStudents: number;
-  todaySchedules: any[];
-  announcements: any[];
+  todaySchedules: TeacherSchedule[];
+  announcements: Announcement[];
   loading: boolean;
   error: string | null;
 }
@@ -77,13 +108,13 @@ export const useTeacherData = () => {
           .limit(20) // Récupérer plus pour avoir suffisamment après filtrage
       ]);
 
-      const schedulesData = schedulesResult.data || [];
+      const schedulesData = (schedulesResult.data || []) as TeacherSchedule[];
 
       // Extraire classes uniques avec leurs élèves
-      const classesMap = new Map<string, any>();
+      const classesMap = new Map<string, ClassData & { enrollment_count: number }>();
       const enrollmentMap = new Map<string, number>();
 
-      schedulesData.forEach((schedule: any) => {
+      schedulesData.forEach((schedule: TeacherSchedule) => {
         if (schedule.classes) {
           const classId = schedule.classes.id;
           
@@ -96,7 +127,7 @@ export const useTeacherData = () => {
 
           // Compter les élèves actifs
           const activeStudents = (schedule.classes.students || []).filter(
-            (s: any) => s.is_active
+            (s: ScheduleStudent) => s.is_active
           );
           enrollmentMap.set(classId, activeStudents.length);
         }
@@ -127,7 +158,7 @@ export const useTeacherData = () => {
         announcementsResult.data || [],
         'teacher',
         false // Les enseignants ne sont pas admins
-      ).slice(0, 3); // Limiter à 3 après le filtrage
+      ).slice(0, 3) as Announcement[]; // Limiter à 3 après le filtrage
 
       const teacherData: TeacherData = {
         classes: classesWithEnrollment,
@@ -142,12 +173,13 @@ export const useTeacherData = () => {
       cache.set(cacheKey, teacherData, 5 * 60 * 1000);
       setData(teacherData);
 
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('[useTeacherData] Error:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Erreur de chargement';
       setData(prev => ({
         ...prev,
         loading: false,
-        error: err.message || 'Erreur de chargement'
+        error: errorMessage
       }));
     } finally {
       isFetchingRef.current = false;
