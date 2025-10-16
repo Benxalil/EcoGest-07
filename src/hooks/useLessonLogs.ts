@@ -68,22 +68,48 @@ export const useLessonLogs = (classId?: string, teacherId?: string | null) => {
     if (!userProfile?.schoolId) return false;
 
     try {
-      const { error } = await supabase
+      // 1️⃣ Créer une entrée temporaire avec ID local
+      const tempId = `temp-${Date.now()}`;
+      const tempLog: LessonLogData = {
+        id: tempId,
+        ...lessonLogData,
+        school_id: userProfile.schoolId,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
+      // 2️⃣ Mise à jour optimiste immédiate
+      setLessonLogs(prev => [tempLog, ...prev]);
+
+      // 3️⃣ Toast immédiat
+      toast({ title: "✅ Journal de cours créé avec succès" });
+
+      // 4️⃣ Insertion réelle en base (arrière-plan)
+      const { data: insertedLog, error } = await supabase
         .from('lesson_logs')
         .insert({
           ...lessonLogData,
           school_id: userProfile.schoolId,
-        });
+        })
+        .select()
+        .single();
 
       if (error) throw error;
 
-      await fetchLessonLogs();
-      toast({ title: "Journal de cours créé avec succès" });
+      // 5️⃣ Remplacer l'entrée temporaire par la vraie
+      setLessonLogs(prev => 
+        prev.map(log => log.id === tempId ? insertedLog : log)
+      );
+
       return true;
     } catch (err) {
       console.error('Erreur lors de la création du journal de cours:', err);
+      
+      // 6️⃣ Rollback : supprimer l'entrée temporaire
+      setLessonLogs(prev => prev.filter(log => !log.id.startsWith('temp-')));
+      
       toast({ 
-        title: "Erreur lors de la création du journal de cours", 
+        title: "❌ Erreur lors de la création du journal de cours", 
         description: err instanceof Error ? err.message : "Une erreur est survenue.", 
         variant: "destructive" 
       });
@@ -94,7 +120,23 @@ export const useLessonLogs = (classId?: string, teacherId?: string | null) => {
   const updateLessonLog = async (id: string, lessonLogData: Partial<Omit<LessonLogData, 'id' | 'school_id' | 'created_at' | 'updated_at'>>) => {
     if (!userProfile?.schoolId) return false;
 
+    // 1️⃣ Sauvegarder l'état précédent pour rollback
+    const previousLogs = lessonLogs;
+
     try {
+      // 2️⃣ Mise à jour optimiste immédiate
+      setLessonLogs(prev => 
+        prev.map(log => 
+          log.id === id 
+            ? { ...log, ...lessonLogData, updated_at: new Date().toISOString() }
+            : log
+        )
+      );
+
+      // 3️⃣ Toast immédiat
+      toast({ title: "✅ Journal de cours mis à jour avec succès" });
+
+      // 4️⃣ Mise à jour réelle en base (arrière-plan)
       const { error } = await supabase
         .from('lesson_logs')
         .update(lessonLogData)
@@ -103,13 +145,15 @@ export const useLessonLogs = (classId?: string, teacherId?: string | null) => {
 
       if (error) throw error;
 
-      await fetchLessonLogs();
-      toast({ title: "Journal de cours mis à jour avec succès" });
       return true;
     } catch (err) {
       console.error('Erreur lors de la mise à jour du journal de cours:', err);
+      
+      // 5️⃣ Rollback
+      setLessonLogs(previousLogs);
+      
       toast({ 
-        title: "Erreur lors de la mise à jour du journal de cours", 
+        title: "❌ Erreur lors de la mise à jour du journal de cours", 
         description: err instanceof Error ? err.message : "Une erreur est survenue.", 
         variant: "destructive" 
       });
@@ -120,7 +164,17 @@ export const useLessonLogs = (classId?: string, teacherId?: string | null) => {
   const deleteLessonLog = async (id: string) => {
     if (!userProfile?.schoolId) return false;
 
+    // 1️⃣ Sauvegarder pour rollback
+    const previousLogs = lessonLogs;
+
     try {
+      // 2️⃣ Suppression optimiste immédiate
+      setLessonLogs(prev => prev.filter(log => log.id !== id));
+
+      // 3️⃣ Toast immédiat
+      toast({ title: "✅ Journal de cours supprimé avec succès" });
+
+      // 4️⃣ Suppression réelle en base (arrière-plan)
       const { error } = await supabase
         .from('lesson_logs')
         .delete()
@@ -129,13 +183,15 @@ export const useLessonLogs = (classId?: string, teacherId?: string | null) => {
 
       if (error) throw error;
 
-      await fetchLessonLogs();
-      toast({ title: "Journal de cours supprimé avec succès" });
       return true;
     } catch (err) {
       console.error('Erreur lors de la suppression du journal de cours:', err);
+      
+      // 5️⃣ Rollback
+      setLessonLogs(previousLogs);
+      
       toast({ 
-        title: "Erreur lors de la suppression du journal de cours", 
+        title: "❌ Erreur lors de la suppression du journal de cours", 
         description: err instanceof Error ? err.message : "Une erreur est survenue.", 
         variant: "destructive" 
       });

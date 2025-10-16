@@ -79,7 +79,14 @@ export default function CahierDeTexte() {
       return;
     }
 
-    const success = await createLessonLog({
+    // 1️⃣ Réinitialiser le formulaire IMMÉDIATEMENT
+    form.reset();
+
+    // 2️⃣ Naviguer IMMÉDIATEMENT (ne pas attendre le serveur)
+    navigate(`/emplois/cahier/${classeId}/${data.subject_id}`);
+
+    // 3️⃣ Créer le journal en arrière-plan
+    createLessonLog({
       class_id: classeId,
       subject_id: data.subject_id,
       teacher_id: data.teacher_id,
@@ -88,12 +95,8 @@ export default function CahierDeTexte() {
       lesson_date: data.lesson_date,
       start_time: data.start_time
     });
-
-    if (success) {
-      // Le toast est déjà affiché dans useLessonLogs
-      // Rediriger immédiatement vers la page de consultation des cahiers
-      navigate(`/emplois/cahier/${classeId}/${data.subject_id}`);
-    }
+    
+    // Note : Les toasts de succès/erreur sont gérés dans useLessonLogs
   };
 
   if (classesLoading || subjectsLoading || teachersLoading) {
@@ -279,8 +282,8 @@ export default function CahierDeTexte() {
                     >
                       Annuler
                     </Button>
-                    <Button type="submit" disabled={loading}>
-                      {loading ? "Enregistrement..." : "Enregistrer"}
+                    <Button type="submit" disabled={form.formState.isSubmitting}>
+                      {form.formState.isSubmitting ? "Enregistrement..." : "Enregistrer"}
                     </Button>
                   </div>
                 </form>
