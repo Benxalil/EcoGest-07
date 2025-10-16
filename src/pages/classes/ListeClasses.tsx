@@ -93,7 +93,7 @@ export default function ListeClasses() {
 
   const handleAddSuccess = () => {
     setIsAddDialogOpen(false);
-    refreshClasses();
+    // ✅ Pas besoin de refreshClasses() - la mutation optimiste gère tout
   };
 
   const handleOpenAddDialog = () => {

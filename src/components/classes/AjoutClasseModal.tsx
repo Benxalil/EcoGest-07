@@ -10,7 +10,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useToast } from "@/hooks/use-toast";
 import { useSubscriptionPlan } from "@/hooks/useSubscriptionPlan";
 import { useClasses } from "@/hooks/useClasses";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { DialogDescription } from "@/components/ui/dialog";
 import { DEFAULT_SERIES, DEFAULT_LABELS } from "@/constants/classOptions";
 
 const formSchema = z.object({
@@ -33,7 +34,6 @@ export function AjoutClasseModal({ open, onOpenChange, onSuccess }: AjoutClasseM
   const { currentPlan, isFeatureLimited, getFeatureLimit, checkStarterLimits, markAsNotStarterCompatible } = useSubscriptionPlan();
   const { classes, createClass } = useClasses();
   const [showStarterWarning, setShowStarterWarning] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -46,15 +46,9 @@ export function AjoutClasseModal({ open, onOpenChange, onSuccess }: AjoutClasseM
   });
 
   const onSubmit = async (data: FormData) => {
-    if (isSubmitting) return;
-    
     try {
-      setIsSubmitting(true);
-      console.log("Form submission started", { data, currentPlan, classesCount: classes.length });
-
       // Vérifier les limites d'abonnement
       const currentClassCount = classes.length;
-      console.log("Checking limits", { currentPlan, currentClassCount });
       
       // Pour les plans payants, utiliser la logique existante
       if (currentPlan !== 'trial' && isFeatureLimited('classes', currentClassCount)) {
@@ -73,36 +67,33 @@ export function AjoutClasseModal({ open, onOpenChange, onSuccess }: AjoutClasseM
       // Pour la période d'essai, vérifier les limites Starter et afficher un avertissement
       if (currentPlan === 'trial') {
         const starterLimits = checkStarterLimits('classes', currentClassCount);
-        console.log("Starter limits check", starterLimits);
         
         if (starterLimits.exceedsStarter) {
-          console.log("Showing starter warning");
           setShowStarterWarning(true);
           return;
         }
       }
 
-      console.log("Proceeding with class creation");
+      // ✅ Fermer le modal IMMÉDIATEMENT
+      form.reset();
+      if (onOpenChange) {
+        onOpenChange(false);
+      }
+      if (onSuccess) {
+        onSuccess();
+      }
+
+      // ✅ Créer la classe en arrière-plan (mutation optimiste gère l'affichage)
       const series = data.series && data.series !== "none" ? data.series : "";
       const label = data.label && data.label !== "none" ? data.label : "";
       
-      const success = await createClass({
+      await createClass({
         name: data.name,
         level: data.level,
         section: series && label 
           ? `${series}${label}` 
           : (series || label || ""),
       });
-
-      if (success) {
-        form.reset();
-        if (onOpenChange) {
-          onOpenChange(false);
-        }
-        if (onSuccess) {
-          onSuccess();
-        }
-      }
     } catch (error) {
       console.error("Form submission error:", error);
       toast({
@@ -110,39 +101,35 @@ export function AjoutClasseModal({ open, onOpenChange, onSuccess }: AjoutClasseM
         description: "Une erreur est survenue lors de la création de la classe.",
         variant: "destructive",
       });
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
   const handleStarterWarningConfirm = async () => {
-    setIsSubmitting(true);
     try {
       await markAsNotStarterCompatible();
       setShowStarterWarning(false);
       
-      // Continuer avec la création de la classe
+      // ✅ Fermer le modal IMMÉDIATEMENT
+      form.reset();
+      if (onOpenChange) {
+        onOpenChange(false);
+      }
+      if (onSuccess) {
+        onSuccess();
+      }
+
+      // ✅ Créer la classe en arrière-plan
       const data = form.getValues();
       const series = data.series && data.series !== "none" ? data.series : "";
       const label = data.label && data.label !== "none" ? data.label : "";
       
-      const success = await createClass({
+      await createClass({
         name: data.name,
         level: data.level,
         section: series && label 
           ? `${series}${label}` 
           : (series || label || ""),
       });
-
-      if (success) {
-        form.reset();
-        if (onOpenChange) {
-          onOpenChange(false);
-        }
-        if (onSuccess) {
-          onSuccess();
-        }
-      }
     } catch (error) {
       console.error("Error during starter warning confirm:", error);
       toast({
@@ -150,8 +137,6 @@ export function AjoutClasseModal({ open, onOpenChange, onSuccess }: AjoutClasseM
         description: "Une erreur est survenue lors de la création de la classe.",
         variant: "destructive",
       });
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -287,8 +272,12 @@ export function AjoutClasseModal({ open, onOpenChange, onSuccess }: AjoutClasseM
               )}
             />
 
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? 'Création...' : 'Créer la classe'}
+            <DialogDescription className="sr-only">
+              Formulaire de création d'une nouvelle classe
+            </DialogDescription>
+
+            <Button type="submit" className="w-full">
+              Créer la classe
             </Button>
           </form>
         </Form>
@@ -316,6 +305,10 @@ export function AjoutClasseModal({ open, onOpenChange, onSuccess }: AjoutClasseM
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <DialogDescription className="sr-only">
+        Formulaire de création d'une nouvelle classe
+      </DialogDescription>
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -427,8 +420,8 @@ export function AjoutClasseModal({ open, onOpenChange, onSuccess }: AjoutClasseM
           )}
         />
 
-        <Button type="submit" className="w-full" disabled={isSubmitting}>
-          {isSubmitting ? 'Création...' : 'Créer la classe'}
+        <Button type="submit" className="w-full">
+          Créer la classe
         </Button>
         </form>
       </Form>
