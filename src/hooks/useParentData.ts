@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useOptimizedUserData } from './useOptimizedUserData';
 import { useOptimizedCache } from './useOptimizedCache';
-import { filterAnnouncementsByRole } from '@/utils/announcementFilters';
+import { filterAnnouncementsByRole, type Announcement } from '@/utils/announcementFilters';
 
 export interface Child {
   id: string;
@@ -40,12 +40,28 @@ export interface ParentInfo {
   matricule: string;
 }
 
+interface SubjectInfo {
+  name: string;
+  color: string | null;
+}
+
+interface ScheduleData {
+  id: string;
+  start_time: string;
+  end_time: string;
+  room: string | null;
+  subject: string;
+  activity_name: string | null;
+  day: string;
+  subjects?: SubjectInfo;
+}
+
 export interface ParentData {
   children: Child[];
   selectedChild: Child | null;
   parentInfo: ParentInfo | null;
-  todaySchedules: any[];
-  announcements: any[];
+  todaySchedules: ScheduleData[];
+  announcements: Announcement[];
   loading: boolean;
   error: string | null;
 }
@@ -267,7 +283,7 @@ export const useParentData = (selectedChildId?: string | null) => {
       }
 
       // Formater les enfants
-      const formattedChildren = childrenData.map((child: any) => ({
+      const formattedChildren = childrenData.map((child: Child) => ({
         ...child,
         classes: Array.isArray(child.classes) ? child.classes[0] : child.classes,
         profiles: Array.isArray(child.profiles) ? child.profiles[0] : child.profiles
@@ -286,7 +302,7 @@ export const useParentData = (selectedChildId?: string | null) => {
       });
 
       // Récupérer les schedules de l'enfant sélectionné
-      let todaySchedules: any[] = [];
+      let todaySchedules: ScheduleData[] = [];
       if (selectedChild?.class_id) {
         const today = new Date().getDay();
         const { data: schedulesData } = await supabase
@@ -378,12 +394,13 @@ export const useParentData = (selectedChildId?: string | null) => {
       cacheRef.current.set(cacheKeyRef.current, parentData, 30 * 1000);
       setData(parentData);
 
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('[useParentData] Error:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Erreur de chargement';
       setData(prev => ({
         ...prev,
         loading: false,
-        error: err.message || 'Erreur de chargement'
+        error: errorMessage
       }));
     } finally {
       isFetchingRef.current = false;
