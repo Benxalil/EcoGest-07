@@ -345,14 +345,8 @@ export default function ParametresModernes() {
         }));
       }
 
-      // Autres paramètres depuis localStorage
-      const teachers = localStorage.getItem('teacherSettings');
-      if (teachers) {
-        setTeacherSettings(JSON.parse(teachers));
-      }
-
-      // ✅ studentSettings et parentSettings viennent de la base de données via useSchoolSettings
-      // Plus de localStorage pour éviter les conflits
+      // ✅ ÉTAPE 2 : studentSettings, parentSettings et teacherSettings viennent de la base de données
+      // Plus de localStorage pour éviter les conflits entre cache et DB
 
       const notifications = localStorage.getItem('notificationSettings');
       if (notifications) {
@@ -543,16 +537,27 @@ export default function ParametresModernes() {
       }
 
       // Sauvegarder les formats de matricule dans la base de données via useSchoolSettings
+      
+      // ✅ ÉTAPE 1 : Vérifier que les settings sont bien chargés
+      if (!studentSettings || !parentSettings || !teacherSettings) {
+        console.error('❌ [performSave] Impossible de sauvegarder : settings non chargés', {
+          studentSettings,
+          parentSettings,
+          teacherSettings
+        });
+        throw new Error("Les paramètres utilisateurs ne sont pas encore chargés. Veuillez attendre et réessayer.");
+      }
+      
       console.log('💾 [performSave] Appel de updateSchoolSettings avec:', {
-        studentMatriculeFormat: studentSettings?.matriculeFormat,
-        parentMatriculeFormat: parentSettings?.matriculeFormat,
-        teacherMatriculeFormat: teacherSettings?.teacherPrefix,
-        defaultStudentPassword: studentSettings?.defaultStudentPassword,
-        defaultParentPassword: parentSettings?.defaultParentPassword,
-        defaultTeacherPassword: teacherSettings?.defaultTeacherPassword,
-        autoGenerateStudentMatricule: studentSettings?.autoGenerateMatricule,
-        autoGenerateParentMatricule: parentSettings?.autoGenerateMatricule,
-        autoGenerateTeacherMatricule: teacherSettings?.autoGenerateUsername,
+        studentMatriculeFormat: studentSettings.matriculeFormat,
+        parentMatriculeFormat: parentSettings.matriculeFormat,
+        teacherMatriculeFormat: teacherSettings.teacherPrefix,
+        defaultStudentPassword: studentSettings.defaultStudentPassword,
+        defaultParentPassword: parentSettings.defaultParentPassword,
+        defaultTeacherPassword: teacherSettings.defaultTeacherPassword,
+        autoGenerateStudentMatricule: studentSettings.autoGenerateMatricule,
+        autoGenerateParentMatricule: parentSettings.autoGenerateMatricule,
+        autoGenerateTeacherMatricule: teacherSettings.autoGenerateUsername,
       });
       
       const settingsSuccess = await updateSchoolSettings({
@@ -576,12 +581,14 @@ export default function ParametresModernes() {
 
       // Sauvegarder les autres paramètres en localStorage (notifications, sécurité, sauvegarde)
       localStorage.setItem('settings', JSON.stringify(generalSettings));
-      localStorage.setItem('teacherSettings', JSON.stringify(teacherSettings));
-      // ✅ NE PLUS sauvegarder studentSettings et parentSettings en localStorage
-      // Ils sont maintenant uniquement en base de données
       localStorage.setItem('notificationSettings', JSON.stringify(notificationSettings));
       localStorage.setItem('securitySettings', JSON.stringify(securitySettings));
       localStorage.setItem('backupSettings', JSON.stringify(backupSettings));
+      
+      // ✅ ÉTAPE 2 : Nettoyer le localStorage des anciennes valeurs
+      localStorage.removeItem('studentSettings');
+      localStorage.removeItem('parentSettings');
+      localStorage.removeItem('teacherSettings');
 
       // Déclencher un événement pour notifier les autres composants
       window.dispatchEvent(new Event('schoolSettingsUpdated'));
@@ -655,6 +662,51 @@ export default function ParametresModernes() {
       <div className="space-y-6">
         {/* Message d'abonnement */}
         <SubscriptionAlert />
+        
+        {/* ÉTAPE 4 : Bouton de test debug - À SUPPRIMER APRÈS TEST */}
+        <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+          <div className="flex items-center gap-4">
+            <div className="flex-1">
+              <h3 className="text-sm font-semibold text-yellow-800 dark:text-yellow-200">🧪 Mode Debug</h3>
+              <p className="text-xs text-yellow-700 dark:text-yellow-300 mt-1">
+                Ce bouton teste directement la sauvegarde en base de données avec des valeurs de test.
+              </p>
+            </div>
+            <Button 
+              onClick={async () => {
+                console.log('🧪 [DEBUG] Test direct de updateSchoolSettings');
+                console.log('🧪 [DEBUG] userProfile:', userProfile);
+                console.log('🧪 [DEBUG] studentSettings:', studentSettings);
+                
+                const result = await updateSchoolSettings({
+                  studentMatriculeFormat: 'TEST_DEBUG_001',
+                  parentMatriculeFormat: 'PARENT_DEBUG_001',
+                  teacherMatriculeFormat: 'PROF_DEBUG_001',
+                  defaultStudentPassword: 'test123',
+                  defaultParentPassword: 'parent123',
+                  defaultTeacherPassword: 'prof123',
+                  autoGenerateStudentMatricule: true,
+                  autoGenerateParentMatricule: true,
+                  autoGenerateTeacherMatricule: true,
+                });
+                
+                console.log('🧪 [DEBUG] Résultat:', result);
+                
+                if (result) {
+                  toast({
+                    title: "✅ Test réussi !",
+                    description: "La sauvegarde directe fonctionne. Vérifiez dans Supabase.",
+                  });
+                }
+              }}
+              variant="outline"
+              className="gap-2 bg-yellow-100 hover:bg-yellow-200 dark:bg-yellow-900/40 dark:hover:bg-yellow-900/60"
+            >
+              <TestTube className="w-4 h-4" />
+              Test Debug Save
+            </Button>
+          </div>
+        </div>
         
         {/* Header */}
         <div className="flex items-center justify-between">

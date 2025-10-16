@@ -126,27 +126,19 @@ export const useSchoolSettings = () => {
   }, [userProfile?.schoolId, toast]);
 
   const updateSettings = async (newSettings: Partial<SchoolSettings>) => {
-    if (!userProfile?.schoolId) return false;
+    if (!userProfile?.schoolId) {
+      console.error('❌ [useSchoolSettings] Pas de schoolId disponible');
+      return false;
+    }
 
-    console.log('💾 [useSchoolSettings] Mise à jour optimiste des paramètres:', newSettings);
+    console.log('💾 [useSchoolSettings] Début de la mise à jour:', newSettings);
+    console.log('💾 [useSchoolSettings] schoolId:', userProfile.schoolId);
+    console.log('💾 [useSchoolSettings] Rôle utilisateur:', userProfile.role);
 
-    // 1️⃣ Sauvegarder l'état précédent pour rollback
+    // ✅ ÉTAPE 3 : PAS DE MISE À JOUR OPTIMISTE - On attend la confirmation de la DB
     const previousSettings = { ...settings };
-    
-    // 2️⃣ Mise à jour optimiste IMMÉDIATE de l'état local
-    setSettings(prev => ({ ...prev, ...newSettings }));
-    
-    // 3️⃣ Émettre l'événement IMMÉDIATEMENT pour synchroniser les autres onglets
-    window.dispatchEvent(new CustomEvent('schoolSettingsUpdated'));
-    
-    // 4️⃣ Notification immédiate
-    toast({
-      title: "✅ Paramètres en cours de sauvegarde...",
-      description: "Vos modifications sont en train d'être enregistrées",
-      duration: 2000,
-    });
 
-    // 5️⃣ Mise à jour de la base de données en arrière-plan
+    // Mise à jour de la base de données
     try {
       console.log('💾 [useSchoolSettings] Tentative UPDATE sur schools avec schoolId:', userProfile.schoolId);
       console.log('💾 [useSchoolSettings] Rôle utilisateur:', userProfile.role);
@@ -184,19 +176,26 @@ export const useSchoolSettings = () => {
       }
 
       console.log('✅ [useSchoolSettings] Paramètres sauvegardés en base de données');
+      
+      // ✅ ÉTAPE 3 : Mettre à jour l'état local APRÈS la confirmation DB
+      setSettings(prev => ({ ...prev, ...newSettings }));
+      window.dispatchEvent(new CustomEvent('schoolSettingsUpdated'));
+      
+      toast({
+        title: "✅ Paramètres sauvegardés",
+        description: "Vos modifications ont été enregistrées avec succès",
+        duration: 3000,
+      });
+      
       return true;
     } catch (error) {
       console.error('❌ [useSchoolSettings] Erreur lors de la mise à jour:', error);
       
-      // 6️⃣ Rollback en cas d'erreur
-      setSettings(previousSettings);
-      window.dispatchEvent(new CustomEvent('schoolSettingsUpdated'));
-      
       toast({
         title: "❌ Erreur de sauvegarde",
-        description: error instanceof Error ? error.message : "Impossible de sauvegarder les paramètres. Modifications annulées.",
+        description: error instanceof Error ? error.message : "Impossible de sauvegarder les paramètres.",
         variant: "destructive",
-        duration: 5000, // Plus long pour lire le message d'erreur
+        duration: 5000,
       });
       
       return false;
