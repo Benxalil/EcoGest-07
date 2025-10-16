@@ -21,7 +21,8 @@ import { TeacherSettings } from "@/components/parametres/TeacherSettings";
 import { SchoolPrefixManager } from "@/components/admin/SchoolPrefixManager";
 import { Database as DatabaseType } from "@/integrations/supabase/types";
 import { supabase } from "@/integrations/supabase/client";
-import { useSchoolSettings } from "@/hooks/useSchoolSettings";
+import { useSchoolSettings } from '@/hooks/useSchoolSettings';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 interface GeneralSettings {
   formatNomUtilisateur: string;
@@ -88,6 +89,11 @@ export default function ParametresModernes() {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
+  
+  // États pour la confirmation de modification des formats
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [confirmDialogMessage, setConfirmDialogMessage] = useState('');
+  const [pendingSaveAction, setPendingSaveAction] = useState<(() => Promise<void>) | null>(null);
   
   // États pour les informations d'école éditables - initialisées vides pour éviter les valeurs par défaut
   const [schoolInfo, setSchoolInfo] = useState({
@@ -380,6 +386,45 @@ export default function ParametresModernes() {
   };
 
   const saveAllSettings = async () => {
+    // Vérifier si des formats de matricule ou mots de passe ont été modifiés
+    const hasStudentChanges = schoolSettings && (
+      studentSettings.matriculeFormat !== schoolSettings.studentMatriculeFormat ||
+      studentSettings.defaultStudentPassword !== schoolSettings.defaultStudentPassword ||
+      studentSettings.autoGenerateMatricule !== schoolSettings.autoGenerateStudentMatricule
+    );
+    
+    const hasParentChanges = schoolSettings && (
+      parentSettings.matriculeFormat !== schoolSettings.parentMatriculeFormat ||
+      parentSettings.defaultParentPassword !== schoolSettings.defaultParentPassword ||
+      parentSettings.autoGenerateMatricule !== schoolSettings.autoGenerateParentMatricule
+    );
+    
+    const hasTeacherChanges = schoolSettings && (
+      teacherSettings.teacherPrefix !== schoolSettings.teacherMatriculeFormat ||
+      teacherSettings.defaultTeacherPassword !== schoolSettings.defaultTeacherPassword ||
+      teacherSettings.autoGenerateUsername !== schoolSettings.autoGenerateTeacherMatricule
+    );
+    
+    // Si des modifications ont été détectées, afficher le dialog de confirmation
+    if (hasStudentChanges || hasParentChanges || hasTeacherChanges) {
+      const changedTypes = [];
+      if (hasStudentChanges) changedTypes.push('élèves');
+      if (hasParentChanges) changedTypes.push('parents');
+      if (hasTeacherChanges) changedTypes.push('enseignants');
+      
+      const message = `⚠️ Attention ! Si vous validez cette modification, les nouveaux ${changedTypes.join(', ')} enregistrés utiliseront ce nouveau format de matricule et de mot de passe.\n\nLes anciens membres conserveront leurs identifiants actuels.`;
+      
+      setConfirmDialogMessage(message);
+      setPendingSaveAction(() => performSave);
+      setShowConfirmDialog(true);
+      return;
+    }
+    
+    // Si aucune modification des formats, sauvegarder directement
+    await performSave();
+  };
+
+  const performSave = async () => {
     try {
       // Sauvegarder l'année académique en base de données
       const success = await updateAcademicYear(generalSettings.anneeScolaire);
@@ -890,6 +935,40 @@ export default function ParametresModernes() {
           </TabsContent>
         </Tabs>
       </div>
+      
+      {/* Dialog de confirmation pour les changements de format */}
+      <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>⚠️ Confirmation de modification</AlertDialogTitle>
+            <AlertDialogDescription className="whitespace-pre-line">
+              {confirmDialogMessage}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setShowConfirmDialog(false);
+              setPendingSaveAction(null);
+              toast({
+                title: "Modification annulée",
+                description: "Aucune modification n'a été apportée aux formats",
+                duration: 2000,
+              });
+            }}>
+              ❌ Annuler
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={async () => {
+              setShowConfirmDialog(false);
+              if (pendingSaveAction) {
+                await pendingSaveAction();
+                setPendingSaveAction(null);
+              }
+            }}>
+              ✅ Confirmer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Layout>
   );
 }
