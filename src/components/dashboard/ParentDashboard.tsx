@@ -7,6 +7,7 @@ import { ParentChildSelector } from "@/components/parent/ParentChildSelector";
 import { LoadingSkeleton } from "@/components/ui/loading-skeleton";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useParentData } from "@/hooks/useParentData";
+import { formatClassName } from "@/utils/classNameFormatter";
 
 const ParentDashboard = memo(() => {
   const navigate = useNavigate();
@@ -64,7 +65,7 @@ const ParentDashboard = memo(() => {
             <span className="block mt-1">
               Élève sélectionné : <span className="font-semibold">{selectedChild.first_name} {selectedChild.last_name}</span>
               {selectedChild.classes && (
-                <span> - {selectedChild.classes.name} {selectedChild.classes.level}</span>
+                <span> - {formatClassName(selectedChild.classes)}</span>
               )}
             </span>
           )}
@@ -136,7 +137,7 @@ const ParentDashboard = memo(() => {
             </p>
           ) : (
             <div className="space-y-3">
-              {(announcements || []).map((announcement: any) => (
+              {(announcements || []).slice(0, 3).map((announcement: any) => (
                 <div key={announcement.id} className="border rounded-lg p-3 hover:bg-orange-50/50 transition-colors">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
