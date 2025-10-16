@@ -271,11 +271,29 @@ export const useParentData = (selectedChildId?: string | null) => {
       }
 
       // Filtrer les annonces pour les parents
-      const filteredAnnouncements = filterAnnouncementsByRole(
+      let filteredAnnouncements = filterAnnouncementsByRole(
         announcementsResult.data || [],
         'parent',
         false
       );
+
+      // Trier par date d'expiration (les plus proches en premier)
+      filteredAnnouncements = filteredAnnouncements.sort((a, b) => {
+        // Annonces sans date d'expiration viennent en dernier
+        if (!a.expires_at && !b.expires_at) return 0;
+        if (!a.expires_at) return 1;
+        if (!b.expires_at) return -1;
+        
+        const dateA = new Date(a.expires_at).getTime();
+        const dateB = new Date(b.expires_at).getTime();
+        const now = new Date().getTime();
+        
+        // Calculer la distance temporelle par rapport à maintenant
+        const distA = Math.abs(dateA - now);
+        const distB = Math.abs(dateB - now);
+        
+        return distA - distB; // Les plus proches en premier
+      }).slice(0, 3); // Limiter aux 3 annonces les plus proches
 
       const parentData: ParentData = {
         children: formattedChildren,
