@@ -22,25 +22,6 @@ export interface Announcement {
   updated_at: string;
 }
 
-// Interface pour les données brutes de Supabase (types plus larges)
-interface RawAnnouncementData {
-  id: string;
-  title: string;
-  content: string;
-  author_id: string;
-  is_published: boolean;
-  priority: string | null;
-  target_audience: string[] | null;
-  target_role: string[] | null;
-  target_classes: string[] | null;
-  is_urgent: boolean | null;
-  published_at: string | null;
-  expires_at: string | null;
-  school_id: string;
-  created_at: string;
-  updated_at: string;
-}
-
 export interface CreateAnnouncementData {
   title: string;
   content: string;
@@ -48,15 +29,6 @@ export interface CreateAnnouncementData {
   priority?: 'normal' | 'urgent';
   target_audience?: string[];
   expires_at?: Date;
-}
-
-interface UpdateAnnouncementPayload {
-  title?: string;
-  content?: string;
-  is_published?: boolean;
-  priority?: 'normal' | 'urgent';
-  target_audience?: string[];
-  expires_at?: string;
 }
 
 export const useAnnouncements = () => {
@@ -83,16 +55,10 @@ export const useAnnouncements = () => {
 
       if (error) throw error;
       
-      setAllAnnouncements(data?.map((item: RawAnnouncementData): Announcement => ({
+      setAllAnnouncements(data?.map(item => ({
         ...item,
-        priority: (item.priority === 'urgent' ? 'urgent' : 'normal') as 'normal' | 'urgent',
-        target_audience: item.target_audience || ['tous'],
-        author_id: item.author_id || undefined,
-        is_urgent: item.is_urgent || undefined,
-        published_at: item.published_at || undefined,
-        expires_at: item.expires_at || undefined,
-        target_role: item.target_role || undefined,
-        target_classes: item.target_classes || undefined
+        priority: (item as any).priority || 'normal',
+        target_audience: (item as any).target_audience || ['tous']
       })) || []);
     } catch (err) {
       console.error('Erreur lors de la récupération des annonces:', err);
@@ -146,7 +112,7 @@ export const useAnnouncements = () => {
 
     try {
       // Mettre à jour toutes les colonnes
-      const updateData: UpdateAnnouncementPayload = {};
+      const updateData: any = {};
       if (announcementData.title) updateData.title = announcementData.title;
       if (announcementData.content) updateData.content = announcementData.content;
       if (announcementData.is_published !== undefined) updateData.is_published = announcementData.is_published;
