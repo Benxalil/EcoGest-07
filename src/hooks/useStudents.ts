@@ -3,7 +3,17 @@ import { supabase } from '@/integrations/supabase/client';
 import { useUserRole } from './useUserRole';
 import { useMatriculeSettings } from './useMatriculeSettings';
 import { useToast } from '@/hooks/use-toast';
-import type { RealtimeChannel } from '@supabase/supabase-js';
+import type { RealtimeChannel, RealtimePostgresChangesPayload } from '@supabase/supabase-js';
+
+// Interface pour la réponse de l'Edge Function create-user-account
+interface CreateUserAccountResponse {
+  user: {
+    id: string;
+    email: string;
+    role: string;
+  } | null;
+  error?: string;
+}
 
 export interface Student {
   id: string;
@@ -88,7 +98,7 @@ export function useStudents(classId?: string) {
         throw fetchError;
       }
 
-      setStudents(data || []);
+      setStudents((data as Student[]) || []);
       setTotalCount(count || 0);
     } catch (err) {
       console.error('Erreur lors de la récupération des élèves:', err);
@@ -118,7 +128,7 @@ export function useStudents(classId?: string) {
           table: 'students',
           filter: `school_id=eq.${userProfile.schoolId}`
         },
-        async (payload) => {
+        async (payload: RealtimePostgresChangesPayload<Student>) => {
           if (payload.eventType === 'INSERT') {
             // Récupérer les données complètes avec la classe
             const { data } = await supabase
@@ -136,10 +146,11 @@ export function useStudents(classId?: string) {
               .single();
 
             if (data) {
+              const studentData = data as Student;
               setStudents(prev => {
-                const exists = prev.some(s => s.id === data.id);
+                const exists = prev.some(s => s.id === studentData.id);
                 if (exists) return prev;
-                return [...prev, data].sort((a, b) => 
+                return [...prev, studentData].sort((a, b) => 
                   a.first_name.localeCompare(b.first_name)
                 );
               });
@@ -161,8 +172,9 @@ export function useStudents(classId?: string) {
               .single();
 
             if (data) {
+              const studentData = data as Student;
               setStudents(prev => prev.map(s => 
-                s.id === data.id ? data : s
+                s.id === studentData.id ? studentData : s
               ));
             }
           } else if (payload.eventType === 'DELETE') {
@@ -191,7 +203,7 @@ export function useStudents(classId?: string) {
       // L'Edge Function va construire l'email valide pour Supabase
       
       // Créer le compte via Edge Function
-      const { data, error } = await supabase.functions.invoke('create-user-account', {
+      const { data, error } = await supabase.functions.invoke<CreateUserAccountResponse>('create-user-account', {
         body: { 
           email: studentNumber, // Juste le matricule (ex: Eleve001)
           password: password, 
@@ -208,7 +220,7 @@ export function useStudents(classId?: string) {
         return null;
       }
 
-      return data.user;
+      return data?.user || null;
     } catch (error) {
       console.error('Erreur lors de la création du compte auth:', error);
       return null;
@@ -361,7 +373,8 @@ export function useStudents(classId?: string) {
       if (error) throw error;
 
       // Remplacer l'élément optimiste par le réel
-      setStudents(prev => prev.map(s => s.id === tempId ? data : s));
+      const newStudent = data as Student;
+      setStudents(prev => prev.map(s => s.id === tempId ? newStudent : s));
 
       if (authUser) {
         toast({
@@ -415,9 +428,10 @@ export function useStudents(classId?: string) {
       if (error) throw error;
 
       // Remplacer avec les données réelles
-      setStudents(prev => prev.map(s => s.id === id ? data : s));
+      const updatedStudent = data as Student;
+      setStudents(prev => prev.map(s => s.id === id ? updatedStudent : s));
 
-      return data;
+      return updatedStudent;
     } catch (err) {
       // Rollback en cas d'erreur
       if (previousState) {
