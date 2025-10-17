@@ -43,18 +43,27 @@ interface EleveFormData {
   adresse: string;
   telephone?: string;
   classe: string;
+  
+  // Informations du père (avec matricule + mot de passe)
   perePrenom: string;
   pereNom: string;
   pereAdresse: string;
   pereTelephone: string;
+  pereStatut: 'alive' | 'deceased'; // ✅ NOUVEAU
+  pereFonction: string; // ✅ NOUVEAU
   pereNomUtilisateur: string;
   pereMotDePasse: string;
+  
+  // Informations de la mère (SANS matricule ni mot de passe)
   merePrenom?: string;
   mereNom?: string;
   mereAdresse?: string;
   mereTelephone?: string;
-  mereNomUtilisateur?: string;
-  mereMotDePasse?: string;
+  mereStatut?: 'alive' | 'deceased'; // ✅ NOUVEAU
+  mereFonction?: string; // ✅ NOUVEAU
+  // ❌ SUPPRIMÉ : mereNomUtilisateur
+  // ❌ SUPPRIMÉ : mereMotDePasse
+  
   contactUrgenceNom: string;
   contactUrgenceTelephone: string;
   contactUrgenceRelation: string;
@@ -320,18 +329,21 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
       adresse: initialData?.address || "",
       telephone: initialData?.phone || "",
       classe: initialData?.classes ? `${initialData.classes.name} ${initialData.classes.level}${initialData.classes.section ? ` - ${initialData.classes.section}` : ''}` : "",
-      perePrenom: initialData?.perePrenom || "",
-      pereNom: initialData?.pereNom || "",
-      pereAdresse: initialData?.pereAdresse || "",
-      pereTelephone: initialData?.parent_phone || "",
+      perePrenom: initialData?.father_first_name || initialData?.parent_first_name || initialData?.perePrenom || "",
+      pereNom: initialData?.father_last_name || initialData?.parent_last_name || initialData?.pereNom || "",
+      pereAdresse: initialData?.father_address || initialData?.pereAdresse || "",
+      pereTelephone: initialData?.father_phone || initialData?.parent_phone || "",
+      pereStatut: initialData?.father_status || 'alive', // ✅ NOUVEAU
+      pereFonction: initialData?.father_profession || "", // ✅ NOUVEAU
       pereNomUtilisateur: initialData?.pereNomUtilisateur || "",
       pereMotDePasse: initialData?.pereMotDePasse || "",
-      merePrenom: initialData?.merePrenom || "",
-      mereNom: initialData?.mereNom || "",
-      mereAdresse: initialData?.mereAdresse || "",
-      mereTelephone: initialData?.mereTelephone || "",
-      mereNomUtilisateur: initialData?.mereNomUtilisateur || "",
-      mereMotDePasse: initialData?.mereMotDePasse || "",
+      
+      merePrenom: initialData?.mother_first_name || initialData?.merePrenom || "",
+      mereNom: initialData?.mother_last_name || initialData?.mereNom || "",
+      mereAdresse: initialData?.mother_address || initialData?.mereAdresse || "",
+      mereTelephone: initialData?.mother_phone || initialData?.mereTelephone || "",
+      mereStatut: initialData?.mother_status || 'alive', // ✅ NOUVEAU
+      mereFonction: initialData?.mother_profession || "", // ✅ NOUVEAU
       contactUrgenceNom: initialData?.contactUrgenceNom || "",
       contactUrgenceTelephone: initialData?.emergency_contact?.split(' - ')[1]?.split(' (')[0] || "",
       contactUrgenceRelation: initialData?.emergency_contact?.split(' (')[1]?.replace(')', '') || "",
@@ -408,8 +420,8 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
         mereNom: "",
         mereAdresse: "",
         mereTelephone: "",
-        mereNomUtilisateur: "",
-        mereMotDePasse: "",
+        mereStatut: 'alive', // ✅ NOUVEAU
+        mereFonction: "", // ✅ NOUVEAU
         contactUrgenceNom: initialData.emergency_contact?.split(' - ')[0] || "",
         contactUrgenceTelephone: initialData.emergency_contact?.split(' - ')[1]?.split(' (')[0] || "",
         contactUrgenceRelation: initialData.emergency_contact?.split(' (')[1]?.replace(')', '') || "",
@@ -502,10 +514,7 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
             form.setValue("pereNomUtilisateur", parentNumber);
           }
           
-          const motherNumber = await getNextParentNumber(userProfile.schoolId, currentParentSettings.matriculeFormat);
-          if (!manuallyEditedFields.has('mereNomUtilisateur')) {
-            form.setValue("mereNomUtilisateur", motherNumber);
-          }
+          // ❌ SUPPRIMÉ : Plus de génération de matricule pour la mère
         }
       }
       
@@ -514,12 +523,9 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
         form.setValue("motDePasse", currentStudentSettings.defaultStudentPassword);
       }
       
-      // Définir les mots de passe par défaut pour les parents
+      // Définir le mot de passe par défaut pour le père uniquement
       if (!manuallyEditedFields.has('pereMotDePasse')) {
         form.setValue("pereMotDePasse", currentParentSettings.defaultParentPassword);
-      }
-      if (!manuallyEditedFields.has('mereMotDePasse')) {
-        form.setValue("mereMotDePasse", currentParentSettings.defaultParentPassword);
       }
     };
     
@@ -549,10 +555,7 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
           if (!manuallyEditedFields.has('pereNomUtilisateur')) {
             form.setValue("pereNomUtilisateur", parentNumber);
           }
-          const motherNumber = await getNextParentNumber(userProfile.schoolId, currentParentSettings.matriculeFormat);
-          if (!manuallyEditedFields.has('mereNomUtilisateur')) {
-            form.setValue("mereNomUtilisateur", motherNumber);
-          }
+          // ❌ SUPPRIMÉ : Plus de génération de matricule pour la mère
         }
       }
       
@@ -561,12 +564,9 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
         form.setValue("motDePasse", currentStudentSettings.defaultStudentPassword);
       }
       
-      // Mettre à jour les mots de passe des parents
+      // Mettre à jour le mot de passe du père uniquement
       if (!manuallyEditedFields.has('pereMotDePasse')) {
         form.setValue("pereMotDePasse", currentParentSettings.defaultParentPassword);
-      }
-      if (!manuallyEditedFields.has('mereMotDePasse')) {
-        form.setValue("mereMotDePasse", currentParentSettings.defaultParentPassword);
       }
     };
 
@@ -1440,6 +1440,37 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
                     </FormItem>} />
               </div>
 
+              {/* ✅ NOUVEAU : Statut de vie et Fonction */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField control={form.control} name="pereStatut" render={({
+                  field
+                }) => <FormItem>
+                      <FormLabel>Statut de vie</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value || 'alive'}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Sélectionner" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="alive">En vie</SelectItem>
+                          <SelectItem value="deceased">Décédé</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>} />
+
+                <FormField control={form.control} name="pereFonction" render={({
+                  field
+                }) => <FormItem>
+                      <FormLabel>Fonction / Profession</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="Ex: Enseignant, Commerçant, etc." />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>} />
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField control={form.control} name="pereNomUtilisateur" render={({
                 field
@@ -1585,32 +1616,32 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
                     </FormItem>} />
               </div>
 
+              {/* ✅ NOUVEAU : Statut de vie et Fonction pour la mère */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField control={form.control} name="mereNomUtilisateur" render={({
-                field
-              }) => <FormItem>
-                      <FormLabel>Nom d'utilisateur (Mère) (optionnel)</FormLabel>
-                      <FormControl>
-                        <Input 
-                          {...field} 
-                          disabled={schoolSettings.autoGenerateParentMatricule && !useMotherExisting}
-                          className={schoolSettings.autoGenerateParentMatricule && !useMotherExisting ? "bg-muted" : ""}
-                        />
-                      </FormControl>
-                      {!settingsLoading && !useMotherExisting && userProfile?.schoolId && (
-                        <div className="text-sm text-muted-foreground mt-1">
-                          Format: {schoolSettings.parentMatriculeFormat}XXX@{userProfile.schoolId.substring(0, 8)}.ecogest.app
-                        </div>
-                      )}
+                <FormField control={form.control} name="mereStatut" render={({
+                  field
+                }) => <FormItem>
+                      <FormLabel>Statut de vie (optionnel)</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value || 'alive'}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Sélectionner" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="alive">En vie</SelectItem>
+                          <SelectItem value="deceased">Décédée</SelectItem>
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>} />
 
-                <FormField control={form.control} name="mereMotDePasse" render={({
-                field
-              }) => <FormItem>
-                      <FormLabel>Mot de passe (optionnel)</FormLabel>
+                <FormField control={form.control} name="mereFonction" render={({
+                  field
+                }) => <FormItem>
+                      <FormLabel>Fonction / Profession (optionnel)</FormLabel>
                       <FormControl>
-                        <Input {...field} readOnly className="bg-muted" />
+                        <Input {...field} placeholder="Ex: Infirmière, Couturière, etc." />
                       </FormControl>
                       <FormMessage />
                     </FormItem>} />

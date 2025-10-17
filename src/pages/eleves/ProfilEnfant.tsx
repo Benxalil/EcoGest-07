@@ -219,8 +219,29 @@ export default function ProfilEnfant() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <label className="text-sm font-medium text-muted-foreground">Nom</label>
-                <p className="text-base mt-1">{selectedChild.emergency_contact || 'Non renseigné'}</p>
+                <label className="text-sm font-medium text-muted-foreground">Nom complet</label>
+                <p className="text-base mt-1">
+                  {selectedChild.father_first_name || selectedChild.parent_first_name 
+                    ? `${selectedChild.father_first_name || selectedChild.parent_first_name || ''} ${selectedChild.father_last_name || selectedChild.parent_last_name || ''}`
+                    : 'Non renseigné'}
+                </p>
+              </div>
+              
+              <Separator />
+              
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">Statut de vie</label>
+                <p className="text-base mt-1">
+                  {selectedChild.father_status === 'alive' ? '✅ En vie' : 
+                   selectedChild.father_status === 'deceased' ? '⚫ Décédé' : 'Non renseigné'}
+                </p>
+              </div>
+              
+              <Separator />
+              
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">Profession / Fonction</label>
+                <p className="text-base mt-1">{selectedChild.father_profession || 'Non renseignée'}</p>
               </div>
               
               <Separator />
@@ -230,7 +251,7 @@ export default function ProfilEnfant() {
                   <MapPin className="h-4 w-4" />
                   Adresse
                 </label>
-                <p className="text-base mt-1">{selectedChild.address || 'Non renseignée'}</p>
+                <p className="text-base mt-1">{selectedChild.father_address || selectedChild.address || 'Non renseignée'}</p>
               </div>
               
               <Separator />
@@ -240,7 +261,7 @@ export default function ProfilEnfant() {
                   <Phone className="h-4 w-4" />
                   Téléphone
                 </label>
-                <p className="text-base mt-1">{selectedChild.parent_phone || 'Non renseigné'}</p>
+                <p className="text-base mt-1">{selectedChild.father_phone || selectedChild.parent_phone || 'Non renseigné'}</p>
               </div>
             </CardContent>
           </Card>
@@ -252,8 +273,29 @@ export default function ProfilEnfant() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <label className="text-sm font-medium text-muted-foreground">Nom</label>
-                <p className="text-base mt-1">Non renseigné</p>
+                <label className="text-sm font-medium text-muted-foreground">Nom complet</label>
+                <p className="text-base mt-1">
+                  {selectedChild.mother_first_name 
+                    ? `${selectedChild.mother_first_name || ''} ${selectedChild.mother_last_name || ''}`
+                    : 'Non renseigné'}
+                </p>
+              </div>
+              
+              <Separator />
+              
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">Statut de vie</label>
+                <p className="text-base mt-1">
+                  {selectedChild.mother_status === 'alive' ? '✅ En vie' : 
+                   selectedChild.mother_status === 'deceased' ? '⚫ Décédée' : 'Non renseigné'}
+                </p>
+              </div>
+              
+              <Separator />
+              
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">Profession / Fonction</label>
+                <p className="text-base mt-1">{selectedChild.mother_profession || 'Non renseignée'}</p>
               </div>
               
               <Separator />
@@ -263,7 +305,7 @@ export default function ProfilEnfant() {
                   <MapPin className="h-4 w-4" />
                   Adresse
                 </label>
-                <p className="text-base mt-1">Non renseignée</p>
+                <p className="text-base mt-1">{selectedChild.mother_address || 'Non renseignée'}</p>
               </div>
               
               <Separator />
@@ -273,7 +315,7 @@ export default function ProfilEnfant() {
                   <Phone className="h-4 w-4" />
                   Téléphone
                 </label>
-                <p className="text-base mt-1">Non renseigné</p>
+                <p className="text-base mt-1">{selectedChild.mother_phone || 'Non renseigné'}</p>
               </div>
             </CardContent>
           </Card>

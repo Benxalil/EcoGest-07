@@ -1265,11 +1265,23 @@ export type Database = {
           date_of_birth: string | null
           emergency_contact: string | null
           enrollment_date: string | null
+          father_address: string | null
+          father_first_name: string | null
+          father_last_name: string | null
+          father_phone: string | null
+          father_profession: string | null
+          father_status: string | null
           first_name: string
           gender: Database["public"]["Enums"]["gender"] | null
           id: string
           is_active: boolean | null
           last_name: string
+          mother_address: string | null
+          mother_first_name: string | null
+          mother_last_name: string | null
+          mother_phone: string | null
+          mother_profession: string | null
+          mother_status: string | null
           parent_email: string | null
           parent_first_name: string | null
           parent_last_name: string | null
@@ -1290,11 +1302,23 @@ export type Database = {
           date_of_birth?: string | null
           emergency_contact?: string | null
           enrollment_date?: string | null
+          father_address?: string | null
+          father_first_name?: string | null
+          father_last_name?: string | null
+          father_phone?: string | null
+          father_profession?: string | null
+          father_status?: string | null
           first_name: string
           gender?: Database["public"]["Enums"]["gender"] | null
           id?: string
           is_active?: boolean | null
           last_name: string
+          mother_address?: string | null
+          mother_first_name?: string | null
+          mother_last_name?: string | null
+          mother_phone?: string | null
+          mother_profession?: string | null
+          mother_status?: string | null
           parent_email?: string | null
           parent_first_name?: string | null
           parent_last_name?: string | null
@@ -1315,11 +1339,23 @@ export type Database = {
           date_of_birth?: string | null
           emergency_contact?: string | null
           enrollment_date?: string | null
+          father_address?: string | null
+          father_first_name?: string | null
+          father_last_name?: string | null
+          father_phone?: string | null
+          father_profession?: string | null
+          father_status?: string | null
           first_name?: string
           gender?: Database["public"]["Enums"]["gender"] | null
           id?: string
           is_active?: boolean | null
           last_name?: string
+          mother_address?: string | null
+          mother_first_name?: string | null
+          mother_last_name?: string | null
+          mother_phone?: string | null
+          mother_profession?: string | null
+          mother_status?: string | null
           parent_email?: string | null
           parent_first_name?: string | null
           parent_last_name?: string | null

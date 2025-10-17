@@ -15,8 +15,29 @@ export interface Child {
   gender: string | null;
   phone: string | null;
   address: string | null;
+  
+  // ✅ Informations PÈRE
+  father_first_name?: string | null;
+  father_last_name?: string | null;
+  father_phone?: string | null;
+  father_address?: string | null;
+  father_status?: 'alive' | 'deceased' | null;
+  father_profession?: string | null;
+  
+  // ✅ Informations MÈRE
+  mother_first_name?: string | null;
+  mother_last_name?: string | null;
+  mother_phone?: string | null;
+  mother_address?: string | null;
+  mother_status?: 'alive' | 'deceased' | null;
+  mother_profession?: string | null;
+  
+  // @deprecated - Compatibilité
   parent_phone: string | null;
   parent_email: string | null;
+  parent_first_name?: string | null;
+  parent_last_name?: string | null;
+  
   emergency_contact: string | null;
   enrollment_date: string | null;
   is_active: boolean;

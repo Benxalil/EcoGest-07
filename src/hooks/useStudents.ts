@@ -25,11 +25,32 @@ export interface Student {
   gender: "M" | "F";
   address?: string;
   phone?: string;
+  
+  // ✅ Informations PÈRE (avec matricule)
+  father_first_name?: string;
+  father_last_name?: string;
+  father_phone?: string;
+  father_address?: string;
+  father_status?: 'alive' | 'deceased';
+  father_profession?: string;
+  
+  // ✅ Informations MÈRE (sans matricule)
+  mother_first_name?: string;
+  mother_last_name?: string;
+  mother_phone?: string;
+  mother_address?: string;
+  mother_status?: 'alive' | 'deceased';
+  mother_profession?: string;
+  
+  // ✅ Matricule unique (père uniquement)
+  parent_matricule?: string;
+  
+  // @deprecated - Conservés pour compatibilité
   parent_phone?: string;
   parent_email?: string;
   parent_first_name?: string;
   parent_last_name?: string;
-  parent_matricule?: string;
+  
   emergency_contact?: string;
   school_id: string;
   class_id?: string;
@@ -357,7 +378,12 @@ export function useStudents(classId?: string) {
           student_number: studentNumber,
           parent_matricule: studentData.parent_matricule || parentMatricule, // Utiliser parent_matricule fourni ou généré
           user_id: authUser?.id || null,
-          password: studentPassword // ✅ Stocker le mot de passe élève en clair pour l'admin
+          password: studentPassword, // ✅ Stocker le mot de passe élève en clair pour l'admin
+          
+          // ✅ Compatibilité - garder les anciens champs
+          parent_first_name: studentData.father_first_name,
+          parent_last_name: studentData.father_last_name,
+          parent_phone: studentData.father_phone
         }])
         .select(`
           *,
