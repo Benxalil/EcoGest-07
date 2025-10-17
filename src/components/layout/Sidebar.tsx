@@ -253,7 +253,7 @@ export function Sidebar({
                 <EcoGestLogo size={64} />
               </div>
             ) : (
-              <EcoGestFullLogo height={90} />
+              <EcoGestFullLogo height={70} />
             )}
           </div>
         </div>
