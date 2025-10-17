@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserRole } from './useUserRole';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 
 /**
  * Hook simplifié pour récupérer les informations de l'école
@@ -10,6 +11,8 @@ export const useSchoolData = () => {
   const [schoolData, setSchoolData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const channelRef = useRef<RealtimeChannel | null>(null);
+  const lastUpdateRef = useRef<number>(0);
   
   const { userProfile } = useUserRole();
 
@@ -58,6 +61,16 @@ export const useSchoolData = () => {
       };
     }
 
+    // ✅ Éviter les souscriptions multiples
+    if (channelRef.current) {
+      if (import.meta.env.DEV) {
+        console.log('🔌 [useSchoolData] Canal déjà ouvert, réutilisation');
+      }
+      return () => {
+        isMounted = false;
+      };
+    }
+
     const channel = supabase
       .channel('school-data-changes')
       .on(
@@ -69,7 +82,16 @@ export const useSchoolData = () => {
           filter: `id=eq.${userProfile.schoolId}`
         },
         (payload) => {
-          console.log('🔔 [useSchoolData] Mise à jour Realtime détectée', payload);
+          // ✅ Debounce de 1000ms pour éviter les mises à jour trop fréquentes
+          const now = Date.now();
+          if (now - lastUpdateRef.current < 1000) {
+            return;
+          }
+          lastUpdateRef.current = now;
+
+          if (import.meta.env.DEV) {
+            console.log('🔔 [useSchoolData] Mise à jour Realtime détectée', payload);
+          }
           
           if (isMounted) {
             setSchoolData(payload.new);
@@ -78,13 +100,22 @@ export const useSchoolData = () => {
         }
       )
       .subscribe((status) => {
-        console.log('📡 [useSchoolData] Statut souscription Realtime:', status);
+        if (import.meta.env.DEV) {
+          console.log('📡 [useSchoolData] Statut souscription Realtime:', status);
+        }
       });
+
+    channelRef.current = channel;
 
     return () => {
       isMounted = false;
-      supabase.removeChannel(channel);
-      console.log('🔌 [useSchoolData] Désouscription Realtime');
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+        if (import.meta.env.DEV) {
+          console.log('🔌 [useSchoolData] Désouscription Realtime');
+        }
+      }
     };
   }, [userProfile?.schoolId]);
 
