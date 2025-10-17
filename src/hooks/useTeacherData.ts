@@ -169,8 +169,8 @@ export const useTeacherData = () => {
         error: null
       };
 
-      // Cache plus agressif: 5 minutes
-      cache.set(cacheKey, teacherData, 5 * 60 * 1000);
+      // 🚀 OPTIMISATION: Cache encore plus long: 10 minutes pour teacher data
+      cache.set(cacheKey, teacherData, 10 * 60 * 1000);
       setData(teacherData);
 
     } catch (err: unknown) {
@@ -201,9 +201,9 @@ export const useTeacherData = () => {
     const handleUpdate = (table: string) => {
       console.log('[useTeacherData] Real-time update detected for:', table);
       cache.deleteWithEvent(cacheKey);
-      // Debounce réduit à 500ms pour une mise à jour plus rapide
+      // 🚀 OPTIMISATION: Debounce plus agressif pour réduire les refetch (1000ms)
       if (timeoutId) clearTimeout(timeoutId);
-      timeoutId = setTimeout(fetchTeacherData, 500);
+      timeoutId = setTimeout(fetchTeacherData, 1000);
     };
 
     const channel = supabase

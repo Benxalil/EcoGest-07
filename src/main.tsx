@@ -17,6 +17,20 @@ import { PerformanceMonitorWidget } from './components/debug/PerformanceMonitorW
 if (typeof window !== 'undefined') {
   performanceMonitor.initialize();
   initializePerformanceOptimizations();
+  
+  // 🚀 OPTIMISATION: Enregistrer le Service Worker pour cache agressif
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker
+        .register('/sw.js')
+        .then((registration) => {
+          console.log('[SW] Enregistré avec succès:', registration.scope);
+        })
+        .catch((error) => {
+          console.error('[SW] Échec enregistrement:', error);
+        });
+    });
+  }
 }
 
 const rootElement = document.getElementById("root");

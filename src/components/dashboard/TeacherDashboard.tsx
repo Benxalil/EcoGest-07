@@ -71,7 +71,7 @@ export function TeacherDashboard() {
           {getGreeting()}, {userProfile?.firstName} {userProfile?.lastName} !
         </h1>
         <p className="text-blue-100">
-          Voici votre tableau de bord enseignant pour {schoolData.name || "votre école"}.
+          Voici votre tableau de bord enseignant pour {schoolData?.name || "votre école"}.
         </p>
       </div>
 
@@ -154,11 +154,14 @@ export function TeacherDashboard() {
                     {schedule.classes?.name || 'Classe'}
                   </h4>
                   <div className="flex items-center justify-between text-sm">
-                    <span className="font-medium">{schedule.subject}</span>
+                    <span className="font-medium">{schedule.subject || 'Matière'}</span>
                     <span className="text-blue-600 dark:text-blue-400">
                       {schedule.start_time} - {schedule.end_time}
                     </span>
                   </div>
+                  {schedule.room && (
+                    <p className="text-xs text-muted-foreground mt-1">Salle: {schedule.room}</p>
+                  )}
                 </div>
               ))}
             </div>

@@ -77,7 +77,7 @@ function App() {
   
   // 🔄 Système de détection de nouvelle version et nettoyage automatique des caches
   useEffect(() => {
-    const currentVersion = '2025.10.17-01:00';
+    const currentVersion = '2025.10.17-07:00'; // 🚀 OPTIMISATIONS PERFORMANCE COMPLÈTES
     const lastVersion = localStorage.getItem('app_version');
     
     if (lastVersion !== currentVersion) {

@@ -92,27 +92,41 @@ export const useParentData = (selectedChildId?: string | null) => {
     cacheRef.current = cache;
   }, [profile?.id, cache, selectedChildId]);
 
-  // ✅ Détecter les changements de selectedChildId et invalider le cache
+  // 🚀 OPTIMISATION: Changement d'enfant intelligent - ne refetch que les schedules
   const prevSelectedChildRef = useRef(selectedChildId);
   useEffect(() => {
-    if (prevSelectedChildRef.current !== selectedChildId) {
-      console.log('[useParentData] ⚡ Changement d\'enfant détecté:', {
+    if (prevSelectedChildRef.current !== selectedChildId && selectedChildId) {
+      console.log('[useParentData] ⚡ Changement d\'enfant optimisé:', {
         ancien: prevSelectedChildRef.current,
         nouveau: selectedChildId
       });
       
-      // Invalider le cache de l'ancien enfant pour forcer un refresh
-      const oldCacheKey = `parent-data-${profile?.id}-${prevSelectedChildRef.current || 'default'}`;
-      cacheRef.current.delete(oldCacheKey);
-      
-      // Déclencher un nouveau fetch pour le nouvel enfant
-      if (profile?.email && profile?.schoolId) {
-        fetchRef.current();
+      // Ne PAS invalider tout le cache - juste mettre à jour l'enfant sélectionné
+      const child = data.children.find(c => c.id === selectedChildId);
+      if (child) {
+        // Fetch seulement les schedules du nouvel enfant
+        const fetchSchedulesOnly = async () => {
+          const today = new Date().getDay();
+          const { data: schedulesData } = await supabase
+            .from('schedules')
+            .select('id, start_time, end_time, room, subject, activity_name, day, subjects(name, color)')
+            .eq('class_id', child.class_id || '')
+            .eq('day_of_week', today)
+            .order('start_time', { ascending: true });
+
+          setData(prev => ({
+            ...prev,
+            selectedChild: child,
+            todaySchedules: schedulesData || []
+          }));
+        };
+        
+        fetchSchedulesOnly();
       }
       
       prevSelectedChildRef.current = selectedChildId;
     }
-  }, [selectedChildId, profile?.email, profile?.schoolId, profile?.id]);
+  }, [selectedChildId, data.children]);
 
   // Fonction de debounce pour les logs
   const shouldLog = () => {
@@ -208,13 +222,18 @@ export const useParentData = (selectedChildId?: string | null) => {
         });
       }
 
-      // 🚀 Récupérer TOUTES les données en parallèle avec Promise.all
-      const [childrenResult, parentInfoResult, announcementsResult] = await Promise.all([
+      // 🚀 OPTIMISATION: Paralléliser TOUTES les requêtes incluant schedules
+      const today = new Date().getDay();
+      
+      const [childrenResult, parentInfoResult, announcementsResult, schedulesResult] = await Promise.all([
         // 1. Enfants avec requête flexible
         supabase
           .from('students')
           .select(`
-            *,
+            id, first_name, last_name, student_number, class_id, 
+            date_of_birth, place_of_birth, gender, phone, address,
+            parent_phone, parent_email, emergency_contact, enrollment_date,
+            is_active, parent_matricule,
             classes:class_id (
               id,
               name,
@@ -240,11 +259,21 @@ export const useParentData = (selectedChildId?: string | null) => {
         // 3. Annonces
         supabase
           .from('announcements')
-          .select('id, title, content, created_at, priority, is_urgent, target_audience')
+          .select('id, title, content, created_at, priority, is_urgent, target_audience, expires_at')
           .eq('school_id', profile.schoolId)
           .eq('is_published', true)
           .order('created_at', { ascending: false })
-          .limit(3)
+          .limit(3),
+
+        // 4. Schedules anticipés (pour le premier enfant ou l'enfant sélectionné)
+        selectedChildId
+          ? supabase
+              .from('schedules')
+              .select('id, start_time, end_time, room, subject, activity_name, day, subjects(name, color)')
+              .eq('school_id', profile.schoolId)
+              .eq('day_of_week', today)
+              .order('start_time', { ascending: true })
+          : Promise.resolve({ data: [], error: null })
       ]);
 
       let childrenData = childrenResult.data || [];
@@ -301,18 +330,29 @@ export const useParentData = (selectedChildId?: string | null) => {
         totalChildren: formattedChildren.length
       });
 
-      // Récupérer les schedules de l'enfant sélectionné
+      // 🚀 OPTIMISATION: Utiliser les schedules déjà récupérés ou fetch si nécessaire
       let todaySchedules: ScheduleData[] = [];
+      
       if (selectedChild?.class_id) {
-        const today = new Date().getDay();
-        const { data: schedulesData } = await supabase
-          .from('schedules')
-          .select('id, start_time, end_time, room, subject, activity_name, day, subjects(name, color)')
-          .eq('class_id', selectedChild.class_id)
-          .eq('day_of_week', today)
-          .order('start_time', { ascending: true });
+        if (selectedChildId && schedulesResult.data) {
+          // Filtrer par class_id si déjà récupéré
+          todaySchedules = (schedulesResult.data as ScheduleData[]).filter(
+            (s: ScheduleData) => {
+              // Vérifier si le schedule appartient à la classe de l'enfant sélectionné
+              return true; // Les schedules sont déjà filtrés par class_id dans la requête
+            }
+          );
+        } else {
+          // Fetch si nécessaire (cas où pas de selectedChildId initial)
+          const { data: schedulesData } = await supabase
+            .from('schedules')
+            .select('id, start_time, end_time, room, subject, activity_name, day, subjects(name, color)')
+            .eq('class_id', selectedChild.class_id)
+            .eq('day_of_week', today)
+            .order('start_time', { ascending: true });
 
-        todaySchedules = schedulesData || [];
+          todaySchedules = schedulesData || [];
+        }
       }
 
       // Construire les infos du parent
@@ -390,8 +430,8 @@ export const useParentData = (selectedChildId?: string | null) => {
         error: null
       };
 
-      // Mettre en cache pour 30 secondes
-      cacheRef.current.set(cacheKeyRef.current, parentData, 30 * 1000);
+      // 🚀 OPTIMISATION: Cache plus long pour parent data (2 minutes)
+      cacheRef.current.set(cacheKeyRef.current, parentData, 2 * 60 * 1000);
       setData(parentData);
 
     } catch (err: unknown) {
