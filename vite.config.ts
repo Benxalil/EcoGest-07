@@ -63,6 +63,12 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  esbuild: {
+    target: 'es2020',
+    supported: {
+      'top-level-await': true
+    },
+  },
   build: {
     target: 'es2020',
     minify: 'esbuild',
@@ -76,8 +82,10 @@ export default defineConfig(({ mode }) => ({
     chunkSizeWarningLimit: 1000,
     sourcemap: mode === 'production' ? false : true,
   },
-  // Optimize dependencies
   optimizeDeps: {
+    esbuildOptions: {
+      target: 'es2020',
+    },
     include: [
       'react',
       'react-dom',
