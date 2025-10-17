@@ -36,6 +36,8 @@ export const EcoGestFullLogo = ({ height = 30 }: { height?: number }) => {
       fetchPriority="high"
       style={{
         imageRendering: 'crisp-edges',
+        width: `${width}px`,
+        height: `${height}px`,
         ...(({
           WebkitImageRendering: 'crisp-edges',
           msInterpolationMode: 'nearest-neighbor',
