@@ -209,12 +209,9 @@ export default function Parametres() {
     }
   }, [schoolData]);
 
-  // 📥 Charger les paramètres de matricules depuis la base de données
+  // 📥 Charger les paramètres de matricules depuis la base de données (une seule fois)
   useEffect(() => {
     if (matriculeSettings && !matriculeLoading) {
-      console.log('📥 [Parametres] Chargement des paramètres depuis la DB:', matriculeSettings);
-      
-      // Synchroniser les paramètres élèves
       setStudentSettings(prev => ({
         ...prev,
         matriculeFormat: matriculeSettings.studentMatriculeFormat,
@@ -222,7 +219,6 @@ export default function Parametres() {
         autoGenerateMatricule: matriculeSettings.autoGenerateStudentMatricule,
       }));
       
-      // Synchroniser les paramètres parents
       setParentSettings(prev => ({
         ...prev,
         matriculeFormat: matriculeSettings.parentMatriculeFormat,
@@ -230,15 +226,12 @@ export default function Parametres() {
         autoGenerateMatricule: matriculeSettings.autoGenerateParentMatricule,
       }));
       
-      // Synchroniser les paramètres enseignants
       setTeacherSettings(prev => ({
         ...prev,
         teacherPrefix: matriculeSettings.teacherMatriculeFormat,
         defaultTeacherPassword: matriculeSettings.defaultTeacherPassword,
         autoGenerateUsername: matriculeSettings.autoGenerateTeacherMatricule,
       }));
-      
-      console.log('✅ [Parametres] Paramètres synchronisés avec succès');
     }
   }, [matriculeSettings, matriculeLoading]);
   const loadAllSettings = () => {
@@ -366,11 +359,10 @@ export default function Parametres() {
   };
   const saveAllSettings = async () => {
     try {
-      // 1. ✅ NOUVEAU : Sauvegarder les formats de matricules en base de données
-      if (matriculeSettings && userProfile?.schoolId) {
-        console.log('💾 [Parametres] Sauvegarde des paramètres matricules en DB...');
-        
-        const success = await updateMatriculeSettings({
+      // Lancer toutes les sauvegardes en parallèle pour plus de rapidité
+      const [matriculeSuccess, schoolSuccess, academicYearSuccess] = await Promise.all([
+        // 1. Sauvegarder les formats de matricules
+        userProfile?.schoolId ? updateMatriculeSettings({
           studentMatriculeFormat: studentSettings.matriculeFormat,
           parentMatriculeFormat: parentSettings.matriculeFormat,
           teacherMatriculeFormat: teacherSettings.teacherPrefix,
@@ -380,32 +372,23 @@ export default function Parametres() {
           autoGenerateStudentMatricule: studentSettings.autoGenerateMatricule,
           autoGenerateParentMatricule: parentSettings.autoGenerateMatricule,
           autoGenerateTeacherMatricule: teacherSettings.autoGenerateUsername,
-        });
-
-        if (!success) {
-          throw new Error('Échec de la sauvegarde des paramètres matricules');
-        }
+        }) : Promise.resolve(true),
         
-        console.log('✅ [Parametres] Paramètres matricules sauvegardés en DB avec succès');
-      }
+        // 2. Sauvegarder les informations de l'école
+        updateSchoolData({
+          name: schoolSettings.nom,
+          address: schoolSettings.adresse,
+          phone: schoolSettings.telephone,
+          slogan: schoolSettings.slogan,
+          logo_url: schoolSettings.logo
+        }),
+        
+        // 3. Sauvegarder l'année académique
+        updateAcademicYear(generalSettings.anneeScolaire)
+      ]);
 
-      // 2. Sauvegarder les informations de l'école en base de données
-      const schoolUpdateSuccess = await updateSchoolData({
-        name: schoolSettings.nom,
-        address: schoolSettings.adresse,
-        phone: schoolSettings.telephone,
-        slogan: schoolSettings.slogan,
-        logo_url: schoolSettings.logo
-      });
-
-      if (!schoolUpdateSuccess) {
-        throw new Error("Échec de la mise à jour des informations de l'école");
-      }
-
-      // 3. Sauvegarder l'année académique en base de données
-      const success = await updateAcademicYear(generalSettings.anneeScolaire);
-      if (!success) {
-        throw new Error("Échec de la mise à jour de l'année académique");
+      if (!matriculeSuccess || !schoolSuccess || !academicYearSuccess) {
+        throw new Error('Échec de sauvegarde de certains paramètres');
       }
 
       // 4. Mettre à jour les dates de l'année académique dans la base de données

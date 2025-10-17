@@ -65,7 +65,6 @@ export const useMatriculeSettings = () => {
             autoGenerateTeacherMatricule: data.auto_generate_teacher_matricule ?? true,
           };
           
-          console.log('✅ [useMatriculeSettings] Chargé depuis DB:', loadedSettings);
           setSettings(loadedSettings);
         }
       } catch (err) {
@@ -99,7 +98,6 @@ export const useMatriculeSettings = () => {
           filter: `id=eq.${userProfile.schoolId}`
         },
         (payload) => {
-          console.log('🔔 [useMatriculeSettings] Mise à jour détectée', payload);
           if (isMounted && payload.new) {
             const updatedSettings: MatriculeSettings = {
               studentMatriculeFormat: payload.new.student_matricule_format || 'ELEVE',
@@ -113,12 +111,6 @@ export const useMatriculeSettings = () => {
               autoGenerateTeacherMatricule: payload.new.auto_generate_teacher_matricule ?? true,
             };
             setSettings(updatedSettings);
-            
-            toast({
-              title: "🔄 Paramètres synchronisés",
-              description: "Les formats ont été mis à jour automatiquement",
-              duration: 2000,
-            });
           }
         }
       )
@@ -133,14 +125,11 @@ export const useMatriculeSettings = () => {
   // 💾 SAUVEGARDER vers la base de données
   const updateSettings = async (newSettings: Partial<MatriculeSettings>) => {
     if (!userProfile?.schoolId) {
-      console.error('❌ [useMatriculeSettings] Pas de schoolId');
       return false;
     }
 
     try {
-      console.log('💾 [useMatriculeSettings] UPDATE en cours...', newSettings);
-
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('schools')
         .update({
           student_matricule_format: newSettings.studentMatriculeFormat,
@@ -153,49 +142,21 @@ export const useMatriculeSettings = () => {
           auto_generate_parent_matricule: newSettings.autoGenerateParentMatricule,
           auto_generate_teacher_matricule: newSettings.autoGenerateTeacherMatricule,
         })
-        .eq('id', userProfile.schoolId)
-        .select()
-        .single();
+        .eq('id', userProfile.schoolId);
 
-      console.log('💾 [useMatriculeSettings] Résultat:', { data, error });
+      if (error) throw error;
 
-      if (error) {
-        throw error;
-      }
-
-      if (data) {
-        const updatedSettings: MatriculeSettings = {
-          studentMatriculeFormat: data.student_matricule_format || 'ELEVE',
-          parentMatriculeFormat: data.parent_matricule_format || 'PAR',
-          teacherMatriculeFormat: data.teacher_matricule_format || 'PROF',
-          defaultStudentPassword: data.default_student_password || 'student123',
-          defaultParentPassword: data.default_parent_password || 'parent123',
-          defaultTeacherPassword: data.default_teacher_password || 'teacher123',
-          autoGenerateStudentMatricule: data.auto_generate_student_matricule ?? true,
-          autoGenerateParentMatricule: data.auto_generate_parent_matricule ?? true,
-          autoGenerateTeacherMatricule: data.auto_generate_teacher_matricule ?? true,
-        };
-        
-        setSettings(updatedSettings);
-        
-        toast({
-          title: "✅ Paramètres sauvegardés",
-          description: "Les formats ont été mis à jour avec succès",
-          duration: 3000,
-        });
-        
-        return true;
-      }
-
-      return false;
+      // Mettre à jour l'état local immédiatement
+      setSettings(prev => prev ? { ...prev, ...newSettings as MatriculeSettings } : null);
+      
+      return true;
     } catch (error) {
-      console.error('❌ [useMatriculeSettings] Erreur:', error);
+      console.error('Erreur sauvegarde matricules:', error);
       
       toast({
-        title: "❌ Erreur de sauvegarde",
+        title: "Erreur de sauvegarde",
         description: error instanceof Error ? error.message : "Impossible de sauvegarder",
         variant: "destructive",
-        duration: 5000,
       });
       
       return false;
