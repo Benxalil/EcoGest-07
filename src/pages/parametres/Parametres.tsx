@@ -19,6 +19,7 @@ import { useSchoolData } from "@/hooks/useSchoolData";
 import { SubscriptionAlert } from "@/components/subscription/SubscriptionAlert";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useMatriculeSettings } from "@/hooks/useMatriculeSettings";
 import { TeacherSettings } from "@/components/parametres/TeacherSettings";
 import { StudentSettings } from "@/components/parametres/StudentSettings";
 import { ParentSettings } from "@/components/parametres/ParentSettings";
@@ -80,6 +81,7 @@ export default function Parametres() {
   const { subscriptionStatus, simulateSubscriptionState } = useSubscription();
   const { isTeacher, isStudent, isParent, loading, userProfile, simulateRole, resetRoleSimulation, isSimulating } = useUserRole();
   const { schoolData, updateSchoolData } = useSchoolData();
+  const { settings: matriculeSettings, loading: matriculeLoading, updateSettings: updateMatriculeSettings } = useMatriculeSettings();
   const [showPasswords, setShowPasswords] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
@@ -206,6 +208,39 @@ export default function Parametres() {
       }
     }
   }, [schoolData]);
+
+  // 📥 Charger les paramètres de matricules depuis la base de données
+  useEffect(() => {
+    if (matriculeSettings && !matriculeLoading) {
+      console.log('📥 [Parametres] Chargement des paramètres depuis la DB:', matriculeSettings);
+      
+      // Synchroniser les paramètres élèves
+      setStudentSettings(prev => ({
+        ...prev,
+        matriculeFormat: matriculeSettings.studentMatriculeFormat,
+        defaultStudentPassword: matriculeSettings.defaultStudentPassword,
+        autoGenerateMatricule: matriculeSettings.autoGenerateStudentMatricule,
+      }));
+      
+      // Synchroniser les paramètres parents
+      setParentSettings(prev => ({
+        ...prev,
+        matriculeFormat: matriculeSettings.parentMatriculeFormat,
+        defaultParentPassword: matriculeSettings.defaultParentPassword,
+        autoGenerateMatricule: matriculeSettings.autoGenerateParentMatricule,
+      }));
+      
+      // Synchroniser les paramètres enseignants
+      setTeacherSettings(prev => ({
+        ...prev,
+        teacherPrefix: matriculeSettings.teacherMatriculeFormat,
+        defaultTeacherPassword: matriculeSettings.defaultTeacherPassword,
+        autoGenerateUsername: matriculeSettings.autoGenerateTeacherMatricule,
+      }));
+      
+      console.log('✅ [Parametres] Paramètres synchronisés avec succès');
+    }
+  }, [matriculeSettings, matriculeLoading]);
   const loadAllSettings = () => {
     try {
       // Paramètres de l'école - chargés via useEffect depuis schoolData
@@ -331,7 +366,30 @@ export default function Parametres() {
   };
   const saveAllSettings = async () => {
     try {
-      // 1. Sauvegarder les informations de l'école en base de données
+      // 1. ✅ NOUVEAU : Sauvegarder les formats de matricules en base de données
+      if (matriculeSettings && userProfile?.schoolId) {
+        console.log('💾 [Parametres] Sauvegarde des paramètres matricules en DB...');
+        
+        const success = await updateMatriculeSettings({
+          studentMatriculeFormat: studentSettings.matriculeFormat,
+          parentMatriculeFormat: parentSettings.matriculeFormat,
+          teacherMatriculeFormat: teacherSettings.teacherPrefix,
+          defaultStudentPassword: studentSettings.defaultStudentPassword,
+          defaultParentPassword: parentSettings.defaultParentPassword,
+          defaultTeacherPassword: teacherSettings.defaultTeacherPassword,
+          autoGenerateStudentMatricule: studentSettings.autoGenerateMatricule,
+          autoGenerateParentMatricule: parentSettings.autoGenerateMatricule,
+          autoGenerateTeacherMatricule: teacherSettings.autoGenerateUsername,
+        });
+
+        if (!success) {
+          throw new Error('Échec de la sauvegarde des paramètres matricules');
+        }
+        
+        console.log('✅ [Parametres] Paramètres matricules sauvegardés en DB avec succès');
+      }
+
+      // 2. Sauvegarder les informations de l'école en base de données
       const schoolUpdateSuccess = await updateSchoolData({
         name: schoolSettings.nom,
         address: schoolSettings.adresse,
@@ -344,13 +402,13 @@ export default function Parametres() {
         throw new Error("Échec de la mise à jour des informations de l'école");
       }
 
-      // 2. Sauvegarder l'année académique en base de données
+      // 3. Sauvegarder l'année académique en base de données
       const success = await updateAcademicYear(generalSettings.anneeScolaire);
       if (!success) {
         throw new Error("Échec de la mise à jour de l'année académique");
       }
 
-      // 3. Mettre à jour les dates de l'année académique dans la base de données
+      // 4. Mettre à jour les dates de l'année académique dans la base de données
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         const { data: profile } = await supabase
@@ -375,7 +433,8 @@ export default function Parametres() {
         }
       }
 
-      // 4. Sauvegarder les autres paramètres dans localStorage
+      // 5. ✅ MODIFIÉ : Sauvegarder dans localStorage UNIQUEMENT pour compatibilité
+      // (sera progressivement supprimé au fur et à mesure de la migration)
       localStorage.setItem('settings', JSON.stringify(generalSettings));
       localStorage.setItem('teacherSettings', JSON.stringify(teacherSettings));
       localStorage.setItem('studentSettings', JSON.stringify(studentSettings));
@@ -384,7 +443,7 @@ export default function Parametres() {
       localStorage.setItem('securitySettings', JSON.stringify(securitySettings));
       localStorage.setItem('backupSettings', JSON.stringify(backupSettings));
 
-      // 5. Déclencher un événement pour notifier les autres composants (Header, Dashboard)
+      // 6. Déclencher un événement pour notifier les autres composants (Header, Dashboard)
       window.dispatchEvent(new Event('schoolSettingsUpdated'));
       
       setHasUnsavedChanges(false);
@@ -396,7 +455,7 @@ export default function Parametres() {
         duration: 4000,
       });
     } catch (error) {
-      console.error('Erreur lors de la sauvegarde:', error);
+      console.error('❌ [Parametres] Erreur lors de la sauvegarde:', error);
       toast({
         title: "Erreur",
         description: error instanceof Error ? error.message : "Impossible de sauvegarder les paramètres.",
