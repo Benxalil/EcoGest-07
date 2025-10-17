@@ -29,6 +29,10 @@ export function SchoolInfo({
               src={displayLogo} 
               alt={`Logo ${displayName}`} 
               className="w-full h-full object-contain p-1"
+              width="48"
+              height="48"
+              loading="eager"
+              decoding="async"
               onError={(e) => {
                 console.error('Erreur chargement logo:', displayLogo);
                 e.currentTarget.style.display = 'none';
