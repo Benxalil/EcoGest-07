@@ -82,7 +82,20 @@ const AuthPage = () => {
           description: errorMessage,
           variant: "destructive",
         });
-      } else {
+      } else if (authData.user) {
+        // Vérifier si l'email est confirmé
+        if (!authData.user.email_confirmed_at) {
+          toast({
+            title: "Compte non vérifié",
+            description: "Votre compte n'a pas encore été validé. Consultez votre boîte mail pour confirmer votre inscription.",
+            variant: "destructive",
+          });
+          navigate('/auth/pending-confirmation', { 
+            state: { email: authData.user.email } 
+          });
+          return;
+        }
+        
         // Attendre que la session soit complètement établie
         const { data: { session } } = await supabase.auth.getSession();
         

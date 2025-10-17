@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,6 +15,7 @@ type Currency = "FCFA" | "EUR" | "USD" | "MAD" | "GNF";
 type AcademicYear = "2024/2025" | "2025/2026" | "2026/2027" | "2027/2028" | "2028/2029" | "2029/2030";
 const SchoolRegistrationPage = () => {
   const { theme, setTheme } = useTheme();
+  const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -200,14 +201,16 @@ Veuillez cliquer sur le lien dans l'email pour activer votre compte.
 
 Une fois confirmé, vous serez automatiquement redirigé pour finaliser la création de votre école.`);
         
-        // Rediriger vers page d'attente de confirmation
-        window.location.href = '/auth/pending-confirmation';
+        // Rediriger vers page d'attente de confirmation avec l'email
+        navigate('/auth/pending-confirmation', { 
+          state: { email: formData.adminEmail } 
+        });
       } else {
         // Email déjà confirmé (mode développement)
         console.log('✅ Email déjà confirmé, redirection directe vers finalisation');
         
         // Rediriger directement vers la finalisation
-        window.location.href = '/complete-registration';
+        navigate('/complete-registration');
       }
 
     } catch (error: any) {

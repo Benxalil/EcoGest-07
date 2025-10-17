@@ -14,6 +14,7 @@ import AuthPage from "./pages/auth/AuthPage";
 import SchoolRegistrationPage from "./pages/auth/SchoolRegistrationPage";
 import CompleteRegistration from "./pages/auth/CompleteRegistration";
 import PendingConfirmation from "./pages/auth/PendingConfirmation";
+import EmailVerified from "./pages/auth/EmailVerified";
 
 // ✅ Pages secondaires - chargement lazy
 const PageListeEnseignants = lazy(() => import("./pages/enseignants/ListeEnseignants"));
@@ -76,7 +77,7 @@ function App() {
   
   // 🔄 Système de détection de nouvelle version et nettoyage automatique des caches
   useEffect(() => {
-    const currentVersion = '2025.10.16-22:15';
+    const currentVersion = '2025.10.17-01:00';
     const lastVersion = localStorage.getItem('app_version');
     
     if (lastVersion !== currentVersion) {
@@ -162,6 +163,7 @@ function App() {
           <Route path="/auth" element={<AuthPage />} />
           <Route path="/inscription" element={<SchoolRegistrationPage />} />
           <Route path="/auth/pending-confirmation" element={<PendingConfirmation />} />
+          <Route path="/email-verified" element={<EmailVerified />} />
           <Route path="/complete-registration" element={<CompleteRegistration />} />
           <Route path="/abonnement" element={<Abonnement />} />
           <Route path="/admin/user-migration" element={<UserMigration />} />

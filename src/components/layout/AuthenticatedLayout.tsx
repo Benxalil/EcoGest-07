@@ -12,12 +12,36 @@ const AuthenticatedLayout: React.FC<AuthenticatedLayoutProps> = ({ children }) =
   const navigate = useNavigate();
   const location = useLocation();
   const [checkingSchool, setCheckingSchool] = useState(true);
+  const [checkingEmailVerification, setCheckingEmailVerification] = useState(false);
 
   // Don't check authentication for public routes
-  const publicRoutes = ['/auth', '/inscription', '/complete-registration', '/auth/pending-confirmation'];
+  const publicRoutes = ['/auth', '/inscription', '/complete-registration', '/auth/pending-confirmation', '/email-verified'];
   const isPublicRoute = publicRoutes.includes(location.pathname);
 
   useEffect(() => {
+    const checkEmailVerification = async () => {
+      // Skip check for public routes or if no user
+      if (isPublicRoute || !user || loading || checkingEmailVerification) {
+        return;
+      }
+
+      setCheckingEmailVerification(true);
+      try {
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        
+        if (authUser && !authUser.email_confirmed_at) {
+          console.log('⚠️ Email non vérifié, redirection vers pending-confirmation');
+          navigate('/auth/pending-confirmation', { 
+            state: { email: authUser.email } 
+          });
+        }
+      } catch (error) {
+        console.error('Erreur lors de la vérification de l\'email:', error);
+      } finally {
+        setCheckingEmailVerification(false);
+      }
+    };
+
     const checkSchoolRegistration = async () => {
       // Skip check for public routes or if user is not loaded
       if (isPublicRoute || !user || loading) {
@@ -26,6 +50,9 @@ const AuthenticatedLayout: React.FC<AuthenticatedLayoutProps> = ({ children }) =
       }
 
       try {
+        // D'abord, vérifier l'email
+        await checkEmailVerification();
+        
         // Check if user has a school_id in their profile
         const { data: profile, error } = await supabase
           .from('profiles')
@@ -64,7 +91,7 @@ const AuthenticatedLayout: React.FC<AuthenticatedLayoutProps> = ({ children }) =
     };
 
     checkSchoolRegistration();
-  }, [user, loading, isPublicRoute, navigate, location.pathname]);
+  }, [user, loading, isPublicRoute, navigate, location.pathname, checkingEmailVerification]);
 
   if (isPublicRoute) {
     return <>{children}</>;
