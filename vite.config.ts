@@ -64,16 +64,16 @@ export default defineConfig(({ mode }) => ({
     },
   },
   build: {
-    // Optimize build output
-    target: 'esnext',
+    target: 'es2020',
     minify: 'esbuild',
+    modulePreload: true,
+    cssCodeSplit: true,
     rollupOptions: {
       output: {
-        manualChunks: undefined, // Let Vite handle chunking automatically
+        manualChunks: undefined,
       },
     },
     chunkSizeWarningLimit: 1000,
-    cssCodeSplit: true,
     sourcemap: mode === 'production' ? false : true,
   },
   // Optimize dependencies

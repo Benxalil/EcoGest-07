@@ -6,6 +6,8 @@ interface LazyImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
   alt: string;
   fallbackSrc?: string;
   showSkeleton?: boolean;
+  width?: number | string;
+  height?: number | string;
 }
 
 /**
@@ -30,6 +32,8 @@ export const LazyImage = React.memo<LazyImageProps>(({
   fallbackSrc = '/placeholder.svg',
   showSkeleton = true,
   className,
+  width,
+  height,
   ...props
 }) => {
   const [imageSrc, setImageSrc] = useState<string | null>(null);
@@ -88,10 +92,12 @@ export const LazyImage = React.memo<LazyImageProps>(({
           src={imageSrc}
           alt={alt}
           className={className}
+          width={width || 'auto'}
+          height={height || 'auto'}
           onLoad={handleLoad}
           onError={handleError}
-          loading="lazy" // ✅ Lazy loading natif du navigateur (fallback)
-          decoding="async" // ✅ Décodage asynchrone pour ne pas bloquer le thread principal
+          loading="lazy"
+          decoding="async"
           style={{ display: isLoading ? 'none' : 'block' }}
           {...props}
         />
