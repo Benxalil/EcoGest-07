@@ -513,7 +513,7 @@ Une fois confirmé, vous serez automatiquement redirigé pour finaliser la créa
       <Card className="w-full max-w-2xl shadow-xl border-0 bg-card/95 backdrop-blur-sm">
         <CardHeader className="text-center">
           <div className="pt-4 pb-2 flex justify-center">
-            <EcoGestFullLogo height={30} />
+            <EcoGestFullLogo height={130} />
           </div>
         </CardHeader>
         

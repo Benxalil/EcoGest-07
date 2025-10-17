@@ -132,7 +132,7 @@ const AuthPage = () => {
       <Card className="w-full max-w-md shadow-xl border-0 bg-card/95 backdrop-blur-sm">
         {/* Logo complet centré */}
         <div className="pt-8 pb-6 flex justify-center">
-          <EcoGestFullLogo height={30} />
+          <EcoGestFullLogo height={130} />
         </div>
 
         <CardContent className="px-6 pb-8">
