@@ -119,6 +119,10 @@ export const useSchedules = (classId?: string) => {
       school_id: userProfile.schoolId
     };
 
+    // Invalider le cache immédiatement
+    const cacheKey = `schedules-${classId}`;
+    cache.delete(cacheKey);
+
     // Mise à jour optimiste de l'UI immédiatement
     setSchedules(prevSchedules => {
       const updatedSchedules = prevSchedules.map(daySchedule => {
@@ -132,6 +136,8 @@ export const useSchedules = (classId?: string) => {
         }
         return daySchedule;
       });
+      // Mettre à jour le cache avec les nouvelles données
+      cache.set(cacheKey, updatedSchedules, 120000);
       return updatedSchedules;
     });
 
@@ -243,9 +249,13 @@ export const useSchedules = (classId?: string) => {
     // Sauvegarder l'ancien état pour rollback
     const previousSchedules = schedules;
 
+    // Invalider le cache immédiatement
+    const cacheKey = `schedules-${classId}`;
+    cache.delete(cacheKey);
+
     // Mise à jour optimiste de l'UI immédiatement
-    setSchedules(prevSchedules => 
-      prevSchedules.map(daySchedule => ({
+    setSchedules(prevSchedules => {
+      const updatedSchedules = prevSchedules.map(daySchedule => ({
         ...daySchedule,
         courses: daySchedule.courses.map(course => 
           course.id === id 
@@ -259,8 +269,11 @@ export const useSchedules = (classId?: string) => {
               }
             : course
         )
-      }))
-    );
+      }));
+      // Mettre à jour le cache avec les nouvelles données
+      cache.set(cacheKey, updatedSchedules, 120000);
+      return updatedSchedules;
+    });
 
     // Toast immédiat
     toast({
@@ -318,13 +331,20 @@ export const useSchedules = (classId?: string) => {
     // Sauvegarder l'ancien état pour rollback
     const previousSchedules = schedules;
 
+    // Invalider le cache immédiatement
+    const cacheKey = `schedules-${classId}`;
+    cache.delete(cacheKey);
+
     // Suppression optimiste de l'UI immédiatement
-    setSchedules(prevSchedules => 
-      prevSchedules.map(daySchedule => ({
+    setSchedules(prevSchedules => {
+      const updatedSchedules = prevSchedules.map(daySchedule => ({
         ...daySchedule,
         courses: daySchedule.courses.filter(course => course.id !== id)
-      }))
-    );
+      }));
+      // Mettre à jour le cache avec les nouvelles données
+      cache.set(cacheKey, updatedSchedules, 120000);
+      return updatedSchedules;
+    });
 
     // Toast immédiat
     toast({
