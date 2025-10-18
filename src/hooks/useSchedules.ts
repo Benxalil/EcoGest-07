@@ -94,231 +94,279 @@ export const useSchedules = (classId?: string) => {
   const createCourse = async (courseData: CreateCourseData) => {
     if (!userProfile?.schoolId) return false;
 
-    try {
-      // Convertir le format d'affichage vers le format DB si nécessaire
-      const dayMapping: { [key: string]: string } = {
-        'LUNDI': 'Lundi',
-        'MARDI': 'Mardi',
-        'MERCREDI': 'Mercredi',
-        'JEUDI': 'Jeudi',
-        'VENDREDI': 'Vendredi',
-        'SAMEDI': 'Samedi'
-      };
+    const dayMapping: { [key: string]: string } = {
+      'LUNDI': 'Lundi',
+      'MARDI': 'Mardi',
+      'MERCREDI': 'Mercredi',
+      'JEUDI': 'Jeudi',
+      'VENDREDI': 'Vendredi',
+      'SAMEDI': 'Samedi'
+    };
 
-      const dbDay = dayMapping[courseData.day] || courseData.day;
-      const dayOfWeek = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'].indexOf(dbDay) + 1;
+    const dbDay = dayMapping[courseData.day] || courseData.day;
+    const dayOfWeek = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'].indexOf(dbDay) + 1;
 
-      // Insertion en base de données AVANT toute mise à jour UI
-      const { data: insertedCourse, error } = await supabase
-        .from('schedules')
-        .insert({
-          subject: courseData.subject,
-          teacher: courseData.teacher || '',
-          teacher_id: courseData.teacher_id || null,
-          start_time: courseData.start_time,
-          end_time: courseData.end_time,
-          day: dbDay,
-          day_of_week: dayOfWeek,
-          class_id: courseData.class_id,
-          school_id: userProfile.schoolId
-        })
-        .select()
-        .single();
+    // Créer un ID temporaire pour l'UI optimiste
+    const tempId = `temp-${Date.now()}`;
+    const optimisticCourse: Course = {
+      id: tempId,
+      subject: courseData.subject,
+      teacher: courseData.teacher || '',
+      start_time: courseData.start_time,
+      end_time: courseData.end_time,
+      day: dbDay,
+      class_id: courseData.class_id,
+      school_id: userProfile.schoolId
+    };
 
-      if (error) {
-        // Gestion des conflits d'horaires
-        if (error.message.includes('schedules_no_time_conflict') || error.code === '23505') {
-          toast({
-            title: "⚠️ Conflit d'horaire",
-            description: "Un cours existe déjà à ce créneau horaire.",
-            variant: "destructive",
-          });
-          return false;
+    // Mise à jour optimiste de l'UI immédiatement
+    setSchedules(prevSchedules => {
+      const updatedSchedules = prevSchedules.map(daySchedule => {
+        if (daySchedule.day === dbDay) {
+          return {
+            ...daySchedule,
+            courses: [...daySchedule.courses, optimisticCourse].sort((a, b) => 
+              a.start_time.localeCompare(b.start_time)
+            )
+          };
         }
-        throw error;
-      }
+        return daySchedule;
+      });
+      return updatedSchedules;
+    });
 
-      // Créer le nouveau cours avec l'ID réel de la base de données
-      const newCourse: Course = {
-        id: insertedCourse.id,
-        subject: courseData.subject,
-        teacher: courseData.teacher || '',
-        start_time: courseData.start_time,
-        end_time: courseData.end_time,
-        day: dbDay,
-        class_id: courseData.class_id,
-        school_id: userProfile.schoolId
-      };
+    // Toast immédiat
+    toast({
+      title: "✅ Cours ajouté",
+      description: `Le cours ${courseData.subject} a été ajouté avec succès.`,
+    });
 
-      // Mise à jour de l'état local APRÈS succès DB
-      setSchedules(prevSchedules => {
-        const updatedSchedules = prevSchedules.map(daySchedule => {
-          if (daySchedule.day === dbDay) {
-            return {
+    // Insertion DB en arrière-plan
+    (async () => {
+      try {
+        const { data: insertedCourse, error } = await supabase
+          .from('schedules')
+          .insert({
+            subject: courseData.subject,
+            teacher: courseData.teacher || '',
+            teacher_id: courseData.teacher_id || null,
+            start_time: courseData.start_time,
+            end_time: courseData.end_time,
+            day: dbDay,
+            day_of_week: dayOfWeek,
+            class_id: courseData.class_id,
+            school_id: userProfile.schoolId
+          })
+          .select()
+          .single();
+
+        if (error) {
+          // Rollback en cas d'erreur
+          setSchedules(prevSchedules => 
+            prevSchedules.map(daySchedule => ({
               ...daySchedule,
-              courses: [...daySchedule.courses, newCourse].sort((a, b) => 
-                a.start_time.localeCompare(b.start_time)
-              )
-            };
+              courses: daySchedule.courses.filter(course => course.id !== tempId)
+            }))
+          );
+
+          if (error.message.includes('schedules_no_time_conflict') || error.code === '23505') {
+            toast({
+              title: "⚠️ Conflit d'horaire",
+              description: "Un cours existe déjà à ce créneau horaire. Changement annulé.",
+              variant: "destructive",
+            });
+          } else {
+            toast({
+              title: "❌ Erreur",
+              description: "Impossible d'enregistrer le cours. Changement annulé.",
+              variant: "destructive",
+            });
           }
-          return daySchedule;
-        });
-        return updatedSchedules;
-      });
+          return;
+        }
 
-      // Toast de succès APRÈS confirmation DB
-      toast({
-        title: "✅ Cours ajouté",
-        description: `Le cours ${courseData.subject} a été ajouté avec succès.`,
-      });
+        // Remplacer l'ID temporaire par l'ID réel de la DB
+        setSchedules(prevSchedules => 
+          prevSchedules.map(daySchedule => ({
+            ...daySchedule,
+            courses: daySchedule.courses.map(course => 
+              course.id === tempId ? { ...course, id: insertedCourse.id } : course
+            )
+          }))
+        );
 
-      // Invalidations de cache (en arrière-plan, délai de 100ms)
-      if (courseData.teacher_id) {
-        setTimeout(() => {
+        // Invalidations de cache
+        if (courseData.teacher_id) {
           cache.invalidateByPrefixWithEvent(`teacher-dashboard-${courseData.teacher_id}`);
           cache.deleteWithEvent('teacher-data-*');
           window.dispatchEvent(new CustomEvent('schedule-updated', { 
             detail: { teacherId: courseData.teacher_id, classId: courseData.class_id }
           }));
-        }, 100);
+        }
+      } catch (err) {
+        console.error('Erreur lors de la création du cours:', err);
+        // Rollback
+        setSchedules(prevSchedules => 
+          prevSchedules.map(daySchedule => ({
+            ...daySchedule,
+            courses: daySchedule.courses.filter(course => course.id !== tempId)
+          }))
+        );
+        toast({
+          title: "❌ Erreur",
+          description: "Impossible d'enregistrer le cours. Changement annulé.",
+          variant: "destructive",
+        });
       }
+    })();
 
-      return true;
-    } catch (err) {
-      console.error('Erreur lors de la création du cours:', err);
-      
-      const errorMessage = err instanceof Error ? err.message : "Une erreur est survenue lors de la création du cours.";
-      
-      toast({
-        title: "❌ Erreur",
-        description: errorMessage,
-        variant: "destructive",
-      });
-      return false;
-    }
+    return true;
   };
 
   const updateCourse = async (id: string, courseData: Partial<CreateCourseData>) => {
     if (!userProfile?.schoolId) return false;
 
-    try {
-      // Convertir le format d'affichage vers le format DB si nécessaire
-      const dayMapping: { [key: string]: string } = {
-        'LUNDI': 'Lundi',
-        'MARDI': 'Mardi', 
-        'MERCREDI': 'Mercredi',
-        'JEUDI': 'Jeudi',
-        'VENDREDI': 'Vendredi',
-        'SAMEDI': 'Samedi'
-      };
+    const dayMapping: { [key: string]: string } = {
+      'LUNDI': 'Lundi',
+      'MARDI': 'Mardi', 
+      'MERCREDI': 'Mercredi',
+      'JEUDI': 'Jeudi',
+      'VENDREDI': 'Vendredi',
+      'SAMEDI': 'Samedi'
+    };
 
-      let dbDay: string | undefined;
-      if (courseData.day) {
-        dbDay = dayMapping[courseData.day] || courseData.day;
-      }
-
-      // Mise à jour en base de données AVANT toute mise à jour UI
-      const updatedData: any = { ...courseData };
-      if (dbDay) {
-        const dayOfWeek = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'].indexOf(dbDay) + 1;
-        updatedData.day = dbDay;
-        updatedData.day_of_week = dayOfWeek;
-      }
-
-      const { error } = await supabase
-        .from('schedules')
-        .update(updatedData)
-        .eq('id', id)
-        .eq('school_id', userProfile.schoolId);
-
-      if (error) throw error;
-
-      // Mise à jour de l'état local APRÈS succès DB
-      setSchedules(prevSchedules => 
-        prevSchedules.map(daySchedule => ({
-          ...daySchedule,
-          courses: daySchedule.courses.map(course => 
-            course.id === id 
-              ? { 
-                  ...course, 
-                  subject: courseData.subject || course.subject,
-                  teacher: courseData.teacher || course.teacher,
-                  start_time: courseData.start_time || course.start_time,
-                  end_time: courseData.end_time || course.end_time,
-                  day: dbDay || course.day
-                }
-              : course
-          )
-        }))
-      );
-
-      // Toast de succès APRÈS confirmation DB
-      toast({
-        title: "✅ Cours mis à jour",
-        description: "Le cours a été mis à jour avec succès.",
-      });
-
-      // Invalidations de cache (arrière-plan, délai de 100ms)
-      setTimeout(() => {
-        cache.deleteWithEvent('teacher-data-*');
-      }, 100);
-
-      return true;
-    } catch (err) {
-      console.error('Erreur lors de la mise à jour:', err);
-      
-      toast({
-        title: "❌ Erreur",
-        description: err instanceof Error ? err.message : "Erreur lors de la mise à jour.",
-        variant: "destructive",
-      });
-      return false;
+    let dbDay: string | undefined;
+    if (courseData.day) {
+      dbDay = dayMapping[courseData.day] || courseData.day;
     }
+
+    // Sauvegarder l'ancien état pour rollback
+    const previousSchedules = schedules;
+
+    // Mise à jour optimiste de l'UI immédiatement
+    setSchedules(prevSchedules => 
+      prevSchedules.map(daySchedule => ({
+        ...daySchedule,
+        courses: daySchedule.courses.map(course => 
+          course.id === id 
+            ? { 
+                ...course, 
+                subject: courseData.subject || course.subject,
+                teacher: courseData.teacher || course.teacher,
+                start_time: courseData.start_time || course.start_time,
+                end_time: courseData.end_time || course.end_time,
+                day: dbDay || course.day
+              }
+            : course
+        )
+      }))
+    );
+
+    // Toast immédiat
+    toast({
+      title: "✅ Cours mis à jour",
+      description: "Le cours a été mis à jour avec succès.",
+    });
+
+    // Mise à jour DB en arrière-plan
+    (async () => {
+      try {
+        const updatedData: any = { ...courseData };
+        if (dbDay) {
+          const dayOfWeek = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'].indexOf(dbDay) + 1;
+          updatedData.day = dbDay;
+          updatedData.day_of_week = dayOfWeek;
+        }
+
+        const { error } = await supabase
+          .from('schedules')
+          .update(updatedData)
+          .eq('id', id)
+          .eq('school_id', userProfile.schoolId);
+
+        if (error) {
+          // Rollback en cas d'erreur
+          setSchedules(previousSchedules);
+          toast({
+            title: "❌ Erreur",
+            description: "Impossible de mettre à jour le cours. Changement annulé.",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        // Invalidations de cache
+        cache.deleteWithEvent('teacher-data-*');
+      } catch (err) {
+        console.error('Erreur lors de la mise à jour:', err);
+        // Rollback
+        setSchedules(previousSchedules);
+        toast({
+          title: "❌ Erreur",
+          description: "Impossible de mettre à jour le cours. Changement annulé.",
+          variant: "destructive",
+        });
+      }
+    })();
+
+    return true;
   };
 
   const deleteCourse = async (id: string) => {
     if (!userProfile?.schoolId) return false;
 
-    try {
-      // Suppression en base de données AVANT toute mise à jour UI
-      const { error } = await supabase
-        .from('schedules')
-        .delete()
-        .eq('id', id)
-        .eq('school_id', userProfile.schoolId);
+    // Sauvegarder l'ancien état pour rollback
+    const previousSchedules = schedules;
 
-      if (error) throw error;
+    // Suppression optimiste de l'UI immédiatement
+    setSchedules(prevSchedules => 
+      prevSchedules.map(daySchedule => ({
+        ...daySchedule,
+        courses: daySchedule.courses.filter(course => course.id !== id)
+      }))
+    );
 
-      // Suppression de l'état local APRÈS succès DB
-      setSchedules(prevSchedules => 
-        prevSchedules.map(daySchedule => ({
-          ...daySchedule,
-          courses: daySchedule.courses.filter(course => course.id !== id)
-        }))
-      );
+    // Toast immédiat
+    toast({
+      title: "✅ Cours supprimé",
+      description: "Le cours a été supprimé avec succès.",
+    });
 
-      // Toast de succès APRÈS confirmation DB
-      toast({
-        title: "✅ Cours supprimé",
-        description: "Le cours a été supprimé avec succès.",
-      });
+    // Suppression DB en arrière-plan
+    (async () => {
+      try {
+        const { error } = await supabase
+          .from('schedules')
+          .delete()
+          .eq('id', id)
+          .eq('school_id', userProfile.schoolId);
 
-      // Invalidations de cache (arrière-plan, délai de 100ms)
-      setTimeout(() => {
+        if (error) {
+          // Rollback en cas d'erreur
+          setSchedules(previousSchedules);
+          toast({
+            title: "❌ Erreur",
+            description: "Impossible de supprimer le cours. Changement annulé.",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        // Invalidations de cache
         cache.deleteWithEvent('teacher-data-*');
-      }, 100);
+      } catch (err) {
+        console.error('Erreur lors de la suppression:', err);
+        // Rollback
+        setSchedules(previousSchedules);
+        toast({
+          title: "❌ Erreur",
+          description: "Impossible de supprimer le cours. Changement annulé.",
+          variant: "destructive",
+        });
+      }
+    })();
 
-      return true;
-    } catch (err) {
-      console.error('Erreur lors de la suppression:', err);
-      
-      toast({
-        title: "❌ Erreur",
-        description: err instanceof Error ? err.message : "Erreur lors de la suppression.",
-        variant: "destructive",
-      });
-      return false;
-    }
+    return true;
   };
 
   useEffect(() => {
