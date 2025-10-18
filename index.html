@@ -8,6 +8,10 @@
     <link rel="dns-prefetch" href="https://uoqierhqpnqnbsnbzaqa.supabase.co" />
     <link rel="preconnect" href="https://uoqierhqpnqnbsnbzaqa.supabase.co" crossorigin />
     <link rel="dns-prefetch" href="https://cdn.gpteng.co" />
+    <link rel="preconnect" href="https://cdn.gpteng.co" />
+    
+    <!-- Preload critical CSS for faster FCP/LCP -->
+    <link rel="preload" href="/src/index.css" as="style" />
     
     <!-- Preload critical assets -->
     <link rel="modulepreload" href="/src/main.tsx" />
@@ -25,7 +29,8 @@
 
   <body>
     <div id="root"></div>
-    <script src="https://cdn.gpteng.co/gptengineer.js" type="module" defer></script>
+    <!-- Use async instead of defer for non-critical scripts -->
+    <script src="https://cdn.gpteng.co/gptengineer.js" type="module" async></script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

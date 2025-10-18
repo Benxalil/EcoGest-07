@@ -1,4 +1,4 @@
-import React, { useEffect, lazy, Suspense } from "react";
+import React, { useEffect, Suspense } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { StudentRouteHandler } from "@/components/navigation/StudentRouteHandler";
 import { ParentRouteHandler } from "@/components/navigation/ParentRouteHandler";
 import AuthenticatedLayout from "@/components/layout/AuthenticatedLayout";
+import { lazyWithPrefetch } from "@/utils/routePrefetch";
 
 // ✅ Pages critiques - chargement immédiat
 import Index from "./pages/Index";
@@ -16,52 +17,52 @@ import CompleteRegistration from "./pages/auth/CompleteRegistration";
 import PendingConfirmation from "./pages/auth/PendingConfirmation";
 import EmailVerified from "./pages/auth/EmailVerified";
 
-// ✅ Pages secondaires - chargement lazy
-const PageListeEnseignants = lazy(() => import("./pages/enseignants/ListeEnseignants"));
-const ModifierEnseignant = lazy(() => import("./pages/enseignants/ModifierEnseignant"));
-const ListeEleves = lazy(() => import("./pages/eleves/ListeEleves"));
-const ElevesParClasse = lazy(() => import("./pages/eleves/ElevesParClasse"));
-const ModifierEleve = lazy(() => import("./pages/eleves/ModifierEleve"));
-const MonProfil = lazy(() => import("./pages/eleves/MonProfil"));
-const ProfilEnfant = lazy(() => import("./pages/eleves/ProfilEnfant"));
-const ListeClasses = lazy(() => import("./pages/classes/ListeClasses"));
-const ModifierClasse = lazy(() => import("./pages/classes/ModifierClasse"));
-const ListeMatieres = lazy(() => import("./pages/matieres/ListeMatieres"));
-const ListeClassesExamens = lazy(() => import("./pages/examens/ListeClassesExamens"));
-const ListeExamens = lazy(() => import("./pages/examens/ListeExamens"));
-const ListeElevesNotes = lazy(() => import("./pages/examens/ListeElevesNotes"));
-const ListeExamensNotes = lazy(() => import("./pages/notes/ListeExamensNotes"));
-const ListeMatieresNotes = lazy(() => import("./pages/notes/ListeMatieres"));
-const ListeElevesNotesPage = lazy(() => import("./pages/notes/ListeElevesNotes"));
-const EvaluerEleve = lazy(() => import("./pages/notes/EvaluerEleve"));
-const NotesParEleve = lazy(() => import("./pages/notes/NotesParEleve"));
-const ListeElevesClasse = lazy(() => import("./pages/notes/ListeElevesClasse"));
-const ConsulterNotes = lazy(() => import("./pages/notes/ConsulterNotes"));
-const ListeClassesResultats = lazy(() => import("./pages/resultats/ListeClassesResultats"));
-const ResultatsSemestre = lazy(() => import("./pages/resultats/ResultatsSemestre"));
-const BulletinAnnuel = lazy(() => import("./pages/resultats/BulletinAnnuel"));
-const MesResultats = lazy(() => import("./pages/resultats/MesResultats"));
-const DetailsResultatEleve = lazy(() => import("./pages/resultats/DetailsResultatEleve"));
-const ListeEmplois = lazy(() => import("./pages/emplois/ListeEmplois"));
-const EmploiDuTemps = lazy(() => import("./pages/emplois/EmploiDuTemps"));
-const CahierDeTexte = lazy(() => import("./pages/emplois/CahierDeTexte"));
-const AbsenceRetardClasse = lazy(() => import("./pages/emplois/AbsenceRetardClasse"));
-const ListeMatieresCahier = lazy(() => import("./pages/emplois/ListeMatieresCahier"));
-const ConsultationCahier = lazy(() => import("./pages/emplois/ConsultationCahier"));
-const ConsulterAbsencesRetards = lazy(() => import("./pages/emplois/ConsulterAbsencesRetards"));
-const EnregistrerAbsenceRetard = lazy(() => import("./pages/emplois/EnregistrerAbsenceRetard"));
-const ListeCahiersClasse = lazy(() => import("./pages/emplois/ListeCahiersClasse"));
-const GestionPaiements = lazy(() => import("./pages/paiements/GestionPaiements"));
-const PaiementsClasse = lazy(() => import("./pages/paiements/PaiementsClasse"));
-const MesPaiements = lazy(() => import("./pages/paiements/MesPaiements"));
-const PaiementsEnfant = lazy(() => import("./pages/paiements/PaiementsEnfant"));
-const ResultatsEnfant = lazy(() => import("./pages/resultats/ResultatsEnfant"));
-const ListeAnnonces = lazy(() => import("./pages/annonces/ListeAnnonces"));
-const Abonnement = lazy(() => import("@/pages/abonnement/Abonnement"));
-const Parametres = lazy(() => import("./pages/parametres/Parametres"));
-const SchoolSettings = lazy(() => import("./pages/admin/SchoolSettings"));
-const UserMigration = lazy(() => import("./pages/admin/UserMigration"));
-const Utilisateurs = lazy(() => import("./pages/utilisateurs/Utilisateurs"));
+// ✅ Pages secondaires - chargement lazy avec prefetch intelligent
+const PageListeEnseignants = lazyWithPrefetch(() => import("./pages/enseignants/ListeEnseignants"), 'idle');
+const ModifierEnseignant = lazyWithPrefetch(() => import("./pages/enseignants/ModifierEnseignant"), 'idle');
+const ListeEleves = lazyWithPrefetch(() => import("./pages/eleves/ListeEleves"), 'idle');
+const ElevesParClasse = lazyWithPrefetch(() => import("./pages/eleves/ElevesParClasse"), 'idle');
+const ModifierEleve = lazyWithPrefetch(() => import("./pages/eleves/ModifierEleve"), 'idle');
+const MonProfil = lazyWithPrefetch(() => import("./pages/eleves/MonProfil"), 'idle');
+const ProfilEnfant = lazyWithPrefetch(() => import("./pages/eleves/ProfilEnfant"), 'idle');
+const ListeClasses = lazyWithPrefetch(() => import("./pages/classes/ListeClasses"), 'idle');
+const ModifierClasse = lazyWithPrefetch(() => import("./pages/classes/ModifierClasse"), 'idle');
+const ListeMatieres = lazyWithPrefetch(() => import("./pages/matieres/ListeMatieres"), 'idle');
+const ListeClassesExamens = lazyWithPrefetch(() => import("./pages/examens/ListeClassesExamens"), 'idle');
+const ListeExamens = lazyWithPrefetch(() => import("./pages/examens/ListeExamens"), 'idle');
+const ListeElevesNotes = lazyWithPrefetch(() => import("./pages/examens/ListeElevesNotes"), 'idle');
+const ListeExamensNotes = lazyWithPrefetch(() => import("./pages/notes/ListeExamensNotes"), 'idle');
+const ListeMatieresNotes = lazyWithPrefetch(() => import("./pages/notes/ListeMatieres"), 'idle');
+const ListeElevesNotesPage = lazyWithPrefetch(() => import("./pages/notes/ListeElevesNotes"), 'idle');
+const EvaluerEleve = lazyWithPrefetch(() => import("./pages/notes/EvaluerEleve"), 'idle');
+const NotesParEleve = lazyWithPrefetch(() => import("./pages/notes/NotesParEleve"), 'idle');
+const ListeElevesClasse = lazyWithPrefetch(() => import("./pages/notes/ListeElevesClasse"), 'idle');
+const ConsulterNotes = lazyWithPrefetch(() => import("./pages/notes/ConsulterNotes"), 'idle');
+const ListeClassesResultats = lazyWithPrefetch(() => import("./pages/resultats/ListeClassesResultats"), 'idle');
+const ResultatsSemestre = lazyWithPrefetch(() => import("./pages/resultats/ResultatsSemestre"), 'idle');
+const BulletinAnnuel = lazyWithPrefetch(() => import("./pages/resultats/BulletinAnnuel"), 'idle');
+const MesResultats = lazyWithPrefetch(() => import("./pages/resultats/MesResultats"), 'idle');
+const DetailsResultatEleve = lazyWithPrefetch(() => import("./pages/resultats/DetailsResultatEleve"), 'idle');
+const ListeEmplois = lazyWithPrefetch(() => import("./pages/emplois/ListeEmplois"), 'idle');
+const EmploiDuTemps = lazyWithPrefetch(() => import("./pages/emplois/EmploiDuTemps"), 'idle');
+const CahierDeTexte = lazyWithPrefetch(() => import("./pages/emplois/CahierDeTexte"), 'idle');
+const AbsenceRetardClasse = lazyWithPrefetch(() => import("./pages/emplois/AbsenceRetardClasse"), 'idle');
+const ListeMatieresCahier = lazyWithPrefetch(() => import("./pages/emplois/ListeMatieresCahier"), 'idle');
+const ConsultationCahier = lazyWithPrefetch(() => import("./pages/emplois/ConsultationCahier"), 'idle');
+const ConsulterAbsencesRetards = lazyWithPrefetch(() => import("./pages/emplois/ConsulterAbsencesRetards"), 'idle');
+const EnregistrerAbsenceRetard = lazyWithPrefetch(() => import("./pages/emplois/EnregistrerAbsenceRetard"), 'idle');
+const ListeCahiersClasse = lazyWithPrefetch(() => import("./pages/emplois/ListeCahiersClasse"), 'idle');
+const GestionPaiements = lazyWithPrefetch(() => import("./pages/paiements/GestionPaiements"), 'idle');
+const PaiementsClasse = lazyWithPrefetch(() => import("./pages/paiements/PaiementsClasse"), 'idle');
+const MesPaiements = lazyWithPrefetch(() => import("./pages/paiements/MesPaiements"), 'idle');
+const PaiementsEnfant = lazyWithPrefetch(() => import("./pages/paiements/PaiementsEnfant"), 'idle');
+const ResultatsEnfant = lazyWithPrefetch(() => import("./pages/resultats/ResultatsEnfant"), 'idle');
+const ListeAnnonces = lazyWithPrefetch(() => import("./pages/annonces/ListeAnnonces"), 'idle');
+const Abonnement = lazyWithPrefetch(() => import("@/pages/abonnement/Abonnement"), 'idle');
+const Parametres = lazyWithPrefetch(() => import("./pages/parametres/Parametres"), 'idle');
+const SchoolSettings = lazyWithPrefetch(() => import("./pages/admin/SchoolSettings"), 'idle');
+const UserMigration = lazyWithPrefetch(() => import("./pages/admin/UserMigration"), 'idle');
+const Utilisateurs = lazyWithPrefetch(() => import("./pages/utilisateurs/Utilisateurs"), 'idle');
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -77,7 +78,7 @@ function App() {
   
   // 🔄 Système de détection de nouvelle version et nettoyage automatique des caches
   useEffect(() => {
-    const currentVersion = '2025.10.17-07:00'; // 🚀 OPTIMISATIONS PERFORMANCE COMPLÈTES
+    const currentVersion = '2025.10.18-08:00'; // 🚀 OPTIMISATIONS PERFORMANCE COMPLÈTES - CSS Critique, Prefetch, Chunking
     const lastVersion = localStorage.getItem('app_version');
     
     if (lastVersion !== currentVersion) {
