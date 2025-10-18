@@ -337,7 +337,7 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
       lieuNaissance: initialData?.place_of_birth || "",
       adresse: initialData?.address || "",
       telephone: initialData?.phone || "",
-      classe: initialData?.classes ? `${initialData.classes.name} ${initialData.classes.level}${initialData.classes.section ? ` - ${initialData.classes.section}` : ''}` : "",
+      classe: initialData?.classes ? `${initialData.classes?.name || ''} ${initialData.classes?.level || ''}${initialData.classes?.section ? ` - ${initialData.classes.section}` : ''}` : "",
       perePrenom: initialData?.father_first_name || initialData?.parent_first_name || initialData?.perePrenom || "",
       pereNom: initialData?.father_last_name || initialData?.parent_last_name || initialData?.pereNom || "",
       pereAdresse: initialData?.father_address || initialData?.pereAdresse || "",
@@ -427,7 +427,7 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
         lieuNaissance: initialData.place_of_birth || "",
         adresse: initialData.address || "",
         telephone: initialData.phone || "",
-        classe: initialData.classes ? `${initialData.classes.name} ${initialData.classes.level}${initialData.classes.section ? ` - ${initialData.classes.section}` : ''}` : className || "",
+        classe: initialData.classes ? `${initialData.classes?.name || ''} ${initialData.classes?.level || ''}${initialData.classes?.section ? ` - ${initialData.classes.section}` : ''}` : className || "",
         perePrenom: initialData.parent_first_name || "",
         pereNom: initialData.parent_last_name || "",
         pereAdresse: initialData.address || "",
@@ -867,7 +867,7 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
 
   const onSubmit = async (data: EleveFormData) => {
     // Validation supplémentaire pour s'assurer qu'une classe est disponible
-    if (!selectedClass) {
+    if (!selectedClass && !classId) {
       showError({
         title: "Erreur",
         description: "Aucune classe disponible pour ajouter l'élève",
@@ -1053,7 +1053,7 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
 
       showSuccess({
         title: isEditing ? "Élève modifié avec succès" : "Élève ajouté avec succès",
-        description: `${data.prenom} ${data.nom} a été ${isEditing ? 'modifié(e)' : 'ajouté(e)'} ${!isEditing ? `à la classe ${selectedClass?.name} ${selectedClass?.level}${selectedClass?.section ? ` - ${selectedClass.section}` : ''}` : ''}`,
+        description: `${data.prenom} ${data.nom} a été ${isEditing ? 'modifié(e)' : 'ajouté(e)'} ${!isEditing && selectedClass ? `à la classe ${selectedClass.name} ${selectedClass.level}${selectedClass.section ? ` - ${selectedClass.section}` : ''}` : ''}`,
       });
 
       // Réinitialiser le formulaire après sauvegarde
