@@ -1,7 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserRole } from './useUserRole';
 import { useToast } from '@/hooks/use-toast';
+import { useOptimizedCache } from './useOptimizedCache';
+
+const CACHE_TTL = 2 * 60 * 1000; // 2 minutes
 
 export interface LessonLogData {
   id: string;
@@ -26,9 +29,20 @@ export const useLessonLogs = (classId?: string, teacherId?: string | null) => {
   const [error, setError] = useState<string | null>(null);
   const { userProfile } = useUserRole();
   const { toast } = useToast();
+  const cache = useOptimizedCache();
 
-  const fetchLessonLogs = async () => {
+  const fetchLessonLogs = useCallback(async () => {
     if (!userProfile?.schoolId) {
+      setLoading(false);
+      return;
+    }
+
+    const cacheKey = `lesson_logs_${classId || 'all'}_${teacherId || 'all'}`;
+    
+    // Vérifier le cache d'abord
+    const cached = cache.get<LessonLogData[]>(cacheKey);
+    if (cached) {
+      setLessonLogs(cached);
       setLoading(false);
       return;
     }
@@ -37,7 +51,7 @@ export const useLessonLogs = (classId?: string, teacherId?: string | null) => {
       setLoading(true);
       let query = supabase
         .from('lesson_logs')
-        .select('*')
+        .select('id, class_id, subject_id, teacher_id, topic, content, lesson_date, start_time, end_time, school_id, created_at, updated_at')
         .eq('school_id', userProfile.schoolId)
         .order('lesson_date', { ascending: false })
         .order('start_time', { ascending: false });
@@ -56,13 +70,14 @@ export const useLessonLogs = (classId?: string, teacherId?: string | null) => {
       if (error) throw error;
 
       setLessonLogs(data || []);
+      cache.set(cacheKey, data || [], CACHE_TTL);
     } catch (err) {
       console.error('Erreur lors de la récupération des journaux de cours:', err);
       setError(err instanceof Error ? err.message : 'Erreur inconnue');
     } finally {
       setLoading(false);
     }
-  };
+  }, [userProfile?.schoolId, classId, teacherId, cache]);
 
   const createLessonLog = async (lessonLogData: Omit<LessonLogData, 'id' | 'school_id' | 'created_at' | 'updated_at'>) => {
     if (!userProfile?.schoolId) return false;
@@ -201,7 +216,7 @@ export const useLessonLogs = (classId?: string, teacherId?: string | null) => {
 
   useEffect(() => {
     void fetchLessonLogs();
-  }, [userProfile?.schoolId, classId, teacherId]);
+  }, [fetchLessonLogs]);
 
   return {
     lessonLogs,

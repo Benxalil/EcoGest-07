@@ -277,6 +277,19 @@ export default function ListeEmplois() {
                             size="sm"
                             className="bg-red-500 text-white hover:bg-red-600"
                             onClick={() => navigate(`/matieres-cahier/${classe.id}`)}
+                            onMouseEnter={() => {
+                              // Préchargement au survol
+                              if (profile?.schoolId) {
+                                supabase
+                                  .from('lesson_logs')
+                                  .select('id, class_id, subject_id, teacher_id, topic, content, lesson_date, start_time')
+                                  .eq('school_id', profile.schoolId)
+                                  .eq('class_id', classe.id)
+                                  .order('lesson_date', { ascending: false })
+                                  .limit(50)
+                                  .then(() => {});
+                              }
+                            }}
                           >
                             <FileText className="h-4 w-4" />
                             <span className="ml-2 hidden md:inline">Cahier de texte</span>

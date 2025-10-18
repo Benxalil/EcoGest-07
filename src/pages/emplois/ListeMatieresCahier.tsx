@@ -2,6 +2,7 @@ import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, BookText, Calendar, Clock } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useSubjects } from "@/hooks/useSubjects";
@@ -47,10 +48,21 @@ export default function ListeMatieresCahier() {
   if (classesLoading || subjectsLoading || lessonLogsLoading) {
     return (
       <Layout>
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p>Chargement des matières...</p>
+        <div className="container mx-auto p-6">
+          <Skeleton className="h-8 w-64 mb-6" />
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <Card key={i}>
+                <CardHeader>
+                  <Skeleton className="h-6 w-32" />
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-20 w-full" />
+                  <Skeleton className="h-9 w-full" />
+                </CardContent>
+              </Card>
+            ))}
           </div>
         </div>
       </Layout>
