@@ -98,23 +98,24 @@ export function CreerAnnonceModal({ open, onOpenChange }: CreerAnnonceModalProps
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    console.log('🔍 Soumission du formulaire annonce:', { 
-      titre, 
-      contenu, 
-      dateExpiration, 
-      destinataires, 
-      priorite 
-    });
-    
-    if (!titre || !contenu || !dateExpiration || destinataires.length === 0) {
+    // Validation des champs
+    if (!titre?.trim()) {
       showError({
         title: "Champs manquants",
-        description: "Veuillez remplir tous les champs obligatoires",
+        description: "Le titre est obligatoire",
       });
       return;
     }
 
-    if (contenu.length < 10) {
+    if (!contenu?.trim()) {
+      showError({
+        title: "Champs manquants",
+        description: "Le contenu est obligatoire",
+      });
+      return;
+    }
+
+    if (contenu.trim().length < 10) {
       showError({
         title: "Contenu trop court",
         description: "Le contenu doit contenir au moins 10 caractères",
@@ -122,13 +123,29 @@ export function CreerAnnonceModal({ open, onOpenChange }: CreerAnnonceModalProps
       return;
     }
 
+    if (!dateExpiration) {
+      showError({
+        title: "Champs manquants",
+        description: "La date d'expiration est obligatoire",
+      });
+      return;
+    }
+
+    if (destinataires.length === 0) {
+      showError({
+        title: "Champs manquants",
+        description: "Veuillez sélectionner au moins un destinataire",
+      });
+      return;
+    }
+
     setIsSubmitting(true);
     
     try {
-      // Créer l'annonce dans la base de données
+      // Créer l'annonce dans la base de données (le hook gère les toasts)
       const success = await createAnnouncement({
-        title: titre,
-        content: contenu,
+        title: titre.trim(),
+        content: contenu.trim(),
         is_published: true,
         priority: priorite,
         target_audience: destinataires,
@@ -136,19 +153,11 @@ export function CreerAnnonceModal({ open, onOpenChange }: CreerAnnonceModalProps
       });
 
       if (success) {
-        showSuccess({
-          title: "Annonce créée avec succès",
-          description: `L'annonce "${titre}" a été créée et sera visible jusqu'au ${format(dateExpiration, "dd/MM/yyyy", { locale: fr })}`,
-        });
         resetForm();
         onOpenChange(false);
       }
     } catch (error) {
-      showError({
-        title: "Erreur lors de la création",
-        description: "Une erreur est survenue lors de la création de l'annonce",
-      });
-      console.error(error);
+      console.error('Erreur inattendue lors de la création:', error);
     } finally {
       setIsSubmitting(false);
     }
