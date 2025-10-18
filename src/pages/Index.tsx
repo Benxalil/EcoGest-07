@@ -318,7 +318,7 @@ const Index = () => {
       <div className="space-y-6">
         {/* Header de bienvenue */}
         <div className="bg-blue-600 rounded-lg p-6 text-white">
-          <h1 className="text-2xl font-bold mb-2">{getGreeting()}, {schoolSettings.name || "École Connectée"} !</h1>
+          <h1 className="text-2xl font-bold mb-2">{getGreeting()}, {schoolSettings?.name || "École Connectée"} !</h1>
           <p className="text-blue-100">
             Bienvenue dans votre tableau de bord d'administration. Voici ce qui se passe aujourd'hui.
           </p>
