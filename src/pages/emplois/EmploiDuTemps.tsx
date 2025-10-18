@@ -232,17 +232,23 @@ export default function EmploiDuTemps() {
       class_id: classeId
     };
 
-    // 1️⃣ Fermer le modal IMMÉDIATEMENT (ne pas attendre le serveur)
-    form.reset();
-    setEditingCourse(null);
-    setIsDialogOpen(false);
-    setIsSubmitting(false);
+    try {
+      // Attendre la confirmation de la base de données
+      let success = false;
+      if (editingCourse && editingCourse.course.id) {
+        success = await updateCourse(editingCourse.course.id, courseData);
+      } else {
+        success = await createCourse(courseData);
+      }
 
-    // 2️⃣ Faire l'opération en arrière-plan (les toasts sont gérés dans le hook)
-    if (editingCourse && editingCourse.course.id) {
-      updateCourse(editingCourse.course.id, courseData);
-    } else {
-      createCourse(courseData);
+      // Fermer le modal UNIQUEMENT si l'opération a réussi
+      if (success) {
+        form.reset();
+        setEditingCourse(null);
+        setIsDialogOpen(false);
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
