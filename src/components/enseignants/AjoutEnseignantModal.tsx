@@ -1,5 +1,5 @@
 import React from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { AjoutEnseignantForm } from "@/components/enseignants/AjoutEnseignantForm";
 
 interface AjoutEnseignantModalProps {
@@ -21,6 +21,9 @@ export function AjoutEnseignantModal({ open, onOpenChange, onSuccess }: AjoutEns
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Ajouter un enseignant</DialogTitle>
+          <DialogDescription>
+            Remplissez les informations pour créer un nouveau compte enseignant
+          </DialogDescription>
         </DialogHeader>
         <AjoutEnseignantForm onSuccess={handleSuccess} />
       </DialogContent>

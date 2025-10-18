@@ -379,6 +379,9 @@ export default function EmploiDuTemps() {
                   <DialogTitle>
                     {editingCourse ? "Modifier le cours" : "Saisir les informations"}
                   </DialogTitle>
+                  <DialogDescription>
+                    {editingCourse ? "Modifiez les informations du cours dans l'emploi du temps" : "Ajoutez un nouveau cours à l'emploi du temps"}
+                  </DialogDescription>
                 </DialogHeader>
                 <Form {...form}>
                   <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">

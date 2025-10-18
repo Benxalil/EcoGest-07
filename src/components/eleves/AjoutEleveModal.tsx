@@ -1,5 +1,5 @@
 import React from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { AjoutEleveForm } from "@/components/eleves/AjoutEleveForm";
 
 interface AjoutEleveModalProps {
@@ -21,6 +21,9 @@ export function AjoutEleveModal({ open, onOpenChange, onSuccess }: AjoutEleveMod
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Ajouter un élève</DialogTitle>
+          <DialogDescription>
+            Remplissez les informations pour créer un nouveau profil élève
+          </DialogDescription>
         </DialogHeader>
         <AjoutEleveForm onSuccess={handleSuccess} />
       </DialogContent>
