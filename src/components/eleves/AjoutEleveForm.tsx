@@ -384,11 +384,11 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
         console.error('❌ Error parsing studentSettings:', e);
       }
     }
-    // Fallback vers schoolSettings (base de données)
+    // Fallback vers schoolSettings (base de données) avec valeurs par défaut
     return {
-      matriculeFormat: schoolSettings.studentMatriculeFormat,
-      defaultStudentPassword: schoolSettings.defaultStudentPassword,
-      autoGenerateMatricule: schoolSettings.autoGenerateStudentMatricule
+      matriculeFormat: schoolSettings?.studentMatriculeFormat || 'ELEVE',
+      defaultStudentPassword: schoolSettings?.defaultStudentPassword || 'student123',
+      autoGenerateMatricule: schoolSettings?.autoGenerateStudentMatricule ?? true
     };
   };
 
@@ -406,11 +406,11 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
         console.error('❌ Error parsing parentSettings:', e);
       }
     }
-    // Fallback vers schoolSettings (base de données)
+    // Fallback vers schoolSettings (base de données) avec valeurs par défaut
     return {
-      matriculeFormat: schoolSettings.parentMatriculeFormat,
-      defaultParentPassword: schoolSettings.defaultParentPassword,
-      autoGenerateMatricule: schoolSettings.autoGenerateParentMatricule
+      matriculeFormat: schoolSettings?.parentMatriculeFormat || 'PAR',
+      defaultParentPassword: schoolSettings?.defaultParentPassword || 'parent123',
+      autoGenerateMatricule: schoolSettings?.autoGenerateParentMatricule ?? true
     };
   };
 
@@ -1223,7 +1223,7 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
                   <FormControl>
                     <Input {...field} readOnly className="bg-muted" />
                   </FormControl>
-                  {!settingsLoading && userProfile?.schoolId && (
+                  {!settingsLoading && userProfile?.schoolId && schoolSettings && (
                     <div className="text-sm text-muted-foreground mt-1">
                       Format: {schoolSettings.studentMatriculeFormat}XXX@{userProfile.schoolId.substring(0, 8)}.ecogest.app
                     </div>
@@ -1523,11 +1523,11 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
                       <FormControl>
                         <Input 
                           {...field} 
-                          disabled={schoolSettings.autoGenerateParentMatricule && !useFatherExisting}
-                          className={schoolSettings.autoGenerateParentMatricule && !useFatherExisting ? "bg-muted" : ""}
+                          disabled={schoolSettings?.autoGenerateParentMatricule && !useFatherExisting}
+                          className={schoolSettings?.autoGenerateParentMatricule && !useFatherExisting ? "bg-muted" : ""}
                         />
                       </FormControl>
-                      {!settingsLoading && !useFatherExisting && userProfile?.schoolId && (
+                      {!settingsLoading && !useFatherExisting && userProfile?.schoolId && schoolSettings && (
                         <div className="text-sm text-muted-foreground mt-1">
                           Format: {schoolSettings.parentMatriculeFormat}XXX@{userProfile.schoolId.substring(0, 8)}.ecogest.app
                         </div>
