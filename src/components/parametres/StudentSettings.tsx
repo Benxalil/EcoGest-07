@@ -81,7 +81,7 @@ export const StudentSettings = () => {
           studentNumber: studentData.student_number || '',
           className: studentData.classes ? `${studentData.classes.level} ${studentData.classes.name}` : 'Non assigné',
           parentPhone: studentData.parent_phone || '',
-          parentEmail: studentData.parent_email || ''
+          parentEmail: ''
         });
       }
     } catch (error) {

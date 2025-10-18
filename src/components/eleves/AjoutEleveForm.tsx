@@ -245,7 +245,6 @@ const saveEleveToStorage = async (eleveData: EleveFormData, photo?: string | nul
           address: eleveData.adresse || null,
           phone: eleveData.telephone || null,
           parent_phone: eleveData.pereTelephone || null,
-          parent_email: eleveData.perePrenom && eleveData.pereNom ? `${eleveData.perePrenom.toLowerCase()}.${eleveData.pereNom.toLowerCase()}@parent.com` : null,
           emergency_contact: `${eleveData.contactUrgenceNom} - ${eleveData.contactUrgenceTelephone} (${eleveData.contactUrgenceRelation})`,
           school_id: schoolId,
           class_id: classesFromHook?.[0]?.id,

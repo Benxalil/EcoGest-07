@@ -156,7 +156,6 @@ const fetchStudentsByClass = async (userProfile?: any, isTeacher?: boolean): Pro
           lieuNaissance: student.place_of_birth,
           adresse: student.address,
           telephone: student.phone,
-          email: student.parent_email,
           numeroPerso: student.student_number,
           sexe: student.gender,
           photo: null, // Pas de photo dans le schéma actuel

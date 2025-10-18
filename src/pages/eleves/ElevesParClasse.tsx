@@ -6,8 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AjoutEleveForm } from "@/components/eleves/AjoutEleveForm";
-import { Eye, Edit, Trash2, UserPlus, Search, ArrowLeft, Users, Download, FileText } from "lucide-react";
+import { Eye, Edit, Trash2, UserPlus, Search, ArrowLeft, Users, Download, FileText, Phone } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import { useClasses } from "@/hooks/useClasses";
 import { useStudents, Student } from "@/hooks/useStudents";
 import { useStudentDocuments, StudentDocument } from "@/hooks/useStudentDocuments";
@@ -572,10 +574,6 @@ export default function ElevesParClasse() {
                           <p className="text-sm font-medium text-muted-foreground">Téléphone:</p>
                           <p className="text-foreground">{selectedStudent.phone || 'Non renseigné'}</p>
                         </div>
-                        <div>
-                          <p className="text-sm font-medium text-muted-foreground">Email:</p>
-                          <p className="text-foreground">{selectedStudent.parent_email || 'Non renseigné'}</p>
-                        </div>
                       </div>
                     </div>
 
@@ -583,25 +581,34 @@ export default function ElevesParClasse() {
                     <div>
                       <h3 className="text-lg font-semibold mb-4 text-accent-foreground">Informations du père</h3>
                       <div className="space-y-3">
-                        {(() => {
-                      const emergencyParts = selectedStudent.emergency_contact?.split(' - ') || [];
-                      const fatherName = emergencyParts[0] || '';
-                      const fatherPhone = emergencyParts[1] || '';
-                      return <>
-                              <div>
-                                <p className="text-sm font-medium text-muted-foreground">Nom:</p>
-                                <p className="text-foreground">{fatherName || 'Non renseigné'}</p>
-                              </div>
-                              <div>
-                                <p className="text-sm font-medium text-muted-foreground">Adresse:</p>
-                                <p className="text-foreground">{selectedStudent.address || 'Non renseignée'}</p>
-                              </div>
-                              <div>
-                                <p className="text-sm font-medium text-muted-foreground">Téléphone:</p>
-                                <p className="text-foreground">{selectedStudent.parent_phone || fatherPhone || 'Non renseigné'}</p>
-                              </div>
-                            </>;
-                    })()}
+                        <div>
+                          <p className="text-sm font-medium text-muted-foreground">Nom complet:</p>
+                          <p className="text-foreground">
+                            {selectedStudent.father_first_name && selectedStudent.father_last_name 
+                              ? `${selectedStudent.father_first_name} ${selectedStudent.father_last_name}`
+                              : 'Non renseigné'}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-muted-foreground">Statut de vie:</p>
+                          <p className="text-foreground">
+                            {selectedStudent.father_status === 'alive' ? '✅ En vie' : 
+                             selectedStudent.father_status === 'deceased' ? '⚫ Décédé' : 
+                             'Non renseigné'}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-muted-foreground">Profession / Fonction:</p>
+                          <p className="text-foreground">{selectedStudent.father_profession || 'Non renseignée'}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-muted-foreground">Adresse:</p>
+                          <p className="text-foreground">{selectedStudent.father_address || 'Non renseignée'}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-muted-foreground">Téléphone:</p>
+                          <p className="text-foreground">{selectedStudent.father_phone || 'Non renseigné'}</p>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -640,21 +647,107 @@ export default function ElevesParClasse() {
                       <h3 className="text-lg font-semibold mb-4 text-accent-foreground">Informations de la mère</h3>
                       <div className="space-y-3">
                         <div>
-                          <p className="text-sm font-medium text-muted-foreground">Nom:</p>
-                          <p className="text-foreground">Non renseigné</p>
+                          <p className="text-sm font-medium text-muted-foreground">Nom complet:</p>
+                          <p className="text-foreground">
+                            {selectedStudent.mother_first_name && selectedStudent.mother_last_name 
+                              ? `${selectedStudent.mother_first_name} ${selectedStudent.mother_last_name}`
+                              : 'Non renseigné'}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-muted-foreground">Statut de vie:</p>
+                          <p className="text-foreground">
+                            {selectedStudent.mother_status === 'alive' ? '✅ En vie' : 
+                             selectedStudent.mother_status === 'deceased' ? '⚫ Décédée' : 
+                             'Non renseigné'}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-muted-foreground">Profession / Fonction:</p>
+                          <p className="text-foreground">{selectedStudent.mother_profession || 'Non renseignée'}</p>
                         </div>
                         <div>
                           <p className="text-sm font-medium text-muted-foreground">Adresse:</p>
-                          <p className="text-foreground">Non renseigné</p>
+                          <p className="text-foreground">{selectedStudent.mother_address || 'Non renseignée'}</p>
                         </div>
                         <div>
                           <p className="text-sm font-medium text-muted-foreground">Téléphone:</p>
-                          <p className="text-foreground">Non renseigné</p>
+                          <p className="text-foreground">{selectedStudent.mother_phone || 'Non renseigné'}</p>
                         </div>
                       </div>
                     </div>
                   </div>
                 </div>
+
+                {/* Informations médicales - UNIQUEMENT ADMIN */}
+                {!isTeacher && selectedStudent.has_medical_condition && (
+                  <div className="mt-6 pt-6 border-t">
+                    <Card className="border-red-200 bg-red-50/30">
+                      <CardHeader className="bg-red-100/50 border-b border-red-200">
+                        <CardTitle className="text-red-700 flex items-center gap-2">
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          </svg>
+                          Informations médicales
+                          <Badge variant="destructive" className="ml-2">Confidentiel - Admin uniquement</Badge>
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-4 pt-6">
+                        <div>
+                          <label className="text-sm font-medium text-muted-foreground">Type de maladie</label>
+                          <p className="text-base mt-1 font-semibold text-red-700">
+                            {selectedStudent.medical_condition_type || 'Non renseigné'}
+                          </p>
+                        </div>
+                        
+                        {selectedStudent.medical_condition_description && (
+                          <>
+                            <Separator className="bg-red-200" />
+                            <div>
+                              <label className="text-sm font-medium text-muted-foreground">Description</label>
+                              <p className="text-base mt-1 whitespace-pre-wrap">
+                                {selectedStudent.medical_condition_description}
+                              </p>
+                            </div>
+                          </>
+                        )}
+                        
+                        {(selectedStudent.doctor_name || selectedStudent.doctor_phone) && (
+                          <>
+                            <Separator className="bg-red-200" />
+                            <div className="bg-white rounded-md p-3 border border-red-200">
+                              <label className="text-sm font-medium text-muted-foreground block mb-2">
+                                Médecin traitant
+                              </label>
+                              {selectedStudent.doctor_name && (
+                                <p className="text-base mb-1">
+                                  <span className="font-medium">Dr.</span> {selectedStudent.doctor_name}
+                                </p>
+                              )}
+                              {selectedStudent.doctor_phone && (
+                                <p className="text-base flex items-center gap-2 text-muted-foreground">
+                                  <Phone className="h-4 w-4" />
+                                  {selectedStudent.doctor_phone}
+                                </p>
+                              )}
+                            </div>
+                          </>
+                        )}
+                        
+                        <div className="bg-amber-50 border border-amber-300 rounded-md p-3 text-xs text-amber-800 mt-4">
+                          <p className="flex items-start gap-2">
+                            <svg className="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                            <span>
+                              Ces informations sont strictement confidentielles et protégées.
+                            </span>
+                          </p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                )}
 
                 {/* Documents de l'élève */}
                 <DocumentsSection studentId={selectedStudent.id} />

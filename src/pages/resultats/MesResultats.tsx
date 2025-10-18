@@ -55,7 +55,7 @@ export default function MesResultats() {
       if (!students || !userProfile) return;
       
       const student = students.find((s) => 
-        s.parent_email === userProfile.email || 
+        s.user_id === userProfile.id ||
         `${s.first_name} ${s.last_name}`.toLowerCase() === `${userProfile.firstName} ${userProfile.lastName}`.toLowerCase()
       );
       

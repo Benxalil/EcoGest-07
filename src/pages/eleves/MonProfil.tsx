@@ -175,12 +175,6 @@ export default function MonProfil() {
                         <p className="text-foreground">{student.phone}</p>
                       </div>
                     )}
-                    {student.parent_email && (
-                      <div>
-                        <label className="text-sm font-medium text-muted-foreground">Email:</label>
-                        <p className="text-foreground">{student.parent_email}</p>
-                      </div>
-                    )}
                   </div>
                 </div>
 
@@ -188,25 +182,35 @@ export default function MonProfil() {
                 <div>
                   <h3 className="text-lg font-semibold text-primary mb-4">Informations du père</h3>
                   <div className="space-y-3">
-                    {student.parent_phone ? (
+                    {student.father_first_name || student.father_last_name ? (
                       <>
                         <div>
-                          <label className="text-sm font-medium text-muted-foreground">Nom:</label>
-                          <p className="text-foreground">{student.parent_phone}</p>
+                          <label className="text-sm font-medium text-muted-foreground">Nom complet:</label>
+                          <p className="text-foreground">
+                            {`${student.father_first_name || ''} ${student.father_last_name || ''}`.trim()}
+                          </p>
                         </div>
-                        {student.address && (
+                        {student.father_profession && (
                           <div>
-                            <label className="text-sm font-medium text-muted-foreground">Adresse:</label>
-                            <p className="text-foreground">{student.address}</p>
+                            <label className="text-sm font-medium text-muted-foreground">Profession:</label>
+                            <p className="text-foreground">{student.father_profession}</p>
                           </div>
                         )}
-                        <div>
-                          <label className="text-sm font-medium text-muted-foreground">Téléphone:</label>
-                          <p className="text-foreground">{student.parent_phone}</p>
-                        </div>
+                        {student.father_address && (
+                          <div>
+                            <label className="text-sm font-medium text-muted-foreground">Adresse:</label>
+                            <p className="text-foreground">{student.father_address}</p>
+                          </div>
+                        )}
+                        {student.father_phone && (
+                          <div>
+                            <label className="text-sm font-medium text-muted-foreground">Téléphone:</label>
+                            <p className="text-foreground">{student.father_phone}</p>
+                          </div>
+                        )}
                       </>
                     ) : (
-                      <p className="text-sm text-primary">Non renseigné</p>
+                      <p className="text-sm text-muted-foreground">Non renseigné</p>
                     )}
                   </div>
                 </div>
@@ -243,18 +247,36 @@ export default function MonProfil() {
                 <div>
                   <h3 className="text-lg font-semibold text-primary mb-4">Informations de la mère</h3>
                   <div className="space-y-3">
-                    <div>
-                      <label className="text-sm font-medium text-muted-foreground">Nom:</label>
-                      <p className="text-primary">Non renseigné</p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-muted-foreground">Adresse:</label>
-                      <p className="text-primary">Non renseigné</p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-muted-foreground">Téléphone:</label>
-                      <p className="text-primary">Non renseigné</p>
-                    </div>
+                    {student.mother_first_name || student.mother_last_name ? (
+                      <>
+                        <div>
+                          <label className="text-sm font-medium text-muted-foreground">Nom complet:</label>
+                          <p className="text-foreground">
+                            {`${student.mother_first_name || ''} ${student.mother_last_name || ''}`.trim()}
+                          </p>
+                        </div>
+                        {student.mother_profession && (
+                          <div>
+                            <label className="text-sm font-medium text-muted-foreground">Profession:</label>
+                            <p className="text-foreground">{student.mother_profession}</p>
+                          </div>
+                        )}
+                        {student.mother_address && (
+                          <div>
+                            <label className="text-sm font-medium text-muted-foreground">Adresse:</label>
+                            <p className="text-foreground">{student.mother_address}</p>
+                          </div>
+                        )}
+                        {student.mother_phone && (
+                          <div>
+                            <label className="text-sm font-medium text-muted-foreground">Téléphone:</label>
+                            <p className="text-foreground">{student.mother_phone}</p>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">Non renseigné</p>
+                    )}
                   </div>
                 </div>
               </div>

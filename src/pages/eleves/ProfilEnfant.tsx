@@ -162,16 +162,6 @@ export default function ProfilEnfant() {
               
               <div>
                 <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                  <Mail className="h-4 w-4" />
-                  Email
-                </label>
-                <p className="text-base mt-1">{selectedChild.parent_email || 'Non renseigné'}</p>
-              </div>
-
-              <Separator />
-              
-              <div>
-                <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                   <Calendar className="h-4 w-4" />
                   Date d'inscription
                 </label>

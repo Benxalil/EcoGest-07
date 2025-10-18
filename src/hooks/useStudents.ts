@@ -54,7 +54,6 @@ export interface Student {
   
   // @deprecated - Conservés pour compatibilité
   parent_phone?: string;
-  parent_email?: string;
   parent_first_name?: string;
   parent_last_name?: string;
   

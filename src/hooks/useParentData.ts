@@ -21,7 +21,7 @@ export interface Child {
   father_last_name?: string | null;
   father_phone?: string | null;
   father_address?: string | null;
-  father_status?: 'alive' | 'deceased' | null;
+  father_status?: string | null;
   father_profession?: string | null;
   
   // ✅ Informations MÈRE
@@ -29,7 +29,7 @@ export interface Child {
   mother_last_name?: string | null;
   mother_phone?: string | null;
   mother_address?: string | null;
-  mother_status?: 'alive' | 'deceased' | null;
+  mother_status?: string | null;
   mother_profession?: string | null;
 
   // ✅ Informations médicales
@@ -41,7 +41,6 @@ export interface Child {
   
   // @deprecated - Compatibilité
   parent_phone: string | null;
-  parent_email: string | null;
   parent_first_name?: string | null;
   parent_last_name?: string | null;
   
@@ -260,8 +259,11 @@ export const useParentData = (selectedChildId?: string | null) => {
           .select(`
             id, first_name, last_name, student_number, class_id, 
             date_of_birth, place_of_birth, gender, phone, address,
-            parent_phone, parent_email, emergency_contact, enrollment_date,
+            parent_phone, emergency_contact, enrollment_date,
             is_active, parent_matricule,
+            father_first_name, father_last_name, father_phone, father_address, father_status, father_profession,
+            mother_first_name, mother_last_name, mother_phone, mother_address, mother_status, mother_profession,
+            has_medical_condition, medical_condition_type, medical_condition_description, doctor_name, doctor_phone,
             classes:class_id (
               id,
               name,
@@ -279,7 +281,7 @@ export const useParentData = (selectedChildId?: string | null) => {
         // 2. Info parent (depuis le premier enfant) avec mêmes conditions
         supabase
           .from('students')
-          .select('parent_first_name, parent_last_name, parent_phone, parent_email, parent_matricule, emergency_contact')
+          .select('parent_first_name, parent_last_name, parent_phone, parent_matricule, emergency_contact')
           .or(orClauses.join(','))
           .limit(1)
           .maybeSingle(),
@@ -408,7 +410,7 @@ export const useParentData = (selectedChildId?: string | null) => {
         parentInfo = {
           firstName: firstName || profile.firstName || '',
           lastName: lastName || profile.lastName || '',
-          email: studentData.parent_email || profile.email || '',
+          email: profile.email || '',
           phone: studentData.parent_phone || profile.phone || '',
           matricule: studentData.parent_matricule || matriculeVariants[0] || profile.email || ''
         };

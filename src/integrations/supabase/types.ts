@@ -1287,7 +1287,6 @@ export type Database = {
           mother_phone: string | null
           mother_profession: string | null
           mother_status: string | null
-          parent_email: string | null
           parent_first_name: string | null
           parent_last_name: string | null
           parent_matricule: string | null
@@ -1329,7 +1328,6 @@ export type Database = {
           mother_phone?: string | null
           mother_profession?: string | null
           mother_status?: string | null
-          parent_email?: string | null
           parent_first_name?: string | null
           parent_last_name?: string | null
           parent_matricule?: string | null
@@ -1371,7 +1369,6 @@ export type Database = {
           mother_phone?: string | null
           mother_profession?: string | null
           mother_status?: string | null
-          parent_email?: string | null
           parent_first_name?: string | null
           parent_last_name?: string | null
           parent_matricule?: string | null
