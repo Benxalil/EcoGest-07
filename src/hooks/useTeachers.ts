@@ -91,6 +91,23 @@ export const useTeachers = () => {
       return;
     }
 
+    // Charger depuis le cache localStorage d'abord
+    const cacheKey = `teachers-${userProfile?.schoolId}`;
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) {
+      try {
+        const { data, timestamp } = JSON.parse(cached);
+        const age = Date.now() - timestamp;
+        if (age < 300000) { // 5 minutes
+          setTeachers(data);
+          setLoading(false);
+          // Continue en arrière-plan pour rafraîchir
+        }
+      } catch (e) {
+        console.error('Cache parse error:', e);
+      }
+    }
+
     try {
       setLoading(true);
       const { data, error } = await supabase
@@ -102,6 +119,13 @@ export const useTeachers = () => {
       if (error) throw error;
       
       setTeachers((data as TeacherData[]) || []);
+      
+      // Sauvegarder en cache
+      const cacheKey = `teachers-${userProfile?.schoolId}`;
+      localStorage.setItem(cacheKey, JSON.stringify({ 
+        data, 
+        timestamp: Date.now() 
+      }));
     } catch (err) {
       console.error('Erreur lors de la récupération des enseignants:', err);
       setError(err instanceof Error ? err.message : 'Erreur inconnue');

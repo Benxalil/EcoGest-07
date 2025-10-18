@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserRole } from './useUserRole';
 import { useToast } from '@/hooks/use-toast';
@@ -39,13 +39,16 @@ export const useSchedules = (classId?: string) => {
   const { userProfile } = useUserRole();
   const { toast } = useToast();
   const cache = useOptimizedCache();
+  const isFetchingRef = useRef(false);
 
   const fetchSchedules = useCallback(async () => {
-    if (!userProfile?.schoolId || !classId) {
+    if (!userProfile?.schoolId || !classId || isFetchingRef.current) {
       setLoading(false);
       setSchedules([]);
       return;
     }
+
+    isFetchingRef.current = true;
 
     // Vérifier le cache d'abord
     const cacheKey = `schedules-${classId}`;
@@ -87,12 +90,22 @@ export const useSchedules = (classId?: string) => {
       setError(err instanceof Error ? err.message : 'Erreur inconnue');
       setSchedules([]);
     } finally {
+      isFetchingRef.current = false;
       setLoading(false);
     }
-  }, [userProfile?.schoolId, classId, cache]);
+  }, [userProfile?.schoolId, classId]);
 
   const createCourse = async (courseData: CreateCourseData) => {
-    if (!userProfile?.schoolId) return false;
+    console.log('🔵 [createCourse] START:', courseData);
+    
+    if (!userProfile?.schoolId) {
+      toast({
+        title: "❌ Erreur",
+        description: "École non identifiée",
+        variant: "destructive"
+      });
+      return false;
+    }
 
     const dayMapping: { [key: string]: string } = {
       'LUNDI': 'Lundi',
@@ -140,10 +153,17 @@ export const useSchedules = (classId?: string) => {
       cache.set(cacheKey, updatedSchedules, 120000);
       return updatedSchedules;
     });
+    
+    console.log('🟡 [createCourse] Optimistic update done');
+
+    // Timeout promise de 15 secondes
+    const timeoutPromise = new Promise<never>((_, reject) => 
+      setTimeout(() => reject(new Error('Timeout: Serveur injoignable après 15 secondes')), 15000)
+    );
 
     // Insertion DB - ATTENDRE au lieu de faire en background
     try {
-      const { data: insertedCourse, error } = await supabase
+      const insertPromise = supabase
         .from('schedules')
         .insert({
           subject: courseData.subject,
@@ -159,8 +179,13 @@ export const useSchedules = (classId?: string) => {
         .select()
         .single();
 
+      const { data: insertedCourse, error } = await Promise.race([
+        insertPromise,
+        timeoutPromise
+      ]) as { data: Course | null; error: any };
+
       if (error) {
-        console.error('❌ Erreur DB lors de la création:', error);
+        console.error('🔴 [createCourse] DB insert failed:', error);
         // Rollback en cas d'erreur
         setSchedules(prevSchedules => 
           prevSchedules.map(daySchedule => ({
@@ -185,6 +210,8 @@ export const useSchedules = (classId?: string) => {
         }
         return false;
       }
+      
+      console.log('🟢 [createCourse] DB insert success:', insertedCourse);
 
       // Remplacer l'ID temporaire par l'ID réel de la DB
       setSchedules(prevSchedules => {
@@ -215,7 +242,7 @@ export const useSchedules = (classId?: string) => {
 
       return true;
     } catch (err) {
-      console.error('❌ Exception lors de la création du cours:', err);
+      console.error('🔴 [createCourse] Exception caught:', err);
       // Rollback
       setSchedules(prevSchedules => 
         prevSchedules.map(daySchedule => ({
@@ -224,11 +251,20 @@ export const useSchedules = (classId?: string) => {
         }))
       );
       cache.delete(cacheKey);
-      toast({
-        title: "❌ Erreur de connexion",
-        description: "Impossible de communiquer avec le serveur. Vérifiez votre connexion.",
-        variant: "destructive",
-      });
+      
+      if (err instanceof Error && err.message.includes('Timeout')) {
+        toast({
+          title: "⏳ Timeout",
+          description: "Le serveur ne répond pas. Veuillez réessayer.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "❌ Erreur de connexion",
+          description: "Impossible de communiquer avec le serveur. Vérifiez votre connexion.",
+          variant: "destructive",
+        });
+      }
       return false;
     }
   };

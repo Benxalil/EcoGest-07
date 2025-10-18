@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserRole } from './useUserRole';
 import { useToast } from '@/hooks/use-toast';
@@ -34,10 +34,27 @@ export const useSubjects = (classId?: string, teacherId?: string | null) => {
   const { userProfile } = useUserRole();
   const { toast } = useToast();
 
-  const fetchSubjects = async () => {
+  const fetchSubjects = useCallback(async () => {
     if (!userProfile?.schoolId) {
       setLoading(false);
       return;
+    }
+
+    // Charger depuis le cache localStorage d'abord
+    const cacheKey = `subjects-${classId || 'all'}-${teacherId || 'all'}-${userProfile?.schoolId}`;
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) {
+      try {
+        const { data, timestamp } = JSON.parse(cached);
+        const age = Date.now() - timestamp;
+        if (age < 300000) { // 5 minutes
+          setSubjects(data);
+          setLoading(false);
+          // Continue en arrière-plan pour rafraîchir
+        }
+      } catch (e) {
+        console.error('Cache parse error:', e);
+      }
     }
 
     try {
@@ -147,6 +164,13 @@ export const useSubjects = (classId?: string, teacherId?: string | null) => {
         }
         
         setSubjects(data || []);
+        
+        // Sauvegarder en cache
+        const cacheKey = `subjects-${classId || 'all'}-${teacherId || 'all'}-${userProfile?.schoolId}`;
+        localStorage.setItem(cacheKey, JSON.stringify({ 
+          data, 
+          timestamp: Date.now() 
+        }));
       }
     } catch (err) {
       console.error('Erreur lors de la récupération des matières:', err);
@@ -156,7 +180,7 @@ export const useSubjects = (classId?: string, teacherId?: string | null) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [userProfile?.schoolId, classId, teacherId]);
 
   const createSubject = async (subjectData: CreateSubjectData) => {
     if (!userProfile?.schoolId) return false;

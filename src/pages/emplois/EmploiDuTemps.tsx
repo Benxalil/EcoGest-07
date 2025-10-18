@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useForm } from "react-hook-form";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { BookOpen, UserCheck, Pencil, ArrowLeft, Trash2, AlertTriangle, Loader2, Plus } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useClasses } from "@/hooks/useClasses";
@@ -69,6 +69,7 @@ export default function EmploiDuTemps() {
   const [className, setClassName] = useState<string>("");
   const [hasAccess, setHasAccess] = useState<boolean>(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const effectRanRef = useRef(false);
 
   const handleBack = () => {
     navigate('/emplois-du-temps');
@@ -99,6 +100,9 @@ export default function EmploiDuTemps() {
 
   // Charger le nom de la classe depuis Supabase et vérifier l'accès
   useEffect(() => {
+    if (effectRanRef.current) return;
+    effectRanRef.current = true;
+    
     if (classeId && classes.length > 0) {
       const classe = classes.find(c => c.id === classeId);
       if (classe) {
@@ -243,9 +247,12 @@ export default function EmploiDuTemps() {
 
       // Fermer le modal UNIQUEMENT si l'opération a réussi
       if (success) {
-        form.reset();
-        setEditingCourse(null);
-        setIsDialogOpen(false);
+        // Attendre 100ms pour l'animation de sortie
+        setTimeout(() => {
+          form.reset();
+          setEditingCourse(null);
+          setIsDialogOpen(false);
+        }, 100);
       }
     } finally {
       setIsSubmitting(false);
@@ -390,8 +397,9 @@ export default function EmploiDuTemps() {
                   </DialogDescription>
                 </DialogHeader>
                 <Form {...form}>
-                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                    <FormField
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <fieldset disabled={isSubmitting} className={isSubmitting ? 'opacity-50 pointer-events-none' : ''}>
+              <FormField
                       control={form.control}
                       name="subject"
                       render={({ field }) => (
@@ -494,6 +502,7 @@ export default function EmploiDuTemps() {
                         )}
                       />
                     </div>
+                    </fieldset>
                     <div className="flex justify-between items-center mt-4">
                       <div>
                         {editingCourse && (
