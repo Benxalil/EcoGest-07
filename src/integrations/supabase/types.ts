@@ -1263,6 +1263,8 @@ export type Database = {
           class_id: string | null
           created_at: string | null
           date_of_birth: string | null
+          doctor_name: string | null
+          doctor_phone: string | null
           emergency_contact: string | null
           enrollment_date: string | null
           father_address: string | null
@@ -1273,9 +1275,12 @@ export type Database = {
           father_status: string | null
           first_name: string
           gender: Database["public"]["Enums"]["gender"] | null
+          has_medical_condition: boolean | null
           id: string
           is_active: boolean | null
           last_name: string
+          medical_condition_description: string | null
+          medical_condition_type: string | null
           mother_address: string | null
           mother_first_name: string | null
           mother_last_name: string | null
@@ -1300,6 +1305,8 @@ export type Database = {
           class_id?: string | null
           created_at?: string | null
           date_of_birth?: string | null
+          doctor_name?: string | null
+          doctor_phone?: string | null
           emergency_contact?: string | null
           enrollment_date?: string | null
           father_address?: string | null
@@ -1310,9 +1317,12 @@ export type Database = {
           father_status?: string | null
           first_name: string
           gender?: Database["public"]["Enums"]["gender"] | null
+          has_medical_condition?: boolean | null
           id?: string
           is_active?: boolean | null
           last_name: string
+          medical_condition_description?: string | null
+          medical_condition_type?: string | null
           mother_address?: string | null
           mother_first_name?: string | null
           mother_last_name?: string | null
@@ -1337,6 +1347,8 @@ export type Database = {
           class_id?: string | null
           created_at?: string | null
           date_of_birth?: string | null
+          doctor_name?: string | null
+          doctor_phone?: string | null
           emergency_contact?: string | null
           enrollment_date?: string | null
           father_address?: string | null
@@ -1347,9 +1359,12 @@ export type Database = {
           father_status?: string | null
           first_name?: string
           gender?: Database["public"]["Enums"]["gender"] | null
+          has_medical_condition?: boolean | null
           id?: string
           is_active?: boolean | null
           last_name?: string
+          medical_condition_description?: string | null
+          medical_condition_type?: string | null
           mother_address?: string | null
           mother_first_name?: string | null
           mother_last_name?: string | null

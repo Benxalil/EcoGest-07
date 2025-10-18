@@ -64,9 +64,18 @@ interface EleveFormData {
   // ❌ SUPPRIMÉ : mereNomUtilisateur
   // ❌ SUPPRIMÉ : mereMotDePasse
   
+  // Contact d'urgence
   contactUrgenceNom: string;
   contactUrgenceTelephone: string;
   contactUrgenceRelation: string;
+
+  // Informations médicales
+  hasMedicalCondition: boolean;
+  medicalConditionType?: string;
+  medicalConditionDescription?: string;
+  doctorName?: string;
+  doctorPhone?: string;
+  
   statut: boolean;
   photo?: FileList;
   documents?: DocumentData[];
@@ -344,9 +353,18 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
       mereTelephone: initialData?.mother_phone || initialData?.mereTelephone || "",
       mereStatut: initialData?.mother_status || 'alive', // ✅ NOUVEAU
       mereFonction: initialData?.mother_profession || "", // ✅ NOUVEAU
+      
       contactUrgenceNom: initialData?.contactUrgenceNom || "",
       contactUrgenceTelephone: initialData?.emergency_contact?.split(' - ')[1]?.split(' (')[0] || "",
       contactUrgenceRelation: initialData?.emergency_contact?.split(' (')[1]?.replace(')', '') || "",
+      
+      // ✅ NOUVEAU: Informations médicales
+      hasMedicalCondition: initialData?.has_medical_condition || false,
+      medicalConditionType: initialData?.medical_condition_type || "",
+      medicalConditionDescription: initialData?.medical_condition_description || "",
+      doctorName: initialData?.doctor_name || "",
+      doctorPhone: initialData?.doctor_phone || "",
+      
       statut: initialData?.is_active !== undefined ? initialData.is_active : true
     }
   });
@@ -588,6 +606,7 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
   const watchLieuNaissance = form.watch("lieuNaissance");
   const watchNom = form.watch("nom");
   const watchPrenom = form.watch("prenom");
+  const watchHasMedicalCondition = form.watch("hasMedicalCondition");
   
   // Auto-remplir le lieu de naissance → adresse élève
   useEffect(() => {
@@ -947,6 +966,31 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
         gender: (data.sexe === 'Masculin' ? 'M' : data.sexe === 'Féminin' ? 'F' : null) as 'M' | 'F' | null,
         address: data.adresse || null,
         phone: data.telephone || null,
+        
+        // Informations père
+        father_first_name: data.perePrenom || null,
+        father_last_name: data.pereNom || null,
+        father_phone: data.pereTelephone || null,
+        father_address: data.pereAdresse || null,
+        father_status: data.pereStatut || 'alive',
+        father_profession: data.pereFonction || null,
+        
+        // Informations mère
+        mother_first_name: data.merePrenom || null,
+        mother_last_name: data.mereNom || null,
+        mother_phone: data.mereTelephone || null,
+        mother_address: data.mereAdresse || null,
+        mother_status: data.mereStatut || 'alive',
+        mother_profession: data.mereFonction || null,
+        
+        // Informations médicales
+        has_medical_condition: data.hasMedicalCondition || false,
+        medical_condition_type: data.hasMedicalCondition ? data.medicalConditionType : null,
+        medical_condition_description: data.hasMedicalCondition ? data.medicalConditionDescription : null,
+        doctor_name: data.hasMedicalCondition ? data.doctorName : null,
+        doctor_phone: data.hasMedicalCondition ? data.doctorPhone : null,
+        
+        // Compatibilité
         parent_phone: data.pereTelephone || null,
         parent_email: data.perePrenom && data.pereNom ? `${data.perePrenom.toLowerCase()}.${data.pereNom.toLowerCase()}@parent.com` : null,
         parent_first_name: data.perePrenom || null,
@@ -1647,6 +1691,150 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
                     </FormItem>} />
               </div>
             </>
+          )}
+        </div>
+
+        {/* Informations médicales */}
+        <div className="space-y-6 bg-red-50/30 border-2 border-red-200 rounded-lg p-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-bold text-red-700 flex items-center gap-2">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Informations médicales
+            </h2>
+          </div>
+
+          <FormField
+            control={form.control}
+            name="hasMedicalCondition"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-center justify-between rounded-lg border border-red-300 bg-white p-4 shadow-sm">
+                <div className="space-y-0.5">
+                  <FormLabel className="text-base font-semibold">
+                    L'élève souffre-t-il d'une maladie ?
+                  </FormLabel>
+                  <p className="text-sm text-muted-foreground">
+                    Activez pour renseigner les informations médicales
+                  </p>
+                </div>
+                <FormControl>
+                  <Switch
+                    checked={field.value}
+                    onCheckedChange={(checked) => {
+                      field.onChange(checked);
+                      if (!checked) {
+                        form.setValue('medicalConditionType', '');
+                        form.setValue('medicalConditionDescription', '');
+                        form.setValue('doctorName', '');
+                        form.setValue('doctorPhone', '');
+                      }
+                    }}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+
+          {watchHasMedicalCondition && (
+            <div className="space-y-4 animate-in fade-in-50 duration-300">
+              <FormField
+                control={form.control}
+                name="medicalConditionType"
+                rules={{
+                  required: watchHasMedicalCondition ? "Le type de maladie est requis" : false
+                }}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-1">
+                      Type de maladie
+                      <span className="text-destructive">*</span>
+                    </FormLabel>
+                    <FormControl>
+                      <Input 
+                        {...field} 
+                        placeholder="Ex : Asthme, Diabète, Allergie alimentaire, etc."
+                        className="border-red-300 focus-visible:ring-red-500"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="medicalConditionDescription"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description de la maladie (facultatif)</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        {...field} 
+                        placeholder="Détails sur la maladie, traitement, allergies, précautions à prendre..."
+                        rows={4}
+                        className="border-red-300 focus-visible:ring-red-500 resize-none"
+                      />
+                    </FormControl>
+                    <p className="text-xs text-muted-foreground">
+                      Indiquez les traitements, allergies ou précautions spéciales
+                    </p>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="doctorName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nom du médecin traitant (facultatif)</FormLabel>
+                      <FormControl>
+                        <Input 
+                          {...field} 
+                          placeholder="Dr. Nom du médecin"
+                          className="border-red-300 focus-visible:ring-red-500"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="doctorPhone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Numéro du médecin (facultatif)</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="tel"
+                          {...field} 
+                          placeholder="+237 6XX XXX XXX"
+                          className="border-red-300 focus-visible:ring-red-500"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="bg-amber-50 border border-amber-300 rounded-md p-3 text-sm text-amber-800">
+                <p className="flex items-start gap-2">
+                  <svg className="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>
+                    Ces informations sont <strong>confidentielles</strong> et ne seront accessibles qu'à l'administration, 
+                    aux enseignants principaux et aux parents de l'élève.
+                  </span>
+                </p>
+              </div>
+            </div>
           )}
         </div>
 

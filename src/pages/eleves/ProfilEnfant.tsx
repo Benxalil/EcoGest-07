@@ -182,6 +182,92 @@ export default function ProfilEnfant() {
             </CardContent>
           </Card>
 
+          {/* Informations médicales */}
+          {selectedChild.has_medical_condition && (
+            <Card className="border-red-200 bg-red-50/30">
+              <CardHeader className="bg-red-100/50 border-b border-red-200">
+                <CardTitle className="text-red-700 flex items-center gap-2">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  Informations médicales
+                  <Badge variant="destructive" className="ml-2">Confidentiel</Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4 pt-6">
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Type de maladie</label>
+                  <p className="text-base mt-1 font-semibold text-red-700">
+                    {selectedChild.medical_condition_type || 'Non renseigné'}
+                  </p>
+                </div>
+                
+                {selectedChild.medical_condition_description && (
+                  <>
+                    <Separator className="bg-red-200" />
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Description</label>
+                      <p className="text-base mt-1 whitespace-pre-wrap">
+                        {selectedChild.medical_condition_description}
+                      </p>
+                    </div>
+                  </>
+                )}
+                
+                {(selectedChild.doctor_name || selectedChild.doctor_phone) && (
+                  <>
+                    <Separator className="bg-red-200" />
+                    <div className="bg-white rounded-md p-3 border border-red-200">
+                      <label className="text-sm font-medium text-muted-foreground block mb-2">
+                        Médecin traitant
+                      </label>
+                      {selectedChild.doctor_name && (
+                        <p className="text-base mb-1">
+                          <span className="font-medium">Dr.</span> {selectedChild.doctor_name}
+                        </p>
+                      )}
+                      {selectedChild.doctor_phone && (
+                        <p className="text-base flex items-center gap-2 text-muted-foreground">
+                          <Phone className="h-4 w-4" />
+                          {selectedChild.doctor_phone}
+                        </p>
+                      )}
+                    </div>
+                  </>
+                )}
+                
+                <div className="bg-amber-50 border border-amber-300 rounded-md p-3 text-xs text-amber-800 mt-4">
+                  <p className="flex items-start gap-2">
+                    <svg className="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    <span>
+                      Ces informations sont strictement confidentielles et protégées.
+                    </span>
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {!selectedChild.has_medical_condition && (
+            <Card className="border-gray-200">
+              <CardHeader>
+                <CardTitle className="text-gray-600 flex items-center gap-2">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Santé
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground">
+                  Aucune condition médicale signalée pour cet élève.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Contact d'urgence */}
           <Card>
             <CardHeader>

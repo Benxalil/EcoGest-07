@@ -31,6 +31,13 @@ export interface Child {
   mother_address?: string | null;
   mother_status?: 'alive' | 'deceased' | null;
   mother_profession?: string | null;
+
+  // ✅ Informations médicales
+  has_medical_condition?: boolean | null;
+  medical_condition_type?: string | null;
+  medical_condition_description?: string | null;
+  doctor_name?: string | null;
+  doctor_phone?: string | null;
   
   // @deprecated - Compatibilité
   parent_phone: string | null;

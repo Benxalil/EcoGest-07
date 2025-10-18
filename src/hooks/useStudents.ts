@@ -41,6 +41,13 @@ export interface Student {
   mother_address?: string;
   mother_status?: 'alive' | 'deceased';
   mother_profession?: string;
+
+  // ✅ Informations médicales
+  has_medical_condition?: boolean;
+  medical_condition_type?: string;
+  medical_condition_description?: string;
+  doctor_name?: string;
+  doctor_phone?: string;
   
   // ✅ Matricule unique (père uniquement)
   parent_matricule?: string;
