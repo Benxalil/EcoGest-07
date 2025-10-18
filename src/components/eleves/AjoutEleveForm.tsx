@@ -991,7 +991,6 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
         
         // Compatibilité
         parent_phone: data.pereTelephone || null,
-        parent_email: data.perePrenom && data.pereNom ? `${data.perePrenom.toLowerCase()}.${data.pereNom.toLowerCase()}@parent.com` : null,
         parent_first_name: data.perePrenom || null,
         parent_last_name: data.pereNom || null,
         emergency_contact: recoveredEmergencyContact || `${data.contactUrgenceNom} - ${data.contactUrgenceTelephone} (${data.contactUrgenceRelation})`,
@@ -1111,7 +1110,6 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
         address: data.adresse || null,
         phone: data.telephone || null,
         parent_phone: data.pereTelephone || null,
-        parent_email: data.perePrenom && data.pereNom ? `${data.perePrenom.toLowerCase()}.${data.pereNom.toLowerCase()}@parent.com` : null,
         parent_first_name: data.perePrenom || null,
         parent_last_name: data.pereNom || null,
         emergency_contact: `${data.contactUrgenceNom} - ${data.contactUrgenceTelephone} (${data.contactUrgenceRelation})`,
