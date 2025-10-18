@@ -172,7 +172,7 @@ export const useSchedules = (classId?: string) => {
         description: `Le cours ${courseData.subject} a été ajouté avec succès.`,
       });
 
-      // Invalidations de cache (en arrière-plan)
+      // Invalidations de cache (en arrière-plan, délai de 100ms)
       if (courseData.teacher_id) {
         setTimeout(() => {
           cache.invalidateByPrefixWithEvent(`teacher-dashboard-${courseData.teacher_id}`);
@@ -180,7 +180,7 @@ export const useSchedules = (classId?: string) => {
           window.dispatchEvent(new CustomEvent('schedule-updated', { 
             detail: { teacherId: courseData.teacher_id, classId: courseData.class_id }
           }));
-        }, 0);
+        }, 100);
       }
 
       return true;
@@ -216,13 +216,6 @@ export const useSchedules = (classId?: string) => {
       if (courseData.day) {
         dbDay = dayMapping[courseData.day] || courseData.day;
       }
-
-      // Récupérer l'emploi du temps avant modification pour invalider le cache
-      const { data: existingSchedule } = await supabase
-        .from('schedules')
-        .select('teacher_id')
-        .eq('id', id)
-        .single();
 
       // Mise à jour en base de données AVANT toute mise à jour UI
       const updatedData: any = { ...courseData };
@@ -265,16 +258,10 @@ export const useSchedules = (classId?: string) => {
         description: "Le cours a été mis à jour avec succès.",
       });
 
-      // Invalidations de cache (arrière-plan)
+      // Invalidations de cache (arrière-plan, délai de 100ms)
       setTimeout(() => {
         cache.deleteWithEvent('teacher-data-*');
-        if (existingSchedule?.teacher_id) {
-          cache.invalidateByPrefixWithEvent(`teacher-dashboard-${existingSchedule.teacher_id}`);
-        }
-        if (courseData.teacher_id && courseData.teacher_id !== existingSchedule?.teacher_id) {
-          cache.invalidateByPrefixWithEvent(`teacher-dashboard-${courseData.teacher_id}`);
-        }
-      }, 0);
+      }, 100);
 
       return true;
     } catch (err) {
@@ -293,13 +280,6 @@ export const useSchedules = (classId?: string) => {
     if (!userProfile?.schoolId) return false;
 
     try {
-      // Récupérer l'emploi du temps avant suppression pour invalider le cache
-      const { data: existingSchedule } = await supabase
-        .from('schedules')
-        .select('teacher_id')
-        .eq('id', id)
-        .single();
-
       // Suppression en base de données AVANT toute mise à jour UI
       const { error } = await supabase
         .from('schedules')
@@ -323,13 +303,10 @@ export const useSchedules = (classId?: string) => {
         description: "Le cours a été supprimé avec succès.",
       });
 
-      // Invalidations de cache (arrière-plan)
+      // Invalidations de cache (arrière-plan, délai de 100ms)
       setTimeout(() => {
         cache.deleteWithEvent('teacher-data-*');
-        if (existingSchedule?.teacher_id) {
-          cache.invalidateByPrefixWithEvent(`teacher-dashboard-${existingSchedule.teacher_id}`);
-        }
-      }, 0);
+      }, 100);
 
       return true;
     } catch (err) {
