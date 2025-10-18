@@ -388,175 +388,174 @@ export default function EmploiDuTemps() {
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="max-w-[95vw] sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>
-                    {editingCourse ? "Modifier le cours" : "Saisir les informations"}
-                  </DialogTitle>
-                  <DialogDescription>
-                    {editingCourse ? "Modifiez les informations du cours dans l'emploi du temps" : "Ajoutez un nouveau cours à l'emploi du temps"}
-                  </DialogDescription>
-                </DialogHeader>
-                <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <fieldset disabled={isSubmitting} className={isSubmitting ? 'opacity-50 pointer-events-none' : ''}>
-              <FormField
-                      control={form.control}
-                      name="subject"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Matières</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Sélectionnez une matière" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {/* Récupération des matières depuis la base de données et suppression des doublons */}
-                              {Array.from(new Set(subjects.map(subject => subject.name))).map((subjectName) => (
-                                <SelectItem key={subjectName} value={subjectName}>
-                                  {subjectName}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="enseignant"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Enseignants</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Sélectionnez un enseignant" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {teachers.length > 0 ? (
-                                teachers.map((teacher) => (
-                                  <SelectItem key={teacher.id} value={`${teacher.first_name} ${teacher.last_name}`}>
-                                    {teacher.first_name} {teacher.last_name}
-                                  </SelectItem>
-                                ))
-                              ) : (
-                                <SelectItem value="no-teachers" disabled>
-                                  Aucun enseignant enregistré
-                                </SelectItem>
-                              )}
-                            </SelectContent>
-                          </Select>
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="day"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Jour</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Sélectionnez une journée" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="lundi">Lundi</SelectItem>
-                              <SelectItem value="mardi">Mardi</SelectItem>
-                              <SelectItem value="mercredi">Mercredi</SelectItem>
-                              <SelectItem value="jeudi">Jeudi</SelectItem>
-                              <SelectItem value="vendredi">Vendredi</SelectItem>
-                              <SelectItem value="samedi">Samedi</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </FormItem>
-                      )}
-                    />
-                    <div className="grid grid-cols-2 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="startTime"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Début du cours</FormLabel>
-                            <FormControl>
-                              <Input type="time" {...field} />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="endTime"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Fin du cours</FormLabel>
-                            <FormControl>
-                              <Input type="time" {...field} />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                    </fieldset>
-                    <div className="flex justify-between items-center mt-4">
-                      <div>
-                        {editingCourse && (
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button type="button" variant="destructive" size="sm" disabled={isSubmitting}>
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                Supprimer
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Confirmer la suppression</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Êtes-vous sûr de vouloir supprimer cet emploi du temps ? Cette action est irréversible.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Annuler</AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={() => {
-                                    if (editingCourse) {
-                                      handleDeleteCourse(editingCourse.dayIndex, editingCourse.courseIndex);
-                                      handleDialogClose(false);
-                                    }
-                                  }}
-                                  className="bg-red-600 hover:bg-red-700"
-                                >
-                                  Confirmer
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        )}
-                      </div>
-                      <div className="flex space-x-4">
-                        <Button type="button" variant="outline" onClick={() => handleDialogClose(false)} disabled={isSubmitting}>
-                          Annuler
-                        </Button>
-                        <Button type="submit" className="bg-blue-500 hover:bg-blue-600 text-white" disabled={isSubmitting}>
-                          {isSubmitting ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Enregistrement...
-                            </>
-                          ) : (
-                            editingCourse ? "Modifier" : "Enregistrer"
+                  <DialogHeader>
+                    <DialogTitle>
+                      {editingCourse ? "Modifier le cours" : "Saisir les informations"}
+                    </DialogTitle>
+                    <DialogDescription>
+                      {editingCourse ? "Modifiez les informations du cours dans l'emploi du temps" : "Ajoutez un nouveau cours à l'emploi du temps"}
+                    </DialogDescription>
+                  </DialogHeader>
+                  <Form {...form}>
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                      <fieldset disabled={isSubmitting} className={isSubmitting ? 'opacity-50 pointer-events-none' : ''}>
+                        <FormField
+                          control={form.control}
+                          name="subject"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Matières</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Sélectionnez une matière" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {Array.from(new Set(subjects.map(subject => subject.name))).map((subjectName) => (
+                                    <SelectItem key={subjectName} value={subjectName}>
+                                      {subjectName}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </FormItem>
                           )}
-                        </Button>
+                        />
+                        <FormField
+                          control={form.control}
+                          name="enseignant"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Enseignants</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Sélectionnez un enseignant" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {teachers.length > 0 ? (
+                                    teachers.map((teacher) => (
+                                      <SelectItem key={teacher.id} value={`${teacher.first_name} ${teacher.last_name}`}>
+                                        {teacher.first_name} {teacher.last_name}
+                                      </SelectItem>
+                                    ))
+                                  ) : (
+                                    <SelectItem value="no-teachers" disabled>
+                                      Aucun enseignant enregistré
+                                    </SelectItem>
+                                  )}
+                                </SelectContent>
+                              </Select>
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="day"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Jour</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Sélectionnez une journée" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="lundi">Lundi</SelectItem>
+                                  <SelectItem value="mardi">Mardi</SelectItem>
+                                  <SelectItem value="mercredi">Mercredi</SelectItem>
+                                  <SelectItem value="jeudi">Jeudi</SelectItem>
+                                  <SelectItem value="vendredi">Vendredi</SelectItem>
+                                  <SelectItem value="samedi">Samedi</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </FormItem>
+                          )}
+                        />
+                        <div className="grid grid-cols-2 gap-4">
+                          <FormField
+                            control={form.control}
+                            name="startTime"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Début du cours</FormLabel>
+                                <FormControl>
+                                  <Input type="time" {...field} />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="endTime"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Fin du cours</FormLabel>
+                                <FormControl>
+                                  <Input type="time" {...field} />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                      </fieldset>
+                      <div className="flex justify-between items-center mt-4">
+                        <div>
+                          {editingCourse && (
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button type="button" variant="destructive" size="sm" disabled={isSubmitting}>
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Supprimer
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Confirmer la suppression</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Êtes-vous sûr de vouloir supprimer cet emploi du temps ? Cette action est irréversible.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Annuler</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => {
+                                      if (editingCourse) {
+                                        handleDeleteCourse(editingCourse.dayIndex, editingCourse.courseIndex);
+                                        handleDialogClose(false);
+                                      }
+                                    }}
+                                    className="bg-red-600 hover:bg-red-700"
+                                  >
+                                    Confirmer
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          )}
+                        </div>
+                        <div className="flex space-x-4">
+                          <Button type="button" variant="outline" onClick={() => handleDialogClose(false)} disabled={isSubmitting}>
+                            Annuler
+                          </Button>
+                          <Button type="submit" className="bg-blue-500 hover:bg-blue-600 text-white" disabled={isSubmitting}>
+                            {isSubmitting ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Enregistrement...
+                              </>
+                            ) : (
+                              editingCourse ? "Modifier" : "Enregistrer"
+                            )}
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                  </form>
-                </Form>
-              </DialogContent>
+                    </form>
+                  </Form>
+                </DialogContent>
               </Dialog>
             )}
 
