@@ -9,8 +9,8 @@ export function HeaderDarkMode() {
     setTheme(theme === "dark" ? "light" : "dark");
   };
 
-  // Calculer le thème effectif en tenant compte de "system"
-  const isDark = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+  // Le thème est soit "dark" soit "light", jamais "system"
+  const isDark = theme === "dark";
 
   return (
     <Button

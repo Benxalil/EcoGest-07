@@ -32,12 +32,23 @@ export function ThemeProvider({
     if (isAuthPage) {
       return "light";
     }
+    
+    // Récupérer le thème sauvegardé
     const savedTheme = localStorage.getItem(storageKey) as Theme;
-    // Ne jamais retourner "system", toujours utiliser "light" ou "dark"
-    if (savedTheme === "system" || !savedTheme) {
+    
+    // Si pas de thème sauvegardé ou si c'est "system", utiliser le thème par défaut (light)
+    if (!savedTheme || savedTheme === "system") {
+      localStorage.setItem(storageKey, defaultTheme);
       return defaultTheme;
     }
-    return savedTheme;
+    
+    // Utiliser le thème sauvegardé s'il est valide
+    if (savedTheme === "light" || savedTheme === "dark") {
+      return savedTheme;
+    }
+    
+    // Fallback au thème par défaut
+    return defaultTheme;
   })
 
   useEffect(() => {
@@ -45,16 +56,7 @@ export function ThemeProvider({
 
     root.classList.remove("light", "dark")
 
-    if (theme === "system") {
-      const systemTheme = window.matchMedia("(prefers-color-scheme: dark)")
-        .matches
-        ? "dark"
-        : "light"
-
-      root.classList.add(systemTheme)
-      return
-    }
-
+    // Ne plus gérer "system", seulement "light" ou "dark"
     root.classList.add(theme)
   }, [theme])
 
