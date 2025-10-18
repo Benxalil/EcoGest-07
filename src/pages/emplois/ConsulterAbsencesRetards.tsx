@@ -1,7 +1,7 @@
 import { Layout } from "@/components/layout/Layout";
 import { useParams, useNavigate } from "react-router-dom";
 import { formatClassName } from "@/utils/classNameFormatter";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   Table,
   TableBody,
@@ -14,31 +14,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, Calendar, User } from "lucide-react";
 import { useClasses } from "@/hooks/useClasses";
 import { useParentChildren } from "@/hooks/useParentChildren";
 import { useUserRole } from "@/hooks/useUserRole";
-import { supabase } from "@/integrations/supabase/client";
 import { useTeacherId } from "@/hooks/useTeacherId";
 import { useTeacherClasses } from "@/hooks/useTeacherClasses";
-
-interface AttendanceRecord {
-  id: string;
-  date: string;
-  student_id: string;
-  type: "absence" | "retard";
-  reason?: string;
-  period?: string;
-  recorded_by?: string;
-  students: {
-    first_name: string;
-    last_name: string;
-  };
-  teachers?: {
-    first_name: string;
-    last_name: string;
-  };
-}
+import { useAttendances, type AttendanceRecord } from "@/hooks/useAttendances";
 
 export default function ConsulterAbsencesRetards() {
   const { classeId } = useParams<{ classeId: string }>();
@@ -54,8 +37,6 @@ export default function ConsulterAbsencesRetards() {
   const isAdminUser = isAdmin();
   const isParentUser = isParent();
   
-  const [attendances, setAttendances] = useState<AttendanceRecord[]>([]);
-  const [loading, setLoading] = useState(true);
   const [dateFilter, setDateFilter] = useState("");
   const [eleveFilter, setEleveFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
@@ -67,63 +48,12 @@ export default function ConsulterAbsencesRetards() {
   const availableClasses = isTeacherUser && !isAdminUser ? teacherClasses : classes;
   const classe = availableClasses.find(c => c.id === classeId);
 
-  useEffect(() => {
-    const fetchAttendances = async () => {
-      if (!classeId) return;
-      
-      setLoading(true);
-      try {
-        let query = supabase
-          .from('attendances')
-          .select(`
-            id,
-            date,
-            student_id,
-            type,
-            reason,
-            period,
-            recorded_by,
-            teacher_id,
-            students!inner (
-              first_name,
-              last_name
-            ),
-            teachers (
-              first_name,
-              last_name
-            )
-          `)
-          .eq('class_id', classeId);
-
-        // Filtrer par teacher_id si l'utilisateur est enseignant
-        if (isTeacherUser && !isAdminUser && teacherId) {
-          query = query.eq('teacher_id', teacherId);
-        }
-
-        query = query.order('date', { ascending: false });
-
-        const { data, error } = await query;
-
-        if (error) {
-          console.error('Erreur lors du chargement des présences:', error);
-        } else {
-          // Trier les données par nom d'élève
-          const sortedData = (data || []).sort((a, b) => {
-            const nameA = `${a.students?.last_name} ${a.students?.first_name}`.toLowerCase();
-            const nameB = `${b.students?.last_name} ${b.students?.first_name}`.toLowerCase();
-            return nameA.localeCompare(nameB);
-          });
-          setAttendances(sortedData);
-        }
-      } catch (error) {
-        console.error('Erreur:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchAttendances();
-  }, [classeId, isTeacherUser, isAdminUser, teacherId]);
+  // Utiliser le hook optimisé
+  const { attendances, loading } = useAttendances(
+    classeId,
+    isTeacherUser && !isAdminUser ? teacherId : null,
+    userProfile?.schoolId
+  );
 
   const filteredAttendances = attendances.filter(record => {
     // Si parent, filtrer uniquement ses enfants
@@ -203,8 +133,16 @@ export default function ConsulterAbsencesRetards() {
     return (
       <Layout>
         <div className="container mx-auto p-6">
-          <div className="text-center py-12">
-            <p className="text-muted-foreground text-lg">Chargement...</p>
+          <Skeleton className="h-8 w-96 mb-6" />
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {[1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-24 w-full" />
+              ))}
+            </div>
+            {[1, 2, 3].map((i) => (
+              <Skeleton key={i} className="h-48 w-full" />
+            ))}
           </div>
         </div>
       </Layout>

@@ -237,15 +237,38 @@ export default function ListeEmplois() {
                   {profile?.role !== 'student' && (
                     <>
                       <TableCell className="text-center">
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          className="bg-yellow-500 text-white hover:bg-yellow-600"
-                          onClick={() => navigate(`/consulter-absences-retards/${classe.id}`)}
-                        >
-                          <AlertTriangle className="h-4 w-4" />
-                          <span className="ml-2 hidden md:inline">Absence & retard</span>
-                        </Button>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        className="bg-yellow-500 text-white hover:bg-yellow-600"
+                        onClick={() => navigate(`/consulter-absences-retards/${classe.id}`)}
+                        onMouseEnter={() => {
+                          // Préchargement au survol
+                          if (profile?.schoolId) {
+                            supabase
+                              .from('attendances')
+                              .select(`
+                                id,
+                                date,
+                                student_id,
+                                type,
+                                reason,
+                                period,
+                                recorded_by,
+                                teacher_id,
+                                students!inner (first_name, last_name),
+                                teachers (first_name, last_name)
+                              `)
+                              .eq('class_id', classe.id)
+                              .order('date', { ascending: false })
+                              .limit(100)
+                              .then(() => {});
+                          }
+                        }}
+                      >
+                        <AlertTriangle className="h-4 w-4" />
+                        <span className="ml-2 hidden md:inline">Absence & retard</span>
+                      </Button>
                       </TableCell>
                       {!isParent() && (
                         <TableCell className="text-center">
