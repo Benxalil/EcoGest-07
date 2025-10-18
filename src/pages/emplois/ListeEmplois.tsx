@@ -63,7 +63,7 @@ const sortClassesAcademically = (classes: any[]): any[] => {
 
 export default function ListeEmplois() {
   const navigate = useNavigate();
-  const { isAdmin, isTeacher, isParent, userProfile } = useUserRole();
+  const { isAdmin, isTeacher, isParent, userProfile: profile } = useUserRole();
   const [studentClassId, setStudentClassId] = useState<string | null>(null);
   const [studentLoading, setStudentLoading] = useState(true);
   
@@ -80,13 +80,13 @@ export default function ListeEmplois() {
   // OPTIMISÉ: Charger en parallèle la classe de l'élève
   useEffect(() => {
     const loadData = async () => {
-      if (userProfile?.role === 'student' && userProfile?.id && userProfile?.schoolId) {
+      if (profile?.role === 'student' && profile?.id && profile?.schoolId) {
         try {
           const { data: student } = await supabase
             .from('students')
             .select('class_id')
-            .eq('user_id', userProfile.id)
-            .eq('school_id', userProfile.schoolId)
+            .eq('user_id', profile.id)
+            .eq('school_id', profile.schoolId)
             .maybeSingle(); // Évite l'erreur si aucun résultat
 
           if (student) {
@@ -103,12 +103,12 @@ export default function ListeEmplois() {
     };
 
     loadData();
-  }, [userProfile?.role, userProfile?.id, userProfile?.schoolId]);
+  }, [profile?.role, profile?.id, profile?.schoolId]);
 
   // Filtrer les classes pour les élèves et parents
   let displayedClasses = classes;
   
-  if (userProfile?.role === 'student' && studentClassId) {
+  if (profile?.role === 'student' && studentClassId) {
     displayedClasses = classes.filter(c => c.id === studentClassId);
   } else if (isParent() && children.length > 0) {
     // Extraire les IDs de classe uniques des enfants du parent
@@ -179,7 +179,7 @@ export default function ListeEmplois() {
       <div className="container mx-auto p-6">
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-foreground">
-            {userProfile?.role === 'student' 
+            {profile?.role === 'student' 
               ? "Mon Emploi du Temps" 
               : isParent()
                 ? "Emploi du temps de mes enfants"
@@ -195,7 +195,7 @@ export default function ListeEmplois() {
               <TableRow>
                 <TableHead className="w-1/4">Classe</TableHead>
                 <TableHead className="w-1/4 text-center">Emploi du Temps</TableHead>
-                {userProfile?.role !== 'student' && (
+                {profile?.role !== 'student' && (
                   <>
                     <TableHead className="w-1/4 text-center">Absence & Retard</TableHead>
                     {!isParent() && (
@@ -214,16 +214,27 @@ export default function ListeEmplois() {
                       variant="secondary"
                       size="sm"
                       className="bg-blue-500 text-white hover:bg-blue-600"
-                      onClick={() => { 
-                        localStorage.setItem(`classe-name-${classe.id}`, formatClassName(classe));
+                      onClick={() => {
                         navigate(`/emplois-du-temps/${classe.id}`);
+                      }}
+                      onMouseEnter={() => {
+                        // Préchargement au survol
+                        if (profile?.schoolId) {
+                          supabase
+                            .from('schedules')
+                            .select('id, subject, teacher, start_time, end_time, day')
+                            .eq('school_id', profile.schoolId)
+                            .eq('class_id', classe.id)
+                            .limit(100)
+                            .then(() => {});
+                        }
                       }}
                     >
                       <Calendar className="h-4 w-4" />
                       <span className="ml-2 hidden md:inline">Emploi du temps</span>
                     </Button>
                   </TableCell>
-                  {userProfile?.role !== 'student' && (
+                  {profile?.role !== 'student' && (
                     <>
                       <TableCell className="text-center">
                         <Button

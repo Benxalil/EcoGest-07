@@ -300,9 +300,21 @@ export default function EmploiDuTemps() {
   if (classesLoading || schedulesLoading) {
     return (
       <Layout>
-        <div className="container mx-auto p-6">
-          <div className="text-center py-12">
-            <p className="text-muted-foreground text-lg">Chargement des données...</p>
+        <div className="container mx-auto p-3 md:p-4 lg:p-6">
+          <div className="flex items-center mb-4 md:mb-6">
+            <div className="h-10 w-10 bg-muted animate-pulse rounded mr-4" />
+            <div className="h-8 w-64 bg-muted animate-pulse rounded" />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} className="border rounded-lg p-4 space-y-3">
+                <div className="h-6 w-24 bg-muted animate-pulse rounded" />
+                <div className="space-y-2">
+                  <div className="h-20 w-full bg-muted animate-pulse rounded" />
+                  <div className="h-20 w-full bg-muted animate-pulse rounded" />
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </Layout>

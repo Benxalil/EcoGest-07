@@ -47,12 +47,21 @@ export const useSchedules = (classId?: string) => {
       return;
     }
 
+    // Vérifier le cache d'abord
+    const cacheKey = `schedules-${classId}`;
+    const cached = cache.get(cacheKey) as DaySchedule[] | null;
+    if (cached) {
+      setSchedules(cached);
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
-      // OPTIMISÉ: Limite raisonnable + tri côté serveur
+      // OPTIMISÉ: Sélection minimale + tri serveur
       const { data, error } = await supabase
         .from('schedules')
-        .select('*')
+        .select('id, subject, teacher, start_time, end_time, day, day_of_week, class_id, school_id')
         .eq('school_id', userProfile.schoolId)
         .eq('class_id', classId)
         .order('day_of_week')
@@ -61,13 +70,16 @@ export const useSchedules = (classId?: string) => {
 
       if (error) throw error;
 
-      // Organiser les cours par jour
+      // Organiser par jour (côté client, rapide car déjà trié)
       const days = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
       const organizedSchedules: DaySchedule[] = days.map(day => ({
         day,
         courses: (data || []).filter(course => course.day === day)
       }));
 
+      // Mise en cache pour 2 minutes
+      cache.set(cacheKey, organizedSchedules, 120000);
+      
       setSchedules(organizedSchedules);
       setError(null);
     } catch (err) {
@@ -77,7 +89,7 @@ export const useSchedules = (classId?: string) => {
     } finally {
       setLoading(false);
     }
-  }, [userProfile?.schoolId, classId]);
+  }, [userProfile?.schoolId, classId, cache]);
 
   const createCourse = async (courseData: CreateCourseData) => {
     if (!userProfile?.schoolId) return false;
