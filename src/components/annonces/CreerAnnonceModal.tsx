@@ -66,11 +66,11 @@ export function CreerAnnonceModal({ open, onOpenChange }: CreerAnnonceModalProps
   const [priorite, setPriorite] = useState<'normal' | 'urgent'>('normal');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleDestinatairesChange = (destinataire: string, checked: boolean) => {
-    if (destinataire === "Tous") {
+  const handleDestinatairesChange = (destinataireId: string, checked: boolean) => {
+    if (destinataireId === "tous") {
       // Si "Tous" est coché, cocher toutes les cases spécifiques
       if (checked) {
-        setDestinataires(specificOptions.map(opt => opt.label));
+        setDestinataires(specificOptions.map(opt => opt.id));
       } else {
         // Si "Tous" est décoché, tout décocher
         setDestinataires([]);
@@ -79,8 +79,8 @@ export function CreerAnnonceModal({ open, onOpenChange }: CreerAnnonceModalProps
       // Gestion d'une case spécifique
       setDestinataires(prev => {
         const newDestinataires = checked 
-          ? [...prev, destinataire]
-          : prev.filter(d => d !== destinataire);
+          ? [...prev, destinataireId]
+          : prev.filter(d => d !== destinataireId);
         
         return newDestinataires;
       });
@@ -251,8 +251,8 @@ export function CreerAnnonceModal({ open, onOpenChange }: CreerAnnonceModalProps
             <div className="grid grid-cols-2 gap-4">
               {destinatairesOptions.map((item) => {
                 const isChecked = item.id === "tous" 
-                  ? specificOptions.every(opt => destinataires.includes(opt.label))
-                  : destinataires.includes(item.label);
+                  ? specificOptions.every(opt => destinataires.includes(opt.id))
+                  : destinataires.includes(item.id);
                 
                 return (
                   <div key={item.id} className="flex items-center space-x-2">
@@ -260,7 +260,7 @@ export function CreerAnnonceModal({ open, onOpenChange }: CreerAnnonceModalProps
                       id={item.id}
                       checked={isChecked}
                       onCheckedChange={(checked) => 
-                        handleDestinatairesChange(item.label, checked as boolean)
+                        handleDestinatairesChange(item.id, checked as boolean)
                       }
                     />
                     <Label 
