@@ -1,4 +1,4 @@
-import { memo, useMemo, useCallback, useState } from "react";
+import { memo, useMemo, useCallback, useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Calendar, Megaphone } from "lucide-react";
@@ -22,6 +22,13 @@ const ParentDashboard = memo(() => {
     announcements,
     loading
   } = useParentData(selectedChildId);
+
+  // ✅ Synchroniser le selectedChildId avec le premier enfant au chargement initial
+  useEffect(() => {
+    if (!loading && children.length > 0 && !selectedChildId && selectedChild) {
+      setSelectedChildId(selectedChild.id);
+    }
+  }, [loading, children, selectedChildId, selectedChild]);
 
   const greeting = useMemo(() => {
     const currentHour = new Date().getHours();
@@ -75,7 +82,7 @@ const ParentDashboard = memo(() => {
       {/* Sélecteur d'enfant */}
       <ParentChildSelector 
         children={children}
-        selectedChildId={selectedChildId || selectedChild?.id || null}
+        selectedChildId={selectedChild?.id || null}
         onChildSelect={setSelectedChildId}
       />
 
