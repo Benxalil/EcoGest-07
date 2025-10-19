@@ -4,9 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "@/components/theme-provider";
 import { useToast } from "@/hooks/use-toast";
-import AuthenticatedLayout from "@/components/layout/AuthenticatedLayout";
-import { StudentRouteHandler } from "@/components/navigation/StudentRouteHandler";
-import { ParentRouteHandler } from "@/components/navigation/ParentRouteHandler";
+import { ProtectedRoute } from "@/components/navigation/ProtectedRoute";
 import { lazyWithPrefetch } from "@/utils/routePrefetch";
 
 // ✅ Pages critiques - chargement immédiat
@@ -73,23 +71,12 @@ const queryClient = new QueryClient({
   },
 });
 
-// Wrapper pour les routes protégées
-const Protected = ({ children }: { children: React.ReactNode }) => (
-  <AuthenticatedLayout>
-    <StudentRouteHandler>
-      <ParentRouteHandler>
-        {children}
-      </ParentRouteHandler>
-    </StudentRouteHandler>
-  </AuthenticatedLayout>
-);
-
 function App() {
   const { toast } = useToast();
   
   // 🔄 Système de détection de nouvelle version et nettoyage automatique des caches
   useEffect(() => {
-    const currentVersion = '2025.10.19-routing-fix-v2'; // 🔄 Routing corrigé v2
+    const currentVersion = '2025.10.19-fix-routing'; // 🔄 Fix routing structure
     const lastVersion = localStorage.getItem('app_version');
     
     if (lastVersion !== currentVersion) {
@@ -120,7 +107,7 @@ function App() {
       
       toast({
         title: "🔄 Mise à jour appliquée",
-        description: "Navigation corrigée avec succès",
+        description: "Structure de navigation corrigée",
         duration: 3000,
       });
     }
@@ -145,57 +132,57 @@ function App() {
               <Route path="/auth/email-verified" element={<EmailVerified />} />
               
               {/* Routes protégées */}
-              <Route path="/" element={<Protected><Index /></Protected>} />
-              <Route path="/enseignants" element={<Protected><PageListeEnseignants /></Protected>} />
-              <Route path="/enseignants/modifier" element={<Protected><ModifierEnseignant /></Protected>} />
-              <Route path="/eleves" element={<Protected><ListeEleves /></Protected>} />
-              <Route path="/eleves/mon-profil" element={<Protected><MonProfil /></Protected>} />
-              <Route path="/eleves/profil-enfant" element={<Protected><ProfilEnfant /></Protected>} />
-              <Route path="/eleves/classe/:className" element={<Protected><ElevesParClasse /></Protected>} />
-              <Route path="/eleves/modifier" element={<Protected><ModifierEleve /></Protected>} />
-              <Route path="/classes" element={<Protected><ListeClasses /></Protected>} />
-              <Route path="/classes/modifier" element={<Protected><ModifierClasse /></Protected>} />
-              <Route path="/matieres" element={<Protected><ListeMatieres /></Protected>} />
-              <Route path="/examens" element={<Protected><ListeClassesExamens /></Protected>} />
-              <Route path="/examens/classe/:classeId" element={<Protected><ListeExamens /></Protected>} />
-              <Route path="/examens/:classeId/activites/:activiteId/eleve/:eleveId/notes" element={<Protected><ListeElevesNotes /></Protected>} />
-              <Route path="/notes" element={<Protected><ListeExamensNotes /></Protected>} />
-              <Route path="/notes/eleves" element={<Protected><ListeElevesClasse /></Protected>} />
-              <Route path="/notes/eleves-notes" element={<Protected><NotesParEleve /></Protected>} />
-              <Route path="/notes/consulter" element={<Protected><ConsulterNotes /></Protected>} />
-              <Route path="/notes/classe/:classeId" element={<Protected><ListeMatieresNotes /></Protected>} />
-              <Route path="/notes/:classeId/matiere/:matiereId/eleves" element={<Protected><ListeElevesNotesPage /></Protected>} />
-              <Route path="/notes/:classeId/matiere/:matiereId/eleve/:eleveId" element={<Protected><EvaluerEleve /></Protected>} />
-              <Route path="/resultats" element={<Protected><ListeClassesResultats /></Protected>} />
-              <Route path="/resultats/mes-resultats" element={<Protected><MesResultats /></Protected>} />
-              <Route path="/resultats/resultats-enfant" element={<Protected><ResultatsEnfant /></Protected>} />
-              <Route path="/resultats/eleve/:studentId/examen/:examId" element={<Protected><DetailsResultatEleve /></Protected>} />
-              <Route path="/resultats/classe/:classeId/semestre/:semestre" element={<Protected><ResultatsSemestre /></Protected>} />
-              <Route path="/resultats/classe/:classeId/examen/:examId" element={<Protected><ResultatsSemestre /></Protected>} />
-              <Route path="/resultats/classe/:classeId/tous" element={<Protected><BulletinAnnuel /></Protected>} />
-              <Route path="/emplois-du-temps" element={<Protected><ListeEmplois /></Protected>} />
-              <Route path="/emplois-du-temps/:classeId" element={<Protected><EmploiDuTemps /></Protected>} />
-              <Route path="/emplois-du-temps/:classeId/cahier-texte" element={<Protected><CahierDeTexte /></Protected>} />
-              <Route path="/absences-retards/:classeId" element={<Protected><AbsenceRetardClasse /></Protected>} />
-              <Route path="/consulter-absences-retards/:classeId" element={<Protected><ConsulterAbsencesRetards /></Protected>} />
-              <Route path="/enregistrer-absence-retard/:classeId" element={<Protected><EnregistrerAbsenceRetard /></Protected>} />
-              <Route path="/matieres-cahier/:classeId" element={<Protected><ListeMatieresCahier /></Protected>} />
-              <Route path="/liste-cahiers-classe/:classeId" element={<Protected><ListeCahiersClasse /></Protected>} />
-              <Route path="/cahier-consultation" element={<Protected><ConsultationCahier /></Protected>} />
-              <Route path="/emplois/cahier/:classeId/:subjectId" element={<Protected><ConsultationCahier /></Protected>} />
-              <Route path="/cahier-de-texte" element={<Protected><CahierDeTexte /></Protected>} />
-              <Route path="/paiements" element={<Protected><GestionPaiements /></Protected>} />
-              <Route path="/paiements/mes-paiements" element={<Protected><MesPaiements /></Protected>} />
-              <Route path="/paiements/paiements-enfant" element={<Protected><PaiementsEnfant /></Protected>} />
-              <Route path="/paiements/classe/:classeId" element={<Protected><PaiementsClasse /></Protected>} />
-              <Route path="/annonces" element={<Protected><ListeAnnonces /></Protected>} />
-              <Route path="/parametres" element={<Protected><Parametres /></Protected>} />
-              <Route path="/parametres/ecole" element={<Protected><SchoolSettings /></Protected>} />
-              <Route path="/email-verified" element={<Protected><EmailVerified /></Protected>} />
-              <Route path="/complete-registration" element={<Protected><CompleteRegistration /></Protected>} />
-              <Route path="/abonnement" element={<Protected><Abonnement /></Protected>} />
-              <Route path="/admin/user-migration" element={<Protected><UserMigration /></Protected>} />
-              <Route path="/utilisateurs" element={<Protected><Utilisateurs /></Protected>} />
+              <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+              <Route path="/enseignants" element={<ProtectedRoute><PageListeEnseignants /></ProtectedRoute>} />
+              <Route path="/enseignants/modifier" element={<ProtectedRoute><ModifierEnseignant /></ProtectedRoute>} />
+              <Route path="/eleves" element={<ProtectedRoute><ListeEleves /></ProtectedRoute>} />
+              <Route path="/eleves/mon-profil" element={<ProtectedRoute><MonProfil /></ProtectedRoute>} />
+              <Route path="/eleves/profil-enfant" element={<ProtectedRoute><ProfilEnfant /></ProtectedRoute>} />
+              <Route path="/eleves/classe/:className" element={<ProtectedRoute><ElevesParClasse /></ProtectedRoute>} />
+              <Route path="/eleves/modifier" element={<ProtectedRoute><ModifierEleve /></ProtectedRoute>} />
+              <Route path="/classes" element={<ProtectedRoute><ListeClasses /></ProtectedRoute>} />
+              <Route path="/classes/modifier" element={<ProtectedRoute><ModifierClasse /></ProtectedRoute>} />
+              <Route path="/matieres" element={<ProtectedRoute><ListeMatieres /></ProtectedRoute>} />
+              <Route path="/examens" element={<ProtectedRoute><ListeClassesExamens /></ProtectedRoute>} />
+              <Route path="/examens/classe/:classeId" element={<ProtectedRoute><ListeExamens /></ProtectedRoute>} />
+              <Route path="/examens/:classeId/activites/:activiteId/eleve/:eleveId/notes" element={<ProtectedRoute><ListeElevesNotes /></ProtectedRoute>} />
+              <Route path="/notes" element={<ProtectedRoute><ListeExamensNotes /></ProtectedRoute>} />
+              <Route path="/notes/eleves" element={<ProtectedRoute><ListeElevesClasse /></ProtectedRoute>} />
+              <Route path="/notes/eleves-notes" element={<ProtectedRoute><NotesParEleve /></ProtectedRoute>} />
+              <Route path="/notes/consulter" element={<ProtectedRoute><ConsulterNotes /></ProtectedRoute>} />
+              <Route path="/notes/classe/:classeId" element={<ProtectedRoute><ListeMatieresNotes /></ProtectedRoute>} />
+              <Route path="/notes/:classeId/matiere/:matiereId/eleves" element={<ProtectedRoute><ListeElevesNotesPage /></ProtectedRoute>} />
+              <Route path="/notes/:classeId/matiere/:matiereId/eleve/:eleveId" element={<ProtectedRoute><EvaluerEleve /></ProtectedRoute>} />
+              <Route path="/resultats" element={<ProtectedRoute><ListeClassesResultats /></ProtectedRoute>} />
+              <Route path="/resultats/mes-resultats" element={<ProtectedRoute><MesResultats /></ProtectedRoute>} />
+              <Route path="/resultats/resultats-enfant" element={<ProtectedRoute><ResultatsEnfant /></ProtectedRoute>} />
+              <Route path="/resultats/eleve/:studentId/examen/:examId" element={<ProtectedRoute><DetailsResultatEleve /></ProtectedRoute>} />
+              <Route path="/resultats/classe/:classeId/semestre/:semestre" element={<ProtectedRoute><ResultatsSemestre /></ProtectedRoute>} />
+              <Route path="/resultats/classe/:classeId/examen/:examId" element={<ProtectedRoute><ResultatsSemestre /></ProtectedRoute>} />
+              <Route path="/resultats/classe/:classeId/tous" element={<ProtectedRoute><BulletinAnnuel /></ProtectedRoute>} />
+              <Route path="/emplois-du-temps" element={<ProtectedRoute><ListeEmplois /></ProtectedRoute>} />
+              <Route path="/emplois-du-temps/:classeId" element={<ProtectedRoute><EmploiDuTemps /></ProtectedRoute>} />
+              <Route path="/emplois-du-temps/:classeId/cahier-texte" element={<ProtectedRoute><CahierDeTexte /></ProtectedRoute>} />
+              <Route path="/absences-retards/:classeId" element={<ProtectedRoute><AbsenceRetardClasse /></ProtectedRoute>} />
+              <Route path="/consulter-absences-retards/:classeId" element={<ProtectedRoute><ConsulterAbsencesRetards /></ProtectedRoute>} />
+              <Route path="/enregistrer-absence-retard/:classeId" element={<ProtectedRoute><EnregistrerAbsenceRetard /></ProtectedRoute>} />
+              <Route path="/matieres-cahier/:classeId" element={<ProtectedRoute><ListeMatieresCahier /></ProtectedRoute>} />
+              <Route path="/liste-cahiers-classe/:classeId" element={<ProtectedRoute><ListeCahiersClasse /></ProtectedRoute>} />
+              <Route path="/cahier-consultation" element={<ProtectedRoute><ConsultationCahier /></ProtectedRoute>} />
+              <Route path="/emplois/cahier/:classeId/:subjectId" element={<ProtectedRoute><ConsultationCahier /></ProtectedRoute>} />
+              <Route path="/cahier-de-texte" element={<ProtectedRoute><CahierDeTexte /></ProtectedRoute>} />
+              <Route path="/paiements" element={<ProtectedRoute><GestionPaiements /></ProtectedRoute>} />
+              <Route path="/paiements/mes-paiements" element={<ProtectedRoute><MesPaiements /></ProtectedRoute>} />
+              <Route path="/paiements/paiements-enfant" element={<ProtectedRoute><PaiementsEnfant /></ProtectedRoute>} />
+              <Route path="/paiements/classe/:classeId" element={<ProtectedRoute><PaiementsClasse /></ProtectedRoute>} />
+              <Route path="/annonces" element={<ProtectedRoute><ListeAnnonces /></ProtectedRoute>} />
+              <Route path="/parametres" element={<ProtectedRoute><Parametres /></ProtectedRoute>} />
+              <Route path="/parametres/ecole" element={<ProtectedRoute><SchoolSettings /></ProtectedRoute>} />
+              <Route path="/email-verified" element={<ProtectedRoute><EmailVerified /></ProtectedRoute>} />
+              <Route path="/complete-registration" element={<ProtectedRoute><CompleteRegistration /></ProtectedRoute>} />
+              <Route path="/abonnement" element={<ProtectedRoute><Abonnement /></ProtectedRoute>} />
+              <Route path="/admin/user-migration" element={<ProtectedRoute><UserMigration /></ProtectedRoute>} />
+              <Route path="/utilisateurs" element={<ProtectedRoute><Utilisateurs /></ProtectedRoute>} />
             </Routes>
           </Suspense>
         </Router>
