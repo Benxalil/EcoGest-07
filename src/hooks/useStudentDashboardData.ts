@@ -34,6 +34,8 @@ interface ScheduleData {
   subject_id: string | null;
   activity_name: string | null;
   subject: string;
+  day?: string;
+  class_id?: string;
   subjects?: SubjectInfo;
 }
 
@@ -76,45 +78,98 @@ export const useStudentDashboardData = () => {
     }
 
     try {
-      // 🚀 UNE SEULE REQUÊTE via la vue optimisée
-      const { data, error } = await supabase
-        .from('student_dashboard_view' as any)
-        .select('*')
-        .eq('user_id', profile.id)
-        .single();
+      // ✅ Requêtes directes optimisées
+      const [studentResult, schedulesResult, announcementsResult] = await Promise.all([
+        // Student avec class info
+        supabase
+          .from('students')
+          .select(`
+            id,
+            first_name,
+            last_name,
+            student_number,
+            class_id,
+            classes (
+              id,
+              name,
+              level,
+              section
+            )
+          `)
+          .eq('user_id', profile.id)
+          .eq('school_id', profile.schoolId)
+          .single(),
 
-      if (error) throw error;
+        // Emploi du temps d'aujourd'hui
+        supabase
+          .from('schedules')
+          .select(`
+            id,
+            start_time,
+            end_time,
+            room,
+            subject_id,
+            activity_name,
+            subject,
+            day,
+            class_id,
+            subjects (
+              name,
+              color
+            )
+          `)
+          .eq('school_id', profile.schoolId)
+          .limit(50),
 
-      // Parser les données JSON de la vue
-      const viewData = data as any;
-      const classInfo = typeof viewData.class_info === 'string' ? JSON.parse(viewData.class_info) : viewData.class_info;
-      const todaySchedules = typeof viewData.today_schedules === 'string' ? JSON.parse(viewData.today_schedules) : viewData.today_schedules;
-      const announcements = typeof viewData.announcements === 'string' ? JSON.parse(viewData.announcements) : viewData.announcements;
+        // Annonces
+        supabase
+          .from('announcements')
+          .select('*')
+          .eq('school_id', profile.schoolId)
+          .eq('is_published', true)
+          .order('published_at', { ascending: false })
+          .limit(20)
+      ]);
+
+      if (studentResult.error) throw studentResult.error;
+
+      const student = studentResult.data;
+      
+      // Filtrer les emplois du temps pour la classe de l'élève et aujourd'hui
+      const today = new Date().getDay();
+      const dayMapping: { [key: number]: string } = {
+        1: 'LUNDI', 2: 'MARDI', 3: 'MERCREDI', 
+        4: 'JEUDI', 5: 'VENDREDI', 6: 'SAMEDI', 0: 'DIMANCHE'
+      };
+      
+      const todaySchedules = (schedulesResult.data || []).filter(
+        (s: any) => s.class_id === student.class_id && s.day?.toUpperCase() === dayMapping[today]
+      );
 
       // Filtrer les annonces pour les élèves
       const filteredAnnouncements = filterAnnouncementsByRole(
-        announcements || [],
+        announcementsResult.data || [],
         'student',
         false
       ).slice(0, 3) as Announcement[];
 
       const result: StudentDashboardData = {
         student: {
-          id: viewData.student_id,
-          first_name: viewData.first_name,
-          last_name: viewData.last_name,
-          student_number: viewData.student_number,
-          class_id: viewData.class_id,
-          classes: classInfo
+          id: student.id,
+          first_name: student.first_name,
+          last_name: student.last_name,
+          student_number: student.student_number,
+          class_id: student.class_id,
+          classes: student.classes
         },
-        classInfo: classInfo || null,
-        todaySchedules: todaySchedules || [],
+        classInfo: student.classes || null,
+        todaySchedules,
         announcements: filteredAnnouncements,
         loading: false,
         error: null
       };
 
-      // 🔒 Cache mixte: structure en session, pas d'autres données élèves
+      // Cache pendant 5 minutes
       multiLevelCache.set(cacheKey, result, CacheTTL.SCHEDULES, 'session', false);
       
       setData(result);
