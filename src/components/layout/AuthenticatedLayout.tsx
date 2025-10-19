@@ -61,6 +61,43 @@ const AuthenticatedLayout: React.FC<AuthenticatedLayoutProps> = ({ children }) =
           .single();
 
         if (error) {
+          // Si c'est une erreur réseau, on la log mais on continue
+          if (error.message?.includes('Failed to fetch') || error.code === '') {
+            console.warn('⚠️ Erreur réseau temporaire lors de la vérification du profil, nouvelle tentative...');
+            // Attendre un peu et réessayer
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            const { data: retryProfile, error: retryError } = await supabase
+              .from('profiles')
+              .select('school_id, role')
+              .eq('id', user.id)
+              .single();
+            
+            if (retryError) {
+              console.error('❌ Échec de la vérification du profil après retry:', retryError);
+              setCheckingSchool(false);
+              return;
+            }
+            
+            // Utiliser le profil de la deuxième tentative
+            if (retryProfile?.role === 'school_admin' && !retryProfile?.school_id) {
+              const pendingRegistration = localStorage.getItem('pending_school_registration');
+              
+              if (pendingRegistration) {
+                console.log('🔄 Redirection vers /complete-registration - École non finalisée');
+                navigate('/complete-registration');
+                return;
+              } else {
+                console.warn('⚠️ Aucune donnée d\'inscription en attente trouvée');
+                alert('Aucune inscription en attente détectée. Veuillez recommencer le processus d\'inscription.');
+                navigate('/inscription');
+                return;
+              }
+            }
+            
+            setCheckingSchool(false);
+            return;
+          }
+          
           console.error('Erreur lors de la vérification du profil:', error);
           setCheckingSchool(false);
           return;
