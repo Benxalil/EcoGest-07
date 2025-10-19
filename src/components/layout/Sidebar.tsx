@@ -269,13 +269,13 @@ export function Sidebar({
             <div id="sidebar-menu-container" className="space-y-2">
               {menuItems.map(item => (
                 <div key={item.title} className="space-y-2">
-                  <div
-                    onClick={(e) => handleLinkClick(e, item.path)}
-                    className={cn("flex items-center space-x-2 rounded-md p-2 transition-colors cursor-pointer", {
-                      "bg-blue-50 dark:bg-blue-950/30 text-primary font-medium": isActiveRoute(item.path),
-                      "text-sidebar-foreground hover:bg-sidebar-accent/50": !isActiveRoute(item.path)
-                    })}
-                  >
+                <div
+                  onClick={(e) => handleLinkClick(e, item.path)}
+                  className={cn("flex items-center space-x-2 rounded-md p-2 transition-colors cursor-pointer", {
+                    "bg-blue-50 dark:bg-blue-950/30 text-primary dark:text-white font-medium": isActiveRoute(item.path),
+                    "text-sidebar-foreground hover:bg-sidebar-accent/50": !isActiveRoute(item.path)
+                  })}
+                >
                     <item.icon className="h-5 w-5" />
                     <span className={cn({
                       "hidden": isCollapsed && !isMobile

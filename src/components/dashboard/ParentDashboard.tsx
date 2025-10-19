@@ -145,10 +145,10 @@ const ParentDashboard = memo(() => {
           ) : (
             <div className="space-y-3">
               {(announcements || []).slice(0, 3).map((announcement: any) => (
-                <div key={announcement.id} className="border rounded-lg p-3 hover:bg-orange-50/50 transition-colors">
+                <div key={announcement.id} className="border rounded-lg p-3 bg-card hover:bg-accent/50 transition-colors">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
-                      <h4 className="font-medium text-sm mb-1">{announcement.title}</h4>
+                      <h4 className="font-medium text-sm mb-1 text-card-foreground">{announcement.title}</h4>
                       <p className="text-xs text-muted-foreground line-clamp-2">
                         {announcement.content}
                       </p>
@@ -159,7 +159,7 @@ const ParentDashboard = memo(() => {
                       )}
                     </div>
                     {(announcement.priority === 'urgent' || announcement.is_urgent) && (
-                      <span className="text-xs px-2 py-1 rounded bg-red-100 text-red-800 whitespace-nowrap flex-shrink-0">
+                      <span className="text-xs px-2 py-1 rounded bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 whitespace-nowrap flex-shrink-0">
                         Urgent
                       </span>
                     )}

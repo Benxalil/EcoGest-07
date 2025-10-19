@@ -169,18 +169,18 @@ const TeacherDashboard = memo(() => {
           ) : (
             <div className="space-y-3">
               {announcements.map((announcement: any) => (
-                <div key={announcement.id} className="border rounded-lg p-3 hover:bg-orange-50">
+                <div key={announcement.id} className="border rounded-lg p-3 bg-card hover:bg-accent/50 transition-colors">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <h4 className="font-medium text-sm">{announcement.title}</h4>
+                      <h4 className="font-medium text-sm text-card-foreground">{announcement.title}</h4>
                       <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
                         {announcement.content}
                       </p>
                     </div>
                     <span className={`text-xs px-2 py-1 rounded ${
                       announcement.priority === 'urgent' || announcement.is_urgent 
-                        ? 'bg-red-100 text-red-800' 
-                        : 'bg-blue-100 text-blue-800'
+                        ? 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300' 
+                        : 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300'
                     }`}>
                       {announcement.priority === 'urgent' || announcement.is_urgent ? 'Urgent' : 'Normal'}
                     </span>

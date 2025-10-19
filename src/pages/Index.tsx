@@ -484,11 +484,11 @@ const Index = () => {
               ) : (
                 <div className="space-y-2 sm:space-y-3">
                    {upcomingAnnouncements && upcomingAnnouncements.slice(0, 3).map((announcement, index) => (
-                     <div key={index} className="border rounded-lg p-3 bg-white">
+                     <div key={index} className="border rounded-lg p-3 bg-card">
                        <div className="flex items-start justify-between mb-2 gap-2">
-                         <h4 className="font-medium text-xs sm:text-sm flex-1 min-w-0 pr-2">{announcement.title}</h4>
+                         <h4 className="font-medium text-xs sm:text-sm flex-1 min-w-0 pr-2 text-card-foreground">{announcement.title}</h4>
                           <span className={`text-xs px-2 py-1 rounded flex-shrink-0 ${
-                            announcement.priority === 'urgent' || announcement.is_urgent ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'
+                            announcement.priority === 'urgent' || announcement.is_urgent ? 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300' : 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300'
                           }`}>
                             {announcement.priority === 'urgent' || announcement.is_urgent ? 'Urgent' : 'Normal'}
                           </span>
