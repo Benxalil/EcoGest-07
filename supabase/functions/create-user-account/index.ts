@@ -103,6 +103,35 @@ serve(async (req) => {
 
     if (authError) {
       console.error('Auth error:', authError)
+      
+      // Si l'utilisateur existe déjà, chercher son profil existant
+      if (authError.message.includes('already been registered') || authError.message.includes('email_exists')) {
+        console.log('ℹ️ Compte existant, recherche du profil:', authEmail)
+        
+        const { data: existingProfile } = await supabaseClient
+          .from('profiles')
+          .select('id, email, first_name, last_name')
+          .eq('email', authEmail)
+          .maybeSingle()
+        
+        if (existingProfile) {
+          console.log('✅ Profil existant trouvé:', existingProfile.id)
+          return new Response(
+            JSON.stringify({ 
+              success: true,
+              user: { id: existingProfile.id },
+              display_identifier: displayIdentifier,
+              message: 'User already exists, reusing existing account',
+              existing: true
+            }),
+            { 
+              status: 200, 
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+            }
+          )
+        }
+      }
+      
       return new Response(
         JSON.stringify({ error: authError.message }),
         { 
