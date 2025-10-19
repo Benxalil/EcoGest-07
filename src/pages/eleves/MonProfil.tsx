@@ -29,7 +29,7 @@ export default function MonProfil() {
           .from('students')
           .select(`
             *,
-            classes (
+            classes:class_id (
               name,
               level,
               section

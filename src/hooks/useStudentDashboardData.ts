@@ -89,7 +89,7 @@ export const useStudentDashboardData = () => {
             last_name,
             student_number,
             class_id,
-            classes (
+            classes:class_id (
               id,
               name,
               level,

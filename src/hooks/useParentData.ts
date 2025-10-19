@@ -54,9 +54,6 @@ export interface Child {
     level: string;
     section: string | null;
   };
-  profiles?: {
-    avatar_url: string | null;
-  };
 }
 
 export interface ParentInfo {
@@ -271,7 +268,7 @@ export const useParentData = (selectedChildId?: string | null) => {
         supabase
           .from('students')
           .select(`
-            id, first_name, last_name, student_number, class_id, 
+            id, first_name, last_name, student_number, class_id, user_id,
             date_of_birth, place_of_birth, gender, phone, address,
             parent_phone, emergency_contact, enrollment_date,
             is_active, parent_matricule,
@@ -283,9 +280,6 @@ export const useParentData = (selectedChildId?: string | null) => {
               name,
               level,
               section
-            ),
-            profiles:user_id (
-              avatar_url
             )
           `)
           .or(orClauses.join(','))
@@ -335,15 +329,12 @@ export const useParentData = (selectedChildId?: string | null) => {
               name,
               level,
               section
-            ),
-            profiles:user_id (
-              avatar_url
             )
           `)
           .eq('school_id', profile.schoolId)
           .eq('is_active', true)
           .or(`parent_first_name.ilike.${profile.firstName},parent_last_name.ilike.${profile.lastName}`)
-          .order('first_name', { ascending: true });
+          .order('first_name', { ascending: true});
         
         if (fallbackChildren && fallbackChildren.length > 0) {
           console.log('[useParentData] ✅ Enfants trouvés par correspondance de nom:', fallbackChildren.length);
@@ -358,8 +349,7 @@ export const useParentData = (selectedChildId?: string | null) => {
       // Formater les enfants
       const formattedChildren = childrenData.map((child: Child) => ({
         ...child,
-        classes: Array.isArray(child.classes) ? child.classes[0] : child.classes,
-        profiles: Array.isArray(child.profiles) ? child.profiles[0] : child.profiles
+        classes: Array.isArray(child.classes) ? child.classes[0] : child.classes
       }));
 
       // Déterminer l'enfant sélectionné
