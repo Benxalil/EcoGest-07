@@ -3,12 +3,19 @@ import type { Config } from "tailwindcss";
 export default {
   darkMode: ["class"],
   content: [
-    "./pages/**/*.{ts,tsx}",
-    "./components/**/*.{ts,tsx}",
-    "./app/**/*.{ts,tsx}",
     "./src/**/*.{ts,tsx}",
+    // Exclusion des fichiers qui ne contiennent pas de HTML/JSX
+    "!./src/**/*.test.{ts,tsx}",
+    "!./src/**/*.spec.{ts,tsx}",
   ],
   prefix: "",
+  // 🗑️ PurgeCSS - Suppression agressive des classes inutilisées
+  safelist: [
+    // Garder les classes dynamiques utilisées
+    'dark',
+    /^data-/,
+    /^aria-/,
+  ],
   theme: {
     container: {
       center: true,

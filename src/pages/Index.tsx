@@ -2,14 +2,11 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Layout } from "@/components/layout/OptimizedLayout";
-import { PerformanceMonitor } from "@/components/performance/PerformanceMonitor";
 import { FloatingActionButton } from "@/components/ui/floating-action-button";
 import { Users, GraduationCap, School, Calendar, UserPlus, BookOpen, Megaphone, BarChart3, Clock, TrendingUp, Award } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, lazy, Suspense } from "react";
 import { ExamensStats } from "@/components/examens/ExamensStats";
-import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart";
-import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { SubscriptionAlert } from "@/components/subscription/SubscriptionAlert";
 import { TeacherDashboard } from "@/components/dashboard/OptimizedTeacherDashboard";
 import { StudentDashboard } from "@/components/dashboard/StudentDashboard";
@@ -19,6 +16,28 @@ import { formatClassName } from "@/utils/classNameFormatter";
 import { AjoutEnseignantModal } from "@/components/enseignants/AjoutEnseignantModal";
 import { AjoutClasseModal } from "@/components/classes/AjoutClasseModal";
 import { AjoutMatiereModal } from "@/components/matieres/AjoutMatiereModal";
+
+// 🚀 Lazy load des composants lourds (charts, recharts)
+const ChartContainer = lazy(() => import("@/components/ui/chart").then(m => ({ default: m.ChartContainer })));
+const ChartTooltip = lazy(() => import("@/components/ui/chart").then(m => ({ default: m.ChartTooltip })));
+const ChartTooltipContent = lazy(() => import("@/components/ui/chart").then(m => ({ default: m.ChartTooltipContent })));
+const ChartLegend = lazy(() => import("@/components/ui/chart").then(m => ({ default: m.ChartLegend })));
+const ChartLegendContent = lazy(() => import("@/components/ui/chart").then(m => ({ default: m.ChartLegendContent })));
+
+// Lazy load recharts (librairie lourde ~100kb)
+const BarChart = lazy(() => import("recharts").then(m => ({ default: m.BarChart })));
+const Bar = lazy(() => import("recharts").then(m => ({ default: m.Bar })));
+const XAxis = lazy(() => import("recharts").then(m => ({ default: m.XAxis })));
+const YAxis = lazy(() => import("recharts").then(m => ({ default: m.YAxis })));
+const ResponsiveContainer = lazy(() => import("recharts").then(m => ({ default: m.ResponsiveContainer })));
+const PieChart = lazy(() => import("recharts").then(m => ({ default: m.PieChart })));
+const Pie = lazy(() => import("recharts").then(m => ({ default: m.Pie })));
+const Cell = lazy(() => import("recharts").then(m => ({ default: m.Cell })));
+
+// Lazy load PerformanceMonitor (seulement en dev)
+const PerformanceMonitor = import.meta.env.DEV 
+  ? lazy(() => import("@/components/performance/PerformanceMonitor").then(m => ({ default: m.PerformanceMonitor })))
+  : null;
 import { CreerAnnonceModal } from "@/components/annonces/CreerAnnonceModal";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Session } from "@supabase/supabase-js";
@@ -520,16 +539,18 @@ const Index = () => {
                   <h3 className="font-semibold text-sm sm:text-base">Distribution par classe</h3>
                 </div>
                 {(classes || []).length > 0 ? (
-                  <ChartContainer config={chartConfig} className="h-[250px] sm:h-[300px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={(classes || []).map(cls => ({ name: cls.name, students: 0 }))}>
-                        <XAxis dataKey="name" fontSize={12} />
-                        <YAxis fontSize={12} />
-                        <ChartTooltip content={<ChartTooltipContent />} />
-                        <Bar dataKey="students" fill="var(--color-students)" />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </ChartContainer>
+                  <Suspense fallback={<div className="h-[250px] sm:h-[300px] flex items-center justify-center text-sm text-muted-foreground">Chargement...</div>}>
+                    <ChartContainer config={chartConfig} className="h-[250px] sm:h-[300px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={(classes || []).map(cls => ({ name: cls.name, students: 0 }))}>
+                          <XAxis dataKey="name" fontSize={12} />
+                          <YAxis fontSize={12} />
+                          <ChartTooltip content={<ChartTooltipContent />} />
+                          <Bar dataKey="students" fill="var(--color-students)" />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </ChartContainer>
+                  </Suspense>
                 ) : (
                   <p className="text-center text-muted-foreground py-12 sm:py-16 text-sm">Aucune donnée disponible</p>
                 )}
@@ -542,23 +563,25 @@ const Index = () => {
                   <h3 className="font-semibold text-sm sm:text-base">Inscriptions mensuelles</h3>
                 </div>
                 {(students || []).length > 0 ? (
-                  <ChartContainer config={chartConfig} className="h-[250px] sm:h-[300px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={[
-                        { month: 'Jan', inscriptions: 5 },
-                        { month: 'Fév', inscriptions: 8 },
-                        { month: 'Mar', inscriptions: 12 },
-                        { month: 'Avr', inscriptions: 6 },
-                        { month: 'Mai', inscriptions: 9 },
-                        { month: 'Jun', inscriptions: 7 }
-                      ]}>
-                        <XAxis dataKey="month" fontSize={12} />
-                        <YAxis fontSize={12} />
-                        <ChartTooltip content={<ChartTooltipContent />} />
-                        <Bar dataKey="inscriptions" fill="var(--color-inscriptions)" />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </ChartContainer>
+                  <Suspense fallback={<div className="h-[250px] sm:h-[300px] flex items-center justify-center text-sm text-muted-foreground">Chargement...</div>}>
+                    <ChartContainer config={chartConfig} className="h-[250px] sm:h-[300px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={[
+                          { month: 'Jan', inscriptions: 5 },
+                          { month: 'Fév', inscriptions: 8 },
+                          { month: 'Mar', inscriptions: 12 },
+                          { month: 'Avr', inscriptions: 6 },
+                          { month: 'Mai', inscriptions: 9 },
+                          { month: 'Jun', inscriptions: 7 }
+                        ]}>
+                          <XAxis dataKey="month" fontSize={12} />
+                          <YAxis fontSize={12} />
+                          <ChartTooltip content={<ChartTooltipContent />} />
+                          <Bar dataKey="inscriptions" fill="var(--color-inscriptions)" />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </ChartContainer>
+                  </Suspense>
                 ) : (
                   <p className="text-center text-muted-foreground py-12 sm:py-16 text-sm">Aucune donnée disponible</p>
                 )}
