@@ -37,9 +37,17 @@ export default function MonProfil() {
           `)
           .eq('user_id', userProfile.id)
           .eq('school_id', userProfile.schoolId)
-          .single();
+          .maybeSingle();
 
-        if (studentError) throw studentError;
+        if (studentError) {
+          console.error("Erreur lors du chargement de l'élève:", studentError);
+          return;
+        }
+
+        if (!studentData) {
+          console.warn("Aucun élève trouvé pour user_id:", userProfile.id);
+          return;
+        }
 
         setStudent(studentData as any);
 
@@ -48,9 +56,12 @@ export default function MonProfil() {
           .from('profiles')
           .select('*')
           .eq('id', userProfile.id)
-          .single();
+          .maybeSingle();
 
-        if (profileError) throw profileError;
+        if (profileError) {
+          console.error("Erreur lors du chargement du profil:", profileError);
+          return;
+        }
 
         setProfile(profileData);
       } catch (error) {
