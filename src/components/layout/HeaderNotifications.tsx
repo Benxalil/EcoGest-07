@@ -39,17 +39,17 @@ export function HeaderNotifications() {
         <Button
           variant="ghost"
           size="icon"
-          className="h-8 w-8 relative"
+          className="h-8 w-8 sm:h-9 sm:w-9 relative"
         >
-          <Bell className="h-4 w-4" />
+          <Bell className="h-4 w-4 sm:h-5 sm:w-5" />
           {unreadCount > 0 && (
-            <span className="absolute -top-1 -right-1 h-5 w-5 bg-destructive text-destructive-foreground rounded-full text-xs flex items-center justify-center font-semibold">
+            <span className="absolute -top-1 -right-1 h-4 w-4 sm:h-5 sm:w-5 bg-destructive text-destructive-foreground rounded-full text-[10px] sm:text-xs flex items-center justify-center font-semibold">
               {unreadCount > 9 ? '9+' : unreadCount}
             </span>
           )}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-80 max-h-96 bg-background border-border z-50">
+      <DropdownMenuContent align="end" className="w-[calc(100vw-2rem)] sm:w-80 max-h-96 bg-background border-border z-50">
         <div className="flex items-center justify-between px-4 py-2">
           <DropdownMenuLabel className="p-0">Notifications</DropdownMenuLabel>
           {unreadCount > 0 && (

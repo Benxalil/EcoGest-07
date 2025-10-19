@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,14 +22,19 @@ const languages: Language[] = [
 
 export function HeaderLanguageSelector() {
   const [currentLanguage, setCurrentLanguage] = useState<Language>(languages[0]);
+  const isMobile = useIsMobile();
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="flex items-center space-x-2 h-8 px-3">
-          <span className="text-sm">{currentLanguage.flag}</span>
-          <span className="text-sm font-medium">{currentLanguage.name}</span>
-          <ChevronDown className="h-3 w-3" />
+        <Button variant="ghost" className="flex items-center space-x-1.5 h-8 px-2 sm:px-3">
+          <span className="text-base sm:text-sm">{currentLanguage.flag}</span>
+          {!isMobile && (
+            <>
+              <span className="text-sm font-medium">{currentLanguage.name}</span>
+              <ChevronDown className="h-3 w-3" />
+            </>
+          )}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-40">

@@ -208,11 +208,11 @@ export function Sidebar({
         {isMobile && !isOpen && (
           <Button 
             variant="ghost" 
-            size="sm"
-            className="fixed top-2 left-2 z-50 bg-sidebar/90 backdrop-blur-sm shadow-md" 
+            size="icon"
+            className="fixed top-1.5 left-2 z-50 h-9 w-9 bg-sidebar/95 backdrop-blur-sm shadow-lg hover:bg-sidebar border border-sidebar-border" 
             onClick={() => setIsOpen(true)}
           >
-            <Menu className="h-4 w-4" />
+            <Menu className="h-5 w-5" />
           </Button>
         )}
 
@@ -221,26 +221,31 @@ export function Sidebar({
         "translate-x-0": !isMobile || isOpen,
         "w-64": !isMobile && !isCollapsed,
         "w-20": !isMobile && isCollapsed,
-        "w-80": isMobile,
+        "w-72": isMobile,
         "z-40": true
       })}>
-          <div className={cn("flex-shrink-0 my-2 mx-[4px]", {
-            "p-4 px-[26px] py-px": !isCollapsed || isMobile,
+          <div className={cn("flex-shrink-0 my-2 mx-1", {
+            "p-4 px-6 py-1": !isCollapsed || isMobile,
             "px-2 py-1": isCollapsed && !isMobile
           })}>
           <div className="flex items-center justify-between mb-4">
-            <SidebarToggle isCollapsed={isCollapsed && !isMobile} onToggle={toggleCollapse} />
+            {!isMobile && (
+              <SidebarToggle isCollapsed={isCollapsed} onToggle={toggleCollapse} />
+            )}
             
             {/* Bouton fermer pour mobile */}
             {isMobile && (
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => setIsOpen(false)}
-                className="p-1"
-              >
-                <X className="h-4 w-4" />
-              </Button>
+              <div className="flex items-center justify-between w-full">
+                <span className="text-sm font-medium text-sidebar-foreground">Menu</span>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={() => setIsOpen(false)}
+                  className="h-8 w-8"
+                >
+                  <X className="h-5 w-5" />
+                </Button>
+              </div>
             )}
           </div>
           

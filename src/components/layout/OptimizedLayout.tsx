@@ -70,13 +70,13 @@ const Layout = memo(({ children }: LayoutProps) => {
       {/* Header with responsive positioning based on sidebar state */}
       <header className={`fixed top-0 right-0 z-30 bg-background border-b transition-all duration-200 ${
         isMobile 
-          ? 'left-0 p-2 pl-12' 
+          ? 'left-0 px-2 py-1.5 pl-12' 
           : isSidebarCollapsed 
             ? 'left-20 p-4' 
             : 'left-64 p-4'
       } ${isExpired ? 'pt-14' : ''}`}>
         <div className="flex items-center justify-end w-full">
-          <div className="flex items-center space-x-1">
+          <div className="flex items-center gap-1 sm:gap-2">
             {headerContent}
           </div>
         </div>
@@ -85,7 +85,7 @@ const Layout = memo(({ children }: LayoutProps) => {
       {/* Main content with responsive margins based on sidebar state */}
       <main className={`transition-all duration-200 animate-fade-in ${
         isMobile 
-          ? 'ml-0 p-4 pt-16' 
+          ? 'ml-0 p-3 pt-12' 
           : isSidebarCollapsed 
             ? 'ml-20 p-8 pt-20' 
             : 'ml-64 p-8 pt-20'

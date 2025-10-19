@@ -1,4 +1,5 @@
 import { School } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface SchoolInfoProps {
   schoolName?: string;
@@ -13,14 +14,20 @@ export function SchoolInfo({
   schoolSlogan,
   className = "" 
 }: SchoolInfoProps) {
+  const isMobile = useIsMobile();
   const displayName = schoolName || "École Connectée";
   const displaySlogan = schoolSlogan || "Excellence et Innovation";
   const displayLogo = schoolLogo;
+  
   return (
-    <div className={`flex items-center space-x-3 ${className}`}>
+    <div className={`flex items-center space-x-2 ${className}`}>
       <div className="text-right">
-        <h2 className="text-sm font-semibold text-foreground">{displayName}</h2>
-        <p className="text-xs text-muted-foreground">{displaySlogan}</p>
+        <h2 className="text-xs sm:text-sm font-semibold text-foreground truncate max-w-[120px] sm:max-w-none">
+          {displayName}
+        </h2>
+        {!isMobile && (
+          <p className="text-xs text-muted-foreground">{displaySlogan}</p>
+        )}
       </div>
       <div className="w-12 h-12 bg-background border-2 border-border rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
         {displayLogo ? (

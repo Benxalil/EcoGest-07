@@ -17,13 +17,13 @@ export function HeaderDarkMode() {
       variant="ghost"
       size="icon"
       onClick={toggleDarkMode}
-      className="h-8 w-8 transition-transform hover:scale-110"
+      className="h-8 w-8 sm:h-9 sm:w-9 transition-transform hover:scale-110"
       title={isDark ? "Mode clair" : "Mode sombre"}
     >
       {isDark ? (
-        <Sun className="h-4 w-4 transition-all" />
+        <Sun className="h-4 w-4 sm:h-5 sm:w-5 transition-all" />
       ) : (
-        <Moon className="h-4 w-4 transition-all" />
+        <Moon className="h-4 w-4 sm:h-5 sm:w-5 transition-all" />
       )}
     </Button>
   );
