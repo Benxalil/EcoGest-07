@@ -156,14 +156,9 @@ export const useSchedules = (classId?: string) => {
     
     console.log('🟡 [createCourse] Optimistic update done');
 
-    // Timeout promise de 15 secondes
-    const timeoutPromise = new Promise<never>((_, reject) => 
-      setTimeout(() => reject(new Error('Timeout: Serveur injoignable après 15 secondes')), 15000)
-    );
-
-    // Insertion DB - ATTENDRE au lieu de faire en background
+    // Insertion DB - directement sans timeout
     try {
-      const insertPromise = supabase
+      const { data: insertedCourse, error } = await supabase
         .from('schedules')
         .insert({
           subject: courseData.subject,
@@ -178,11 +173,6 @@ export const useSchedules = (classId?: string) => {
         })
         .select()
         .single();
-
-      const { data: insertedCourse, error } = await Promise.race([
-        insertPromise,
-        timeoutPromise
-      ]) as { data: Course | null; error: any };
 
       if (error) {
         console.error('🔴 [createCourse] DB insert failed:', error);
