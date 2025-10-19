@@ -130,52 +130,50 @@ export default function CahierDeTexte() {
 
   return (
     <Layout>
-      <div className="container mx-auto p-6">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center space-x-4">
-            <Button
-              variant="ghost"
-              onClick={() => navigate('/emplois-du-temps')}
-              className="flex items-center"
-            >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Retour
-            </Button>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">
-                Cahier de texte - {classe.name}
-              </h1>
-              <p className="text-gray-600">
-                Enregistrement des cours et activités
-              </p>
-            </div>
+      <div className="container mx-auto p-3 sm:p-6">
+        <div className="mb-4 sm:mb-6">
+          <Button
+            variant="ghost"
+            onClick={() => navigate('/emplois-du-temps')}
+            className="flex items-center mb-3 sm:mb-4"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Retour
+          </Button>
+          <div>
+            <h1 className="text-lg sm:text-2xl font-bold text-foreground">
+              Cahier de texte - {classe.name}
+            </h1>
+            <p className="text-sm sm:text-base text-muted-foreground mt-1">
+              Enregistrement des cours et activités
+            </p>
           </div>
         </div>
 
         <div className="max-w-2xl mx-auto">
           <Card>
-            <CardHeader>
-              <CardTitle>Nouvelle entrée</CardTitle>
+            <CardHeader className="p-4 sm:p-6">
+              <CardTitle className="text-base sm:text-lg">Nouvelle entrée</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-4 sm:p-6 pt-0">
               <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 sm:space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
                     <FormField
                       control={form.control}
                       name="subject_id"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Matière</FormLabel>
+                          <FormLabel className="text-xs sm:text-sm">Matière</FormLabel>
                           <Select onValueChange={field.onChange} value={field.value}>
                             <FormControl>
-                              <SelectTrigger>
+                              <SelectTrigger className="text-xs sm:text-sm">
                                 <SelectValue placeholder="Sélectionner une matière" />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
                               {subjects.map((subject) => (
-                                <SelectItem key={subject.id} value={subject.id}>
+                                <SelectItem key={subject.id} value={subject.id} className="text-xs sm:text-sm">
                                   {subject.name}
                                 </SelectItem>
                               ))}
@@ -191,16 +189,16 @@ export default function CahierDeTexte() {
                       name="teacher_id"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Enseignant</FormLabel>
+                          <FormLabel className="text-xs sm:text-sm">Enseignant</FormLabel>
                           <Select onValueChange={field.onChange} value={field.value}>
                             <FormControl>
-                              <SelectTrigger>
+                              <SelectTrigger className="text-xs sm:text-sm">
                                 <SelectValue placeholder="Sélectionner un enseignant" />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
                               {teachers.map((teacher) => (
-                                <SelectItem key={teacher.id} value={teacher.id}>
+                                <SelectItem key={teacher.id} value={teacher.id} className="text-xs sm:text-sm">
                                   {teacher.first_name} {teacher.last_name}
                                 </SelectItem>
                               ))}
@@ -217,24 +215,24 @@ export default function CahierDeTexte() {
                     name="topic"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Sujet du cours</FormLabel>
+                        <FormLabel className="text-xs sm:text-sm">Sujet du cours</FormLabel>
                         <FormControl>
-                          <Input {...field} placeholder="Ex: Introduction aux fractions" />
+                          <Input {...field} placeholder="Ex: Introduction aux fractions" className="text-xs sm:text-sm" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
                     <FormField
                       control={form.control}
                       name="lesson_date"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Date du cours</FormLabel>
+                          <FormLabel className="text-xs sm:text-sm">Date du cours</FormLabel>
                           <FormControl>
-                            <Input type="date" {...field} />
+                            <Input type="date" {...field} className="text-xs sm:text-sm" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -246,9 +244,9 @@ export default function CahierDeTexte() {
                       name="start_time"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Heure de début</FormLabel>
+                          <FormLabel className="text-xs sm:text-sm">Heure de début</FormLabel>
                           <FormControl>
-                            <Input type="time" {...field} />
+                            <Input type="time" {...field} className="text-xs sm:text-sm" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -261,12 +259,13 @@ export default function CahierDeTexte() {
                     name="content"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Contenu du cours</FormLabel>
+                        <FormLabel className="text-xs sm:text-sm">Contenu du cours</FormLabel>
                         <FormControl>
                           <Textarea
                             {...field}
                             placeholder="Décrivez le contenu du cours, les activités, les exercices..."
                             rows={6}
+                            className="text-xs sm:text-sm"
                           />
                         </FormControl>
                         <FormMessage />
@@ -274,15 +273,16 @@ export default function CahierDeTexte() {
                     )}
                   />
 
-                  <div className="flex justify-end space-x-4">
+                  <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-4">
                     <Button
                       type="button"
                       variant="outline"
                       onClick={() => form.reset()}
+                      className="text-xs sm:text-sm"
                     >
                       Annuler
                     </Button>
-                    <Button type="submit" disabled={form.formState.isSubmitting}>
+                    <Button type="submit" disabled={form.formState.isSubmitting} className="text-xs sm:text-sm">
                       {form.formState.isSubmitting ? "Enregistrement..." : "Enregistrer"}
                     </Button>
                   </div>

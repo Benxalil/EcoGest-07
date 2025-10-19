@@ -272,71 +272,77 @@ export default function EnregistrerAbsenceRetard() {
 
   return (
     <Layout>
-      <div className="container mx-auto p-6">
-        <div className="mb-6 flex items-center gap-4">
+      <div className="container mx-auto p-3 sm:p-6">
+        <div className="mb-4 sm:mb-6">
           <Button
             variant="outline"
             size="sm"
             onClick={() => navigate(-1)}
+            className="mb-3 sm:mb-4"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Retour à l'emploi du temps
+            <span className="hidden sm:inline">Retour à l'emploi du temps</span>
+            <span className="sm:hidden">Retour</span>
           </Button>
-          <h1 className="text-2xl font-bold text-foreground">Enregistrer Absences & Retards</h1>
+          <h1 className="text-lg sm:text-2xl font-bold text-foreground">
+            Enregistrer Absences & Retards
+          </h1>
         </div>
 
         {/* Informations du cours */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BookOpen className="h-5 w-5" />
+        <Card className="mb-4 sm:mb-6">
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+              <BookOpen className="h-4 w-4 sm:h-5 sm:w-5" />
               Informations du cours
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <CardContent className="p-4 sm:p-6 pt-0">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
               <div>
-                <Label className="text-sm font-medium text-muted-foreground">Jour</Label>
-                <Badge variant="outline" className="mt-1">{day}</Badge>
+                <Label className="text-xs sm:text-sm font-medium text-muted-foreground">Jour</Label>
+                <Badge variant="outline" className="mt-1 text-xs sm:text-sm w-full justify-center">{day}</Badge>
               </div>
               <div>
-                <Label className="text-sm font-medium text-muted-foreground">Matière</Label>
-                <Badge variant="outline" className="mt-1">{subject}</Badge>
+                <Label className="text-xs sm:text-sm font-medium text-muted-foreground">Matière</Label>
+                <Badge variant="outline" className="mt-1 text-xs sm:text-sm w-full justify-center truncate">{subject}</Badge>
               </div>
               <div>
-                <Label className="text-sm font-medium text-muted-foreground">Heure de début</Label>
-                <Badge variant="outline" className="mt-1 flex items-center gap-1">
+                <Label className="text-xs sm:text-sm font-medium text-muted-foreground">Heure de début</Label>
+                <Badge variant="outline" className="mt-1 flex items-center gap-1 text-xs sm:text-sm justify-center">
                   <Clock className="h-3 w-3" />
-                  {startTime}
+                  <span className="truncate">{startTime}</span>
                 </Badge>
               </div>
               <div>
-                <Label className="text-sm font-medium text-muted-foreground">Heure de fin</Label>
-                <Badge variant="outline" className="mt-1 flex items-center gap-1">
+                <Label className="text-xs sm:text-sm font-medium text-muted-foreground">Heure de fin</Label>
+                <Badge variant="outline" className="mt-1 flex items-center gap-1 text-xs sm:text-sm justify-center">
                   <Clock className="h-3 w-3" />
-                  {endTime}
+                  <span className="truncate">{endTime}</span>
                 </Badge>
               </div>
             </div>
             
             {/* Date et Enseignant */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 mt-3 sm:mt-4">
               <div>
-                <Label htmlFor="date">Date</Label>
+                <Label htmlFor="date" className="text-xs sm:text-sm">Date</Label>
                 <Input
                   id="date"
                   type="date"
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
+                  className="text-xs sm:text-sm"
                 />
               </div>
               <div>
-                <Label htmlFor="enseignant">Enseignant *</Label>
+                <Label htmlFor="enseignant" className="text-xs sm:text-sm">Enseignant *</Label>
                 <Input
                   id="enseignant"
                   placeholder="Nom de l'enseignant"
                   value={enseignant}
                   onChange={(e) => setEnseignant(e.target.value)}
+                  className="text-xs sm:text-sm"
                 />
               </div>
             </div>
@@ -345,32 +351,32 @@ export default function EnregistrerAbsenceRetard() {
 
         {/* Liste des élèves */}
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+              <Users className="h-4 w-4 sm:h-5 sm:w-5" />
               Liste des élèves ({eleves.length})
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4 sm:p-6 pt-0">
             {studentsLoading ? (
-              <p className="text-muted-foreground text-center py-8">Chargement des élèves...</p>
+              <p className="text-muted-foreground text-center py-8 text-sm">Chargement des élèves...</p>
             ) : eleves.length === 0 ? (
-              <p className="text-muted-foreground text-center py-8">Aucun élève trouvé pour cette classe.</p>
+              <p className="text-muted-foreground text-center py-8 text-sm">Aucun élève trouvé pour cette classe.</p>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2 sm:space-y-3">
                 {eleves.map((eleve) => (
-                  <div key={eleve.id} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div>
-                      <p className="font-medium">{eleve.prenom} {eleve.nom}</p>
-                      <p className="text-sm text-muted-foreground">ID: {eleve.id}</p>
+                  <div key={eleve.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 border rounded-lg gap-3 bg-card">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-sm sm:text-base text-card-foreground truncate">{eleve.prenom} {eleve.nom}</p>
+                      <p className="text-xs sm:text-sm text-muted-foreground truncate">ID: {eleve.id}</p>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 justify-center sm:justify-end flex-shrink-0">
                       {(["present", "absent", "retard"] as const).map((statut) => (
                         <Button
                           key={statut}
                           size="sm"
                           variant={presences[eleve.id] === statut ? "default" : "outline"}
-                          className={presences[eleve.id] === statut ? getStatutColor(statut) : ""}
+                          className={`text-xs sm:text-sm ${presences[eleve.id] === statut ? getStatutColor(statut) : ""}`}
                           onClick={() => handlePresenceChange(eleve.id, statut)}
                         >
                           {getStatutLabel(statut)}
@@ -385,8 +391,8 @@ export default function EnregistrerAbsenceRetard() {
         </Card>
 
         {/* Bouton de sauvegarde */}
-        <div className="mt-6 flex justify-end">
-          <Button onClick={handleSaveAll} className="bg-blue-600 hover:bg-blue-700">
+        <div className="mt-4 sm:mt-6 flex justify-end">
+          <Button onClick={handleSaveAll} className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto text-sm sm:text-base">
             Enregistrer toutes les présences
           </Button>
         </div>
