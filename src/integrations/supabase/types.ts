@@ -552,6 +552,13 @@ export type Database = {
             referencedRelation: "subjects"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "grades_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
         ]
       }
       lesson_logs: {
@@ -819,6 +826,13 @@ export type Database = {
           },
           {
             foreignKeyName: "fk_payments_student_id"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_student_id_fkey"
             columns: ["student_id"]
             isOneToOne: false
             referencedRelation: "students"
@@ -1255,7 +1269,15 @@ export type Database = {
           subject_id?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "student_grades_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       students: {
         Row: {
@@ -1754,6 +1776,14 @@ export type Database = {
       }
       cleanup_old_audit_logs: {
         Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      delete_student_completely: {
+        Args: { student_uuid: string }
+        Returns: undefined
+      }
+      delete_teacher_completely: {
+        Args: { teacher_uuid: string }
         Returns: undefined
       }
       generate_school_suffix: {

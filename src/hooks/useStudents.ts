@@ -514,12 +514,17 @@ export function useStudents(classId?: string) {
       // Suppression optimiste
       setStudents(prev => prev.filter(s => s.id !== id));
 
-      const { error } = await supabase
-        .from('students')
-        .delete()
-        .eq('id', id);
+      // Utiliser la fonction de suppression complète qui supprime aussi le compte auth
+      const { error } = await supabase.rpc('delete_student_completely', {
+        student_uuid: id
+      });
 
       if (error) throw error;
+
+      toast({
+        title: "Succès",
+        description: "Élève et compte supprimés avec succès.",
+      });
     } catch (err) {
       // Rollback en cas d'erreur
       if (previousState) {

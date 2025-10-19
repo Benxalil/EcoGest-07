@@ -308,17 +308,16 @@ export const useTeachers = () => {
       // Suppression optimiste
       setTeachers(prev => prev.filter(t => t.id !== id));
 
-      const { error } = await supabase
-        .from('teachers')
-        .delete()
-        .eq('id', id)
-        .eq('school_id', userProfile.schoolId);
+      // Utiliser la fonction de suppression complète qui supprime aussi le compte auth
+      const { error } = await supabase.rpc('delete_teacher_completely', {
+        teacher_uuid: id
+      });
 
       if (error) throw error;
       
       toast({
         title: "Enseignant supprimé",
-        description: "L'enseignant a été supprimé avec succès.",
+        description: "Enseignant et compte supprimés avec succès.",
       });
       
       return true;
