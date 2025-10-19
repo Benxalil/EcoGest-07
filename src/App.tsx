@@ -1,9 +1,9 @@
 import React, { useEffect, Suspense } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "@/components/theme-provider";
 import { useToast } from "@/hooks/use-toast";
+import { queryClient } from "./lib/queryClient";
 import AuthenticatedLayout from "@/components/layout/AuthenticatedLayout";
 import { StudentRouteHandler } from "@/components/navigation/StudentRouteHandler";
 import { ParentRouteHandler } from "@/components/navigation/ParentRouteHandler";
@@ -64,15 +64,6 @@ const SchoolSettings = lazyWithPrefetch(() => import("./pages/admin/SchoolSettin
 const UserMigration = lazyWithPrefetch(() => import("./pages/admin/UserMigration"), 'idle');
 const Utilisateurs = lazyWithPrefetch(() => import("./pages/utilisateurs/Utilisateurs"), 'idle');
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 1000 * 60 * 5, // 5 minutes
-      gcTime: 1000 * 60 * 10, // 10 minutes (formerly cacheTime)
-    },
-  },
-});
-
 // Wrapper pour les routes protégées
 const Protected = ({ children }: { children: React.ReactNode }) => (
   <AuthenticatedLayout>
@@ -128,79 +119,77 @@ function App() {
   
   return (
     <ThemeProvider defaultTheme="system" storageKey="ecogest-ui-theme">
-      <QueryClientProvider client={queryClient}>
-        <Router>
-          <Suspense fallback={<div className="flex items-center justify-center min-h-screen">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-              <p className="mt-2 text-muted-foreground">Chargement...</p>
-            </div>
-          </div>}>
-            <Routes>
-              {/* Routes publiques */}
-              <Route path="/auth" element={<AuthPage />} />
-              <Route path="/inscription" element={<SchoolRegistrationPage />} />
-              <Route path="/auth/pending-confirmation" element={<PendingConfirmation />} />
-              <Route path="/auth/complete-registration" element={<CompleteRegistration />} />
-              <Route path="/auth/email-verified" element={<EmailVerified />} />
-              
-              {/* Routes protégées */}
-              <Route path="/" element={<Protected><Index /></Protected>} />
-              <Route path="/enseignants" element={<Protected><PageListeEnseignants /></Protected>} />
-              <Route path="/enseignants/modifier" element={<Protected><ModifierEnseignant /></Protected>} />
-              <Route path="/eleves" element={<Protected><ListeEleves /></Protected>} />
-              <Route path="/eleves/mon-profil" element={<Protected><MonProfil /></Protected>} />
-              <Route path="/eleves/profil-enfant" element={<Protected><ProfilEnfant /></Protected>} />
-              <Route path="/eleves/classe/:className" element={<Protected><ElevesParClasse /></Protected>} />
-              <Route path="/eleves/modifier" element={<Protected><ModifierEleve /></Protected>} />
-              <Route path="/classes" element={<Protected><ListeClasses /></Protected>} />
-              <Route path="/classes/modifier" element={<Protected><ModifierClasse /></Protected>} />
-              <Route path="/matieres" element={<Protected><ListeMatieres /></Protected>} />
-              <Route path="/examens" element={<Protected><ListeClassesExamens /></Protected>} />
-              <Route path="/examens/classe/:classeId" element={<Protected><ListeExamens /></Protected>} />
-              <Route path="/examens/:classeId/activites/:activiteId/eleve/:eleveId/notes" element={<Protected><ListeElevesNotes /></Protected>} />
-              <Route path="/notes" element={<Protected><ListeExamensNotes /></Protected>} />
-              <Route path="/notes/eleves" element={<Protected><ListeElevesClasse /></Protected>} />
-              <Route path="/notes/eleves-notes" element={<Protected><NotesParEleve /></Protected>} />
-              <Route path="/notes/consulter" element={<Protected><ConsulterNotes /></Protected>} />
-              <Route path="/notes/classe/:classeId" element={<Protected><ListeMatieresNotes /></Protected>} />
-              <Route path="/notes/:classeId/matiere/:matiereId/eleves" element={<Protected><ListeElevesNotesPage /></Protected>} />
-              <Route path="/notes/:classeId/matiere/:matiereId/eleve/:eleveId" element={<Protected><EvaluerEleve /></Protected>} />
-              <Route path="/resultats" element={<Protected><ListeClassesResultats /></Protected>} />
-              <Route path="/resultats/mes-resultats" element={<Protected><MesResultats /></Protected>} />
-              <Route path="/resultats/resultats-enfant" element={<Protected><ResultatsEnfant /></Protected>} />
-              <Route path="/resultats/eleve/:studentId/examen/:examId" element={<Protected><DetailsResultatEleve /></Protected>} />
-              <Route path="/resultats/classe/:classeId/semestre/:semestre" element={<Protected><ResultatsSemestre /></Protected>} />
-              <Route path="/resultats/classe/:classeId/examen/:examId" element={<Protected><ResultatsSemestre /></Protected>} />
-              <Route path="/resultats/classe/:classeId/tous" element={<Protected><BulletinAnnuel /></Protected>} />
-              <Route path="/emplois-du-temps" element={<Protected><ListeEmplois /></Protected>} />
-              <Route path="/emplois-du-temps/:classeId" element={<Protected><EmploiDuTemps /></Protected>} />
-              <Route path="/emplois-du-temps/:classeId/cahier-texte" element={<Protected><CahierDeTexte /></Protected>} />
-              <Route path="/absences-retards/:classeId" element={<Protected><AbsenceRetardClasse /></Protected>} />
-              <Route path="/consulter-absences-retards/:classeId" element={<Protected><ConsulterAbsencesRetards /></Protected>} />
-              <Route path="/enregistrer-absence-retard/:classeId" element={<Protected><EnregistrerAbsenceRetard /></Protected>} />
-              <Route path="/matieres-cahier/:classeId" element={<Protected><ListeMatieresCahier /></Protected>} />
-              <Route path="/liste-cahiers-classe/:classeId" element={<Protected><ListeCahiersClasse /></Protected>} />
-              <Route path="/cahier-consultation" element={<Protected><ConsultationCahier /></Protected>} />
-              <Route path="/emplois/cahier/:classeId/:subjectId" element={<Protected><ConsultationCahier /></Protected>} />
-              <Route path="/cahier-de-texte" element={<Protected><CahierDeTexte /></Protected>} />
-              <Route path="/paiements" element={<Protected><GestionPaiements /></Protected>} />
-              <Route path="/paiements/mes-paiements" element={<Protected><MesPaiements /></Protected>} />
-              <Route path="/paiements/paiements-enfant" element={<Protected><PaiementsEnfant /></Protected>} />
-              <Route path="/paiements/classe/:classeId" element={<Protected><PaiementsClasse /></Protected>} />
-              <Route path="/annonces" element={<Protected><ListeAnnonces /></Protected>} />
-              <Route path="/parametres" element={<Protected><Parametres /></Protected>} />
-              <Route path="/parametres/ecole" element={<Protected><SchoolSettings /></Protected>} />
-              <Route path="/email-verified" element={<Protected><EmailVerified /></Protected>} />
-              <Route path="/complete-registration" element={<Protected><CompleteRegistration /></Protected>} />
-              <Route path="/abonnement" element={<Protected><Abonnement /></Protected>} />
-              <Route path="/admin/user-migration" element={<Protected><UserMigration /></Protected>} />
-              <Route path="/utilisateurs" element={<Protected><Utilisateurs /></Protected>} />
-            </Routes>
-          </Suspense>
-        </Router>
-        <Toaster />
-      </QueryClientProvider>
+      <Router>
+        <Suspense fallback={<div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+            <p className="mt-2 text-muted-foreground">Chargement...</p>
+          </div>
+        </div>}>
+          <Routes>
+            {/* Routes publiques */}
+            <Route path="/auth" element={<AuthPage />} />
+            <Route path="/inscription" element={<SchoolRegistrationPage />} />
+            <Route path="/auth/pending-confirmation" element={<PendingConfirmation />} />
+            <Route path="/auth/complete-registration" element={<CompleteRegistration />} />
+            <Route path="/auth/email-verified" element={<EmailVerified />} />
+            
+            {/* Routes protégées */}
+            <Route path="/" element={<Protected><Index /></Protected>} />
+            <Route path="/enseignants" element={<Protected><PageListeEnseignants /></Protected>} />
+            <Route path="/enseignants/modifier" element={<Protected><ModifierEnseignant /></Protected>} />
+            <Route path="/eleves" element={<Protected><ListeEleves /></Protected>} />
+            <Route path="/eleves/mon-profil" element={<Protected><MonProfil /></Protected>} />
+            <Route path="/eleves/profil-enfant" element={<Protected><ProfilEnfant /></Protected>} />
+            <Route path="/eleves/classe/:className" element={<Protected><ElevesParClasse /></Protected>} />
+            <Route path="/eleves/modifier" element={<Protected><ModifierEleve /></Protected>} />
+            <Route path="/classes" element={<Protected><ListeClasses /></Protected>} />
+            <Route path="/classes/modifier" element={<Protected><ModifierClasse /></Protected>} />
+            <Route path="/matieres" element={<Protected><ListeMatieres /></Protected>} />
+            <Route path="/examens" element={<Protected><ListeClassesExamens /></Protected>} />
+            <Route path="/examens/classe/:classeId" element={<Protected><ListeExamens /></Protected>} />
+            <Route path="/examens/:classeId/activites/:activiteId/eleve/:eleveId/notes" element={<Protected><ListeElevesNotes /></Protected>} />
+            <Route path="/notes" element={<Protected><ListeExamensNotes /></Protected>} />
+            <Route path="/notes/eleves" element={<Protected><ListeElevesClasse /></Protected>} />
+            <Route path="/notes/eleves-notes" element={<Protected><NotesParEleve /></Protected>} />
+            <Route path="/notes/consulter" element={<Protected><ConsulterNotes /></Protected>} />
+            <Route path="/notes/classe/:classeId" element={<Protected><ListeMatieresNotes /></Protected>} />
+            <Route path="/notes/:classeId/matiere/:matiereId/eleves" element={<Protected><ListeElevesNotesPage /></Protected>} />
+            <Route path="/notes/:classeId/matiere/:matiereId/eleve/:eleveId" element={<Protected><EvaluerEleve /></Protected>} />
+            <Route path="/resultats" element={<Protected><ListeClassesResultats /></Protected>} />
+            <Route path="/resultats/mes-resultats" element={<Protected><MesResultats /></Protected>} />
+            <Route path="/resultats/resultats-enfant" element={<Protected><ResultatsEnfant /></Protected>} />
+            <Route path="/resultats/eleve/:studentId/examen/:examId" element={<Protected><DetailsResultatEleve /></Protected>} />
+            <Route path="/resultats/classe/:classeId/semestre/:semestre" element={<Protected><ResultatsSemestre /></Protected>} />
+            <Route path="/resultats/classe/:classeId/examen/:examId" element={<Protected><ResultatsSemestre /></Protected>} />
+            <Route path="/resultats/classe/:classeId/tous" element={<Protected><BulletinAnnuel /></Protected>} />
+            <Route path="/emplois-du-temps" element={<Protected><ListeEmplois /></Protected>} />
+            <Route path="/emplois-du-temps/:classeId" element={<Protected><EmploiDuTemps /></Protected>} />
+            <Route path="/emplois-du-temps/:classeId/cahier-texte" element={<Protected><CahierDeTexte /></Protected>} />
+            <Route path="/absences-retards/:classeId" element={<Protected><AbsenceRetardClasse /></Protected>} />
+            <Route path="/consulter-absences-retards/:classeId" element={<Protected><ConsulterAbsencesRetards /></Protected>} />
+            <Route path="/enregistrer-absence-retard/:classeId" element={<Protected><EnregistrerAbsenceRetard /></Protected>} />
+            <Route path="/matieres-cahier/:classeId" element={<Protected><ListeMatieresCahier /></Protected>} />
+            <Route path="/liste-cahiers-classe/:classeId" element={<Protected><ListeCahiersClasse /></Protected>} />
+            <Route path="/cahier-consultation" element={<Protected><ConsultationCahier /></Protected>} />
+            <Route path="/emplois/cahier/:classeId/:subjectId" element={<Protected><ConsultationCahier /></Protected>} />
+            <Route path="/cahier-de-texte" element={<Protected><CahierDeTexte /></Protected>} />
+            <Route path="/paiements" element={<Protected><GestionPaiements /></Protected>} />
+            <Route path="/paiements/mes-paiements" element={<Protected><MesPaiements /></Protected>} />
+            <Route path="/paiements/paiements-enfant" element={<Protected><PaiementsEnfant /></Protected>} />
+            <Route path="/paiements/classe/:classeId" element={<Protected><PaiementsClasse /></Protected>} />
+            <Route path="/annonces" element={<Protected><ListeAnnonces /></Protected>} />
+            <Route path="/parametres" element={<Protected><Parametres /></Protected>} />
+            <Route path="/parametres/ecole" element={<Protected><SchoolSettings /></Protected>} />
+            <Route path="/email-verified" element={<Protected><EmailVerified /></Protected>} />
+            <Route path="/complete-registration" element={<Protected><CompleteRegistration /></Protected>} />
+            <Route path="/abonnement" element={<Protected><Abonnement /></Protected>} />
+            <Route path="/admin/user-migration" element={<Protected><UserMigration /></Protected>} />
+            <Route path="/utilisateurs" element={<Protected><Utilisateurs /></Protected>} />
+          </Routes>
+        </Suspense>
+      </Router>
+      <Toaster />
     </ThemeProvider>
   );
 }
