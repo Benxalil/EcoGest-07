@@ -248,9 +248,7 @@ export const useParentData = (selectedChildId?: string | null) => {
       const matriculeVariants = extractParentMatricule(profile.email);
       
       // 🔍 Construire les clauses OR pour recherche flexible
-      const orClauses: string[] = [
-        `parent_email.ilike.${profile.email}` // Email exact (case-insensitive)
-      ];
+      const orClauses: string[] = [];
       
       // Ajouter toutes les variantes de matricule
       matriculeVariants.forEach(variant => {
