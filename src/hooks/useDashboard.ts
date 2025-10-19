@@ -3,7 +3,7 @@
  * Évite les chargements redondants et centralise la logique
  */
 
-import { useOptimizedUserData } from './useOptimizedUserData';
+import { useUnifiedUserData } from './useUnifiedUserData';
 import { useTeacherData } from './useTeacherData';
 import { useParentData } from './useParentData';
 import { useStudentDashboardData } from './useStudentDashboardData';
@@ -22,7 +22,7 @@ interface DashboardHookReturn {
  * Hook unifié qui charge les bonnes données selon le rôle utilisateur
  */
 export const useDashboard = (selectedChildId?: string | null): DashboardHookReturn => {
-  const { profile, teacherId, loading: profileLoading } = useOptimizedUserData();
+  const { profile, teacherId, loading: profileLoading } = useUnifiedUserData();
   const role = profile?.role;
 
   // Prefetch en arrière-plan dès que le profil est chargé

@@ -24,7 +24,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Session } from "@supabase/supabase-js";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import { LoadingSkeleton } from "@/components/ui/loading-skeleton";
-import { useOptimizedUserData } from "@/hooks/useOptimizedUserData";
+import { useUnifiedUserData } from "@/hooks/useUnifiedUserData";
 import { useTodaySchedules } from "@/hooks/useTodaySchedules";
 
 const stats = [
@@ -56,8 +56,8 @@ const stats = [
 
 const Index = () => {
   const navigate = useNavigate();
-  // Hooks optimisés
-  const { profile, loading: userLoading } = useOptimizedUserData();
+  // Hook unifié pour les données utilisateur (React Query)
+  const { profile, loading: userLoading } = useUnifiedUserData();
   const [activeTab, setActiveTab] = useState<"apercu" | "analytique">("apercu");
   const [showMoreSchedules, setShowMoreSchedules] = useState(false);
   

@@ -61,16 +61,19 @@ export const useDashboardData = () => {
     schoolData: null,
     announcements: [],
     academicYear: '2024/2025',
-    loading: false,
+    loading: true,
     error: null
   });
 
   // Fetch dashboard data with separate queries
   const fetchAllDashboardData = useCallback(async () => {
-    if (!profile?.schoolId) return;
+    if (!profile?.schoolId) {
+      setData(prev => ({ ...prev, loading: false }));
+      return;
+    }
     
     // Ne charger les données que pour les administrateurs
-    if (!isAdmin) {
+    if (!isAdmin()) {
       setData(prev => ({ ...prev, loading: false }));
       return;
     }
@@ -144,14 +147,14 @@ export const useDashboardData = () => {
         error: error instanceof Error ? error.message : 'Error loading dashboard data'
       }));
     }
-  }, [profile?.schoolId, profile?.role, profile?.id, isAdmin]);
+  }, [profile?.schoolId, isAdmin]);
 
   // Fetch data when user profile is ready
   useEffect(() => {
-    if (profile) {
+    if (profile?.schoolId) {
       fetchAllDashboardData();
     }
-  }, [fetchAllDashboardData, profile]);
+  }, [profile?.schoolId, fetchAllDashboardData]);
 
   const refetch = useCallback(() => {
     fetchAllDashboardData();
