@@ -107,14 +107,14 @@ export const useParentData = (selectedChildId?: string | null) => {
   const { profile } = useOptimizedUserData();
   const isFetchingRef = useRef(false);
   
-  // ✅ Utiliser des refs pour éviter les re-renders
-  const cacheKeyRef = useRef(`parent-data-${profile?.id}-${selectedChildId || 'default'}`);
+  // ✅ Cache partagé pour tous les enfants du même parent (ne dépend pas de selectedChildId)
+  const cacheKeyRef = useRef(`parent-data-${profile?.id}`);
   const lastLogTime = useRef<number>(0);
 
-  // Mettre à jour les refs sans déclencher de re-render
+  // Mettre à jour la ref du cache seulement selon le parent
   useEffect(() => {
-    cacheKeyRef.current = `parent-data-${profile?.id}-${selectedChildId || 'default'}`;
-  }, [profile?.id, selectedChildId]);
+    cacheKeyRef.current = `parent-data-${profile?.id}`;
+  }, [profile?.id]);
 
   // 🚀 OPTIMISATION: Changement d'enfant intelligent - ne refetch que les schedules
   const prevSelectedChildRef = useRef(selectedChildId);
@@ -200,20 +200,39 @@ export const useParentData = (selectedChildId?: string | null) => {
 
     // ✅ Vérifier le cache EN PREMIER
     const cachedData = unifiedCache.get(cacheKeyRef.current) as ParentData | null;
-    if (cachedData) {
-      // ✅ Vérifier que le cache correspond bien à l'enfant sélectionné
-      const cacheMatchesSelection = 
-        !selectedChildId || 
-        cachedData.selectedChild?.id === selectedChildId;
+    if (cachedData && cachedData.children.length > 0) {
+      // ✅ Utiliser le cache et ajuster l'enfant sélectionné si nécessaire
+      const targetChild = selectedChildId
+        ? cachedData.children.find(c => c.id === selectedChildId) || cachedData.children[0]
+        : cachedData.children[0];
       
-      if (cacheMatchesSelection) {
-        console.log('[useParentData] ✅ Cache valide pour:', selectedChildId || 'premier enfant');
-        setData({ ...cachedData, loading: false, error: null });
+      console.log('[useParentData] ✅ Cache trouvé avec', cachedData.children.length, 'enfant(s)');
+      
+      // Si l'enfant sélectionné est différent, récupérer ses schedules
+      if (targetChild.id !== cachedData.selectedChild?.id) {
+        console.log('[useParentData] 🔄 Changement d\'enfant depuis cache:', targetChild.first_name);
+        const today = new Date().getDay();
+        
+        supabase
+          .from('schedules')
+          .select('id, start_time, end_time, room, subject, activity_name, day, subjects(name, color)')
+          .eq('class_id', targetChild.class_id || '')
+          .eq('day_of_week', today)
+          .order('start_time', { ascending: true })
+          .then(({ data: schedulesData }) => {
+            setData({
+              ...cachedData,
+              selectedChild: targetChild,
+              todaySchedules: schedulesData || [],
+              loading: false,
+              error: null
+            });
+          });
         return;
-      } else {
-        console.log('[useParentData] ⚠️ Cache invalide (enfant différent), re-fetch nécessaire');
-        // Continuer avec le fetch
       }
+      
+      setData({ ...cachedData, loading: false, error: null });
+      return;
     }
 
     // Éviter les requêtes parallèles
