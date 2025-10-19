@@ -226,6 +226,23 @@ export function useStudents(classId?: string) {
     role: 'student' | 'parent' | 'teacher'
   ) => {
     try {
+      // Construire l'email pour vérifier s'il existe déjà
+      const normalizedSuffix = schoolSuffix.replace(/_/g, '-');
+      const authEmail = `${studentNumber}@${normalizedSuffix}.ecogest.app`;
+      
+      // Vérifier si un compte auth existe déjà avec cet email
+      const { data: existingProfiles } = await supabase
+        .from('profiles')
+        .select('id, email')
+        .eq('email', authEmail)
+        .limit(1);
+      
+      // Si le compte existe déjà, pas besoin de le recréer
+      if (existingProfiles && existingProfiles.length > 0) {
+        console.log('✅ Compte auth existant trouvé, réutilisation:', authEmail);
+        return { id: existingProfiles[0].id } as any;
+      }
+      
       // Pour les élèves et parents, on envoie seulement le matricule (pas d'email)
       // L'Edge Function va construire l'email valide pour Supabase
       
@@ -243,12 +260,22 @@ export function useStudents(classId?: string) {
       });
 
       if (error) {
+        // Si l'erreur est "email_exists", ce n'est pas grave, on continue
+        if (error.message?.includes('email_exists') || error.message?.includes('already been registered')) {
+          console.log('ℹ️ Le compte auth existe déjà, ce qui est normal pour un 2ème enfant avec le même parent');
+          return null;
+        }
         console.error('Erreur lors de la création du compte auth:', error);
         return null;
       }
 
       return data?.user || null;
-    } catch (error) {
+    } catch (error: any) {
+      // Si l'erreur est "email_exists", ce n'est pas grave
+      if (error?.message?.includes('email_exists') || error?.message?.includes('already been registered')) {
+        console.log('ℹ️ Le compte auth existe déjà, ce qui est normal pour un 2ème enfant avec le même parent');
+        return null;
+      }
       console.error('Erreur lors de la création du compte auth:', error);
       return null;
     }
