@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useUnifiedUserData } from './useUnifiedUserData';
 import { supabase } from '@/integrations/supabase/client';
-import { multiLevelCache, CacheTTL, CacheKeys } from '@/utils/multiLevelCache';
 import { filterAnnouncementsByRole, type Announcement } from '@/utils/announcementFilters';
 
 // Interfaces pour typage précis (préfixées pour éviter conflits)
@@ -66,7 +65,7 @@ export const useDashboardData = () => {
     error: null
   });
 
-  // 🚀 OPTIMISÉ: Une seule requête via la vue SQL
+  // Fetch dashboard data with separate queries
   const fetchAllDashboardData = useCallback(async () => {
     if (!profile?.schoolId) return;
     
@@ -76,65 +75,60 @@ export const useDashboardData = () => {
       return;
     }
 
-    const cacheKey = CacheKeys.dashboard(profile.id, profile.role);
-    
-    // Check cache first (stale-while-revalidate)
-    const cached = multiLevelCache.get<Omit<DashboardData, 'loading' | 'error'>>(cacheKey, 'memory-first');
-    if (cached) {
-      setData(prev => ({ ...cached, loading: false, error: null }));
-      // Continuer en arrière-plan pour rafraîchir si nécessaire
-    } else {
-      setData(prev => ({ ...prev, loading: true, error: null }));
-    }
+    setData(prev => ({ ...prev, loading: true, error: null }));
 
     try {
-      // 🚀 UNE SEULE REQUÊTE via la vue optimisée
-      const { data, error } = await supabase
-        .from('admin_dashboard_view' as any)
-        .select('*')
-        .eq('school_id', profile.schoolId)
-        .single();
+      // Fetch all data in parallel
+      const [classesResult, studentsResult, teachersResult, schoolResult, announcementsResult] = await Promise.all([
+        supabase
+          .from('classes')
+          .select('id, name, level, section, effectif')
+          .eq('school_id', profile.schoolId),
+        supabase
+          .from('students')
+          .select('id, first_name, last_name, class_id, is_active, created_at, classes(name)')
+          .eq('school_id', profile.schoolId)
+          .eq('is_active', true),
+        supabase
+          .from('teachers')
+          .select('id, first_name, last_name, is_active')
+          .eq('school_id', profile.schoolId)
+          .eq('is_active', true),
+        supabase
+          .from('schools')
+          .select('id, name, logo_url, slogan')
+          .eq('id', profile.schoolId)
+          .single(),
+        supabase
+          .from('announcements')
+          .select('*')
+          .eq('school_id', profile.schoolId)
+          .eq('is_published', true)
+          .order('created_at', { ascending: false })
+      ]);
 
-      if (error) throw error;
-
-      // Parser les données JSON de la vue
-      const viewData = data as any;
-      const classes = typeof viewData.classes === 'string' ? JSON.parse(viewData.classes) : viewData.classes;
-      const students = typeof viewData.students === 'string' ? JSON.parse(viewData.students) : viewData.students;
-      const teachers = typeof viewData.teachers === 'string' ? JSON.parse(viewData.teachers) : viewData.teachers;
-      const announcements = typeof viewData.announcements === 'string' ? JSON.parse(viewData.announcements) : viewData.announcements;
+      // Check for errors
+      if (classesResult.error) throw classesResult.error;
+      if (studentsResult.error) throw studentsResult.error;
+      if (teachersResult.error) throw teachersResult.error;
+      if (schoolResult.error) throw schoolResult.error;
+      if (announcementsResult.error) throw announcementsResult.error;
 
       // Les admins et super-admins voient toutes les annonces
       const filteredAnnouncements = filterAnnouncementsByRole(
-        announcements || [],
+        announcementsResult.data || [],
         profile.role,
         true // Les admins voient tout
       );
 
       const dashboardData = {
-        classes: classes || [],
-        students: students || [],
-        teachers: teachers || [],
-        schoolData: {
-          id: viewData.school_id,
-          name: viewData.school_name,
-          logo_url: viewData.logo_url,
-          slogan: viewData.slogan
-        },
+        classes: classesResult.data || [],
+        students: studentsResult.data || [],
+        teachers: teachersResult.data || [],
+        schoolData: schoolResult.data,
         announcements: filteredAnnouncements,
-        academicYear: viewData.academic_year || '2024/2025'
+        academicYear: '2024/2025'
       };
-
-      // 🔒 Cache admin: séparer données sensibles et structures
-      // Classes et structures → sessionStorage
-      multiLevelCache.set(`classes-${profile.schoolId}`, classes || [], CacheTTL.CLASSES, 'session', false);
-      
-      // Élèves et enseignants → memory-only (données personnelles)
-      multiLevelCache.set(`students-${profile.schoolId}`, students || [], CacheTTL.STUDENTS, 'memory', true);
-      multiLevelCache.set(`teachers-${profile.schoolId}`, teachers || [], CacheTTL.TEACHERS, 'memory', true);
-      
-      // Dashboard complet → memory (contient données sensibles)
-      multiLevelCache.set(cacheKey, dashboardData, CacheTTL.SCHEDULES, 'memory', true);
       
       setData({
         ...dashboardData,
@@ -160,11 +154,8 @@ export const useDashboardData = () => {
   }, [fetchAllDashboardData, profile]);
 
   const refetch = useCallback(() => {
-    if (profile?.id) {
-      multiLevelCache.delete(CacheKeys.dashboard(profile.id, profile.role));
-      fetchAllDashboardData();
-    }
-  }, [fetchAllDashboardData, profile?.id, profile?.role]);
+    fetchAllDashboardData();
+  }, [fetchAllDashboardData]);
 
   // Memoized return to prevent unnecessary re-renders
   return useMemo(() => ({
