@@ -76,56 +76,39 @@ export const useStudentDashboardData = () => {
     }
 
     try {
-      // Faire toutes les requêtes en parallèle
-      const [studentResult, announcementsResult] = await Promise.all([
-        // Récupérer l'élève avec sa classe
-        supabase
-          .from('students')
-          .select('id, first_name, last_name, student_number, class_id, classes(id, name, level, section)')
-          .eq('user_id', profile.id)
-          .eq('school_id', profile.schoolId)
-          .maybeSingle(),
-        
-        // Récupérer les annonces les plus récentes
-        supabase
-          .from('announcements')
-          .select('id, title, content, created_at, priority, is_urgent, target_audience, target_role, target_classes')
-          .eq('school_id', profile.schoolId)
-          .eq('is_published', true)
-          .order('created_at', { ascending: false })
-          .limit(10) // Récupérer plus d'annonces pour avoir suffisamment après filtrage
-      ]);
+      // 🚀 UNE SEULE REQUÊTE via la vue optimisée
+      const { data, error } = await supabase
+        .from('student_dashboard_view' as any)
+        .select('*')
+        .eq('user_id', profile.id)
+        .single();
 
-      if (studentResult.error) throw studentResult.error;
+      if (error) throw error;
 
-      let schedules: ScheduleData[] = [];
-      
-      // Si l'élève a une classe, récupérer l'emploi du temps du jour
-      if (studentResult.data?.class_id) {
-        const today = new Date().getDay();
-        const { data: schedulesData, error: schedulesError } = await supabase
-          .from('schedules')
-          .select('id, start_time, end_time, room, subject_id, activity_name, subject, subjects(name, color)')
-          .eq('class_id', studentResult.data.class_id)
-          .eq('day_of_week', today)
-          .order('start_time');
+      // Parser les données JSON de la vue
+      const viewData = data as any;
+      const classInfo = typeof viewData.class_info === 'string' ? JSON.parse(viewData.class_info) : viewData.class_info;
+      const todaySchedules = typeof viewData.today_schedules === 'string' ? JSON.parse(viewData.today_schedules) : viewData.today_schedules;
+      const announcements = typeof viewData.announcements === 'string' ? JSON.parse(viewData.announcements) : viewData.announcements;
 
-        if (!schedulesError && schedulesData) {
-          schedules = schedulesData;
-        }
-      }
-
-      // Filtrer les annonces pour les élèves et limiter aux 3 plus récentes
+      // Filtrer les annonces pour les élèves
       const filteredAnnouncements = filterAnnouncementsByRole(
-        announcementsResult.data || [],
+        announcements || [],
         'student',
         false
-      ).slice(0, 3) as Announcement[]; // Garder uniquement les 3 premières après filtrage
+      ).slice(0, 3) as Announcement[];
 
       const result: StudentDashboardData = {
-        student: studentResult.data,
-        classInfo: studentResult.data?.classes || null,
-        todaySchedules: schedules,
+        student: {
+          id: viewData.student_id,
+          first_name: viewData.first_name,
+          last_name: viewData.last_name,
+          student_number: viewData.student_number,
+          class_id: viewData.class_id,
+          classes: classInfo
+        },
+        classInfo: classInfo || null,
+        todaySchedules: todaySchedules || [],
         announcements: filteredAnnouncements,
         loading: false,
         error: null

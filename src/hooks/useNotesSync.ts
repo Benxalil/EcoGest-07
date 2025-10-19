@@ -261,7 +261,7 @@ export const useNotesSync = ({ classeId, matiereId, examId, studentId, isComposi
     return toDelete;
   }, [localNotes, initialNotes, isComposition]);
 
-  // Sauvegarder toutes les notes en base de données avec gestion de la suppression
+  // 🚀 OPTIMISÉ: Sauvegarder toutes les notes en batch (1 requête au lieu de N)
   const saveAllNotes = useCallback(async (skipConfirmation = false) => {
     // VALIDATION CRITIQUE : examId doit être défini
     if (!examId) {
@@ -275,7 +275,6 @@ export const useNotesSync = ({ classeId, matiereId, examId, studentId, isComposi
     // Si des notes doivent être supprimées et qu'on n'a pas skip la confirmation
     if (notesToDelete.length > 0 && !skipConfirmation) {
       console.log('useNotesSync: Notes à supprimer détectées:', notesToDelete);
-      // Retourner un objet spécial pour signaler qu'une confirmation est nécessaire
       return {
         needsConfirmation: true,
         notesToDelete,
@@ -284,42 +283,28 @@ export const useNotesSync = ({ classeId, matiereId, examId, studentId, isComposi
     }
 
     try {
-      console.log('useNotesSync: Début sauvegarde pour examId:', examId);
+      console.log('useNotesSync: Début sauvegarde batch pour examId:', examId);
       
-      // 1. Supprimer les notes vidées
-      if (notesToDelete.length > 0) {
-        console.log('useNotesSync: Suppression de', notesToDelete.length, 'notes vidées');
-        
-        const deletePromises = notesToDelete.map(async (item) => {
-          const { data: gradeToDelete } = await supabase
-            .from('grades')
-            .select('id')
-            .eq('student_id', item.studentId)
-            .eq('subject_id', item.subjectId)
-            .eq('exam_id', examId)
-            .eq('exam_type', item.examType)
-            .maybeSingle();
-          
-          if (gradeToDelete) {
-            await supabase
-              .from('grades')
-              .delete()
-              .eq('id', gradeToDelete.id);
-            console.log('useNotesSync: Note supprimée:', gradeToDelete.id);
-          }
+      // 🚀 PRÉPARER TOUTES LES DONNÉES POUR LE BATCH
+      const gradesData = [];
+      
+      // Ajout des notes à supprimer
+      notesToDelete.forEach(item => {
+        gradesData.push({
+          action: 'delete',
+          student_id: item.studentId,
+          subject_id: item.subjectId,
+          exam_id: examId,
+          exam_type: item.examType
         });
-        
-        await Promise.all(deletePromises);
-      }
+      });
       
-      // 2. Sauvegarder/mettre à jour les notes avec valeur
-      const savePromises = localNotes.flatMap((note) => {
-        const promises = [];
-        
+      // Ajout des notes à insérer/mettre à jour
+      localNotes.forEach(note => {
         if (isComposition) {
-          // COMPOSITION : Sauvegarder devoir et composition séparément
           if (note.devoir && note.devoir.trim() !== '') {
-            promises.push(upsertGrade({
+            gradesData.push({
+              action: 'upsert',
               student_id: note.eleveId,
               subject_id: note.matiereId,
               exam_id: examId,
@@ -328,11 +313,12 @@ export const useNotesSync = ({ classeId, matiereId, examId, studentId, isComposi
               coefficient: note.coefficient,
               semester: 'semestre1',
               exam_type: 'devoir'
-            }));
+            });
           }
           
           if (note.composition && note.composition.trim() !== '') {
-            promises.push(upsertGrade({
+            gradesData.push({
+              action: 'upsert',
               student_id: note.eleveId,
               subject_id: note.matiereId,
               exam_id: examId,
@@ -341,12 +327,12 @@ export const useNotesSync = ({ classeId, matiereId, examId, studentId, isComposi
               coefficient: note.coefficient,
               semester: 'semestre1',
               exam_type: 'composition'
-            }));
+            });
           }
         } else {
-          // EXAMEN SIMPLE : Sauvegarder note unique
           if (note.note && note.note.trim() !== '') {
-            promises.push(upsertGrade({
+            gradesData.push({
+              action: 'upsert',
               student_id: note.eleveId,
               subject_id: note.matiereId,
               exam_id: examId,
@@ -354,42 +340,44 @@ export const useNotesSync = ({ classeId, matiereId, examId, studentId, isComposi
               max_grade: 20,
               coefficient: note.coefficient,
               exam_type: 'examen'
-            }));
+            });
           }
         }
-        
-        return promises;
       });
 
-      await Promise.all(savePromises);
+      if (gradesData.length === 0) {
+        console.log('useNotesSync: Aucune note à sauvegarder');
+        return { success: true };
+      }
+
+      // 🚀 UNE SEULE REQUÊTE BATCH via RPC
+      const { data: result, error } = await supabase.rpc('batch_upsert_grades' as any, {
+        grades_data: gradesData,
+        p_school_id: (await supabase.auth.getUser()).data.user?.user_metadata?.school_id,
+        p_created_by: (await supabase.auth.getUser()).data.user?.id
+      });
+
+      if (error) throw error;
+
+      console.log('useNotesSync: Batch save result:', result);
       
-      console.log('useNotesSync: Sauvegarde terminée avec succès');
-      
-      // 3. Recharger les données IMMÉDIATEMENT
-      console.log('useNotesSync: Rechargement des notes après sauvegarde...');
+      // Recharger les données
       await refetchGrades();
-      
-      // Attendre que les données soient bien chargées
       await new Promise(resolve => setTimeout(resolve, 300));
-      
-      // Recharger explicitement les notes locales
       loadNotesFromDatabase();
       
       setHasUnsavedChanges(false);
       
+      const resultData = result as { total: number };
       toast({
         title: "Notes sauvegardées",
-        description: notesToDelete.length > 0 
-          ? `Notes sauvegardées avec succès. ${notesToDelete.length} note(s) supprimée(s).`
-          : "Toutes les notes ont été sauvegardées avec succès.",
+        description: `${resultData.total} note(s) sauvegardée(s) en une seule opération.`,
       });
-      
-      console.log('useNotesSync: Notes rechargées et affichage mis à jour');
       
       return { success: true };
       
     } catch (error) {
-      console.error('useNotesSync: Erreur lors de la sauvegarde:', error);
+      console.error('useNotesSync: Erreur batch save:', error);
       toast({
         title: "Erreur de sauvegarde",
         description: "Une erreur est survenue lors de la sauvegarde des notes.",
@@ -397,7 +385,7 @@ export const useNotesSync = ({ classeId, matiereId, examId, studentId, isComposi
       });
       throw error;
     }
-  }, [localNotes, initialNotes, examId, isComposition, upsertGrade, refetchGrades, toast, loadNotesFromDatabase, getNotesToDelete]);
+  }, [localNotes, examId, isComposition, refetchGrades, toast, loadNotesFromDatabase, getNotesToDelete]);
 
   // Forcer le rechargement des notes
   const refreshNotes = useCallback(async () => {

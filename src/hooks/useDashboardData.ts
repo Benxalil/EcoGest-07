@@ -66,7 +66,7 @@ export const useDashboardData = () => {
     error: null
   });
 
-  // Optimized single data fetch function
+  // 🚀 OPTIMISÉ: Une seule requête via la vue SQL
   const fetchAllDashboardData = useCallback(async () => {
     if (!profile?.schoolId) return;
     
@@ -88,28 +88,21 @@ export const useDashboardData = () => {
     }
 
     try {
-      // Single optimized query - sélection minimale des colonnes nécessaires
-      const [
-        { data: classes, error: classesError },
-        { data: students, error: studentsError },
-        { data: teachers, error: teachersError },
-        { data: schoolData, error: schoolError },
-        { data: announcements, error: announcementsError },
-        { data: academicYears, error: academicError }
-      ] = await Promise.all([
-        supabase.from('classes').select('id, name, level, section, effectif').eq('school_id', profile.schoolId).order('name'),
-        supabase.from('students').select('id, first_name, last_name, class_id, is_active, created_at, classes:class_id(name)').eq('school_id', profile.schoolId).eq('is_active', true),
-        supabase.from('teachers').select('id, first_name, last_name, is_active').eq('school_id', profile.schoolId).eq('is_active', true),
-        supabase.from('schools').select('id, name, logo_url, slogan').eq('id', profile.schoolId).single(),
-        supabase.from('announcements').select('id, title, content, created_at, priority, is_urgent, target_audience').eq('school_id', profile.schoolId).eq('is_published', true).order('created_at', { ascending: false }).limit(10),
-        supabase.from('academic_years').select('name').eq('school_id', profile.schoolId).eq('is_current', true).limit(1)
-      ]);
+      // 🚀 UNE SEULE REQUÊTE via la vue optimisée
+      const { data, error } = await supabase
+        .from('admin_dashboard_view' as any)
+        .select('*')
+        .eq('school_id', profile.schoolId)
+        .single();
 
-      // Handle errors
-      if (classesError || studentsError || teachersError || schoolError || announcementsError || academicError) {
-        const firstError = classesError || studentsError || teachersError || schoolError || announcementsError || academicError;
-        throw new Error(firstError?.message || 'Error fetching dashboard data');
-      }
+      if (error) throw error;
+
+      // Parser les données JSON de la vue
+      const viewData = data as any;
+      const classes = typeof viewData.classes === 'string' ? JSON.parse(viewData.classes) : viewData.classes;
+      const students = typeof viewData.students === 'string' ? JSON.parse(viewData.students) : viewData.students;
+      const teachers = typeof viewData.teachers === 'string' ? JSON.parse(viewData.teachers) : viewData.teachers;
+      const announcements = typeof viewData.announcements === 'string' ? JSON.parse(viewData.announcements) : viewData.announcements;
 
       // Les admins et super-admins voient toutes les annonces
       const filteredAnnouncements = filterAnnouncementsByRole(
@@ -122,9 +115,14 @@ export const useDashboardData = () => {
         classes: classes || [],
         students: students || [],
         teachers: teachers || [],
-        schoolData: schoolData || null,
+        schoolData: {
+          id: viewData.school_id,
+          name: viewData.school_name,
+          logo_url: viewData.logo_url,
+          slogan: viewData.slogan
+        },
         announcements: filteredAnnouncements,
-        academicYear: academicYears?.[0]?.name || '2024/2025'
+        academicYear: viewData.academic_year || '2024/2025'
       };
 
       // 🔒 Cache admin: séparer données sensibles et structures
@@ -152,7 +150,7 @@ export const useDashboardData = () => {
         error: error instanceof Error ? error.message : 'Error loading dashboard data'
       }));
     }
-  }, [profile?.schoolId, profile?.role, profile?.id]);
+  }, [profile?.schoolId, profile?.role, profile?.id, isAdmin]);
 
   // Fetch data when user profile is ready
   useEffect(() => {
