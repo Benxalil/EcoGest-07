@@ -75,42 +75,99 @@ export const useTeacherData = () => {
     setData(prev => ({ ...prev, loading: true, error: null }));
 
     try {
-      // 🚀 UNE SEULE REQUÊTE via la vue optimisée
-      const { data, error } = await supabase
-        .from('teacher_dashboard_view' as any)
-        .select('*')
-        .eq('teacher_id', teacherId)
-        .single();
+      // ✅ Requêtes directes optimisées avec JOINs
+      const [schedulesResult, announcementsResult] = await Promise.all([
+        // Schedules avec classes et students
+        supabase
+          .from('schedules')
+          .select(`
+            *,
+            classes!inner (
+              *,
+              students!students_class_id_fkey (
+                id,
+                class_id,
+                is_active
+              )
+            )
+          `)
+          .eq('school_id', profile.schoolId)
+          .eq('teacher_id', teacherId)
+          .limit(100),
 
-      if (error) throw error;
+        // Announcements
+        supabase
+          .from('announcements')
+          .select('*')
+          .eq('school_id', profile.schoolId)
+          .eq('is_published', true)
+          .order('published_at', { ascending: false })
+          .limit(20)
+      ]);
 
-      // Parser les données JSON de la vue
-      const viewData = data as any;
-      const classes = typeof viewData.classes === 'string' ? JSON.parse(viewData.classes) : viewData.classes;
-      const todaySchedules = typeof viewData.today_schedules === 'string' ? JSON.parse(viewData.today_schedules) : viewData.today_schedules;
-      const announcements = typeof viewData.announcements === 'string' ? JSON.parse(viewData.announcements) : viewData.announcements;
+      const schedulesData = schedulesResult.data || [];
 
-      // Compter le total d'élèves
-      const totalStudents = (classes || []).reduce((sum: number, classe: any) => sum + (classe.enrollment_count || 0), 0);
+      // Extraire classes uniques avec enrollment
+      const classesMap = new Map<string, any>();
+      const enrollmentMap = new Map<string, number>();
 
-      // Filtrer les annonces pour les enseignants
+      schedulesData.forEach((schedule: any) => {
+        if (schedule.classes) {
+          const classId = schedule.classes.id;
+          
+          if (!classesMap.has(classId)) {
+            classesMap.set(classId, {
+              ...schedule.classes,
+              enrollment_count: 0
+            });
+          }
+
+          // Compter les élèves actifs
+          const activeStudents = (schedule.classes.students || []).filter(
+            (s: any) => s.is_active
+          );
+          enrollmentMap.set(classId, activeStudents.length);
+        }
+      });
+
+      // Finaliser les classes
+      const classesWithEnrollment = Array.from(classesMap.values()).map(classe => ({
+        ...classe,
+        enrollment_count: enrollmentMap.get(classe.id) || 0,
+        students: undefined
+      }));
+
+      // Filtrer les cours d'aujourd'hui
+      const today = new Date().getDay();
+      const dayMapping: { [key: number]: string } = {
+        1: 'LUNDI', 2: 'MARDI', 3: 'MERCREDI', 
+        4: 'JEUDI', 5: 'VENDREDI', 6: 'SAMEDI', 0: 'DIMANCHE'
+      };
+      const todaySchedules = schedulesData.filter(
+        s => s.day?.toUpperCase() === dayMapping[today]
+      );
+
+      // Total élèves
+      const totalStudents = Array.from(enrollmentMap.values()).reduce((sum, count) => sum + count, 0);
+
+      // Filtrer annonces pour enseignants
       const filteredAnnouncements = filterAnnouncementsByRole(
-        announcements || [],
+        announcementsResult.data || [],
         'teacher',
         false
       ).slice(0, 3) as Announcement[];
 
       const teacherData: TeacherData = {
-        classes: classes || [],
+        classes: classesWithEnrollment,
         totalStudents,
-        todaySchedules: todaySchedules || [],
+        todaySchedules,
         announcements: filteredAnnouncements,
         loading: false,
         error: null
       };
 
-      // 🚀 OPTIMISATION: Cache encore plus long: 10 minutes pour teacher data
-      unifiedCache.set(cacheKey, teacherData, CacheTTL.STATIC);
+      // Cache pendant 5 minutes
+      unifiedCache.set(cacheKey, teacherData, CacheTTL.SEMI_DYNAMIC);
       setData(teacherData);
 
     } catch (err: unknown) {
