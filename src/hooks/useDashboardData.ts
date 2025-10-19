@@ -52,7 +52,10 @@ export interface DashboardData {
 }
 
 export const useDashboardData = () => {
-  const { profile, isAdmin } = useUnifiedUserData();
+  const { profile } = useUnifiedUserData();
+  
+  // ✅ Calculer isAdmin directement sans fonction (valeur stable)
+  const isAdmin = profile?.role === 'school_admin' || profile?.role === 'super_admin';
   
   const [data, setData] = useState<DashboardData>({
     classes: [],
@@ -73,7 +76,7 @@ export const useDashboardData = () => {
     }
     
     // Ne charger les données que pour les administrateurs
-    if (!isAdmin()) {
+    if (!isAdmin) {
       setData(prev => ({ ...prev, loading: false }));
       return;
     }
@@ -151,14 +154,19 @@ export const useDashboardData = () => {
 
   // Fetch data when user profile is ready
   useEffect(() => {
-    if (profile?.schoolId) {
+    if (profile?.schoolId && isAdmin) {
       fetchAllDashboardData();
+    } else if (profile && !isAdmin) {
+      // Utilisateur non-admin : pas de chargement nécessaire
+      setData(prev => ({ ...prev, loading: false }));
     }
-  }, [profile?.schoolId, fetchAllDashboardData]);
+  }, [profile?.schoolId, isAdmin, fetchAllDashboardData]);
 
   const refetch = useCallback(() => {
-    fetchAllDashboardData();
-  }, [fetchAllDashboardData]);
+    if (isAdmin) {
+      fetchAllDashboardData();
+    }
+  }, [fetchAllDashboardData, isAdmin]);
 
   // Memoized return to prevent unnecessary re-renders
   return useMemo(() => ({
