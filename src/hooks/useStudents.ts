@@ -260,17 +260,25 @@ export function useStudents(classId?: string) {
       });
 
       if (error) {
-        // Récupérer le message d'erreur depuis data.error
         const errorMessage = typeof data?.error === 'string' ? data.error : error.message || '';
         
-        // Si l'erreur est "email_exists", ce n'est pas grave, on continue
         if (errorMessage.includes('email_exists') || 
             errorMessage.includes('already been registered') ||
             errorMessage.includes('A user with this email address has already been registered')) {
-          console.log('ℹ️ Le compte auth existe déjà, ce qui est normal pour un 2ème enfant avec le même parent');
-          return null;
+          console.log('ℹ️ Le compte auth existe déjà:', studentNumber);
+          // ✅ Rechercher le user_id existant dans profiles
+          const normalizedSuffix = schoolSuffix.replace(/_/g, '-');
+          const authEmail = `${studentNumber}@${normalizedSuffix}.ecogest.app`;
+          const { data: existingProfile } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('email', authEmail)
+            .limit(1)
+            .maybeSingle();
+          
+          return existingProfile ? { id: existingProfile.id } as any : null;
         }
-        console.error('Erreur lors de la création du compte auth:', error);
+        console.error('❌ Erreur lors de la création du compte auth:', error);
         return null;
       }
 
@@ -400,27 +408,43 @@ export function useStudents(classId?: string) {
           'parent'
         );
       } else {
-        // Parent existant - vérifier s'il a déjà un compte auth
-        const parentEmail = `${studentData.parent_matricule}@${schoolSuffix.replace(/_/g, '-')}.ecogest.app`;
-        const { data: existingParent } = await supabase
-          .from('profiles')
-          .select('id, email')
-          .eq('email', parentEmail)
+        // Parent existant - vérifier s'il y a déjà des élèves avec ce matricule
+        const { data: existingStudentsWithParent } = await supabase
+          .from('students')
+          .select('id, parent_matricule')
+          .eq('school_id', userProfile?.schoolId)
+          .eq('parent_matricule', studentData.parent_matricule)
+          .eq('is_active', true)
           .limit(1)
           .maybeSingle();
 
-        if (!existingParent) {
-          // Le parent n'a pas encore de compte auth, le créer
-          await createStudentAuthAccount(
-            studentData.parent_matricule, 
-            schoolSuffix, 
-            'Parent de ' + studentData.first_name, 
-            studentData.last_name,
-            parentPassword,
-            'parent'
-          );
+        if (existingStudentsWithParent) {
+          // ✅ Un élève avec ce matricule parent existe déjà
+          console.log('✅ Compte parent existant trouvé via élève:', studentData.parent_matricule);
         } else {
-          console.log('✅ Compte parent existant trouvé:', parentEmail);
+          // ⚠️ Le matricule est fourni mais aucun élève n'existe avec ce matricule
+          // Vérifier quand même dans profiles avant de créer
+          const parentEmail = `${studentData.parent_matricule}@${schoolSuffix.replace(/_/g, '-')}.ecogest.app`;
+          const { data: existingProfile } = await supabase
+            .from('profiles')
+            .select('id, email')
+            .eq('email', parentEmail)
+            .limit(1)
+            .maybeSingle();
+
+          if (!existingProfile) {
+            // Créer le compte parent
+            await createStudentAuthAccount(
+              studentData.parent_matricule, 
+              schoolSuffix, 
+              'Parent de ' + studentData.first_name, 
+              studentData.last_name,
+              parentPassword,
+              'parent'
+            );
+          } else {
+            console.log('✅ Profil parent existant trouvé:', parentEmail);
+          }
         }
       }
 
@@ -430,9 +454,25 @@ export function useStudents(classId?: string) {
         .insert([{
           ...studentData,
           student_number: studentNumber,
-          parent_matricule: studentData.parent_matricule || parentMatricule, // Utiliser parent_matricule fourni ou généré
+          parent_matricule: studentData.parent_matricule || parentMatricule,
           user_id: authUser?.id || null,
-          password: studentPassword, // ✅ Stocker le mot de passe élève en clair pour l'admin
+          password: studentPassword,
+          
+          // ✅ S'assurer que tous les champs du père sont inclus
+          father_first_name: studentData.father_first_name,
+          father_last_name: studentData.father_last_name,
+          father_phone: studentData.father_phone,
+          father_address: studentData.father_address,
+          father_status: studentData.father_status,
+          father_profession: studentData.father_profession,
+          
+          // ✅ Champs de la mère
+          mother_first_name: studentData.mother_first_name,
+          mother_last_name: studentData.mother_last_name,
+          mother_phone: studentData.mother_phone,
+          mother_address: studentData.mother_address,
+          mother_status: studentData.mother_status,
+          mother_profession: studentData.mother_profession,
           
           // ✅ Compatibilité - garder les anciens champs
           parent_first_name: studentData.father_first_name,
