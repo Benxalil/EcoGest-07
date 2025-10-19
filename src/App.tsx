@@ -78,7 +78,7 @@ function App() {
   
   // 🔄 Système de détection de nouvelle version et nettoyage automatique des caches
   useEffect(() => {
-    const currentVersion = '2025.10.19-cleanup-v2'; // 🔄 Forcer rechargement complet après nettoyage
+    const currentVersion = '2025.10.19-bfcache'; // 🔄 BFCACHE ACTIVÉ - Navigation instantanée
     const lastVersion = localStorage.getItem('app_version');
     
     if (lastVersion !== currentVersion) {
@@ -109,7 +109,7 @@ function App() {
       
       toast({
         title: "🔄 Mise à jour appliquée",
-        description: "Application nettoyée et optimisée",
+        description: "Navigation instantanée activée (bfcache)",
         duration: 3000,
       });
     }
