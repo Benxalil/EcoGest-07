@@ -2,9 +2,9 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserRole } from './useUserRole';
 import { useToast } from '@/hooks/use-toast';
-import { useOptimizedCache } from './useOptimizedCache';
+import { unifiedCache, CacheTTL } from '@/utils/unifiedCache';
 
-const CACHE_TTL = 2 * 60 * 1000; // 2 minutes
+const CACHE_TTL = CacheTTL.DYNAMIC; // 2 minutes
 
 export interface LessonLogData {
   id: string;
@@ -29,7 +29,6 @@ export const useLessonLogs = (classId?: string, teacherId?: string | null) => {
   const [error, setError] = useState<string | null>(null);
   const { userProfile } = useUserRole();
   const { toast } = useToast();
-  const cache = useOptimizedCache();
 
   const fetchLessonLogs = useCallback(async () => {
     if (!userProfile?.schoolId) {
@@ -40,7 +39,7 @@ export const useLessonLogs = (classId?: string, teacherId?: string | null) => {
     const cacheKey = `lesson_logs_${classId || 'all'}_${teacherId || 'all'}`;
     
     // Vérifier le cache d'abord
-    const cached = cache.get<LessonLogData[]>(cacheKey);
+    const cached = unifiedCache.get<LessonLogData[]>(cacheKey);
     if (cached) {
       setLessonLogs(cached);
       setLoading(false);
@@ -70,14 +69,14 @@ export const useLessonLogs = (classId?: string, teacherId?: string | null) => {
       if (error) throw error;
 
       setLessonLogs(data || []);
-      cache.set(cacheKey, data || [], CACHE_TTL);
+      unifiedCache.set(cacheKey, data || [], CACHE_TTL);
     } catch (err) {
       console.error('Erreur lors de la récupération des journaux de cours:', err);
       setError(err instanceof Error ? err.message : 'Erreur inconnue');
     } finally {
       setLoading(false);
     }
-  }, [userProfile?.schoolId, classId, teacherId, cache]);
+  }, [userProfile?.schoolId, classId, teacherId]);
 
   const createLessonLog = async (lessonLogData: Omit<LessonLogData, 'id' | 'school_id' | 'created_at' | 'updated_at'>) => {
     if (!userProfile?.schoolId) return false;

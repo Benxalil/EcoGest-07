@@ -1,5 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
-import { multiLevelCache, CacheTTL } from './multiLevelCache';
+import { queryClient, QueryKeys, CacheStaleTime } from '@/lib/queryClient';
 import type { UserProfile } from '@/hooks/useUnifiedUserData';
 
 /**
@@ -67,20 +67,22 @@ export async function preloadEssentialData(
  */
 async function preloadTodaySchedules(schoolId: string, userRole: string): Promise<void> {
   try {
-    const today = new Date().toLocaleDateString('fr-FR', { weekday: 'long' });
-    const dayCapitalized = today.charAt(0).toUpperCase() + today.slice(1);
+    const today = new Date().getDay();
     
-    const cacheKey = `schedules-today-${schoolId}-${dayCapitalized}`;
-    
-    const { data, error } = await supabase
-      .from('schedules')
-      .select('id, day, start_time, end_time, subject, teacher, room, class_id')
-      .eq('school_id', schoolId)
-      .eq('day', dayCapitalized);
-    
-    if (!error && data) {
-      multiLevelCache.set(cacheKey, data, 5 * 60 * 1000, 'session');
-    }
+    await queryClient.prefetchQuery({
+      queryKey: QueryKeys.schedules(schoolId, undefined, undefined),
+      queryFn: async () => {
+        const { data, error } = await supabase
+          .from('schedules')
+          .select('id, day_of_week, start_time, end_time, subject, teacher, room, class_id')
+          .eq('school_id', schoolId)
+          .eq('day_of_week', today);
+        
+        if (error) throw error;
+        return data;
+      },
+      staleTime: CacheStaleTime.SCHEDULES,
+    });
   } catch (error) {
     console.error('[DataPreloader] Error preloading schedules:', error);
   }
@@ -91,27 +93,29 @@ async function preloadTodaySchedules(schoolId: string, userRole: string): Promis
  */
 async function preloadRecentAnnouncements(schoolId: string, userRole: string): Promise<void> {
   try {
-    const cacheKey = `announcements-recent-${schoolId}`;
-    
-    const { data, error } = await supabase
-      .from('announcements')
-      .select('id, title, content, priority, is_urgent, published_at, target_audience')
-      .eq('school_id', schoolId)
-      .eq('is_published', true)
-      .order('published_at', { ascending: false })
-      .limit(10);
-    
-    if (!error && data) {
-      // Filtrer selon le rôle
-      const filteredData = data.filter(announcement => 
-        !announcement.target_audience || 
-        announcement.target_audience.length === 0 ||
-        announcement.target_audience.includes('tous') ||
-        announcement.target_audience.includes(userRole)
-      );
-      
-      multiLevelCache.set(cacheKey, filteredData, CacheTTL.ANNOUNCEMENTS, 'session');
-    }
+    await queryClient.prefetchQuery({
+      queryKey: QueryKeys.announcements(schoolId, userRole),
+      queryFn: async () => {
+        const { data, error } = await supabase
+          .from('announcements')
+          .select('id, title, content, priority, is_urgent, published_at, target_audience')
+          .eq('school_id', schoolId)
+          .eq('is_published', true)
+          .order('published_at', { ascending: false })
+          .limit(10);
+        
+        if (error) throw error;
+        
+        // Filtrer selon le rôle
+        return (data || []).filter(announcement => 
+          !announcement.target_audience || 
+          announcement.target_audience.length === 0 ||
+          announcement.target_audience.includes('tous') ||
+          announcement.target_audience.includes(userRole)
+        );
+      },
+      staleTime: CacheStaleTime.ANNOUNCEMENTS,
+    });
   } catch (error) {
     console.error('[DataPreloader] Error preloading announcements:', error);
   }
@@ -122,19 +126,20 @@ async function preloadRecentAnnouncements(schoolId: string, userRole: string): P
  */
 async function preloadUserClasses(schoolId: string, userRole: string, userId: string): Promise<void> {
   try {
-    const cacheKey = `classes-${schoolId}`;
-    
-    let query = supabase
-      .from('classes')
-      .select('id, name, level, section, capacity, effectif')
-      .eq('school_id', schoolId)
-      .order('level');
-    
-    const { data, error } = await query;
-    
-    if (!error && data) {
-      multiLevelCache.set(cacheKey, data, CacheTTL.CLASSES, 'session');
-    }
+    await queryClient.prefetchQuery({
+      queryKey: QueryKeys.classes(schoolId),
+      queryFn: async () => {
+        const { data, error } = await supabase
+          .from('classes')
+          .select('id, name, level, section, capacity, effectif')
+          .eq('school_id', schoolId)
+          .order('level');
+        
+        if (error) throw error;
+        return data;
+      },
+      staleTime: CacheStaleTime.CLASSES,
+    });
   } catch (error) {
     console.error('[DataPreloader] Error preloading classes:', error);
   }
@@ -145,17 +150,20 @@ async function preloadUserClasses(schoolId: string, userRole: string, userId: st
  */
 async function preloadSubjects(schoolId: string): Promise<void> {
   try {
-    const cacheKey = `subjects-structure-${schoolId}`;
-    
-    const { data, error } = await supabase
-      .from('subjects')
-      .select('id, name, code, coefficient, color, class_id')
-      .eq('school_id', schoolId)
-      .order('name');
-    
-    if (!error && data) {
-      multiLevelCache.set(cacheKey, data, CacheTTL.SUBJECTS, 'session');
-    }
+    await queryClient.prefetchQuery({
+      queryKey: QueryKeys.subjects(schoolId),
+      queryFn: async () => {
+        const { data, error } = await supabase
+          .from('subjects')
+          .select('id, name, code, coefficient, color, class_id')
+          .eq('school_id', schoolId)
+          .order('name');
+        
+        if (error) throw error;
+        return data;
+      },
+      staleTime: CacheStaleTime.SUBJECTS,
+    });
   } catch (error) {
     console.error('[DataPreloader] Error preloading subjects:', error);
   }
@@ -168,17 +176,20 @@ export async function preloadTeacherData(teacherId: string, schoolId: string): P
   console.log('[DataPreloader] Preloading teacher-specific data...');
   
   try {
-    // Précharger les classes de l'enseignant (sans les élèves sensibles)
-    const { data: teacherClasses } = await supabase
-      .from('teacher_subjects')
-      .select('class_id, subject_id, classes(id, name, level, section)')
-      .eq('teacher_id', teacherId)
-      .eq('school_id', schoolId);
-    
-    if (teacherClasses) {
-      const cacheKey = `teacher-classes-${teacherId}`;
-      multiLevelCache.set(cacheKey, teacherClasses, CacheTTL.CLASSES, 'session');
-    }
+    await queryClient.prefetchQuery({
+      queryKey: ['teacher-classes', teacherId],
+      queryFn: async () => {
+        const { data, error } = await supabase
+          .from('teacher_subjects')
+          .select('class_id, subject_id, classes(id, name, level, section)')
+          .eq('teacher_id', teacherId)
+          .eq('school_id', schoolId);
+        
+        if (error) throw error;
+        return data;
+      },
+      staleTime: CacheStaleTime.CLASSES,
+    });
     
     console.log('[DataPreloader] ✅ Teacher data preloaded');
   } catch (error) {
@@ -193,18 +204,21 @@ export async function preloadStudentData(studentId: string, schoolId: string): P
   console.log('[DataPreloader] Preloading student-specific data...');
   
   try {
-    // Précharger uniquement les données non sensibles
-    const { data: studentInfo } = await supabase
-      .from('students')
-      .select('id, class_id, classes(id, name, level, section)')
-      .eq('id', studentId)
-      .eq('school_id', schoolId)
-      .single();
-    
-    if (studentInfo) {
-      const cacheKey = `student-class-info-${studentId}`;
-      multiLevelCache.set(cacheKey, studentInfo, CacheTTL.CLASSES, 'session');
-    }
+    await queryClient.prefetchQuery({
+      queryKey: ['student-class-info', studentId],
+      queryFn: async () => {
+        const { data, error } = await supabase
+          .from('students')
+          .select('id, class_id, classes(id, name, level, section)')
+          .eq('id', studentId)
+          .eq('school_id', schoolId)
+          .single();
+        
+        if (error) throw error;
+        return data;
+      },
+      staleTime: CacheStaleTime.CLASSES,
+    });
     
     console.log('[DataPreloader] ✅ Student data preloaded');
   } catch (error) {

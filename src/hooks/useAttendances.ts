@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useOptimizedCache } from './useOptimizedCache';
+import { unifiedCache, CacheTTL } from '@/utils/unifiedCache';
 
 export interface AttendanceRecord {
   id: string;
@@ -21,12 +21,11 @@ export interface AttendanceRecord {
   };
 }
 
-const CACHE_TTL = 2 * 60 * 1000; // 2 minutes
+const CACHE_TTL = CacheTTL.DYNAMIC; // 2 minutes
 
 export const useAttendances = (classId?: string, teacherId?: string | null, schoolId?: string) => {
   const [attendances, setAttendances] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
-  const cache = useOptimizedCache();
 
   const fetchAttendances = useCallback(async () => {
     if (!classId || !schoolId) {
@@ -37,7 +36,7 @@ export const useAttendances = (classId?: string, teacherId?: string | null, scho
     const cacheKey = `attendances_${classId}_${teacherId || 'all'}`;
     
     // Vérifier le cache d'abord
-    const cached = cache.get<AttendanceRecord[]>(cacheKey);
+    const cached = unifiedCache.get<AttendanceRecord[]>(cacheKey);
     if (cached) {
       setAttendances(cached);
       setLoading(false);
@@ -88,14 +87,14 @@ export const useAttendances = (classId?: string, teacherId?: string | null, scho
         });
         
         setAttendances(sortedData);
-        cache.set(cacheKey, sortedData, CACHE_TTL);
+        unifiedCache.set(cacheKey, sortedData, CACHE_TTL);
       }
     } catch (error) {
       console.error('Erreur:', error);
     } finally {
       setLoading(false);
     }
-  }, [classId, teacherId, schoolId, cache]);
+  }, [classId, teacherId, schoolId]);
 
   useEffect(() => {
     fetchAttendances();

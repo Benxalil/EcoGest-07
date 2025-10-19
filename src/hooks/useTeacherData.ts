@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useOptimizedUserData } from './useOptimizedUserData';
-import { useOptimizedCache } from './useOptimizedCache';
+import { unifiedCache, CacheTTL } from '@/utils/unifiedCache';
 import { filterAnnouncementsByRole, type Announcement } from '@/utils/announcementFilters';
 import type { ClassData } from './useClasses';
 
@@ -56,7 +56,6 @@ export const useTeacherData = () => {
   });
 
   const { profile, teacherId, loading: profileLoading } = useOptimizedUserData();
-  const cache = useOptimizedCache();
   const isFetchingRef = useRef(false);
   const cacheKey = `teacher-data-${profile?.id}`;
 
@@ -66,7 +65,7 @@ export const useTeacherData = () => {
     }
 
     // Vérifier le cache
-    const cachedData = cache.get(cacheKey) as TeacherData | null;
+    const cachedData = unifiedCache.get(cacheKey) as TeacherData | null;
     if (cachedData) {
       setData({ ...cachedData, loading: false, error: null });
       return;
@@ -111,7 +110,7 @@ export const useTeacherData = () => {
       };
 
       // 🚀 OPTIMISATION: Cache encore plus long: 10 minutes pour teacher data
-      cache.set(cacheKey, teacherData, 10 * 60 * 1000);
+      unifiedCache.set(cacheKey, teacherData, CacheTTL.STATIC);
       setData(teacherData);
 
     } catch (err: unknown) {
@@ -125,7 +124,7 @@ export const useTeacherData = () => {
     } finally {
       isFetchingRef.current = false;
     }
-  }, [profile?.schoolId, profile?.id, teacherId, cache, cacheKey]);
+  }, [profile?.schoolId, profile?.id, teacherId, cacheKey]);
 
   // Fetch initial
   useEffect(() => {
@@ -141,7 +140,7 @@ export const useTeacherData = () => {
     let timeoutId: NodeJS.Timeout;
     const handleUpdate = (table: string) => {
       console.log('[useTeacherData] Real-time update detected for:', table);
-      cache.deleteWithEvent(cacheKey);
+      unifiedCache.delete(cacheKey);
       // 🚀 OPTIMISATION: Debounce plus agressif pour réduire les refetch (1000ms)
       if (timeoutId) clearTimeout(timeoutId);
       timeoutId = setTimeout(fetchTeacherData, 1000);
@@ -179,7 +178,7 @@ export const useTeacherData = () => {
       if (timeoutId) clearTimeout(timeoutId);
       supabase.removeChannel(channel);
     };
-  }, [profile?.schoolId, fetchTeacherData, cache, cacheKey]);
+  }, [profile?.schoolId, fetchTeacherData, cacheKey]);
 
   // Listener global pour les mises à jour d'emploi du temps
   useEffect(() => {
@@ -189,14 +188,14 @@ export const useTeacherData = () => {
       const customEvent = e as CustomEvent;
       if (customEvent.detail?.teacherId === teacherId) {
         console.log('[useTeacherData] Schedule update event received for teacher:', teacherId);
-        cache.deleteWithEvent(cacheKey);
+        unifiedCache.delete(cacheKey);
         fetchTeacherData();
       }
     };
 
     window.addEventListener('schedule-updated', handleScheduleUpdate);
     return () => window.removeEventListener('schedule-updated', handleScheduleUpdate);
-  }, [teacherId, fetchTeacherData, cache, cacheKey]);
+  }, [teacherId, fetchTeacherData, cacheKey]);
 
   return {
     classes: data.classes,

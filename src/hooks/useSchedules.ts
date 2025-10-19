@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserRole } from './useUserRole';
 import { useToast } from '@/hooks/use-toast';
-import { useOptimizedCache } from './useOptimizedCache';
+import { unifiedCache, CacheTTL } from '@/utils/unifiedCache';
 
 export interface Course {
   id?: string;
@@ -38,7 +38,6 @@ export const useSchedules = (classId?: string) => {
   const [error, setError] = useState<string | null>(null);
   const { userProfile } = useUserRole();
   const { toast } = useToast();
-  const cache = useOptimizedCache();
   const isFetchingRef = useRef(false);
 
   const fetchSchedules = useCallback(async () => {
@@ -52,7 +51,7 @@ export const useSchedules = (classId?: string) => {
 
     // Vérifier le cache d'abord
     const cacheKey = `schedules-${classId}`;
-    const cached = cache.get(cacheKey) as DaySchedule[] | null;
+    const cached = unifiedCache.get(cacheKey) as DaySchedule[] | null;
     if (cached) {
       setSchedules(cached);
       setLoading(false);
@@ -81,7 +80,7 @@ export const useSchedules = (classId?: string) => {
       }));
 
       // Mise en cache pour 2 minutes
-      cache.set(cacheKey, organizedSchedules, 120000);
+      unifiedCache.set(cacheKey, organizedSchedules, CacheTTL.DYNAMIC);
       
       setSchedules(organizedSchedules);
       setError(null);
@@ -134,7 +133,7 @@ export const useSchedules = (classId?: string) => {
 
     // Invalider le cache immédiatement
     const cacheKey = `schedules-${classId}`;
-    cache.delete(cacheKey);
+    unifiedCache.delete(cacheKey);
 
     // Mise à jour optimiste de l'UI immédiatement
     setSchedules(prevSchedules => {
@@ -150,7 +149,7 @@ export const useSchedules = (classId?: string) => {
         return daySchedule;
       });
       // Mettre à jour le cache avec les nouvelles données
-      cache.set(cacheKey, updatedSchedules, 120000);
+      unifiedCache.set(cacheKey, updatedSchedules, CacheTTL.DYNAMIC);
       return updatedSchedules;
     });
     
@@ -183,7 +182,7 @@ export const useSchedules = (classId?: string) => {
             courses: daySchedule.courses.filter(course => course.id !== tempId)
           }))
         );
-        cache.delete(cacheKey);
+        unifiedCache.delete(cacheKey);
 
         if (error.message.includes('schedules_no_time_conflict') || error.code === '23505') {
           toast({
@@ -211,7 +210,7 @@ export const useSchedules = (classId?: string) => {
             course.id === tempId ? { ...course, id: insertedCourse.id } : course
           )
         }));
-        cache.set(cacheKey, updatedSchedules, 120000);
+        unifiedCache.set(cacheKey, updatedSchedules, CacheTTL.DYNAMIC);
         return updatedSchedules;
       });
 
@@ -223,8 +222,8 @@ export const useSchedules = (classId?: string) => {
 
       // Invalidations de cache
       if (courseData.teacher_id) {
-        cache.invalidateByPrefixWithEvent(`teacher-dashboard-${courseData.teacher_id}`);
-        cache.deleteWithEvent('teacher-data-*');
+        unifiedCache.deleteByPrefix(`teacher-dashboard-${courseData.teacher_id}`);
+        unifiedCache.delete('teacher-data-*');
         window.dispatchEvent(new CustomEvent('schedule-updated', { 
           detail: { teacherId: courseData.teacher_id, classId: courseData.class_id }
         }));
@@ -240,7 +239,7 @@ export const useSchedules = (classId?: string) => {
           courses: daySchedule.courses.filter(course => course.id !== tempId)
         }))
       );
-      cache.delete(cacheKey);
+      unifiedCache.delete(cacheKey);
       
       if (err instanceof Error && err.message.includes('Timeout')) {
         toast({
@@ -281,7 +280,7 @@ export const useSchedules = (classId?: string) => {
 
     // Invalider le cache immédiatement
     const cacheKey = `schedules-${classId}`;
-    cache.delete(cacheKey);
+    unifiedCache.delete(cacheKey);
 
     // Mise à jour optimiste de l'UI immédiatement
     setSchedules(prevSchedules => {
@@ -301,7 +300,7 @@ export const useSchedules = (classId?: string) => {
         )
       }));
       // Mettre à jour le cache avec les nouvelles données
-      cache.set(cacheKey, updatedSchedules, 120000);
+      unifiedCache.set(cacheKey, updatedSchedules, CacheTTL.DYNAMIC);
       return updatedSchedules;
     });
 
@@ -324,7 +323,7 @@ export const useSchedules = (classId?: string) => {
         console.error('❌ Erreur DB lors de la mise à jour:', error);
         // Rollback en cas d'erreur
         setSchedules(previousSchedules);
-        cache.delete(cacheKey);
+        unifiedCache.delete(cacheKey);
         toast({
           title: "❌ Erreur de sauvegarde",
           description: `Impossible de mettre à jour le cours: ${error.message}`,
@@ -340,14 +339,14 @@ export const useSchedules = (classId?: string) => {
       });
 
       // Invalidations de cache
-      cache.deleteWithEvent('teacher-data-*');
+      unifiedCache.delete('teacher-data-*');
       
       return true;
     } catch (err) {
       console.error('❌ Exception lors de la mise à jour:', err);
       // Rollback
       setSchedules(previousSchedules);
-      cache.delete(cacheKey);
+      unifiedCache.delete(cacheKey);
       toast({
         title: "❌ Erreur de connexion",
         description: "Impossible de communiquer avec le serveur. Vérifiez votre connexion.",
@@ -365,7 +364,7 @@ export const useSchedules = (classId?: string) => {
 
     // Invalider le cache immédiatement
     const cacheKey = `schedules-${classId}`;
-    cache.delete(cacheKey);
+    unifiedCache.delete(cacheKey);
 
     // Suppression optimiste de l'UI immédiatement
     setSchedules(prevSchedules => {
@@ -374,7 +373,7 @@ export const useSchedules = (classId?: string) => {
         courses: daySchedule.courses.filter(course => course.id !== id)
       }));
       // Mettre à jour le cache avec les nouvelles données
-      cache.set(cacheKey, updatedSchedules, 120000);
+      unifiedCache.set(cacheKey, updatedSchedules, CacheTTL.DYNAMIC);
       return updatedSchedules;
     });
 
@@ -390,7 +389,7 @@ export const useSchedules = (classId?: string) => {
         console.error('❌ Erreur DB lors de la suppression:', error);
         // Rollback en cas d'erreur
         setSchedules(previousSchedules);
-        cache.delete(cacheKey);
+        unifiedCache.delete(cacheKey);
         toast({
           title: "❌ Erreur de sauvegarde",
           description: `Impossible de supprimer le cours: ${error.message}`,
@@ -406,14 +405,14 @@ export const useSchedules = (classId?: string) => {
       });
 
       // Invalidations de cache
-      cache.deleteWithEvent('teacher-data-*');
+      unifiedCache.delete('teacher-data-*');
       
       return true;
     } catch (err) {
       console.error('❌ Exception lors de la suppression:', err);
       // Rollback
       setSchedules(previousSchedules);
-      cache.delete(cacheKey);
+      unifiedCache.delete(cacheKey);
       toast({
         title: "❌ Erreur de connexion",
         description: "Impossible de communiquer avec le serveur. Vérifiez votre connexion.",

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useOptimizedUserData } from './useOptimizedUserData';
-import { useOptimizedCache } from './useOptimizedCache';
+import { unifiedCache, CacheTTL } from '@/utils/unifiedCache';
 import { filterAnnouncementsByRole, type Announcement } from '@/utils/announcementFilters';
 
 export interface Child {
@@ -105,19 +105,16 @@ export const useParentData = (selectedChildId?: string | null) => {
   });
 
   const { profile } = useOptimizedUserData();
-  const cache = useOptimizedCache();
   const isFetchingRef = useRef(false);
   
   // ✅ Utiliser des refs pour éviter les re-renders
   const cacheKeyRef = useRef(`parent-data-${profile?.id}-${selectedChildId || 'default'}`);
-  const cacheRef = useRef(cache);
   const lastLogTime = useRef<number>(0);
 
   // Mettre à jour les refs sans déclencher de re-render
   useEffect(() => {
     cacheKeyRef.current = `parent-data-${profile?.id}-${selectedChildId || 'default'}`;
-    cacheRef.current = cache;
-  }, [profile?.id, cache, selectedChildId]);
+  }, [profile?.id, selectedChildId]);
 
   // 🚀 OPTIMISATION: Changement d'enfant intelligent - ne refetch que les schedules
   const prevSelectedChildRef = useRef(selectedChildId);
@@ -202,7 +199,7 @@ export const useParentData = (selectedChildId?: string | null) => {
     }
 
     // ✅ Vérifier le cache EN PREMIER
-    const cachedData = cacheRef.current.get(cacheKeyRef.current) as ParentData | null;
+    const cachedData = unifiedCache.get(cacheKeyRef.current) as ParentData | null;
     if (cachedData) {
       // ✅ Vérifier que le cache correspond bien à l'enfant sélectionné
       const cacheMatchesSelection = 
@@ -461,7 +458,7 @@ export const useParentData = (selectedChildId?: string | null) => {
       };
 
       // 🚀 OPTIMISATION: Cache plus long pour parent data (2 minutes)
-      cacheRef.current.set(cacheKeyRef.current, parentData, 2 * 60 * 1000);
+      unifiedCache.set(cacheKeyRef.current, parentData, CacheTTL.DYNAMIC);
       setData(parentData);
 
     } catch (err: unknown) {
@@ -490,7 +487,7 @@ export const useParentData = (selectedChildId?: string | null) => {
 
   // ✅ Callback stable pour les mises à jour real-time
   const handleUpdate = useCallback(() => {
-    cacheRef.current.deleteWithEvent(cacheKeyRef.current);
+    unifiedCache.delete(cacheKeyRef.current);
     setTimeout(() => fetchRef.current(), 300);
   }, []); // ✅ Pas de dépendances
 

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { useOptimizedCache } from '@/hooks/useOptimizedCache';
+import { unifiedCache } from '@/utils/unifiedCache';
 
 interface PerformanceMetrics {
   renderTime: number;
@@ -19,7 +19,6 @@ const PerformanceMonitor = () => {
     activeHooks: 0
   });
   const [isVisible, setIsVisible] = useState(false);
-  const cache = useOptimizedCache();
 
   useEffect(() => {
     // Only show in development
@@ -34,7 +33,7 @@ const PerformanceMonitor = () => {
           const endTime = performance.now();
           const renderTime = endTime - startTime;
           
-          const cacheStats = cache.getStats();
+          const cacheStats = unifiedCache.getStats();
           
           setMetrics({
             renderTime: Math.round(renderTime * 100) / 100,
@@ -48,10 +47,10 @@ const PerformanceMonitor = () => {
       const interval = setInterval(measurePerformance, 2000);
       return () => clearInterval(interval);
     }
-  }, [cache]);
+  }, []);
 
   const clearCache = () => {
-    cache.clear();
+    unifiedCache.clear();
     setMetrics(prev => ({ ...prev, activeHooks: 0, cacheHitRate: 0 }));
   };
 

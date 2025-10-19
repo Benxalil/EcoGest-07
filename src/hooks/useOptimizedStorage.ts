@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useOptimizedCache } from './useOptimizedCache';
+import { unifiedCache, CacheTTL } from '@/utils/unifiedCache';
 
 /**
  * Optimized storage hook that combines localStorage with in-memory caching
@@ -8,15 +8,13 @@ import { useOptimizedCache } from './useOptimizedCache';
 export function useOptimizedStorage<T>(
   key: string,
   initialValue: T,
-  ttl: number = 5 * 60 * 1000 // 5 minutes default
+  ttl: number = CacheTTL.SEMI_DYNAMIC // 5 minutes default
 ) {
-  const cache = useOptimizedCache();
-
   // Initialize state with cached or localStorage value
   const [storedValue, setStoredValue] = useState<T>(() => {
     try {
       // Check cache first (fast)
-      const cachedValue = cache.get<T>(key);
+      const cachedValue = unifiedCache.get<T>(key);
       if (cachedValue !== null) {
         return cachedValue;
       }
@@ -26,7 +24,7 @@ export function useOptimizedStorage<T>(
       const value = item ? JSON.parse(item) : initialValue;
 
       // Store in cache for future access
-      cache.set(key, value, ttl);
+      unifiedCache.set(key, value, ttl);
 
       return value;
     } catch (error) {
@@ -44,7 +42,7 @@ export function useOptimizedStorage<T>(
       setStoredValue(valueToStore);
 
       // Update cache (synchronous, fast)
-      cache.set(key, valueToStore, ttl);
+      unifiedCache.set(key, valueToStore, ttl);
 
       // Batch localStorage writes to avoid blocking
       requestIdleCallback(() => {
@@ -57,18 +55,18 @@ export function useOptimizedStorage<T>(
     } catch (error) {
       console.error(`Error setting value for key "${key}":`, error);
     }
-  }, [key, storedValue, cache, ttl]);
+  }, [key, storedValue, ttl]);
 
   // Remove value
   const removeValue = useCallback(() => {
     try {
-      cache.delete(key);
+      unifiedCache.delete(key);
       window.localStorage.removeItem(key);
       setStoredValue(initialValue);
     } catch (error) {
       console.error(`Error removing key "${key}":`, error);
     }
-  }, [key, cache, initialValue]);
+  }, [key, initialValue]);
 
   // Sync across tabs
   useEffect(() => {
@@ -77,7 +75,7 @@ export function useOptimizedStorage<T>(
         try {
           const newValue = JSON.parse(e.newValue);
           setStoredValue(newValue);
-          cache.set(key, newValue, ttl);
+          unifiedCache.set(key, newValue, ttl);
         } catch (error) {
           console.error('Error syncing storage change:', error);
         }
@@ -86,7 +84,7 @@ export function useOptimizedStorage<T>(
 
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
-  }, [key, cache, ttl]);
+  }, [key, ttl]);
 
   return [storedValue, setValue, removeValue] as const;
 }

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useOptimizedCache } from './useOptimizedCache';
+import { unifiedCache, CacheTTL } from '@/utils/unifiedCache';
 import type { User } from '@supabase/supabase-js';
 
 export type UserRole = 'school_admin' | 'teacher' | 'student' | 'parent' | 'super_admin';
@@ -39,8 +39,6 @@ export const useOptimizedUserData = () => {
       error: null
     }
   );
-  
-  const cache = useOptimizedCache();
 
   const fetchUserData = useCallback(async () => {
     // Si une requête est déjà en cours, l'attendre
@@ -52,7 +50,7 @@ export const useOptimizedUserData = () => {
 
     // Vérifier le cache d'abord (15 minutes pour les données utilisateur)
     const cacheKey = 'optimized-user-data';
-    const cached = cache.get<OptimizedUserData>(cacheKey);
+    const cached = unifiedCache.get<OptimizedUserData>(cacheKey);
     if (cached && cached.profile) {
       globalUserData = cached;
       setData(cached);
@@ -112,7 +110,7 @@ export const useOptimizedUserData = () => {
         let teacherId: string | null = null;
         if (profile.role === 'teacher') {
           const teacherCacheKey = `teacher-id-${user.id}`;
-          const cachedTeacherId = cache.get<string>(teacherCacheKey);
+          const cachedTeacherId = unifiedCache.get<string>(teacherCacheKey);
           
           if (cachedTeacherId) {
             teacherId = cachedTeacherId;
@@ -126,7 +124,7 @@ export const useOptimizedUserData = () => {
             
             teacherId = teacherData?.id || null;
             if (teacherId) {
-              cache.set(teacherCacheKey, teacherId, 15 * 60 * 1000); // 15 minutes
+              unifiedCache.set(teacherCacheKey, teacherId, CacheTTL.STATIC); // 10 minutes
             }
           }
         }
@@ -140,7 +138,7 @@ export const useOptimizedUserData = () => {
         };
 
         // Mettre en cache pour 15 minutes (données utilisateur statiques)
-        cache.set(cacheKey, userData, 15 * 60 * 1000);
+        unifiedCache.set(cacheKey, userData, CacheTTL.STATIC);
         globalUserData = userData;
         
         return userData;
@@ -162,7 +160,7 @@ export const useOptimizedUserData = () => {
     const result = await globalDataPromise;
     setData(result);
     return result;
-  }, [cache]);
+  }, []);
 
   useEffect(() => {
     fetchUserData();
@@ -174,7 +172,7 @@ export const useOptimizedUserData = () => {
       } else if (event === 'SIGNED_OUT') {
         globalUserData = null;
         globalDataPromise = null;
-        cache.clear();
+        unifiedCache.clear();
         setData({
           user: null,
           profile: null,
@@ -188,13 +186,13 @@ export const useOptimizedUserData = () => {
     return () => {
       subscription.unsubscribe();
     };
-  }, [fetchUserData, cache]);
+  }, [fetchUserData]);
 
   const refetch = useCallback(() => {
-    cache.delete('optimized-user-data');
+    unifiedCache.delete('optimized-user-data');
     globalUserData = null;
     return fetchUserData();
-  }, [fetchUserData, cache]);
+  }, [fetchUserData]);
 
   return {
     ...data,
