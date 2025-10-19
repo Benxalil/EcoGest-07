@@ -803,6 +803,109 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
     }
   };
 
+  // ✅ NOUVELLE FONCTION: Synchroniser les informations du père depuis un élève existant
+  const syncParentInfoFromExistingStudent = async (matricule: string) => {
+    if (!userProfile?.schoolId || !matricule) return;
+    
+    try {
+      console.log('🔄 Synchronisation des informations du père depuis un élève existant...');
+      
+      const { data: existingStudent, error } = await supabase
+        .from('students')
+        .select(`
+          father_first_name,
+          father_last_name,
+          father_phone,
+          father_address,
+          father_status,
+          father_profession,
+          mother_first_name,
+          mother_last_name,
+          mother_phone,
+          mother_address,
+          mother_status,
+          mother_profession,
+          emergency_contact
+        `)
+        .eq('school_id', userProfile.schoolId)
+        .eq('parent_matricule', matricule)
+        .eq('is_active', true)
+        .limit(1)
+        .maybeSingle();
+      
+      if (error) {
+        console.error('Erreur lors de la synchronisation:', error);
+        return;
+      }
+      
+      if (existingStudent) {
+        console.log('✅ Élève existant trouvé, synchronisation des données du père...');
+        
+        // Synchroniser UNIQUEMENT les champs non modifiés manuellement
+        if (!manuallyEditedFields.has('perePrenom') && existingStudent.father_first_name) {
+          form.setValue('perePrenom', existingStudent.father_first_name);
+        }
+        if (!manuallyEditedFields.has('pereNom') && existingStudent.father_last_name) {
+          form.setValue('pereNom', existingStudent.father_last_name);
+        }
+        if (!manuallyEditedFields.has('pereTelephone') && existingStudent.father_phone) {
+          form.setValue('pereTelephone', existingStudent.father_phone);
+        }
+        if (!manuallyEditedFields.has('pereAdresse') && existingStudent.father_address) {
+          form.setValue('pereAdresse', existingStudent.father_address);
+        }
+        if (!manuallyEditedFields.has('pereStatut') && existingStudent.father_status) {
+          form.setValue('pereStatut', existingStudent.father_status as 'alive' | 'deceased');
+        }
+        if (!manuallyEditedFields.has('pereFonction') && existingStudent.father_profession) {
+          form.setValue('pereFonction', existingStudent.father_profession);
+        }
+        
+        // Synchroniser aussi les informations de la mère si disponibles
+        if (!manuallyEditedFields.has('merePrenom') && existingStudent.mother_first_name) {
+          form.setValue('merePrenom', existingStudent.mother_first_name);
+        }
+        if (!manuallyEditedFields.has('mereNom') && existingStudent.mother_last_name) {
+          form.setValue('mereNom', existingStudent.mother_last_name);
+        }
+        if (!manuallyEditedFields.has('mereTelephone') && existingStudent.mother_phone) {
+          form.setValue('mereTelephone', existingStudent.mother_phone);
+        }
+        if (!manuallyEditedFields.has('mereAdresse') && existingStudent.mother_address) {
+          form.setValue('mereAdresse', existingStudent.mother_address);
+        }
+        if (!manuallyEditedFields.has('mereStatut') && existingStudent.mother_status) {
+          form.setValue('mereStatut', existingStudent.mother_status as 'alive' | 'deceased');
+        }
+        if (!manuallyEditedFields.has('mereFonction') && existingStudent.mother_profession) {
+          form.setValue('mereFonction', existingStudent.mother_profession);
+        }
+        
+        // Synchroniser le contact d'urgence si non rempli
+        if (!manuallyEditedFields.has('contactUrgenceNom') && existingStudent.emergency_contact) {
+          const contactParts = existingStudent.emergency_contact.split(' - ');
+          if (contactParts.length >= 2) {
+            form.setValue('contactUrgenceNom', contactParts[0]);
+            const phoneAndRelation = contactParts[1].split(' (');
+            if (phoneAndRelation.length >= 2) {
+              form.setValue('contactUrgenceTelephone', phoneAndRelation[0]);
+              form.setValue('contactUrgenceRelation', phoneAndRelation[1].replace(')', ''));
+            }
+          }
+        }
+        
+        showSuccess({
+          title: "Synchronisation réussie",
+          description: "Informations du père récupérées depuis un élève existant"
+        });
+      } else {
+        console.log('⚠️ Aucun élève existant trouvé avec ce matricule');
+      }
+    } catch (error) {
+      console.error('Erreur lors de la synchronisation:', error);
+    }
+  };
+
   // Vérification en temps réel du matricule père
   useEffect(() => {
     if (!useFatherExisting || !fatherMatricule.trim()) {
@@ -819,6 +922,13 @@ export function AjoutEleveForm({ onSuccess, initialData, isEditing = false, clas
 
     return () => clearTimeout(timeoutId);
   }, [fatherMatricule, useFatherExisting, userProfile?.schoolId]);
+
+  // ✅ NOUVEAU: Synchroniser automatiquement les informations du père quand le matricule est validé
+  useEffect(() => {
+    if (fatherValidationStatus === 'valid' && fatherMatricule && useFatherExisting) {
+      syncParentInfoFromExistingStudent(fatherMatricule);
+    }
+  }, [fatherValidationStatus, fatherMatricule, useFatherExisting]);
 
   // Vérification en temps réel du matricule mère
   useEffect(() => {
