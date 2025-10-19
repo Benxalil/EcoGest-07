@@ -78,7 +78,7 @@ function App() {
   
   // 🔄 Système de détection de nouvelle version et nettoyage automatique des caches
   useEffect(() => {
-    const currentVersion = '2025.10.18-08:00'; // 🚀 OPTIMISATIONS PERFORMANCE COMPLÈTES - CSS Critique, Prefetch, Chunking
+    const currentVersion = '2025.10.19-bfcache'; // 🔄 BFCACHE ACTIVÉ - Navigation instantanée
     const lastVersion = localStorage.getItem('app_version');
     
     if (lastVersion !== currentVersion) {
@@ -95,12 +95,21 @@ function App() {
         }
       });
       
+      // Forcer le rechargement du service worker
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then((registrations) => {
+          registrations.forEach((registration) => {
+            registration.unregister();
+          });
+        });
+      }
+      
       // Mettre à jour la version
       localStorage.setItem('app_version', currentVersion);
       
       toast({
         title: "🔄 Mise à jour appliquée",
-        description: "L'application a été mise à jour avec les dernières modifications",
+        description: "Navigation instantanée activée (bfcache)",
         duration: 3000,
       });
     }

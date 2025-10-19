@@ -1,9 +1,10 @@
 /**
  * 🚀 OPTIMISATION: Service Worker pour cache agressif des assets
  * Cache les images et fichiers statiques pour améliorer les performances
+ * Compatible avec bfcache pour navigation instantanée
  */
 
-const CACHE_NAME = 'ecogest-cache-v1';
+const CACHE_NAME = 'ecogest-cache-v2'; // Incrémenter pour forcer le refresh
 const ASSETS_TO_CACHE = [
   '/lovable-uploads/',
   '/assets/',
@@ -87,6 +88,12 @@ self.addEventListener('fetch', (event) => {
   }
 
   // Network First pour le reste (HTML, API, etc.)
+  // Ne pas cacher les modules JS pour éviter les erreurs de chargement dynamique
+  if (url.pathname.match(/\.js$/)) {
+    event.respondWith(fetch(event.request));
+    return;
+  }
+
   event.respondWith(
     fetch(event.request)
       .then((response) => {

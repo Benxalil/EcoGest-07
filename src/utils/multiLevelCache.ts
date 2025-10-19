@@ -18,12 +18,14 @@ class MultiLevelCache {
   private memoryCache = new Map<string, CacheEntry<any>>();
   private broadcastChannel: BroadcastChannel | null = null;
   private listeners = new Map<string, Set<(data: any) => void>>();
+  private messageHandler: ((event: MessageEvent) => void) | null = null;
 
   constructor() {
     // Initialiser BroadcastChannel pour la synchronisation inter-onglets
+    // Compatible avec bfcache - sera fermé proprement
     if (typeof BroadcastChannel !== 'undefined') {
       this.broadcastChannel = new BroadcastChannel('multilevel-cache-sync');
-      this.broadcastChannel.onmessage = (event) => {
+      this.messageHandler = (event) => {
         const { key, data, action } = event.data;
         
         if (action === 'set') {
@@ -36,10 +38,50 @@ class MultiLevelCache {
           this.notifyListeners(key, null);
         }
       };
+      this.broadcastChannel.onmessage = this.messageHandler;
+
+      // 🔄 Gérer le bfcache: fermer le channel avant la mise en cache
+      if (typeof window !== 'undefined') {
+        window.addEventListener('pagehide', this.handlePageHide);
+        window.addEventListener('pageshow', this.handlePageShow);
+      }
     }
 
     // Nettoyer les entrées expirées au démarrage
     this.cleanup();
+  }
+
+  // 🔄 Fermer le BroadcastChannel avant mise en bfcache
+  private handlePageHide = (event: PageTransitionEvent) => {
+    if (event.persisted && this.broadcastChannel) {
+      this.broadcastChannel.close();
+      console.log('[MultiLevelCache] BroadcastChannel fermé pour bfcache');
+    }
+  };
+
+  // 🔄 Réouvrir le BroadcastChannel après restauration depuis bfcache
+  private handlePageShow = (event: PageTransitionEvent) => {
+    if (event.persisted && typeof BroadcastChannel !== 'undefined') {
+      this.broadcastChannel = new BroadcastChannel('multilevel-cache-sync');
+      if (this.messageHandler) {
+        this.broadcastChannel.onmessage = this.messageHandler;
+      }
+      console.log('[MultiLevelCache] BroadcastChannel réouvert après bfcache');
+    }
+  };
+
+  // Nettoyage pour désactiver complètement le cache
+  public destroy(): void {
+    if (this.broadcastChannel) {
+      this.broadcastChannel.close();
+      this.broadcastChannel = null;
+    }
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('pagehide', this.handlePageHide);
+      window.removeEventListener('pageshow', this.handlePageShow);
+    }
+    this.memoryCache.clear();
+    this.listeners.clear();
   }
 
   /**

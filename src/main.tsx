@@ -34,11 +34,15 @@ const initializeNonCritical = () => {
     initializePerformanceOptimizations();
     
     // 🚀 OPTIMISATION: Enregistrer le Service Worker pour cache agressif
+    // Compatible avec bfcache
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker
         .register('/sw.js')
         .then((registration) => {
           console.log('[SW] Enregistré avec succès:', registration.scope);
+          
+          // 🔄 Mettre à jour le SW immédiatement s'il y a une nouvelle version
+          registration.update();
         })
         .catch((error) => {
           console.error('[SW] Échec enregistrement:', error);
@@ -51,6 +55,14 @@ const initializeNonCritical = () => {
   } else {
     setTimeout(callback, 1);
   }
+
+  // 🔄 Détecter la restauration depuis bfcache
+  window.addEventListener('pageshow', (event) => {
+    if (event.persisted) {
+      console.log('🔄 Page restaurée depuis bfcache');
+      // Réinitialiser si nécessaire
+    }
+  });
 };
 
 const rootElement = document.getElementById("root");

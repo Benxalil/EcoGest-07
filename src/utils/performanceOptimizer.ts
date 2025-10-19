@@ -126,19 +126,26 @@ export const cleanupAbandonedData = () => {
   }
 };
 
-// Initialize performance optimizations
+// Store cleanup functions globally for proper cleanup
+let unhandledRejectionHandler: ((event: PromiseRejectionEvent) => void) | null = null;
+let performanceObserver: PerformanceObserver | null = null;
+
+// Initialize performance optimizations (bfcache compatible)
 export const initializePerformanceOptimizations = () => {
   // Clean up old localStorage data
   cleanupAbandonedData();
   
   // Set up error handling for unhandled promise rejections
-  window.addEventListener('unhandledrejection', (event) => {
-    console.error('Unhandled promise rejection:', event.reason);
-  });
+  if (!unhandledRejectionHandler) {
+    unhandledRejectionHandler = (event) => {
+      console.error('Unhandled promise rejection:', event.reason);
+    };
+    window.addEventListener('unhandledrejection', unhandledRejectionHandler);
+  }
   
   // Performance observer for measuring page performance
-  if ('PerformanceObserver' in window) {
-    const observer = new PerformanceObserver((list) => {
+  if ('PerformanceObserver' in window && !performanceObserver) {
+    performanceObserver = new PerformanceObserver((list) => {
       for (const entry of list.getEntries()) {
         if (entry.entryType === 'measure') {
           console.log(`Performance measure: ${entry.name} - ${entry.duration}ms`);
@@ -146,6 +153,22 @@ export const initializePerformanceOptimizations = () => {
       }
     });
     
-    observer.observe({ entryTypes: ['measure'] });
+    performanceObserver.observe({ entryTypes: ['measure'] });
+  }
+
+  // 🔄 Cleanup pour bfcache - nettoyer avant mise en cache
+  window.addEventListener('pagehide', cleanupPerformanceOptimizations);
+};
+
+// Cleanup function pour bfcache
+export const cleanupPerformanceOptimizations = () => {
+  if (unhandledRejectionHandler) {
+    window.removeEventListener('unhandledrejection', unhandledRejectionHandler);
+    unhandledRejectionHandler = null;
+  }
+  
+  if (performanceObserver) {
+    performanceObserver.disconnect();
+    performanceObserver = null;
   }
 };
