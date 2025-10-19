@@ -260,8 +260,13 @@ export function useStudents(classId?: string) {
       });
 
       if (error) {
+        // Récupérer le message d'erreur depuis data.error
+        const errorMessage = typeof data?.error === 'string' ? data.error : error.message || '';
+        
         // Si l'erreur est "email_exists", ce n'est pas grave, on continue
-        if (error.message?.includes('email_exists') || error.message?.includes('already been registered')) {
+        if (errorMessage.includes('email_exists') || 
+            errorMessage.includes('already been registered') ||
+            errorMessage.includes('A user with this email address has already been registered')) {
           console.log('ℹ️ Le compte auth existe déjà, ce qui est normal pour un 2ème enfant avec le même parent');
           return null;
         }
@@ -271,8 +276,13 @@ export function useStudents(classId?: string) {
 
       return data?.user || null;
     } catch (error: any) {
+      // Extraire le message d'erreur
+      const errorMessage = error?.message || error?.error || JSON.stringify(error);
+      
       // Si l'erreur est "email_exists", ce n'est pas grave
-      if (error?.message?.includes('email_exists') || error?.message?.includes('already been registered')) {
+      if (errorMessage.includes('email_exists') || 
+          errorMessage.includes('already been registered') ||
+          errorMessage.includes('A user with this email address has already been registered')) {
         console.log('ℹ️ Le compte auth existe déjà, ce qui est normal pour un 2ème enfant avec le même parent');
         return null;
       }
@@ -380,6 +390,7 @@ export function useStudents(classId?: string) {
 
       // Créer le compte parent avec le mot de passe personnalisé
       if (!studentData.parent_matricule) {
+        // Nouveau parent - créer le compte
         await createStudentAuthAccount(
           parentMatricule, 
           schoolSuffix, 
@@ -389,17 +400,27 @@ export function useStudents(classId?: string) {
           'parent'
         );
       } else {
-        // Si parent existant, on vérifie qu'il existe bien dans la base
+        // Parent existant - vérifier s'il a déjà un compte auth
+        const parentEmail = `${studentData.parent_matricule}@${schoolSuffix.replace(/_/g, '-')}.ecogest.app`;
         const { data: existingParent } = await supabase
-          .from('students')
-          .select('parent_matricule')
-          .eq('school_id', userProfile?.schoolId)
-          .eq('parent_matricule', studentData.parent_matricule)
+          .from('profiles')
+          .select('id, email')
+          .eq('email', parentEmail)
           .limit(1)
           .maybeSingle();
 
         if (!existingParent) {
-          throw new Error('Le matricule parent spécifié n\'existe pas dans le système');
+          // Le parent n'a pas encore de compte auth, le créer
+          await createStudentAuthAccount(
+            studentData.parent_matricule, 
+            schoolSuffix, 
+            'Parent de ' + studentData.first_name, 
+            studentData.last_name,
+            parentPassword,
+            'parent'
+          );
+        } else {
+          console.log('✅ Compte parent existant trouvé:', parentEmail);
         }
       }
 
