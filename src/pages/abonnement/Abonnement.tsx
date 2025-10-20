@@ -14,7 +14,7 @@ import { useNavigate } from "react-router-dom";
 
 const Abonnement = () => {
   const [isAnnual, setIsAnnual] = useState(false);
-  const { currentPlan, starterCompatible, getActiveSubscription } = useSubscriptionPlan();
+  const { currentPlan, starterCompatible, proCompatible, getActiveSubscription } = useSubscriptionPlan();
   const { plans, loading: plansLoading, formatPrice } = useSubscriptionPlans();
   const { userProfile } = useUserRole();
   const { toast } = useToast();
@@ -188,7 +188,7 @@ const Abonnement = () => {
                 <p className="text-blue-700">
                   Il vous reste <strong>{subscriptionStatus.daysRemaining} jour{subscriptionStatus.daysRemaining > 1 ? 's' : ''}</strong> avec un accès complet à toutes les fonctionnalités comme un compte Pro.
                 </p>
-                {!starterCompatible && (
+                {(!starterCompatible || !proCompatible) && (
                   <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mt-4">
                     <div className="flex items-start gap-3">
                       <div className="bg-orange-100 rounded-full p-1 mt-0.5">
@@ -196,11 +196,20 @@ const Abonnement = () => {
                       </div>
                       <div className="text-sm">
                         <p className="font-medium text-orange-900 mb-1">
-                          Limitation du plan Starter
+                          Limitation{!starterCompatible && !proCompatible ? 's' : ''} des plans
                         </p>
-                        <p className="text-orange-800">
-                          Vous avez dépassé les limites du plan Starter (6 classes ou 200 élèves). 
-                          À la fin de l'essai, vous devrez choisir un plan Pro ou Premium.
+                        {!starterCompatible && (
+                          <p className="text-orange-800 mb-2">
+                            • Plan <strong>Starter</strong> : Vous avez dépassé les limites (6 classes ou 200 élèves).
+                          </p>
+                        )}
+                        {!proCompatible && (
+                          <p className="text-orange-800 mb-2">
+                            • Plan <strong>Pro</strong> : Vous avez dépassé les limites (15 classes ou 500 élèves).
+                          </p>
+                        )}
+                        <p className="text-orange-800 mt-2">
+                          À la fin de l'essai, vous devrez choisir un plan {!proCompatible ? 'Premium' : 'Pro ou Premium'}.
                         </p>
                       </div>
                     </div>
@@ -245,7 +254,8 @@ const Abonnement = () => {
             const IconComponent = plan.icon;
             const isActive = isActivePlan(plan.id);
             const currentPlan = isAnnual ? plan.dbPlans.annual : plan.dbPlans.monthly;
-            const isPlanDisabled = plan.id === 'starter' && !starterCompatible;
+            const isPlanDisabled = (plan.id === 'starter' && !starterCompatible) || 
+                                   (plan.id === 'pro' && !proCompatible);
             
             if (!currentPlan) return null; // Ne pas afficher si le plan n'existe pas en DB
             

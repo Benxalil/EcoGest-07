@@ -181,6 +181,7 @@ export const useSubscriptionPlan = () => {
   const [currentPlan, setCurrentPlan] = useState<SubscriptionPlan>('trial');
   const [loading, setLoading] = useState(true);
   const [starterCompatible, setStarterCompatible] = useState(true);
+  const [proCompatible, setProCompatible] = useState(true);
   const { userProfile } = useUserRole();
 
   const fetchSubscriptionPlan = async () => {
@@ -194,7 +195,7 @@ export const useSubscriptionPlan = () => {
       setLoading(true);
       const { data: school, error } = await supabase
         .from('schools')
-        .select('subscription_status, subscription_plan, starter_compatible')
+        .select('subscription_status, subscription_plan, starter_compatible, pro_compatible')
         .eq('id', userProfile.schoolId)
         .single();
 
@@ -208,6 +209,7 @@ export const useSubscriptionPlan = () => {
       }
       
       setStarterCompatible(school?.starter_compatible ?? true);
+      setProCompatible(school?.pro_compatible ?? true);
     } catch (error) {
       console.error('Erreur lors de la récupération du plan d\'abonnement:', error);
       setCurrentPlan('trial');
@@ -276,6 +278,21 @@ export const useSubscriptionPlan = () => {
     }
   };
 
+  const markAsNotProCompatible = async () => {
+    if (!userProfile?.schoolId) return;
+    
+    try {
+      await supabase
+        .from('schools')
+        .update({ pro_compatible: false })
+        .eq('id', userProfile.schoolId);
+      
+      setProCompatible(false);
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour de la compatibilité Pro:', error);
+    }
+  };
+
   const checkStarterLimits = (feature: 'students' | 'classes', currentCount: number) => {
     const starterFeatures = PLAN_FEATURES['starter_monthly'];
     const limit = feature === 'students' ? starterFeatures.maxStudents : starterFeatures.maxClasses;
@@ -284,6 +301,31 @@ export const useSubscriptionPlan = () => {
       exceedsStarter: currentCount >= (limit || 0),
       starterLimit: limit,
       isTrialActive: currentPlan === 'trial'
+    };
+  };
+
+  const checkProLimits = (feature: 'students' | 'classes', currentCount: number) => {
+    const proFeatures = PLAN_FEATURES['pro_monthly'];
+    const limit = feature === 'students' ? proFeatures.maxStudents : proFeatures.maxClasses;
+    
+    return {
+      exceedsPro: currentCount >= (limit || 0),
+      proLimit: limit,
+      isTrialActive: currentPlan === 'trial'
+    };
+  };
+
+  // Fonction générique pour vérifier tous les paliers
+  const checkPlanLimits = (feature: 'students' | 'classes', currentCount: number) => {
+    const starterCheck = checkStarterLimits(feature, currentCount);
+    const proCheck = checkProLimits(feature, currentCount);
+    
+    return {
+      starter: starterCheck,
+      pro: proCheck,
+      // Déterminer quel palier est dépassé
+      exceededPlan: starterCheck.exceedsStarter && !proCheck.exceedsPro ? 'starter' :
+                    proCheck.exceedsPro ? 'pro' : null
     };
   };
 
@@ -330,13 +372,17 @@ export const useSubscriptionPlan = () => {
     currentPlan,
     loading,
     starterCompatible,
+    proCompatible,
     features: getCurrentFeatures(),
     planDetails: getCurrentPlanDetails(),
     hasFeature,
     isFeatureLimited,
     getFeatureLimit,
     markAsNotStarterCompatible,
+    markAsNotProCompatible,
     checkStarterLimits,
+    checkProLimits,
+    checkPlanLimits,
     refreshPlan: fetchSubscriptionPlan,
     getActiveSubscription
   };

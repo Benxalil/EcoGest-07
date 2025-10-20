@@ -1032,6 +1032,7 @@ export type Database = {
           name: string
           parent_matricule_format: string | null
           phone: string | null
+          pro_compatible: boolean
           school_suffix: string | null
           school_type: Database["public"]["Enums"]["school_type"] | null
           semester_type:
@@ -1072,6 +1073,7 @@ export type Database = {
           name: string
           parent_matricule_format?: string | null
           phone?: string | null
+          pro_compatible?: boolean
           school_suffix?: string | null
           school_type?: Database["public"]["Enums"]["school_type"] | null
           semester_type?:
@@ -1112,6 +1114,7 @@ export type Database = {
           name?: string
           parent_matricule_format?: string | null
           phone?: string | null
+          pro_compatible?: boolean
           school_suffix?: string | null
           school_type?: Database["public"]["Enums"]["school_type"] | null
           semester_type?:

@@ -31,9 +31,19 @@ interface AjoutClasseModalProps {
 
 export function AjoutClasseModal({ open, onOpenChange, onSuccess }: AjoutClasseModalProps) {
   const { toast } = useToast();
-  const { currentPlan, isFeatureLimited, getFeatureLimit, checkStarterLimits, markAsNotStarterCompatible, starterCompatible } = useSubscriptionPlan();
+  const { 
+    currentPlan, 
+    isFeatureLimited, 
+    getFeatureLimit, 
+    checkPlanLimits, 
+    markAsNotStarterCompatible, 
+    markAsNotProCompatible,
+    starterCompatible,
+    proCompatible
+  } = useSubscriptionPlan();
   const { classes, createClass } = useClasses();
   const [showStarterWarning, setShowStarterWarning] = useState(false);
+  const [showProWarning, setShowProWarning] = useState(false);
   
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -64,12 +74,19 @@ export function AjoutClasseModal({ open, onOpenChange, onSuccess }: AjoutClasseM
         return;
       }
 
-      // Pour la période d'essai, vérifier les limites Starter et afficher un avertissement
+      // Pour la période d'essai, vérifier les limites de tous les paliers et afficher un avertissement
       // ✅ N'afficher l'alerte qu'une seule fois : au premier dépassement du palier
-      if (currentPlan === 'trial' && starterCompatible) {
-        const starterLimits = checkStarterLimits('classes', currentClassCount);
+      if (currentPlan === 'trial') {
+        const limits = checkPlanLimits('classes', currentClassCount);
         
-        if (starterLimits.exceedsStarter) {
+        // Vérifier d'abord le dépassement Pro (si pas encore marqué comme incompatible)
+        if (proCompatible && limits.exceededPlan === 'pro') {
+          setShowProWarning(true);
+          return;
+        }
+        
+        // Puis vérifier le dépassement Starter (si pas encore marqué comme incompatible)
+        if (starterCompatible && limits.exceededPlan === 'starter') {
           setShowStarterWarning(true);
           return;
         }
@@ -143,6 +160,43 @@ export function AjoutClasseModal({ open, onOpenChange, onSuccess }: AjoutClasseM
     }
   };
 
+  const handleProWarningConfirm = async () => {
+    try {
+      await markAsNotProCompatible();
+      setShowProWarning(false);
+      
+    // ✅ Récupérer les valeurs du formulaire
+    const formValues = form.getValues();
+    const series = formValues.series && formValues.series !== "none" ? formValues.series : "";
+    const label = formValues.label && formValues.label !== "none" ? formValues.label : "";
+
+    // ✅ Lancer la création en arrière-plan (sans attendre)
+    createClass({
+      name: formValues.name,
+      level: formValues.level,
+      section: series && label 
+        ? `${series}${label}` 
+        : (series || label || ""),
+    });
+
+    // ✅ Fermer le modal IMMÉDIATEMENT
+    form.reset();
+    if (onOpenChange) {
+      onOpenChange(false);
+    }
+    if (onSuccess) {
+      onSuccess();
+    }
+    } catch (error) {
+      console.error("❌ Erreur dans handleProWarningConfirm:", error);
+      toast({
+        title: "Erreur",
+        description: error instanceof Error ? error.message : "Une erreur est survenue",
+        variant: "destructive",
+      });
+    }
+  };
+
   // If used as a standalone form (not in a dialog)
   if (!open && !onOpenChange) {
     return (
@@ -159,6 +213,24 @@ export function AjoutClasseModal({ open, onOpenChange, onSuccess }: AjoutClasseM
             <AlertDialogFooter>
               <AlertDialogCancel>Annuler</AlertDialogCancel>
               <AlertDialogAction onClick={handleStarterWarningConfirm}>
+                Continuer
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        <AlertDialog open={showProWarning} onOpenChange={setShowProWarning}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Limite du plan Pro dépassée</AlertDialogTitle>
+              <AlertDialogDescription>
+                En ajoutant plus de 15 classes, vous ne pourrez plus choisir le plan Pro à la fin de l'essai gratuit. 
+                Vous devrez opter pour le plan Premium. Voulez-vous continuer ?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Annuler</AlertDialogCancel>
+              <AlertDialogAction onClick={handleProWarningConfirm}>
                 Continuer
               </AlertDialogAction>
             </AlertDialogFooter>
@@ -303,6 +375,24 @@ export function AjoutClasseModal({ open, onOpenChange, onSuccess }: AjoutClasseM
           <AlertDialogFooter>
             <AlertDialogCancel>Annuler</AlertDialogCancel>
             <AlertDialogAction onClick={handleStarterWarningConfirm}>
+              Continuer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={showProWarning} onOpenChange={setShowProWarning}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Limite du plan Pro dépassée</AlertDialogTitle>
+            <AlertDialogDescription>
+              En ajoutant plus de 15 classes, vous ne pourrez plus choisir le plan Pro à la fin de l'essai gratuit. 
+              Vous devrez opter pour le plan Premium. Voulez-vous continuer ?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction onClick={handleProWarningConfirm}>
               Continuer
             </AlertDialogAction>
           </AlertDialogFooter>
